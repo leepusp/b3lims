@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Etiqueta LIMS - {{ sample.sample_id }}</title>
+    <style>
+        /* Configuração para etiquetas de 25mm x 25mm (Criotubos padrão) */
+        @page {
+            size: 25mm 25mm;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 1mm;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            background-color: white;
+        }
+        .label-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 23mm; /* Ajuste fino para margens */
+        }
+        .qr-code {
+            width: 14mm;
+            height: 14mm;
+        }
+        .info {
+            font-size: 7px;
+            font-weight: bold;
+            line-height: 1.1;
+            margin-top: 1mm;
+            word-break: break-all;
+        }
+        .date {
+            font-size: 6px;
+            font-weight: normal;
+        }
+        /* Esconde elementos na impressão caso necessário */
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="label-wrapper">
+        <img src="data:image/png;base64,{{ qr_code }}" class="qr-code">
+        <div class="info">
+            {{ sample.sample_id }}<br>
+            <span class="date">{{ sample.created_at|date:"d/m/Y" }}</span>
+        </div>
+    </div>
+</body>
+</html>

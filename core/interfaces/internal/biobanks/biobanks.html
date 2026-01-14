@@ -1,0 +1,228 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Biobanks · Biobank LIMS{% endblock %}
+{% block page_title %}Biobanks{% endblock %}
+{% block page_subtitle %}Infrastructure and Institution Management{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'internal/biobanks/biobank.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+    .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
+    .chip-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; min-height: 50px; }
+    .biobank-entry { transition: transform 0.2s; border: none; border-top: 4px solid #0d6efd; }
+    .biobank-entry:hover { transform: translateY(-5px); }
+    .tag-pill { background: #e7f1ff; color: #0d6efd; border: 1px solid #cfe2ff; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; margin-right: 4px; }
+    .kw-pill { background: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; display: inline-block; margin-bottom: 4px;}
+    /* Ajuste para a área de notas/descrição */
+    .notes-textarea textarea { min-height: 120px; resize: vertical; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+{% if user.is_authenticated %}
+<section class="card shadow-sm border-0 mb-5">
+    <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 text-primary"><i class="bi bi-building-add me-2"></i>Register New Biobank</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" class="biobank-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_biobank">
+
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="section-label">Official Name</label>
+                            {{ biobank_form.name }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="section-label">Default Visibility</label>
+                            {{ biobank_form.visibility }}
+                        </div>
+                        <div class="col-12">
+                            <label class="section-label">Institution / Entity Name</label>
+                            {{ biobank_form.institution }}
+                            <div class="form-text small">Search for hospital, university or research center names.</div>
+                        </div>
+                        
+                        <div class="col-12 notes-textarea">
+                            <label class="section-label">Scientific & Operational Notes</label>
+                            {{ biobank_form.description }}
+                            <div class="form-text small">Describe infrastructure, cooling systems, or specific protocols.</div>
+                        </div>
+                    </div>
+
+                    <div style="display:none;">
+                        {{ biobank_form.location_label }}
+                        {{ biobank_form.latitude }}
+                        {{ biobank_form.longitude }}
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <label class="section-label">Geographic Location</label>
+                    <div id="map" class="shadow-sm mb-2" style="height:250px; border-radius:12px; border: 1px solid #ddd;"></div>
+                    <div class="text-muted mb-4" style="font-size: 0.75rem;">
+                        <i class="bi bi-geo-alt me-1"></i> O marcador atualiza as coordenadas automaticamente.
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="section-label mb-0">Tags</label>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none me-2" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
+                                <a href="/?page=tags" class="btn btn-link btn-sm p-0 text-decoration-none">Manage</a>
+                            </div>
+                        </div>
+                        <div id="tagChipContainer" class="chip-box">
+                            {% for tag in all_tags %}
+                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" 
+                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">
+                                    {{ tag.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        <div id="tagHiddenInputs" style="display:none;"></div>
+                    </div>
+
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="section-label mb-0">Custom Metadata</label>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add Meta</button>
+                        </div>
+                        <div id="keywordChipContainer" class="chip-box"></div>
+                        <div id="keywordHiddenInputs" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-4 pt-3 border-top">
+                <button class="btn btn-primary px-5 shadow-sm">
+                    <i class="bi bi-cloud-check me-2"></i>Save Biobank
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+<section class="mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+        <h3 class="h4 mb-0"><i class="bi bi-collection me-2"></i>Registered Biobanks</h3>
+        <span class="badge bg-dark rounded-pill">{{ biobanks|length }} Total</span>
+    </div>
+
+    {% if biobanks %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        {% for b in biobanks %}
+        <div class="col">
+            <div class="card h-100 shadow-sm biobank-entry">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="fw-bold text-primary mb-0">{{ b.name }}</h5>
+                        <span class="badge bg-light text-dark border small">
+                            {{ b.get_visibility_display }}
+                        </span>
+                    </div>
+                    
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-geo-alt-fill me-1"></i> {{ b.location_label|default:b.institution }}
+                    </p>
+
+                    {% if b.description %}
+                    <p class="small text-secondary mb-3 text-truncate-3" style="font-style: italic;">
+                        "{{ b.description }}"
+                    </p>
+                    {% endif %}
+
+                    <div class="mb-2">
+                        {% for t in b.tags.all %}
+                            <span class="tag-pill">{{ t.name }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div>
+                        {% for k in b.keywords.all %}
+                            <span class="kw-pill"><strong>{{ k.keyword.name }}:</strong> {{ k.value }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white border-0 pb-3">
+                    <div class="d-grid gap-2">
+                        {% if b.can_manage_members %}
+                        <a href="{% url 'biobank_members' b.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-people me-1"></i> Manage Members
+                        </a>
+                        {% endif %}
+                        
+                        <div class="btn-group w-100">
+                            {% if b.can_edit %}
+                            <form method="post" class="flex-fill me-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="deactivate_biobank">
+                                <input type="hidden" name="id" value="{{ b.id }}">
+                                <button class="btn btn-sm btn-outline-warning w-100">Disable</button>
+                            </form>
+                            {% endif %}
+
+                            {% if user.is_superuser %}
+                            <button type="button" class="btn btn-sm btn-outline-danger flex-fill js-delete-biobank"
+                                    data-biobank-id="{{ b.id }}" data-biobank-name="{{ b.name }}">
+                                Delete
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 bg-white rounded shadow-sm">
+        <p class="text-muted mt-3">No biobanks registered.</p>
+    </div>
+    {% endif %}
+</section>
+
+<div class="modal fade" id="confirmDeleteBiobankModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Biobank</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-octagon display-4 text-danger mb-3"></i>
+                <p>Are you sure you want to delete <strong id="deleteBiobankName"></strong>?</p>
+                <p class="small text-muted">This will remove all linked collections and samples.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" id="confirmDeleteBiobankForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_biobank">
+                    <input type="hidden" name="id" id="deleteBiobankId">
+                    <button class="btn btn-danger">Confirm Deletion</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "internal/tags/add_tag.html" %}
+{% include "internal/keywords/add_keyword.html" %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/biobanks/biobank.js' %}"></script>
+{% endblock %}

@@ -11,7 +11,6 @@ from core.models import (
     KeywordValue,
 )
 
-
 # ============================================================
 # TAGS
 # ============================================================
@@ -21,7 +20,6 @@ class TagAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     ordering = ("name",)
 
-
 # ============================================================
 # KEYWORDS
 # ============================================================
@@ -30,7 +28,6 @@ class KeywordAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
     ordering = ("name",)
-
 
 @admin.register(KeywordValue)
 class KeywordValueAdmin(admin.ModelAdmin):
@@ -57,20 +54,18 @@ class KeywordValueAdmin(admin.ModelAdmin):
         return ", ".join(s.sample_id for s in obj.samples.all())
     samples_list.short_description = "Samples"
 
-
 # ============================================================
 # INLINES
 # ============================================================
 class SampleFileInline(admin.TabularInline):
     model = SampleFile
     extra = 0
-    readonly_fields = ("uploaded_at",)
-
+    # Campos que existem no modelo SampleFile
+    readonly_fields = ("uploaded_at", "mime_type", "file_size")
 
 class CollectionUserRoleInline(admin.TabularInline):
     model = CollectionUserRole
     extra = 0
-
 
 # ============================================================
 # BIOBANK
@@ -85,28 +80,11 @@ class BiobankAdmin(admin.ModelAdmin):
         "is_active",
         "created_at",
     )
-
-    search_fields = (
-        "name",
-        "institution",
-        "location_label",
-    )
-
-    list_filter = (
-        "visibility",
-        "is_active",
-    )
-
+    search_fields = ("name", "institution", "location_label")
+    list_filter = ("visibility", "is_active")
     ordering = ("name",)
-
     filter_horizontal = ("tags", "keywords")
-
-    readonly_fields = (
-        "created_at",
-        "latitude",
-        "longitude",
-    )
-
+    readonly_fields = ("created_at", "latitude", "longitude")
 
 # ============================================================
 # COLLECTION
@@ -119,42 +97,46 @@ class CollectionAdmin(admin.ModelAdmin):
     inlines = [CollectionUserRoleInline]
     filter_horizontal = ("tags", "keywords")
 
-
 # ============================================================
 # SAMPLE
 # ============================================================
 @admin.register(Sample)
 class SampleAdmin(admin.ModelAdmin):
+    # Adicionado 'status' para controle de qualidade e 'uuid' para rastreio
     list_display = (
         "sample_id",
+        "status",
         "sample_type",
         "organism_name",
         "collection",
         "biobank",
         "created_at",
     )
-    list_filter = ("collection", "biobank")
-    search_fields = ("sample_id", "organism_name", "sample_type")
+    list_filter = ("status", "collection", "biobank", "is_active")
+    search_fields = ("sample_id", "organism_name", "sample_type", "uuid")
     ordering = ("-created_at",)
     inlines = [SampleFileInline]
-    filter_horizontal = ("tags", "keyword_values")
-
+    filter_horizontal = ("tags", "keywords")
+    # UUID deve ser apenas leitura
+    readonly_fields = ("uuid", "created_at", "updated_at")
 
 # ============================================================
-# SAMPLE FILE
+# SAMPLE FILE (CORRIGIDO)
 # ============================================================
 @admin.register(SampleFile)
 class SampleFileAdmin(admin.ModelAdmin):
-    list_display = ("file", "sample", "file_type", "uploaded_at")
-    list_filter = ("file_type", "uploaded_at")
+    # Alterado 'file_type' para 'category' e 'mime_type' que existem no modelo
+    list_display = ("file", "sample", "category", "mime_type", "uploaded_at")
+    list_filter = ("category", "uploaded_at")
     search_fields = ("file", "description")
-
 
 # ============================================================
 # EVENTS
 # ============================================================
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ("sample", "event_type", "timestamp")
+    # Adicionado 'location_snapshot' para o mapa de rastreabilidade
+    list_display = ("sample", "event_type", "location_snapshot", "timestamp")
     list_filter = ("event_type", "timestamp")
-    search_fields = ("sample__sample_id", "notes")
+    search_fields = ("sample__sample_id", "notes", "location_snapshot")
+    readonly_fields = ("timestamp",)

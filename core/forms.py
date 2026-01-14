@@ -1,8 +1,6 @@
 # core/forms.py
-
 from django import forms
 from core.models import Biobank, Collection, Tag
-
 
 # ----------------------------------------------------------
 # BIOBANK FORM
@@ -17,7 +15,7 @@ class BiobankForm(forms.ModelForm):
             "location_label",
             "latitude",
             "longitude",
-            "notes",
+            "description", # Alterado de 'notes' para 'description'
         ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
@@ -29,27 +27,20 @@ class BiobankForm(forms.ModelForm):
             "location_label": forms.HiddenInput(),
             "latitude": forms.HiddenInput(),
             "longitude": forms.HiddenInput(),
-            "notes": forms.Textarea(attrs={
+            "description": forms.Textarea(attrs={ # Alterado de 'notes'
                 "class": "form-control",
                 "rows": 4,
-                "placeholder": "Relevant notes about this Biobank"
+                "placeholder": "Relevant description about this Biobank"
             }),
         }
-
 
 # ----------------------------------------------------------
 # COLLECTION FORM
 # ----------------------------------------------------------
 class CollectionForm(forms.ModelForm):
-    tags = forms.ModelMultipleChoiceField(
-        queryset=Tag.objects.all(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
-
     class Meta:
         model = Collection
-        fields = ["name", "biobank", "description", "tags"]
+        fields = ["name", "biobank", "description", "visibility"]
 
         widgets = {
             "name": forms.TextInput(attrs={
@@ -59,12 +50,16 @@ class CollectionForm(forms.ModelForm):
             "biobank": forms.Select(attrs={
                 "class": "form-select"
             }),
+            "visibility": forms.Select(attrs={
+                "class": "form-select"
+            }),
             "description": forms.Textarea(attrs={
                 "class": "form-control",
                 "rows": 4,
                 "placeholder": "Describe the collection"
             }),
         }
+
 # ----------------------------------------------------------
 # TAG FORM
 # ----------------------------------------------------------
@@ -72,4 +67,7 @@ class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
         fields = ["name", "description"]
-
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+        }

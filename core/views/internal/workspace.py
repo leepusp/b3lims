@@ -7,14 +7,18 @@ from django.shortcuts import render
 from core.context import base_context
 
 # =========================================================
-# INTERNAL ENTITY VIEWS
+# INTERNAL ENTITY VIEWS (Caminhos padronizados)
 # =========================================================
-from core.views.internal.biobanks.biobanks import biobanks_view
-from core.views.internal.collections import collections_view
-from core.views.internal.samples import samples_view
+from core.views.internal.biobanks.views import biobanks_view
+from core.views.internal.biobanks.members import biobank_members_view 
+from core.views.internal.collections.views import collections_view
+from core.views.internal.collections.members import manage_collection_members
+
+# CORREÇÃO AQUI: Importando a view de Samples que estava faltando
+from core.views.internal.samples.views import samples_view
 
 # =========================================================
-# TAGS
+# TAGS (Importação direta do arquivo tags.py)
 # =========================================================
 from core.views.internal.tags import (
     tags_view,
@@ -24,7 +28,7 @@ from core.views.internal.tags import (
 )
 
 # =========================================================
-# KEYWORDS
+# KEYWORDS (Importação direta do arquivo keywords.py)
 # =========================================================
 from core.views.internal.keywords import (
     keywords_view,
@@ -44,6 +48,7 @@ def home(request):
 
     page = request.GET.get("page", "workspace")
 
+    # Dicionário de rotas mapeando o parâmetro ?page= para a função da view
     ROUTES = {
         # ================= MAIN =================
         "workspace": workspace_view,
@@ -63,9 +68,11 @@ def home(request):
         "delete_keyword": delete_keyword_view,
     }
 
+    # Se a página solicitada existir no dicionário, executa a view correspondente
     if page in ROUTES:
         return ROUTES[page](request)
 
+    # Caso contrário, retorna para o dashboard principal
     return workspace_view(request)
 
 

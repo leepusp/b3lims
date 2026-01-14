@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ambientes Virtuais
+biobank-env/
+venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Arquivos de Sistema
+.DS_Store
+

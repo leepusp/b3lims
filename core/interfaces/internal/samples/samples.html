@@ -1,0 +1,271 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Samples · Biobank LIMS{% endblock %}
+{% block page_title %}Samples{% endblock %}
+{% block page_subtitle %}Manage biological specimens and cryopreservation data{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
+<style>
+    .timeline-item { border-left: 2px solid #e9ecef; padding-left: 15px; position: relative; padding-bottom: 10px; }
+    .timeline-item::before { content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; background: #0d6efd; border-radius: 50%; }
+    .preview-img { max-width: 100%; height: auto; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="h4 mb-0"><i class="bi bi-flask me-2"></i>Specimen Inventory</h3>
+        </div>
+        <div class="btn-group shadow-sm">
+            <a href="/?page=tags" class="btn btn-sm btn-white border">
+                <i class="bi bi-tags me-1"></i> Manage Tags
+            </a>
+            <a href="/?page=keywords" class="btn btn-sm btn-white border">
+                <i class="bi bi-key me-1"></i> Manage Keywords
+            </a>
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <section class="card shadow-sm mb-5 border-0">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0 text-primary"><i class="bi bi-plus-circle me-2"></i>Register New Sample</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="sample-form" id="mainSampleForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_sample">
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-uppercase">Sample ID / Barcode</label>
+                        <input name="sample_id" class="form-control" placeholder="Ex: B3-2024-001" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-uppercase">Sample Type</label>
+                        <input name="sample_type" class="form-control" placeholder="Ex: Bacterial Isolate, Phage, DNA">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-uppercase">Organism / Strain</label>
+                        <input name="organism_name" class="form-control" placeholder="Ex: E. coli, Staphylococcus aureus">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase">Collection (Optional)</label>
+                        <select name="collection" class="form-select">
+                            <option value="">— Independent Sample (Unlinked) —</option>
+                            {% for col in collections %}
+                                <option value="{{ col.id }}">{{ col.name }} ({{ col.biobank.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase">Storage Location</label>
+                        <input name="storage_location" class="form-control" placeholder="Ex: UltraFreezer 01, Rack B, Box 05">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase">Visibility</label>
+                        <select name="visibility" class="form-select">
+                            <option value="private">Private</option>
+                            <option value="group">Group</option>
+                            <option value="public">Public</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase">Initial Status</label>
+                        <select name="status" class="form-select">
+                            <option value="pending">Aguardando Recebimento</option>
+                            <option value="qc" selected>Em Controle de Qualidade</option>
+                            <option value="available">Disponível</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
+                            Tags
+                            <a href="/?page=tags" class="text-decoration-none small">Edit Tags</a>
+                        </label>
+                        <div id="tagChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;">
+                            {% for tag in all_tags %}
+                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" 
+                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">
+                                    {{ tag.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        <div id="tagHiddenInputs" style="display:none;"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                            <i class="bi bi-plus-circle me-1"></i> New Tag
+                        </button>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
+                            Metadata Keywords
+                            <a href="/?page=keywords" class="text-decoration-none small">Edit Keys</a>
+                        </label>
+                        <div id="keywordChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;"></div>
+                        <div id="keywordHiddenInputs" style="display:none;"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+                            <i class="bi bi-key me-1"></i> Add Metadata
+                        </button>
+                    </div>
+
+                    <div class="col-12 mt-3">
+                        <label class="form-label fw-bold small text-uppercase">Attachments</label>
+                        <div id="fileContainer" class="mb-2"></div>
+                        <button type="button" id="addFileBtn" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-paperclip"></i> Add File
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4 border-top pt-3">
+                    <button type="submit" class="btn btn-primary px-5">Save Specimen</button>
+                </div>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="mt-5">
+        <div class="table-responsive bg-white rounded shadow-sm">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-uppercase">
+                        <th>Sample ID</th>
+                        <th>Info / Status</th>
+                        <th>Hierarchy / Location</th>
+                        <th>Files & Meta</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in samples %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-primary">{{ s.sample_id }}</div>
+                            <small class="text-muted" style="font-size: 0.6rem;">{{ s.uuid }}</small>
+                        </td>
+                        <td>
+                            <div class="small fw-bold">{{ s.organism_name|default:"—" }}</div>
+                            {% if s.status == 'available' %}
+                                <span class="badge bg-success-soft text-success small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
+                            {% elif s.status == 'qc' %}
+                                <span class="badge bg-warning-soft text-warning small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary-soft text-secondary small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small"><i class="bi bi-diagram-3 me-1"></i>{{ s.collection.name|default:"Avulsa" }}</div>
+                            <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ s.storage_location|default:"N/A" }}</div>
+                        </td>
+                        <td>
+                            {% if s.files.all %}
+                                <button class="btn btn-sm btn-outline-primary mb-1" data-bs-toggle="modal" data-bs-target="#fileModal{{ s.id }}">
+                                    <i class="bi bi-files"></i> {{ s.files.count }} Files
+                                </button>
+                            {% endif %}
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% for t in s.tags.all %}<span class="badge bg-light text-dark border fw-normal" style="font-size:0.65rem;">{{ t.name }}</span>{% endfor %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#historyModal{{ s.id }}" title="History">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+                                {% if s.can_delete %}
+                                <form method="post" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_sample">
+                                    <input type="hidden" name="sample_id" value="{{ s.id }}">
+                                    <button class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="historyModal{{ s.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Tracking History: {{ s.sample_id }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="timeline p-2">
+                                        {% for event in s.events.all %}
+                                        <div class="timeline-item">
+                                            <div class="small fw-bold">{{ event.get_event_type_display }}</div>
+                                            <div class="text-muted small">{{ event.timestamp|date:"d/m/Y H:i" }}</div>
+                                            {% if event.location_snapshot %}<div class="small text-primary italic">At: {{ event.location_snapshot }}</div>{% endif %}
+                                            <p class="small mb-0">{{ event.notes }}</p>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-center text-muted">No events recorded.</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="fileModal{{ s.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Files for {{ s.sample_id }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        {% for f in s.files.all %}
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-2 text-center h-100">
+                                                {% if f.category == 'image' %}
+                                                    <img src="{{ f.file.url }}" class="preview-img mb-2" alt="Microscopy">
+                                                {% else %}
+                                                    <div class="display-4"><i class="bi bi-file-earmark-medical"></i></div>
+                                                {% endif %}
+                                                <div class="small fw-bold text-truncate">{{ f.file.name }}</div>
+                                                <div class="badge bg-light text-dark mb-2">{{ f.get_category_display }}</div>
+                                                <div class="d-grid">
+                                                    <a href="{{ f.file.url }}" target="_blank" class="btn btn-sm btn-primary">Open / Download</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% include "internal/tags/add_tag.html" %}
+    {% include "internal/keywords/add_keyword.html" %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'internal/samples/samples.js' %}"></script>
+{% endblock %}
