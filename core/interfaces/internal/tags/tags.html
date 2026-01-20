@@ -1,154 +1,67 @@
-{% extends "internal/common/base.html" %}
-{% load static %}
+             <span class="badge bg-light text-dark border badge-usage">{{ item.sample_count }} Sample(s)</span>
+                        </td>
 
-{% block title %}Manage Tags · Biobank LIMS{% endblock %}
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="openEditModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}')">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </button>
 
-{% block page_title %}Tags{% endblock %}
-{% block page_subtitle %}
-Edit, delete and inspect where each tag is being used
-{% endblock %}
-
-{% block content %}
-
-<h2>Manage Tags</h2>
-<p class="section-subtitle">
-    Edit, delete and inspect where each tag is being used (Biobanks, Collections, Samples).
-</p>
-
-<!-- Search -->
-<input id="tag-search"
-       type="text"
-       class="form-control"
-       placeholder="Search tags..."
-       style="max-width:300px; margin-bottom:20px;">
-
-<div class="card">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Tag</th>
-                <th>Used In</th>
-                <th style="width:180px;">Actions</th>
-            </tr>
-        </thead>
-
-        <tbody id="tags-table-body">
-            {% for item in tags %}
-            <tr class="tag-row" data-name="{{ item.tag.name|lower }}">
-
-                <td>
-                    <strong>{{ item.tag.name }}</strong>
-
-                    <div style="margin-top:5px; font-size:13px; color:#444;">
-
-                        {% if item.biobanks %}
-                            <div><b>Biobanks:</b>
-                                {% for b in item.biobanks %}
-                                    <a href="/?page=biobanks&highlight={{ b.id }}">
-                                        {{ b.name }}
-                                    </a>{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2"
+                                        onclick="openDeleteModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}', {{ item.total_use }})">
+                                    <i class="bi bi-trash me-1"></i> Delete
+                                </button>
                             </div>
-                        {% endif %}
-
-                        {% if item.collections %}
-                            <div><b>Collections:</b>
-                                {% for c in item.collections %}
-                                    <a href="/?page=collections&highlight={{ c.id }}">
-                                        {{ c.name }}
-                                    </a>{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if item.samples %}
-                            <div><b>Samples:</b>
-                                {% for s in item.samples %}
-                                    <a href="/?page=samples&highlight={{ s.id }}">
-                                        {{ s.sample_id }}
-                                    </a>{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                    </div>
-                </td>
-
-                <td>
-                    {{ item.biobank_count }} biobank(s)<br>
-                    {{ item.collection_count }} collection(s)<br>
-                    {{ item.sample_count }} sample(s)
-                </td>
-
-                <td>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-primary"
-                            onclick="openEditModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}')">
-                        Edit
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger"
-                            onclick="openDeleteModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}', {{ item.total_use }})">
-                        Delete
-                    </button>
-                </td>
-
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3">No tags found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- ================= MODALS ================= -->
-
-<div id="editModal" class="modal-bg" style="display:none;">
-    <div class="modal-card">
-        <h3>Edit Tag</h3>
-
-        <form method="post" action="/?page=edit_tag">
-            {% csrf_token %}
-            <input type="hidden" name="id" id="editTagId">
-
-            <label>Name</label>
-            <input type="text"
-                   name="name"
-                   id="editTagName"
-                   class="form-control"
-                   required>
-
-            <div style="margin-top:10px;">
-                <button class="btn btn-primary">Save</button>
-                <button type="button"
-                        class="btn btn-secondary"
-                        onclick="closeEditModal()">Cancel</button>
-            </div>
-        </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="bi bi-tags display-4 d-block mb-2"></i>
+                            No tags found in the system.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<div id="deleteModal" class="modal-bg" style="display:none;">
-    <div class="modal-card">
-        <h3>Delete Tag</h3>
-        <p id="deleteMessage"></p>
-
-        <form method="post" action="/?page=delete_tag">
-            {% csrf_token %}
-            <input type="hidden" name="id" id="deleteTagId">
-
-            <button id="deleteConfirmBtn" class="btn btn-danger">Delete</button>
-            <button type="button"
-                    class="btn btn-secondary"
-                    onclick="closeDeleteModal()">Cancel</button>
-        </form>
+    <div id="editModal" class="modal-bg" style="display:none;">
+        <div class="modal-card shadow-lg">
+            <h5 class="mb-3"><i class="bi bi-pencil me-2"></i>Edit Tag</h5>
+            <form method="post" action="/?page=edit_tag">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="editTagId">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Name</label>
+                    <input type="text" name="name" id="editTagName" class="form-control" required>
+                </div>
+                <div class="text-end">
+                    <button type="button" class="btn btn-light border btn-sm" onclick="closeEditModal()">Cancel</button>
+                    <button class="btn btn-primary btn-sm ms-2">Save Changes</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- ================= JS ================= -->
+    <div id="deleteModal" class="modal-bg" style="display:none;">
+        <div class="modal-card border-top border-danger border-4">
+            <h5 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Tag</h5>
+            <p id="deleteMessage" class="small"></p>
+            <form method="post" action="/?page=delete_tag">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="deleteTagId">
+                <div class="text-end mt-4">
+                    <button type="button" class="btn btn-light border btn-sm" onclick="closeDeleteModal()">Cancel</button>
+                    <button id="deleteConfirmBtn" class="btn btn-danger btn-sm ms-2">Confirm Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
 
 <script>
 const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
@@ -169,12 +82,10 @@ function openDeleteModal(id, name, totalUse) {
     document.getElementById("deleteTagId").value = id;
 
     if (totalUse > 0 && !IS_ADMIN) {
-        msg.innerHTML =
-            `Tag "<b>${name}</b>" is used in <b>${totalUse}</b> entities and cannot be deleted.`;
+        msg.innerHTML = `The tag "<b>${name}</b>" is currently linked to <b>${totalUse}</b> entities. Only administrators can delete tags in use.`;
         btn.disabled = true;
     } else {
-        msg.innerHTML =
-            `Are you sure you want to delete "<b>${name}</b>"?`;
+        msg.innerHTML = `Are you sure you want to permanently delete "<b>${name}</b>"? This action cannot be undone.`;
         btn.disabled = false;
     }
 
@@ -192,5 +103,4 @@ document.getElementById("tag-search").addEventListener("input", function() {
     });
 });
 </script>
-
 {% endblock %}

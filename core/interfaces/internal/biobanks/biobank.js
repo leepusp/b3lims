@@ -1,6 +1,6 @@
 /* =========================================================
-    BIOBANK PAGE JS - Enhanced Version
-    Tags, Keywords, Smart Localization & Draggable Map
+   BIOBANK PAGE JS - "Submit Event" Version (Sample Style)
+   Tags, Keywords, Smart Localization
 ========================================================= */
 
 function getCsrfToken() {
@@ -8,85 +8,18 @@ function getCsrfToken() {
 }
 
 /* =========================================================
-    TAG SELECTION (CHIPS)
-========================================================= */
-function toggleTagChip(chip) {
-    const tagId = chip.dataset.tagId;
-    const hiddenContainer = document.getElementById("tagHiddenInputs");
-    if (!tagId || !hiddenContainer) return;
-
-    // Toggle visual state usando classes do Bootstrap que usamos no HTML
-    chip.classList.toggle("bg-primary");
-    chip.classList.toggle("text-white");
-    chip.classList.toggle("text-dark");
-
-    const existing = hiddenContainer.querySelector(`input[value="${tagId}"]`);
-
-    if (existing) {
-        existing.remove();
-    } else {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "tags";
-        input.value = tagId;
-        hiddenContainer.appendChild(input);
-    }
-}
-
-function initTagSelector() {
-    document.querySelectorAll(".selectable-tag").forEach(chip => {
-        if (chip.dataset.bound === "1") return;
-        chip.addEventListener("click", () => toggleTagChip(chip));
-        chip.dataset.bound = "1";
-    });
-}
-
-/* =========================================================
-    KEYWORDS (LOCAL)
-========================================================= */
-function initKeywordSelector() {
-    const form = document.getElementById("addKeywordForm");
-    if (!form) return;
-
-    form.addEventListener("submit", e => {
-        e.preventDefault();
-        const key = form.key.value.trim();
-        const value = form.value.value.trim();
-
-        if (!key || !value) return;
-
-        const chipContainer = document.getElementById("keywordChipContainer");
-        const hiddenContainer = document.getElementById("keywordHiddenInputs");
-
-        const chip = document.createElement("span");
-        chip.className = "badge bg-dark text-white m-1 p-2";
-        chip.innerHTML = `${key} <i class="bi bi-arrow-right mx-1"></i> ${value}`;
-        chipContainer.appendChild(chip);
-
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "keyword_pairs";
-        input.value = `${key}:::${value}`;
-        hiddenContainer.appendChild(input);
-
-        bootstrap.Modal.getInstance(document.getElementById("addKeywordModal"))?.hide();
-        form.reset();
-    });
-}
-
-/* =========================================================
-    SMART LOCALIZATION (DRAGGABLE MAP)
+   SMART LOCALIZATION (DRAGGABLE MAP)
+   Mantida igual pois já estava correta
 ========================================================= */
 function initSmartLocation() {
     const mapEl = document.getElementById("map");
-    const searchInput = document.querySelector("input[name='institution']");
-    const latInput = document.querySelector("input[name='latitude']");
-    const lngInput = document.querySelector("input[name='longitude']");
-    const labelInput = document.querySelector("input[name='location_label']");
+    const institutionInput = document.getElementById("id_institution");
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const labelInput = document.getElementById("id_location_label");
 
-    if (!mapEl || !searchInput || typeof L === "undefined") return;
+    if (!mapEl || !institutionInput || typeof L === "undefined") return;
 
-    // Inicializa em uma visão global ou coordenadas padrão do Brasil
     const map = L.map("map").setView([-15.78, -47.92], 4);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -96,46 +29,51 @@ function initSmartLocation() {
     let marker = null;
     let debounce = null;
 
-    function updateInputs(lat, lng, label) {
-        latInput.value = lat.toFixed(6);
-        lngInput.value = lng.toFixed(6);
-        if (label) {
-            labelInput.value = label;
+    function updateInputs(lat, lng, address) {
+        if (latInput) latInput.value = lat.toFixed(6);
+        if (lngInput) lngInput.value = lng.toFixed(6);
+
+        if (address) {
+            if (labelInput) labelInput.value = address;
+            if (institutionInput && !institutionInput.value) institutionInput.value = address.split(",")[0];
         }
     }
 
-    function createOrMoveMarker(lat, lng) {
+    function createOrMoveMarker(lat, lng, address = null) {
         if (marker) {
             marker.setLatLng([lat, lng]);
         } else {
-            // Torna o marcador arrastável (Draggable)
             marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            
-            // Evento disparado quando o usuário termina de arrastar o pino
             marker.on('dragend', function(event) {
                 const position = marker.getLatLng();
                 reverseGeocode(position.lat, position.lng);
             });
         }
+        if (address) updateInputs(lat, lng, address);
     }
 
     function reverseGeocode(lat, lng) {
-        updateInputs(lat, lng);
+        if (labelInput) labelInput.value = "Searching address...";
+
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
             .then(r => r.json())
             .then(data => {
                 if (data.display_name) {
-                    labelInput.value = data.display_name;
-                    // Opcional: não sobrescrever o que o usuário digitou na pesquisa se ele só arrastou o pino
+                    updateInputs(lat, lng, data.display_name);
+                } else {
+                    if (labelInput) labelInput.value = "Address not found";
                 }
+            })
+            .catch(err => {
+                console.error("Geocode error:", err);
+                if (labelInput) labelInput.value = "Error fetching address";
             });
     }
 
-    // Busca por texto (Instituição/Endereço)
-    searchInput.addEventListener("input", () => {
+    institutionInput.addEventListener("input", () => {
         clearTimeout(debounce);
         debounce = setTimeout(() => {
-            const query = searchInput.value.trim();
+            const query = institutionInput.value.trim();
             if (query.length < 3) return;
 
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
@@ -145,46 +83,198 @@ function initSmartLocation() {
                     const place = data[0];
                     const lat = parseFloat(place.lat);
                     const lon = parseFloat(place.lon);
-
                     map.setView([lat, lon], 16);
-                    createOrMoveMarker(lat, lon);
-                    updateInputs(lat, lon, place.display_name);
+                    createOrMoveMarker(lat, lon, place.display_name);
                 });
-        }, 800);
+        }, 500);
     });
 
-    // Clique no mapa para definir local
     map.on("click", e => {
-        createOrMoveMarker(e.latlng.lat, e.latlng.lng);
-        reverseGeocode(e.latlng.lat, e.latlng.lng);
+        const { lat, lng } = e.latlng;
+        createOrMoveMarker(lat, lng);
+        reverseGeocode(lat, lng);
     });
 }
 
 /* =========================================================
-    DELETE BIOBANK CONFIRMATION
+   TAGS LOGIC (FORM SUBMIT INTERCEPTION)
 ========================================================= */
-function initDeleteBiobankConfirm() {
-    const modalEl = document.getElementById("confirmDeleteBiobankModal");
-    if (!modalEl) return;
+function initTagSystem() {
+    // 1. Lógica para selecionar Tags já existentes na tela
+    const tagChips = document.querySelectorAll(".selectable-tag");
+    const hiddenContainer = document.getElementById("tagHiddenInputs");
 
-    const nameEl = document.getElementById("deleteBiobankName");
-    const idInput = document.getElementById("deleteBiobankId");
+    tagChips.forEach(chip => {
+        if (chip.dataset.bound) return;
+        chip.dataset.bound = "true";
 
-    document.querySelectorAll(".js-delete-biobank").forEach(btn => {
-        btn.addEventListener("click", () => {
-            nameEl.textContent = btn.dataset.biobankName;
-            idInput.value = btn.dataset.biobankId;
-            new bootstrap.Modal(modalEl).show();
+        chip.addEventListener("click", function() {
+            const tagId = this.dataset.tagId;
+
+            // Toggle visual
+            this.classList.toggle("bg-white");
+            this.classList.toggle("text-dark");
+            this.classList.toggle("bg-primary");
+            this.classList.toggle("text-white");
+
+            // Gerencia input hidden
+            const existingInput = hiddenContainer.querySelector(`input[value="${tagId}"]`);
+            if (existingInput) {
+                existingInput.remove();
+            } else {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "tags";
+                input.value = tagId;
+                hiddenContainer.appendChild(input);
+            }
         });
     });
+
+    // 2. Lógica para SALVAR NOVA TAG via AJAX (Escutando o Form)
+    const addTagForm = document.getElementById("addTagForm");
+
+    if (addTagForm) {
+        // Remove listener antigo substituindo o elemento por um clone
+        const newForm = addTagForm.cloneNode(true);
+        addTagForm.parentNode.replaceChild(newForm, addTagForm);
+
+        newForm.addEventListener("submit", function(e) {
+            e.preventDefault(); // <--- O SEGREDO: Impede o refresh da página
+
+            const feedback = document.getElementById("tagErrorFeedback");
+            const btnSubmit = this.querySelector("[type=submit]");
+            const spinner = btnSubmit.querySelector(".spinner-border");
+
+            // Coleta dados via FormData (igual ao sample.js)
+            const fd = new FormData(this);
+            const tagName = fd.get("name")?.toString().trim();
+
+            if (!tagName) {
+                if(feedback) { feedback.innerText = "Tag name is required."; feedback.style.display = "block"; }
+                return;
+            }
+
+            // UI Loading
+            if(spinner) spinner.classList.remove("d-none");
+            btnSubmit.disabled = true;
+
+            fetch("/ajax/add_tag/", {
+                method: "POST",
+                body: fd,
+                headers: { "X-CSRFToken": getCsrfToken() }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || data.id) {
+                    // Adiciona Chip Visual
+                    const chipContainer = document.getElementById("tagChipContainer");
+                    const chip = document.createElement("span");
+                    chip.className = "badge rounded-pill border selectable-tag bg-primary text-white border-primary m-1 p-2";
+                    chip.dataset.tagId = data.id;
+                    chip.style.cursor = "pointer";
+                    chip.innerText = data.name;
+                    chipContainer.appendChild(chip);
+
+                    // Adiciona Input Hidden
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "tags";
+                    input.value = data.id;
+                    hiddenContainer.appendChild(input);
+
+                    // Reinicializa seletores
+                    initTagSystem();
+
+                    // Limpa form e fecha modal
+                    this.reset();
+                    const modalEl = document.getElementById("addTagModal");
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+                    else new bootstrap.Modal(modalEl).hide();
+
+                    if(feedback) feedback.style.display = "none";
+
+                } else {
+                    if(feedback) { feedback.innerText = data.error || "Error creating tag."; feedback.style.display = "block"; }
+                }
+            })
+            .catch(() => {
+                if(feedback) { feedback.innerText = "Server connection error."; feedback.style.display = "block"; }
+            })
+            .finally(() => {
+                if(spinner) spinner.classList.add("d-none");
+                btnSubmit.disabled = false;
+            });
+        });
+    }
 }
 
 /* =========================================================
-    INIT
+   KEYWORDS LOGIC (FORM SUBMIT INTERCEPTION)
+========================================================= */
+function initKeywordSystem() {
+    const addKeywordForm = document.getElementById("addKeywordForm");
+
+    if (addKeywordForm) {
+        const newForm = addKeywordForm.cloneNode(true);
+        addKeywordForm.parentNode.replaceChild(newForm, addKeywordForm);
+
+        newForm.addEventListener("submit", function(e) {
+            e.preventDefault(); // <--- Impede o refresh
+
+            const keyInput = document.getElementById("keywordKey");
+            const valInput = document.getElementById("keywordValue");
+            const feedback = document.getElementById("keywordErrorFeedback");
+
+            const key = keyInput?.value.trim();
+            const val = valInput?.value.trim();
+
+            if (!key || !val) {
+                if(feedback) { feedback.innerText = "Both Key and Value are required."; feedback.style.display = "block"; }
+                return;
+            }
+
+            // Cria Chip
+            const chipContainer = document.getElementById("keywordChipContainer");
+            const hiddenContainer = document.getElementById("keywordHiddenInputs");
+            const pairValue = `${key}:::${val}`;
+
+            const chip = document.createElement("span");
+            chip.className = "badge bg-light text-dark border p-2 m-1 d-inline-flex align-items-center";
+            chip.innerHTML = `<strong>${key}</strong>: ${val} <i class="bi bi-x ms-2 text-danger" style="cursor:pointer;"></i>`;
+
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = "keyword_pairs";
+            hidden.value = pairValue;
+
+            // Remove ao clicar no X
+            chip.querySelector(".bi-x").onclick = function() {
+                chip.remove();
+                hidden.remove();
+            };
+
+            chipContainer.appendChild(chip);
+            hiddenContainer.appendChild(hidden);
+
+            // Limpa form e fecha modal
+            this.reset();
+            if(feedback) feedback.style.display = "none";
+
+            const modalEl = document.getElementById("addKeywordModal");
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+            else new bootstrap.Modal(modalEl).hide();
+        });
+    }
+}
+
+/* =========================================================
+   INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
-    initTagSelector();
-    initKeywordSelector();
     initSmartLocation();
-    initDeleteBiobankConfirm();
+    initTagSystem();
+    initKeywordSystem();
 });

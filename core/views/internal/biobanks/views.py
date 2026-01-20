@@ -5,13 +5,12 @@ from django.core.exceptions import PermissionDenied
 
 from core.context import base_context
 from core.forms import BiobankForm
-from core.models import (
-    Biobank,
-    BiobankUserRole,
-    Tag,
-    Keyword,
-    KeywordValue,
-)
+
+from core.models.biobanks.biobank import Biobank
+from core.models.biobanks.biobank_user_role import BiobankUserRole
+from core.models.tags.model import Tag
+from core.models.keywords.model import Keyword, KeywordValue
+
 from core.permissions.biobanks import (
     can_view_biobank,
     can_edit_biobank,

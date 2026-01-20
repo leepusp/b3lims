@@ -5,49 +5,113 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'internal/workspace/workspace.css' %}">
+<style>
+    /* Layout Grid Principal */
+    .workspace-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 320px; 
+        gap: 24px; 
+        margin-top: 20px; 
+    }
+
+    /* Cabeçalho do Dashboard */
+    .workspace-header { 
+        border-bottom: 1px solid #e5e7eb; 
+        padding-bottom: 20px; 
+        margin-bottom: 20px; 
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+
+    /* Estilização das Seções e Sidebar */
+    .workspace-section { 
+        background: white; 
+        border-radius: 12px; 
+        border: 1px solid #e5e7eb; 
+        padding: 24px; 
+        margin-bottom: 24px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .workspace-sidebar .sidebar-box { 
+        background: white; 
+        border: 1px solid #e5e7eb; 
+        border-radius: 12px; 
+        padding: 20px; 
+        margin-bottom: 20px; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Tipografia de Métricas */
+    .metric-value { 
+        font-size: 2.2rem; 
+        font-weight: 700; 
+        color: #0d6efd; 
+        line-height: 1.2;
+    }
+
+    /* Melhoria Responsiva */
+    @media (max-width: 992px) {
+        .workspace-grid { 
+            grid-template-columns: 1fr; 
+        }
+        .workspace-sidebar {
+            order: -1; /* Sidebar aparece no topo em telas pequenas */
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-
-<div class="workspace">
-
-    <!-- ================= HEADER CONTEXT ================= -->
+<div class="container-fluid py-4">
     <header class="workspace-header">
         <div>
-            <h1>Workspace</h1>
-            <p class="subtitle">
-                Operational overview of your biobank environment
-            </p>
+            <h1 class="fw-bold h2 mb-1">Operational Workspace</h1>
+            <p class="text-muted mb-0">Management and cloud synchronization for CEBID B3.</p>
+        </div>
+        <div class="text-end d-none d-md-block">
+            <span class="badge bg-light text-dark border p-2">
+                <i class="bi bi-calendar3 me-2"></i>{% now "d/m/Y" %}
+            </span>
         </div>
     </header>
 
-    <!-- ================= GRID ================= -->
+    {% if messages %}
+        <div class="row mb-3">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
+                        {% elif message.tags == 'info' %}<i class="bi bi-info-circle-fill me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="workspace-grid">
-
-        <!-- MAIN CONTENT -->
         <section class="workspace-main">
-
-            <!-- KPIs / METRICS -->
             {% include "internal/workspace/partials/metrics.html" %}
-
-            <!-- RECENT ACTIVITY -->
-            {% include "internal/workspace/partials/recent_activity.html" %}
-
+            
+            <div class="mt-4">
+                {% include "internal/workspace/partials/recent_activity.html" %}
+            </div>
         </section>
 
-        <!-- SIDE PANEL -->
         <aside class="workspace-sidebar">
-
-            <!-- USER SCOPE -->
             {% include "internal/workspace/partials/scope.html" %}
-
-            <!-- QUICK ACTIONS -->
+            
             {% include "internal/workspace/partials/quick_actions.html" %}
 
+            <div class="alert alert-warning border-0 shadow-sm small">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>Pro Tip:</strong> Use the <b>Sync to Benchling</b> button to mirror your local inventory to the cloud registry.
+            </div>
         </aside>
-
     </div>
-
 </div>
-
 {% endblock %}

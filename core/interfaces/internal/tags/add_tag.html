@@ -1,6 +1,6 @@
 {# =============================================================== #}
 {# ADD TAG MODAL                                                   #}
-{# Reusable modal for creating tags via AJAX                      #}
+{# Reusable modal for creating tags via AJAX                       #}
 {# =============================================================== #}
 
 <div class="modal fade" id="addTagModal" tabindex="-1" aria-hidden="true">
@@ -11,7 +11,7 @@
                 {% csrf_token %}
 
                 <div class="modal-header">
-                    <h5 class="modal-title">
+                    <h5 class="modal-title" id="addTagModalTitle">
                         {{ title|default:"Add New Tag" }}
                     </h5>
                     <button type="button"
@@ -22,14 +22,18 @@
                 </div>
 
                 <div class="modal-body">
-                    <label class="form-label">
-                        {{ label|default:"Tag name" }}
-                    </label>
-                    <input type="text"
-                           class="form-control"
-                           name="name"
-                           placeholder="e.g. Oncology"
-                           required>
+                    <div class="mb-3">
+                        <label class="form-label" for="tagNameInput">
+                            {{ label|default:"Tag name" }}
+                        </label>
+                        <input type="text"
+                               id="tagNameInput"
+                               class="form-control"
+                               name="name"
+                               placeholder="e.g. Oncology"
+                               required>
+                    </div>
+                    <div id="tagErrorFeedback" class="text-danger small mt-2" style="display:none;"></div>
                 </div>
 
                 <div class="modal-footer">
@@ -38,8 +42,11 @@
                             data-bs-dismiss="modal">
                         Cancel
                     </button>
+
                     <button type="submit"
+                            id="btnSaveTagAJAX"
                             class="btn btn-success">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         Create Tag
                     </button>
                 </div>

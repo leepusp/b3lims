@@ -4,6 +4,12 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Django (Importante para manter a limpeza que fizemos)
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
 # Ambientes Virtuais
 biobank-env/
 venv/
@@ -13,6 +19,11 @@ env/
 .vscode/
 .idea/
 
-# Arquivos de Sistema
+# Arquivos de Sistema e Temporários
 .DS_Store
+base.css
+schema.png
+environment.yml
 
+# Logs e outros
+*.log

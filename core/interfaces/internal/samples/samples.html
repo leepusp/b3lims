@@ -1,33 +1,50 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
 
-{% block title %}Samples · Biobank LIMS{% endblock %}
+{% block title %}Samples · CEPIDB3 Biobank{% endblock %}
 {% block page_title %}Samples{% endblock %}
-{% block page_subtitle %}Manage biological specimens and cryopreservation data{% endblock %}
+{% block page_subtitle %}Manage biological specimens and scientific data{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
     .timeline-item { border-left: 2px solid #e9ecef; padding-left: 15px; position: relative; padding-bottom: 10px; }
     .timeline-item::before { content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; background: #0d6efd; border-radius: 50%; }
     .preview-img { max-width: 100%; height: auto; border-radius: 4px; }
+    .print-alert { background-color: #f8f9fa; border-left: 4px solid #0d6efd; }
+    .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
+    .btn-manage-mini { font-size: 0.7rem; padding: 2px 8px; background: white; border: 1px solid #dee2e6; color: #333; text-decoration: none; }
+    .btn-manage-mini:hover { background: #f8f9fa; color: #000; }
+
+    /* Estilo para o Editor do Caderno de Laboratório */
+    #eln-editor { height: 250px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+    .ql-toolbar { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f8f9fa; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
 
+    {% if messages %}
+        {% for message in messages %}
+            {% if "sample_created_id" in message.extra_tags %}
+                <div class="alert print-alert d-flex justify-content-between align-items-center shadow-sm mb-4" role="alert">
+                    <div>
+                        <i class="bi bi-printer-fill text-primary me-2"></i>
+                        <strong>Amostra Registrada!</strong> Deseja imprimir a etiqueta para o tubo agora?
+                    </div>
+                    <a href="{% url 'print_sample_label' message.message %}" target="_blank" class="btn btn-primary btn-sm">
+                        <i class="bi bi-qr-code-scan me-1"></i> Imprimir Etiqueta
+                    </a>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="h4 mb-0"><i class="bi bi-flask me-2"></i>Specimen Inventory</h3>
-        </div>
-        <div class="btn-group shadow-sm">
-            <a href="/?page=tags" class="btn btn-sm btn-white border">
-                <i class="bi bi-tags me-1"></i> Manage Tags
-            </a>
-            <a href="/?page=keywords" class="btn btn-sm btn-white border">
-                <i class="bi bi-key me-1"></i> Manage Keywords
-            </a>
         </div>
     </div>
 
@@ -41,26 +58,31 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_sample">
 
+                <input type="hidden" name="scientific_notes" id="scientific_notes_input">
+
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-uppercase">Sample ID / Barcode</label>
-                        <input name="sample_id" class="form-control" placeholder="Ex: B3-2024-001" required>
+                        <label class="section-label">Sample ID / Barcode</label>
+                        <div class="input-group">
+                            <input name="sample_id" class="form-control" placeholder="Ex: B3-2024-001" required>
+                            <span class="input-group-text bg-light"><i class="bi bi-qr-code"></i></span>
+                        </div>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-uppercase">Sample Type</label>
-                        <input name="sample_type" class="form-control" placeholder="Ex: Bacterial Isolate, Phage, DNA">
+                        <label class="section-label">Sample Type</label>
+                        <input name="sample_type" class="form-control" placeholder="Ex: Bacterial Isolate, DNA">
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-uppercase">Organism / Strain</label>
-                        <input name="organism_name" class="form-control" placeholder="Ex: E. coli, Staphylococcus aureus">
+                        <label class="section-label">Organism / Strain</label>
+                        <input name="organism_name" class="form-control" placeholder="Ex: E. coli">
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Collection (Optional)</label>
+                        <label class="section-label">Collection (Optional)</label>
                         <select name="collection" class="form-select">
-                            <option value="">— Independent Sample (Unlinked) —</option>
+                            <option value="">— Independent Sample —</option>
                             {% for col in collections %}
                                 <option value="{{ col.id }}">{{ col.name }} ({{ col.biobank.name }})</option>
                             {% endfor %}
@@ -68,12 +90,12 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Storage Location</label>
-                        <input name="storage_location" class="form-control" placeholder="Ex: UltraFreezer 01, Rack B, Box 05">
+                        <label class="section-label">Storage Location</label>
+                        <input name="storage_location" class="form-control" placeholder="Ex: Freezer -80°C, Rack B">
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Visibility</label>
+                        <label class="section-label">Visibility</label>
                         <select name="visibility" class="form-select">
                             <option value="private">Private</option>
                             <option value="group">Group</option>
@@ -82,7 +104,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Initial Status</label>
+                        <label class="section-label">Initial Status</label>
                         <select name="status" class="form-select">
                             <option value="pending">Aguardando Recebimento</option>
                             <option value="qc" selected>Em Controle de Qualidade</option>
@@ -91,16 +113,15 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
-                            Tags
-                            <a href="/?page=tags" class="text-decoration-none small">Edit Tags</a>
-                        </label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="section-label mb-0">Tags</label>
+                            <a href="/?page=tags" class="btn btn-manage-mini rounded shadow-sm">
+                                <i class="bi bi-tags me-1"></i> Manage Tags
+                            </a>
+                        </div>
                         <div id="tagChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;">
                             {% for tag in all_tags %}
-                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" 
-                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">
-                                    {{ tag.name }}
-                                </span>
+                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                         <div id="tagHiddenInputs" style="display:none;"></div>
@@ -110,28 +131,34 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
-                            Metadata Keywords
-                            <a href="/?page=keywords" class="text-decoration-none small">Edit Keys</a>
-                        </label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="section-label mb-0">Keywords</label>
+                            <a href="/?page=keywords" class="btn btn-manage-mini rounded shadow-sm">
+                                <i class="bi bi-key me-1"></i> Manage Keywords
+                            </a>
+                        </div>
                         <div id="keywordChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;"></div>
                         <div id="keywordHiddenInputs" style="display:none;"></div>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
-                            <i class="bi bi-key me-1"></i> Add Metadata
+                            <i class="bi bi-key me-1"></i> Add Keywords
                         </button>
                     </div>
 
+                    <div class="col-12 mt-4">
+                        <label class="section-label"><i class="bi bi-journal-text me-1"></i>Scientific Notebook / ELN</label>
+                        <div id="eln-editor"></div>
+                        <small class="text-muted">Descreva protocolos, medições e observações experimentais aqui.</small>
+                    </div>
+
                     <div class="col-12 mt-3">
-                        <label class="form-label fw-bold small text-uppercase">Attachments</label>
+                        <label class="section-label">Attachments</label>
                         <div id="fileContainer" class="mb-2"></div>
-                        <button type="button" id="addFileBtn" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-paperclip"></i> Add File
-                        </button>
+                        <button type="button" id="addFileBtn" class="btn btn-sm btn-outline-info"><i class="bi bi-paperclip"></i> Add File</button>
                     </div>
                 </div>
 
                 <div class="text-end mt-4 border-top pt-3">
-                    <button type="submit" class="btn btn-primary px-5">Save Specimen</button>
+                    <button type="submit" class="btn btn-primary px-5 shadow-sm">Save Specimen</button>
                 </div>
             </form>
         </div>
@@ -146,7 +173,6 @@
                         <th>Sample ID</th>
                         <th>Info / Status</th>
                         <th>Hierarchy / Location</th>
-                        <th>Files & Meta</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -157,103 +183,21 @@
                             <div class="fw-bold text-primary">{{ s.sample_id }}</div>
                             <small class="text-muted" style="font-size: 0.6rem;">{{ s.uuid }}</small>
                         </td>
-                        <td>
-                            <div class="small fw-bold">{{ s.organism_name|default:"—" }}</div>
-                            {% if s.status == 'available' %}
-                                <span class="badge bg-success-soft text-success small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
-                            {% elif s.status == 'qc' %}
-                                <span class="badge bg-warning-soft text-warning small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
-                            {% else %}
-                                <span class="badge bg-secondary-soft text-secondary small" style="font-size: 0.7rem;">● {{ s.get_status_display }}</span>
-                            {% endif %}
-                        </td>
+                        <td><div class="small fw-bold">{{ s.organism_name|default:"—" }}</div></td>
                         <td>
                             <div class="small"><i class="bi bi-diagram-3 me-1"></i>{{ s.collection.name|default:"Avulsa" }}</div>
-                            <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ s.storage_location|default:"N/A" }}</div>
-                        </td>
-                        <td>
-                            {% if s.files.all %}
-                                <button class="btn btn-sm btn-outline-primary mb-1" data-bs-toggle="modal" data-bs-target="#fileModal{{ s.id }}">
-                                    <i class="bi bi-files"></i> {{ s.files.count }} Files
-                                </button>
-                            {% endif %}
-                            <div class="d-flex flex-wrap gap-1 mt-1">
-                                {% for t in s.tags.all %}<span class="badge bg-light text-dark border fw-normal" style="font-size:0.65rem;">{{ t.name }}</span>{% endfor %}
-                            </div>
                         </td>
                         <td class="text-end">
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#historyModal{{ s.id }}" title="History">
-                                    <i class="bi bi-clock-history"></i>
-                                </button>
-                                {% if s.can_delete %}
-                                <form method="post" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="delete_sample">
-                                    <input type="hidden" name="sample_id" value="{{ s.id }}">
-                                    <button class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></button>
-                                </form>
-                                {% endif %}
+                                <a href="{% url 'print_sample_label' s.id %}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer"></i></a>
+                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#historyModal{{ s.id }}"><i class="bi bi-clock-history"></i></button>
                             </div>
                         </td>
                     </tr>
-
-                    <div class="modal fade" id="historyModal{{ s.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Tracking History: {{ s.sample_id }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="timeline p-2">
-                                        {% for event in s.events.all %}
-                                        <div class="timeline-item">
-                                            <div class="small fw-bold">{{ event.get_event_type_display }}</div>
-                                            <div class="text-muted small">{{ event.timestamp|date:"d/m/Y H:i" }}</div>
-                                            {% if event.location_snapshot %}<div class="small text-primary italic">At: {{ event.location_snapshot }}</div>{% endif %}
-                                            <p class="small mb-0">{{ event.notes }}</p>
-                                        </div>
-                                        {% empty %}
-                                        <p class="text-center text-muted">No events recorded.</p>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal fade" id="fileModal{{ s.id }}" tabindex="-1">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Files for {{ s.sample_id }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="row g-3">
-                                        {% for f in s.files.all %}
-                                        <div class="col-md-6">
-                                            <div class="border rounded p-2 text-center h-100">
-                                                {% if f.category == 'image' %}
-                                                    <img src="{{ f.file.url }}" class="preview-img mb-2" alt="Microscopy">
-                                                {% else %}
-                                                    <div class="display-4"><i class="bi bi-file-earmark-medical"></i></div>
-                                                {% endif %}
-                                                <div class="small fw-bold text-truncate">{{ f.file.name }}</div>
-                                                <div class="badge bg-light text-dark mb-2">{{ f.get_category_display }}</div>
-                                                <div class="d-grid">
-                                                    <a href="{{ f.file.url }}" target="_blank" class="btn btn-sm btn-primary">Open / Download</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No samples found.</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -262,10 +206,42 @@
 
     {% include "internal/tags/add_tag.html" %}
     {% include "internal/keywords/add_keyword.html" %}
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+    // Configuração do Editor
+    var quill = new Quill('#eln-editor', {
+        theme: 'snow',
+        placeholder: 'Protocolos e observações experimentais...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, false] }],
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'blockquote'],
+                ['clean']
+            ]
+        }
+    });
+
+    // Sincroniza o conteúdo do Editor com o formulário antes de enviar
+    const sampleForm = document.getElementById('mainSampleForm');
+    if (sampleForm) {
+        sampleForm.onsubmit = function() {
+            const notesInput = document.getElementById('scientific_notes_input');
+            // Só salva se o editor tiver conteúdo (evita enviar strings de espaço em branco do Quill)
+            if (quill.getText().trim().length > 0) {
+                notesInput.value = quill.root.innerHTML;
+            } else {
+                notesInput.value = "";
+            }
+            return true;
+        };
+    }
+</script>
+
 <script src="{% static 'internal/samples/samples.js' %}"></script>
 {% endblock %}

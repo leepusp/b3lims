@@ -1,10 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Imports atualizados para a nova estrutura de diretórios
-from core.models.tags import Tag
-from core.models.keywords import KeywordValue
-
+# Importação direta dos módulos para evitar loop circular
+from core.models.tags.model import Tag
+from core.models.keywords.model import KeywordValue
 
 class Biobank(models.Model):
     """

@@ -3,55 +3,66 @@
 
 {% block title %}Collections · Biobank LIMS{% endblock %}
 {% block page_title %}Collections{% endblock %}
-{% block page_subtitle %}Manage biological assets and research groupings{% endblock %}
+{% block page_subtitle %}Manage groupings of specimens and research projects{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/collections/collections.css' %}">
+<style>
+    .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
+    /* Estilo do botão mini */
+    .btn-manage-mini { font-size: 0.7rem; padding: 2px 8px; background: white; border: 1px solid #dee2e6; color: #333; text-decoration: none; }
+    .btn-manage-mini:hover { background: #f8f9fa; color: #000; }
+    /* Área dos chips */
+    .chip-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; min-height: 50px; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
 
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="h4 mb-0"><i class="bi bi-collection me-2"></i>Research Collections</h3>
+    </div>
+
     {% if user.is_authenticated %}
-    <section class="card shadow-sm mb-5 border-0">
+    <section class="card shadow-sm border-0 mb-5">
         <div class="card-header bg-white py-3">
             <h5 class="card-title mb-0 text-primary"><i class="bi bi-folder-plus me-2"></i>Create New Collection</h5>
         </div>
         <div class="card-body">
-            <form method="post" class="collection-form" id="mainCollectionForm">
+            <form method="post" action="{% url 'home' %}?page=collections">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_collection">
 
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Collection Name</label>
-                        {{ collection_form.name }}
-                        <div class="form-text">Ex: "Clinical Isolates 2023" or "Phage Library A"</div>
+                        <label class="section-label">Collection Name</label>
+                        <input name="name" class="form-control" placeholder="Ex: Zika Virus Study 2024" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="section-label">Connect to Biobank</label>
+                        <select name="biobank" class="form-select" required>
+                            {% for b in biobanks %}
+                                <option value="{{ b.id }}">{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-12">
+                         <label class="section-label">Description</label>
+                         <textarea name="description" class="form-control" rows="3" placeholder="Brief description of this collection..."></textarea>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase">Target Biobank</label>
-                        {{ collection_form.biobank }}
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label fw-bold small text-uppercase">Scientific Description</label>
-                        {{ collection_form.description }}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
-                            Tags
-                            <a href="/?page=tags" class="text-decoration-none small">Edit Tags</a>
-                        </label>
-                        <div id="tagChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 48px;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="section-label mb-0">Tags</label>
+                            <a href="/?page=tags" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
+                                <i class="bi bi-tags me-1"></i> Manage Tags
+                            </a>
+                        </div>
+                        <div id="tagChipContainer" class="chip-box mb-2">
                             {% for tag in all_tags %}
-                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" 
-                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">
-                                    {{ tag.name }}
-                                </span>
-                            {% empty %}
-                                <span class="text-muted small">No tags defined.</span>
+                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2"
+                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                         <div id="tagHiddenInputs" style="display:none;"></div>
@@ -61,108 +72,199 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-uppercase d-flex justify-content-between">
-                            Metadata (Keywords)
-                            <a href="/?page=keywords" class="text-decoration-none small">Edit Keys</a>
-                        </label>
-                        <div id="keywordChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 48px;">
-                            </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="section-label mb-0">Keywords</label>
+                            <a href="/?page=keywords" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
+                                <i class="bi bi-key me-1"></i> Manage Keywords
+                            </a>
+                        </div>
+                        <div id="keywordChipContainer" class="chip-box mb-2"></div>
                         <div id="keywordHiddenInputs" style="display:none;"></div>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
-                            <i class="bi bi-key me-1"></i> Add Metadata
+                            <i class="bi bi-key me-1"></i> Add Keywords
                         </button>
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-top text-end">
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="bi bi-check-lg me-2"></i>Initialize Collection
-                    </button>
+                <div class="text-end mt-4 pt-3 border-top">
+                    <button class="btn btn-primary px-5 shadow-sm">Create Collection</button>
                 </div>
             </form>
         </div>
     </section>
     {% endif %}
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="h4 mb-0 text-dark">Registered Collections</h3>
-        <div class="badge bg-primary rounded-pill">{{ collections|length }} Active Groups</div>
-    </div>
-
-    {% if collections %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-        {% for c in collections %}
-        <div class="col">
-            <div class="card h-100 shadow-sm border-0 transition-hover">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="card-title text-primary fw-bold mb-0">{{ c.name }}</h5>
-                        <span class="badge bg-light text-dark border small">{{ c.visibility|title }}</span>
-                    </div>
-
-                    <div class="mb-3 small">
-                        <div class="text-muted mb-1">
-                            <i class="bi bi-bank me-2"></i><strong>Biobank:</strong> {{ c.biobank.name }}
-                        </div>
-                        <div class="text-muted">
-                            <i class="bi bi-person-badge me-2"></i><strong>PI/Owner:</strong> {{ c.owner.get_full_name|default:c.owner.username }}
-                        </div>
-                    </div>
-
-                    {% if c.description %}
-                        <p class="card-text text-secondary small mb-3 text-truncate-3" title="{{ c.description }}">
-                            {{ c.description }}
-                        </p>
-                    {% endif %}
-
-                    <div class="mb-2">
-                        {% for t in c.tags.all %}
-                            <span class="badge bg-info text-dark fw-normal" style="font-size: 0.7rem;">{{ t.name }}</span>
-                        {% endfor %}
-                    </div>
-
-                    <div class="mb-3">
-                        {% for k in c.keywords.all %}
-                            <small class="d-inline-block bg-light border rounded px-2 py-1 me-1 mb-1 text-muted" style="font-size: 0.7rem;">
-                                <strong>{{ k.keyword.name }}:</strong> {{ k.value }}
-                            </small>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="card-footer bg-white border-0 pt-0 pb-3">
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <a href="/?page=samples&collection={{ c.id }}" class="btn btn-sm btn-primary w-100">
-                                <i class="bi bi-box-seam me-1"></i> Samples
-                            </a>
-                        </div>
-                        <div class="col-6">
-                            {% if c.can_manage_members %}
-                            <a href="/collections/{{ c.id }}/members/" class="btn btn-sm btn-outline-secondary w-100">
-                                <i class="bi bi-people me-1"></i> Members
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-5 bg-light rounded border">
-        <i class="bi bi-folder2-open display-4 text-muted"></i>
-        <p class="mt-3 text-muted">No collections found. Start by creating one above.</p>
-    </div>
-    {% endif %}
-
     {% include "internal/tags/add_tag.html" %}
     {% include "internal/keywords/add_keyword.html" %}
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/collections/collections.js' %}"></script>
+<script>
+/* =========================================================
+   COLLECTIONS JS - INLINE VERSION
+   Uses "Submit Interception" Logic (Same as Biobanks/Sample)
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    // --- 1. TAGS: SELEÇÃO ---
+    function initTagSelector() {
+        const tagChips = document.querySelectorAll(".selectable-tag");
+        const hiddenContainer = document.getElementById("tagHiddenInputs");
+
+        tagChips.forEach(chip => {
+            if (chip.dataset.bound === "1") return;
+            chip.dataset.bound = "1";
+
+            chip.addEventListener("click", function() {
+                const tagId = this.dataset.tagId;
+
+                // Toggle Visual
+                this.classList.toggle("bg-white");
+                this.classList.toggle("text-dark");
+                this.classList.toggle("bg-primary");
+                this.classList.toggle("text-white");
+
+                // Toggle Hidden Input
+                const existing = hiddenContainer.querySelector(`input[value="${tagId}"]`);
+                if (existing) {
+                    existing.remove();
+                } else {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "tags";
+                    input.value = tagId;
+                    hiddenContainer.appendChild(input);
+                }
+            });
+        });
+    }
+
+    // --- 2. TAGS: CRIAÇÃO (AJAX SUBMIT) ---
+    const addTagForm = document.getElementById("addTagForm");
+    if (addTagForm) {
+        addTagForm.addEventListener("submit", function(e) {
+            e.preventDefault(); // Impede refresh (permite Enter)
+
+            const fd = new FormData(this);
+            const csrf = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+            const btn = this.querySelector("[type=submit]");
+            const feedback = document.getElementById("tagErrorFeedback");
+
+            // UI Loading
+            btn.disabled = true;
+
+            fetch("/ajax/add_tag/", {
+                method: "POST",
+                body: fd,
+                headers: { "X-CSRFToken": csrf }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success || data.id) {
+                    // Visual
+                    const chipContainer = document.getElementById("tagChipContainer");
+                    const chip = document.createElement("span");
+                    chip.className = "badge rounded-pill border selectable-tag bg-primary text-white border-primary m-1 p-2";
+                    chip.dataset.tagId = data.id;
+                    chip.innerText = data.name;
+                    chip.style.cursor = "pointer";
+                    chipContainer.appendChild(chip);
+
+                    // Hidden Input
+                    const hiddenContainer = document.getElementById("tagHiddenInputs");
+                    const hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "tags";
+                    hidden.value = data.id;
+                    hiddenContainer.appendChild(hidden);
+
+                    // Re-bind
+                    initTagSelector();
+
+                    // Close Modal
+                    const modalEl = document.getElementById("addTagModal");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    else new bootstrap.Modal(modalEl).hide();
+
+                    this.reset();
+                    if(feedback) feedback.style.display = "none";
+                } else {
+                    if(feedback) {
+                        feedback.innerText = data.error || "Error creating tag";
+                        feedback.style.display = "block";
+                    }
+                }
+            })
+            .catch(err => {
+                if(feedback) {
+                    feedback.innerText = "Connection error";
+                    feedback.style.display = "block";
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // --- 3. KEYWORDS: CRIAÇÃO LOCAL (SUBMIT) ---
+    const addKeywordForm = document.getElementById("addKeywordForm");
+    if (addKeywordForm) {
+        addKeywordForm.addEventListener("submit", function(e) {
+            e.preventDefault(); // Impede refresh
+
+            const key = (document.getElementById("keywordKey") || this.querySelector("[name=key]")).value.trim();
+            const val = (document.getElementById("keywordValue") || this.querySelector("[name=value]")).value.trim();
+            const feedback = document.getElementById("keywordErrorFeedback");
+
+            if (!key || !val) {
+                if(feedback) {
+                    feedback.innerText = "Both fields required";
+                    feedback.style.display = "block";
+                }
+                return;
+            }
+
+            const container = document.getElementById("keywordChipContainer");
+            const hiddenContainer = document.getElementById("keywordHiddenInputs");
+
+            // Visual
+            const chip = document.createElement("span");
+            chip.className = "badge bg-light text-dark border p-2 m-1";
+            chip.innerHTML = `${key}: ${val} <i class="bi bi-x text-danger ms-2" style="cursor:pointer"></i>`;
+
+            // Hidden
+            const pair = `${key}:::${val}`;
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = "keyword_pairs";
+            hidden.value = pair;
+
+            // Remove logic
+            chip.querySelector("i").onclick = () => {
+                chip.remove();
+                hidden.remove();
+            };
+
+            container.appendChild(chip);
+            hiddenContainer.appendChild(hidden);
+
+            // Close Modal
+            const modalEl = document.getElementById("addKeywordModal");
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            else new bootstrap.Modal(modalEl).hide();
+
+            this.reset();
+            if(feedback) feedback.style.display = "none";
+        });
+    }
+
+    // Init
+    initTagSelector();
+});
+</script>
 {% endblock %}

@@ -1,40 +1,26 @@
-<div class="workspace-section">
+<div class="workspace-section shadow-sm" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+    <h3 class="h5 mb-4"><i class="bi bi-clock-history me-2 text-info"></i>Recent Activity</h3>
 
-    <h3>Recent Activity</h3>
-
-    <div class="activity-feed">
-
-        <div class="activity-item">
-            <span class="activity-action">Sample registered</span>
-            <span class="activity-entity">ABC-123</span>
-            <span class="activity-meta">
-                by <strong>{{ request.user.username }}</strong> · moments ago
-            </span>
+    <div class="list-group list-group-flush">
+        {% for event in stats.recent_activity %}
+        <div class="list-group-item px-0 py-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="badge bg-primary text-white small mb-1" style="font-size: 0.65rem;">
+                        {{ event.get_event_type_display }}
+                    </span>
+                    <p class="mb-1 small fw-bold text-dark">{{ event.notes|truncatechars:100 }}</p>
+                    <small class="text-muted">
+                        <i class="bi bi-person me-1"></i>{{ event.user.username }}
+                    </small>
+                </div>
+                <span class="text-muted small" style="font-size: 0.75rem;">{{ event.timestamp|date:"d/m/Y H:i" }}</span>
+            </div>
         </div>
-
-        <div class="activity-item">
-            <span class="activity-action">Collection created</span>
-            <span class="activity-entity">Phages</span>
-            <span class="activity-meta">
-                by <strong>{{ request.user.username }}</strong> · today
-            </span>
+        {% empty %}
+        <div class="text-center py-4">
+            <p class="text-muted small mb-0">No recent activity recorded.</p>
         </div>
-
-        <div class="activity-item">
-            <span class="activity-action">Biobank updated</span>
-            <span class="activity-entity">CEPID B3</span>
-            <span class="activity-meta">
-                system event · today
-            </span>
-        </div>
-
-        <!-- FUTURO -->
-        {# 
-        {% for event in recent_activity %}
-            ...
         {% endfor %}
-        #}
-
     </div>
-
 </div>

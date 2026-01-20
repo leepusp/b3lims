@@ -1,26 +1,20 @@
-<div class="sidebar-box">
+<div class="sidebar-box shadow-sm" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+    <h4 class="h6 fw-bold mb-3"><i class="bi bi-person-badge me-2 text-secondary"></i>User Context</h4>
+    
+    <div class="d-flex align-items-center mb-3">
+        <div class="avatar bg-primary text-white me-2 shadow-sm" style="width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem;">
+            {{ request.user.username|slice:":1"|upper }}
+        </div>
+        <div style="overflow: hidden;">
+            <div class="fw-bold text-dark text-truncate" style="font-size: 0.95rem;">{{ request.user.username }}</div>
+            <div class="text-muted text-truncate" style="font-size: 0.75rem;">{{ request.user.email|default:"Sessão Ativa" }}</div>
+        </div>
+    </div>
 
-    <h4>User Context</h4>
-
-    <p>
-        <strong>Account:</strong><br>
-        {{ request.user.username }}
-    </p>
-
-    <p>
-        <strong>Role:</strong><br>
-        {% if request.user.is_superuser %}
-            System Administrator
-        {% elif request.user.is_staff %}
-            Biobank Curator
-        {% else %}
-            Registered User
-        {% endif %}
-    </p>
-
-    <p class="section-subtitle" style="margin-top:10px;">
-        Your role defines which biobanks, collections and samples you are
-        allowed to manage within the system.
-    </p>
-
+    <div class="p-2 rounded bg-light border">
+        <label class="text-uppercase text-muted fw-bold d-block" style="font-size: 0.6rem; margin-bottom: 2px;">Nível de Acesso</label>
+        <span class="badge {% if request.user.is_superuser %}bg-danger{% else %}bg-dark{% endif %} w-100">
+            {% if request.user.is_superuser %}Administrador{% elif request.user.is_staff %}Curador{% else %}Pesquisador{% endif %}
+        </span>
+    </div>
 </div>
