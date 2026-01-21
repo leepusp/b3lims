@@ -48,7 +48,7 @@ python3 -m venv biobank-env
 source biobank-env/bin/activate
 
 # Ativar no Windows
-# biobank-env\Scripts\activate
+biobank-env\Scripts\activate
 4. Instalar Dependências
 Bash
 
