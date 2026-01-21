@@ -7,3 +7,11 @@ graphviz==0.21
 pydot==4.0.1
 pyparsing==3.2.5
 sqlparse==0.5.3
+
+# Bibliotecas para Bioinformática e Ciência
+biopython==1.84
+numpy==2.2.1
+
+# Utilitários de ambiente e produção
+python-dotenv==1.0.1
+gunicorn==23.0.0

@@ -14,10 +14,10 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 # =========================
-# APLICAÇÕES (ORDEM CORRIGIDA)
+# APLICAÇÕES
 # =========================
 INSTALLED_APPS = [
-    # 1. Django Core Apps (Devem vir primeiro)
+    # 1. Django Core Apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -25,10 +25,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # 2. App Principal (Usando CoreConfig para ativar Signals de rastreamento)
+    # 2. App Principal (Agora contém o Lab Tools)
     "core.apps.CoreConfig",
 
-    # 3. Utilitários Externos
+    # REMOVIDO: "lab_tools"
+    # (Não incluímos mais aqui pois foi integrado ao core)
+
+    # 4. Utilitários Externos
     "django_extensions",
     "rest_framework",
     "django_filters",
@@ -59,8 +62,8 @@ WSGI_APPLICATION = "biobank.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        # ROOT dos templates (mapeado para sua pasta interfaces)
         "DIRS": [
+            # O Django vai procurar os templates em: ~/biobank/core/interfaces
             BASE_DIR / "core" / "interfaces",
         ],
         "APP_DIRS": True,
@@ -89,11 +92,10 @@ DATABASES = {
 # STATIC FILES (CSS, JS, IMAGES)
 # =========================
 STATIC_URL = "/static/"
-# Onde o Django busca arquivos estáticos extras (sua pasta interfaces)
 STATICFILES_DIRS = [
+    # O Django vai procurar estáticos em: ~/biobank/core/interfaces
     BASE_DIR / "core" / "interfaces",
 ]
-# Pasta onde o collectstatic jogará os arquivos em produção
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # =========================

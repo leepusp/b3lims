@@ -69,6 +69,21 @@ body.lims-layout {
     gap: 6px;
 }
 
+.nav-section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+    margin: 12px 0 4px 12px;
+    font-weight: 700;
+}
+
+.sidebar-divider {
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin: 8px 0;
+    opacity: 1;
+}
+
 .sidebar-nav .nav-link {
     display: flex;
     align-items: center;
@@ -78,6 +93,7 @@ body.lims-layout {
     color: #fff;
     text-decoration: none;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .sidebar-nav .nav-link:hover,
@@ -87,6 +103,8 @@ body.lims-layout {
 
 .sidebar-nav i {
     font-size: 18px;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* Footer */
@@ -105,11 +123,9 @@ body.lims-layout {
 }
 
 .lims-sidebar.collapsed .logo-block,
-.lims-sidebar.collapsed .logo-sub {
-    display: none;
-}
-
-.lims-sidebar.collapsed .nav-label {
+.lims-sidebar.collapsed .logo-sub,
+.lims-sidebar.collapsed .nav-label,
+.lims-sidebar.collapsed .nav-section-label {
     display: none;
 }
 
@@ -170,6 +186,7 @@ body.lims-layout {
     align-items: center;
     justify-content: center;
     font-weight: 700;
+    margin-right: 8px;
 }
 
 /* =========================================================

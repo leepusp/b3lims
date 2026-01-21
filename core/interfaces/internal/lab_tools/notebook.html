@@ -1,0 +1,186 @@
+{% extends 'internal/common/base.html' %}
+{% load static %}
+
+{% block title %}Caderno de Laboratório{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+    /* Layout de altura total */
+    .notebook-wrapper {
+        display: flex;
+        height: calc(100vh - 120px); /* Desconta o cabeçalho */
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    /* Sidebar da lista de entradas */
+    .notebook-sidebar {
+        width: 280px;
+        background: #f8f9fa;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .entry-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .entry-item {
+        display: block;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        color: #333;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    
+    .entry-item:hover { background: #e9ecef; }
+    .entry-item.active { background: #e3f2fd; border-left: 4px solid #0d6efd; }
+    
+    /* Área do Editor */
+    .notebook-editor-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* Remove bordas padrão do Quill para parecer mais limpo */
+    .ql-toolbar { border: none !important; border-bottom: 1px solid #eee !important; }
+    .ql-container { border: none !important; font-size: 16px; }
+    
+    /* Botão Salvar Flutuante (feedback visual) */
+    .save-status { font-size: 0.85rem; color: #6c757d; margin-right: 15px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="m-0"><i class="bi bi-journal-bookmark me-2"></i>ELN Notebook</h4>
+        <a href="{% url 'notebook_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Nova Entrada
+        </a>
+    </div>
+
+    <div class="notebook-wrapper shadow-sm">
+        
+        <div class="notebook-sidebar">
+            <div class="p-3 bg-light border-bottom">
+                <input type="text" class="form-control form-control-sm" placeholder="Buscar entrada...">
+            </div>
+            <div class="entry-list">
+                {% for entry in entries %}
+                <a href="?entry_id={{ entry.id }}" class="entry-item {% if active_entry.id == entry.id %}active{% endif %}">
+                    <div class="fw-bold text-truncate">{{ entry.title }}</div>
+                    <small class="text-muted">{{ entry.created_at|date:"d M Y, H:i" }}</small>
+                </a>
+                {% empty %}
+                <div class="p-4 text-center text-muted small">
+                    Nenhuma entrada encontrada.<br>Crie a primeira!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="notebook-editor-area">
+            {% if active_entry %}
+                <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                    <input type="text" id="entry-title" class="form-control border-0 fw-bold fs-5" 
+                           value="{{ active_entry.title }}" placeholder="Título do Experimento">
+                    
+                    <div class="d-flex align-items-center">
+                        <span id="save-status" class="save-status">Salvo</span>
+                        <button class="btn btn-success btn-sm" onclick="saveEntry()">
+                            <i class="bi bi-save"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="editor-container">
+                    {{ active_entry.content|safe }}
+                </div>
+            {% else %}
+                <div class="d-flex h-100 align-items-center justify-content-center text-muted">
+                    Selecione uma entrada ao lado para editar.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+    {% if active_entry %}
+    // 1. Inicializa o Editor
+    var quill = new Quill('#editor-container', {
+        theme: 'snow',
+        placeholder: 'Descreva os detalhes do experimento, reagentes e observações...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'image', 'code-block'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    // 2. Lógica de Salvamento Automático e Manual
+    const saveStatus = document.getElementById('save-status');
+    let timeoutId;
+
+    function saveEntry() {
+        saveStatus.textContent = "Salvando...";
+        
+        const data = {
+            title: document.getElementById('entry-title').value,
+            content: quill.root.innerHTML // Pega o HTML gerado
+        };
+
+        fetch("{% url 'notebook_save_api' active_entry.id %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                saveStatus.textContent = "Salvo às " + new Date().toLocaleTimeString();
+                saveStatus.classList.remove('text-danger');
+            } else {
+                saveStatus.textContent = "Erro ao salvar!";
+                saveStatus.classList.add('text-danger');
+            }
+        });
+    }
+
+    // Salvar automaticamente após parar de digitar por 2 segundos
+    quill.on('text-change', function() {
+        saveStatus.textContent = "Não salvo...";
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 2000);
+    });
+    
+    document.getElementById('entry-title').addEventListener('input', function() {
+        saveStatus.textContent = "Não salvo...";
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 2000);
+    });
+
+    {% endif %}
+</script>
+{% endblock %}
+

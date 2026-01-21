@@ -1,0 +1,215 @@
+{% extends 'internal/common/base.html' %}
+
+{% block title %}{{ sequence.name }} | Visualizador Bioinformático{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Layout de Grade Principal */
+    .viewer-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        height: calc(100vh - 70px);
+        background: #fff;
+        overflow: hidden;
+    }
+
+    /* Painel de Controle Lateral */
+    .viewer-sidebar {
+        background: #f8f9fa;
+        border-right: 1px solid #dee2e6;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Área de Visualização Dinâmica */
+    .viewer-main {
+        position: relative;
+        background: #ffffff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Canvas 3D e Mapa de Plasmídeo */
+    #canvas-3d, #plasmid-map {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Customização do Mapa de Plasmídeo */
+    #plasmid-map {
+        background: #fff;
+    }
+
+    /* Visualização Linear (Estilo Benchling) */
+    .fasta-view {
+        padding: 40px;
+        font-family: 'Fira Code', 'Courier New', monospace;
+        font-size: 14px;
+        overflow-y: auto;
+        background: #fafafa;
+    }
+
+    .seq-row { display: flex; margin-bottom: 2px; }
+    .seq-idx { width: 60px; color: #adb5bd; text-align: right; margin-right: 20px; font-size: 12px; }
+    .seq-txt { letter-spacing: 1px; font-weight: 500; color: #212529; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viewer-layout">
+    <div class="viewer-sidebar shadow-sm">
+        <a href="{% url 'molecular_index' %}" class="btn btn-sm btn-link mb-3 p-0 text-decoration-none text-muted">
+            <i class="bi bi-arrow-left"></i> Voltar ao Inventário
+        </a>
+
+        <h4 class="h5 mb-1 text-primary">{{ sequence.name }}</h4>
+        <div class="mb-3">
+            <span class="badge {% if sequence.seq_type == 'PDB' %}bg-info text-dark{% else %}bg-success{% endif %}">
+                {{ sequence.get_seq_type_display }}
+            </span>
+        </div>
+
+        <p class="small text-muted">{{ sequence.description|default:"Sem descrição adicional." }}</p>
+
+        <hr>
+
+        {% if sequence.seq_type == 'PDB' %}
+            <h6 class="fw-bold small text-uppercase mb-3">Estilo de Visualização</h6>
+            <div class="d-grid gap-2 mb-4">
+                <button class="btn btn-sm btn-outline-primary text-start" onclick="updateStyle('cartoon')">
+                    <i class="bi bi-layers me-2"></i>Cartoon (Fitas)
+                </button>
+                <button class="btn btn-sm btn-outline-primary text-start" onclick="updateStyle('surface')">
+                    <i class="bi bi-cloud me-2"></i>Superfície Molecular
+                </button>
+                <button class="btn btn-sm btn-outline-primary text-start" onclick="updateStyle('stick')">
+                    <i class="bi bi-node-plus me-2"></i>Bastões (Atômico)
+                </button>
+            </div>
+
+            <h6 class="fw-bold small text-uppercase mb-3">Anotações</h6>
+            <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" id="toggleLabels" onchange="toggleLabels(this.checked)">
+                <label class="form-check-label small" for="toggleLabels">Mostrar Resíduos</label>
+            </div>
+        {% else %}
+            <h6 class="fw-bold small text-uppercase mb-3">Modo de Exibição</h6>
+            <div class="d-grid gap-2 mb-4">
+                <button class="btn btn-sm btn-outline-success text-start" onclick="renderPlasmid('circular')">
+                    <i class="bi bi-circle me-2"></i>Mapa Circular
+                </button>
+                <button class="btn btn-sm btn-outline-success text-start" onclick="renderPlasmid('linear')">
+                    <i class="bi bi-distribute-horizontal me-2"></i>Mapa Linear
+                </button>
+            </div>
+
+            <button class="btn btn-sm btn-primary w-100 mt-auto" onclick="copySequence()">
+                <i class="bi bi-clipboard me-2"></i>Copiar Sequência
+            </button>
+        {% endif %}
+
+        <div class="mt-4 pt-3 border-top">
+            <button class="btn btn-sm btn-light w-100" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise me-2"></i>Recarregar
+            </button>
+        </div>
+    </div>
+
+    <div class="viewer-main">
+        {% if sequence.seq_type == 'PDB' %}
+            <div id="canvas-3d"></div>
+        {% else %}
+            <div id="plasmid-map"></div>
+            <div class="fasta-view border-top">
+                {% for row in formatted_seq %}
+                <div class="seq-row">
+                    <div class="seq-idx">{{ row.index }}</div>
+                    <div class="seq-txt">{{ row.text }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <textarea id="hidden-seq" style="display:none;">{{ sequence.sequence_data }}</textarea>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
+<script src="https://unpkg.com/seqviz"></script>
+
+<script>
+    const seqData = `{{ sequence.sequence_data|escapejs }}`;
+
+    // --- LÓGICA 3D (PROTEÍNAS) ---
+    {% if sequence.seq_type == 'PDB' %}
+    let viewer = null;
+
+    $(function() {
+        let element = $('#canvas-3d');
+        viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
+        viewer.addModel(seqData, "pdb");
+        viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+        viewer.zoomTo();
+        viewer.render();
+    });
+
+    function updateStyle(style) {
+        if(!viewer) return;
+        viewer.removeAllSurfaces();
+        viewer.setStyle({}, {});
+
+        if(style === 'cartoon') {
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+        } else if(style === 'stick') {
+            viewer.setStyle({}, {stick: {radius: 0.15, colorscheme: 'Jmol'}});
+        } else if(style === 'surface') {
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+            viewer.addSurface($3Dmol.SurfaceType.MS, {opacity: 0.7, color: 'white'});
+        }
+        viewer.render();
+    }
+
+    function toggleLabels(show) {
+        if(show) {
+            viewer.addResLabels({prop:'resn'}, {fontColor:'black', backgroundColor:'white', backgroundOpacity:0.5});
+        } else {
+            viewer.removeAllLabels();
+        }
+        viewer.render();
+    }
+    {% endif %}
+
+    // --- LÓGICA DE PLASMÍDEO (DNA/SEQVIZ) ---
+    {% if sequence.seq_type != 'PDB' %}
+    function renderPlasmid(mode) {
+        const container = document.getElementById("plasmid-map");
+        container.innerHTML = ""; // Limpa anterior
+
+        window.seqviz.Viewer(container, {
+            name: "{{ sequence.name }}",
+            seq: seqData,
+            viewer: mode,
+            showAnnotations: true,
+            showComplement: true,
+            style: { height: "100%", width: "100%" },
+            colors: ["#8ce8ad", "#82c91e", "#fab005", "#fd7e14"]
+        }).render();
+    }
+
+    // Inicializa como circular por padrão
+    $(document).ready(() => renderPlasmid('circular'));
+
+    function copySequence() {
+        navigator.clipboard.writeText(document.getElementById("hidden-seq").value).then(() => {
+            alert("Sequência copiada!");
+        });
+    }
+    {% endif %}
+</script>
+{% endblock %}

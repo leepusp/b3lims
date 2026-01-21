@@ -9,23 +9,33 @@
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
+    /* Estilos Específicos da Página de Amostras */
     .timeline-item { border-left: 2px solid #e9ecef; padding-left: 15px; position: relative; padding-bottom: 10px; }
     .timeline-item::before { content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; background: #0d6efd; border-radius: 50%; }
     .preview-img { max-width: 100%; height: auto; border-radius: 4px; }
     .print-alert { background-color: #f8f9fa; border-left: 4px solid #0d6efd; }
     .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
+
+    /* Botões Mini */
     .btn-manage-mini { font-size: 0.7rem; padding: 2px 8px; background: white; border: 1px solid #dee2e6; color: #333; text-decoration: none; }
     .btn-manage-mini:hover { background: #f8f9fa; color: #000; }
+
+    /* Área dos Chips (Tags/Keywords) */
+    .chip-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; min-height: 50px; }
 
     /* Estilo para o Editor do Caderno de Laboratório */
     #eln-editor { height: 250px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
     .ql-toolbar { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f8f9fa; }
+
+    /* Uploads */
+    .border-dashed { border-style: dashed !important; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
 
+    {# --- Bloco de Mensagens / Alerta de Impressão --- #}
     {% if messages %}
         {% for message in messages %}
             {% if "sample_created_id" in message.extra_tags %}
@@ -58,9 +68,11 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_sample">
 
+                {# Input oculto para receber o HTML do Quill #}
                 <input type="hidden" name="scientific_notes" id="scientific_notes_input">
 
                 <div class="row g-3">
+                    {# --- Coluna 1: Identificação Básica --- #}
                     <div class="col-md-4">
                         <label class="section-label">Sample ID / Barcode</label>
                         <div class="input-group">
@@ -79,6 +91,7 @@
                         <input name="organism_name" class="form-control" placeholder="Ex: E. coli">
                     </div>
 
+                    {# --- Coluna 2: Localização e Status --- #}
                     <div class="col-md-6">
                         <label class="section-label">Collection (Optional)</label>
                         <select name="collection" class="form-select">
@@ -112,16 +125,18 @@
                         </select>
                     </div>
 
+                    {# --- Coluna 3: Tags e Keywords (Unified) --- #}
                     <div class="col-md-6">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="section-label mb-0">Tags</label>
-                            <a href="/?page=tags" class="btn btn-manage-mini rounded shadow-sm">
+                            <a href="/?page=tags" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
                                 <i class="bi bi-tags me-1"></i> Manage Tags
                             </a>
                         </div>
-                        <div id="tagChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;">
+                        <div id="tagChipContainer" class="chip-box mb-2">
                             {% for tag in all_tags %}
-                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2" data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
+                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2"
+                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                         <div id="tagHiddenInputs" style="display:none;"></div>
@@ -133,17 +148,18 @@
                     <div class="col-md-6">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="section-label mb-0">Keywords</label>
-                            <a href="/?page=keywords" class="btn btn-manage-mini rounded shadow-sm">
+                            <a href="/?page=keywords" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
                                 <i class="bi bi-key me-1"></i> Manage Keywords
                             </a>
                         </div>
-                        <div id="keywordChipContainer" class="p-2 border rounded bg-light mb-2" style="min-height: 45px;"></div>
+                        <div id="keywordChipContainer" class="chip-box mb-2"></div>
                         <div id="keywordHiddenInputs" style="display:none;"></div>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
                             <i class="bi bi-key me-1"></i> Add Keywords
                         </button>
                     </div>
 
+                    {# --- Coluna 4: ELN e Arquivos --- #}
                     <div class="col-12 mt-4">
                         <label class="section-label"><i class="bi bi-journal-text me-1"></i>Scientific Notebook / ELN</label>
                         <div id="eln-editor"></div>
@@ -165,6 +181,7 @@
     </section>
     {% endif %}
 
+    {# --- Tabela de Listagem de Amostras --- #}
     <section class="mt-5">
         <div class="table-responsive bg-white rounded shadow-sm">
             <table class="table table-hover align-middle mb-0">
@@ -204,15 +221,17 @@
         </div>
     </section>
 
+    {# --- Modais (Tags e Keywords) --- #}
     {% include "internal/tags/add_tag.html" %}
     {% include "internal/keywords/add_keyword.html" %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
 <script>
-    // Configuração do Editor
     var quill = new Quill('#eln-editor', {
         theme: 'snow',
         placeholder: 'Protocolos e observações experimentais...',
@@ -226,21 +245,6 @@
             ]
         }
     });
-
-    // Sincroniza o conteúdo do Editor com o formulário antes de enviar
-    const sampleForm = document.getElementById('mainSampleForm');
-    if (sampleForm) {
-        sampleForm.onsubmit = function() {
-            const notesInput = document.getElementById('scientific_notes_input');
-            // Só salva se o editor tiver conteúdo (evita enviar strings de espaço em branco do Quill)
-            if (quill.getText().trim().length > 0) {
-                notesInput.value = quill.root.innerHTML;
-            } else {
-                notesInput.value = "";
-            }
-            return true;
-        };
-    }
 </script>
 
 <script src="{% static 'internal/samples/samples.js' %}"></script>

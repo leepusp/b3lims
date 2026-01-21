@@ -1,6 +1,6 @@
-//* =========================================================
+/* =========================================================
    SAMPLES PAGE JS
-   ELN Integration, File Uploads, Tags & Keywords (Unified)
+   ELN Integration, File Uploads, Tags & Keywords (Unified - Biobank Style)
 ========================================================= */
 
 function getCsrfToken() {
@@ -99,13 +99,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        // Criação AJAX (Clique no botão do Modal)
+        // Criação AJAX (Clique no botão do Modal - ESTILO BIOBANK)
         const btnSaveTag = document.getElementById("btnSaveTagAJAX");
         if (btnSaveTag) {
             const newBtn = btnSaveTag.cloneNode(true);
             btnSaveTag.parentNode.replaceChild(newBtn, btnSaveTag);
 
-            newBtn.addEventListener("click", function() {
+            newBtn.addEventListener("click", function(e) {
+                // Previne qualquer comportamento de submit se o botão estiver dentro de um form
+                e.preventDefault();
+
                 const nameInput = document.getElementById("tagNameInput");
                 const feedback = document.getElementById("tagErrorFeedback");
                 const tagName = nameInput?.value.trim();
@@ -150,7 +153,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         nameInput.value = "";
                         const modalEl = document.getElementById("addTagModal");
-                        bootstrap.Modal.getInstance(modalEl)?.hide();
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
                     } else {
                         if(feedback) { feedback.innerText = data.error || "Error creating tag."; feedback.style.display = "block"; }
                     }
@@ -176,7 +180,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const newBtn = btnSaveKw.cloneNode(true);
             btnSaveKw.parentNode.replaceChild(newBtn, btnSaveKw);
 
-            newBtn.addEventListener("click", function() {
+            newBtn.addEventListener("click", function(e) {
+                e.preventDefault(); // Previne submit padrão
+
                 const keyInput = document.getElementById("keywordKey");
                 const valInput = document.getElementById("keywordValue");
                 const feedback = document.getElementById("keywordErrorFeedback");
@@ -215,7 +221,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if(feedback) feedback.style.display = "none";
 
                 const modalEl = document.getElementById("addKeywordModal");
-                bootstrap.Modal.getInstance(modalEl)?.hide();
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
             });
         }
     }

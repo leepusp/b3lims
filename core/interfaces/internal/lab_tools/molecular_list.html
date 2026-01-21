@@ -1,0 +1,84 @@
+{% extends 'internal/common/base.html' %}
+
+{% block title %}Inventário Molecular | Biobank{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0"><i class="bi bi-capsule me-2"></i>Ferramentas Moleculares</h3>
+            <p class="text-muted mb-0">Gerencie e visualize estruturas PDB e sequências de DNA/Proteínas.</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="bi bi-plus-circle me-2"></i>Nova Molécula
+        </button>
+    </div>
+
+    <div class="row g-4">
+        {% for seq in sequences %}
+        <div class="col-md-4 col-xl-3">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge {% if seq.seq_type == 'PDB' %}bg-info text-dark{% else %}bg-success{% endif %}">
+                            {{ seq.get_seq_type_display }}
+                        </span>
+                        <small class="text-muted">{{ seq.created_at|date:"d/m/Y" }}</small>
+                    </div>
+                    <h5 class="card-title text-truncate">{{ seq.name }}</h5>
+                    <p class="card-text small text-muted text-truncate">{{ seq.description|default:"Sem descrição" }}</p>
+                    <a href="{% url 'molecular_viewer' seq.id %}" class="btn btn-outline-primary w-100 btn-sm">
+                        <i class="bi bi-eye me-1"></i>Abrir Visualizador
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-layout-text-sidebar-reverse display-1 text-light"></i>
+            <p class="text-muted mt-3">Nenhuma molécula encontrada. Clique em "Nova Molécula" para começar.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form action="{% url 'molecular_upload' %}" method="POST" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar Dados Moleculares</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Identificação</label>
+                    <input type="text" name="name" class="form-control" required placeholder="Ex: Receptor de Insulina">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tipo de Dado</label>
+                    <select name="seq_type" class="form-select">
+                        <option value="PDB">Estrutura 3D (Arquivo PDB)</option>
+                        <option value="DNA">Sequência de DNA (FASTA)</option>
+                        <option value="PROTEIN">Sequência de Proteína (FASTA)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Conteúdo (Cole o texto do PDB ou FASTA)</label>
+                    <textarea name="sequence_data" class="form-control" rows="10" required
+                              style="font-family: monospace; font-size: 12px;"
+                              placeholder="ATOM      1  N   GLY A..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notas Adicionais</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+                <button type="submit" class="btn btn-primary">Salvar Molécula</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

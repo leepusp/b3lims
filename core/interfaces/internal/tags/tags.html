@@ -1,4 +1,48 @@
-             <span class="badge bg-light text-dark border badge-usage">{{ item.sample_count }} Sample(s)</span>
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Manage Tags · Biobank{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modal-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .modal-card { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; }
+    .badge-usage { font-size: 0.8rem; font-weight: normal; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="h4 mb-0"><i class="bi bi-tags me-2"></i>Tag Management</h3>
+        <div class="d-flex gap-2">
+            <input type="text" id="tag-search" class="form-control" placeholder="Search tags...">
+            </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Tag Name</th>
+                        <th>Usage in Samples</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# AQUI INICIA O LOOP CORRETAMENTE #}
+                    {% for item in tags %}
+                    <tr class="tag-row" data-name="{{ item.tag.name|lower }}">
+                        <td class="ps-4 fw-bold text-primary">
+                            {{ item.tag.name }}
+                        </td>
+                        <td>
+                            {# O trecho que você enviou começa aqui #}
+                            <span class="badge bg-light text-dark border badge-usage">
+                                {{ item.sample_count|default:"0" }} Sample(s)
+                            </span>
                         </td>
 
                         <td class="text-end pe-4">
@@ -9,12 +53,14 @@
                                 </button>
 
                                 <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                                        onclick="openDeleteModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}', {{ item.total_use }})">
+                                        onclick="openDeleteModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}', {{ item.total_use|default:0 }})">
                                     <i class="bi bi-trash me-1"></i> Delete
                                 </button>
                             </div>
                         </td>
                     </tr>
+
+                    {# O bloco empty deve ficar DENTRO do for, logo antes do endfor #}
                     {% empty %}
                     <tr>
                         <td colspan="3" class="text-center py-5 text-muted">
@@ -23,6 +69,7 @@
                         </td>
                     </tr>
                     {% endfor %}
+                    {# FIM DO LOOP #}
                 </tbody>
             </table>
         </div>
@@ -31,8 +78,7 @@
     <div id="editModal" class="modal-bg" style="display:none;">
         <div class="modal-card shadow-lg">
             <h5 class="mb-3"><i class="bi bi-pencil me-2"></i>Edit Tag</h5>
-            <form method="post" action="/?page=edit_tag">
-                {% csrf_token %}
+            <form method="post" action="/?page=edit_tag"> {% csrf_token %}
                 <input type="hidden" name="id" id="editTagId">
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Name</label>
@@ -50,8 +96,7 @@
         <div class="modal-card border-top border-danger border-4">
             <h5 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Tag</h5>
             <p id="deleteMessage" class="small"></p>
-            <form method="post" action="/?page=delete_tag">
-                {% csrf_token %}
+            <form method="post" action="/?page=delete_tag"> {% csrf_token %}
                 <input type="hidden" name="id" id="deleteTagId">
                 <div class="text-end mt-4">
                     <button type="button" class="btn btn-light border btn-sm" onclick="closeDeleteModal()">Cancel</button>
@@ -62,8 +107,11 @@
     </div>
 
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
+// Ajuste para garantir que IS_ADMIN seja booleano JS
 const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
 
 function openEditModal(id, name) {
@@ -96,11 +144,15 @@ function closeDeleteModal() {
     document.getElementById("deleteModal").style.display = "none";
 }
 
-document.getElementById("tag-search").addEventListener("input", function() {
-    const q = this.value.toLowerCase();
-    document.querySelectorAll(".tag-row").forEach(row => {
-        row.style.display = row.dataset.name.includes(q) ? "" : "none";
+// Filtro de busca em tempo real
+const searchInput = document.getElementById("tag-search");
+if (searchInput) {
+    searchInput.addEventListener("input", function() {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll(".tag-row").forEach(row => {
+            row.style.display = row.dataset.name.includes(q) ? "" : "none";
+        });
     });
-});
+}
 </script>
 {% endblock %}
