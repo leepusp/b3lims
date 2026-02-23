@@ -1,5 +1,7 @@
 # Biological Sample Collections Database (Biobank LIMS)
 
+Tudo aqui deveria estar escrito em ingles!!!!!
+
 Este projeto é um Biobank desenvolvido para o CEPID B3 — Centro de Pesquisa, Inovação e Difusão em Biologia de Bactérias e Bacteriófagos.
 
 O sistema foi projetado para centralizar o armazenamento, organização e distribuição de patrimônio biológico de alto valor científico, promovendo rastreabilidade, conformidade legal e colaboração entre pesquisadores.
