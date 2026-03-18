@@ -70,3 +70,8 @@ Thumbs.db
 # Optional
 # ----------------------
 environment.yml
+
+# ----------------------
+# Other
+# ----------------------
+.DS_Store
