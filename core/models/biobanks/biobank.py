@@ -1,13 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Importação direta dos módulos para evitar loop circular
 from core.models.tags.model import Tag
 from core.models.keywords.model import KeywordValue
+from core.models.research_groups.model import ResearchGroup
 
 class Biobank(models.Model):
     """
-    Entidade máxima do sistema. Representa uma unidade física ou 
+    Entidade máxima do sistema. Representa uma unidade física ou
     consórcio de guarda de material biológico.
     """
 
@@ -15,14 +15,12 @@ class Biobank(models.Model):
     # METADADOS BÁSICOS
     # =========================
     name = models.CharField(max_length=200)
-    institution = models.CharField(max_length=255)
+
     description = models.TextField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         help_text="Descrição institucional do Biobanco"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     # =========================
     # LOCALIZAÇÃO
@@ -57,16 +55,19 @@ class Biobank(models.Model):
         help_text="Gestor principal do Biobanco"
     )
 
-    VISIBILITY_CHOICES = [
-        ("private", "Privado"),
-        ("biobank", "Restrito ao Biobank"),
-        ("public", "Público"),
-    ]
+    research_group = models.ForeignKey(
+        ResearchGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="biobanks",
+        help_text="Grupo de pesquisa responsável pelo Biobanco"
+    )
 
-    visibility = models.CharField(
-        max_length=20,
-        choices=VISIBILITY_CHOICES,
-        default="biobank",
+    # Novo formato simplificado
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Marque para disponibilizar este biobanco publicamente"
     )
 
     # =========================

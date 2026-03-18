@@ -2,116 +2,282 @@
 {% load static %}
 
 {% block title %}Biobanks · Biobank LIMS{% endblock %}
-{% block page_title %}Biobanks{% endblock %}
-{% block page_subtitle %}Infrastructure and Institution Management{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/biobanks/biobank.css' %}">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-    .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
-    .chip-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; min-height: 50px; }
-    #map { cursor: crosshair; z-index: 1; height: 280px; border-radius: 12px; border: 1px solid #ddd; }
 
-    /* Estilo do botão mini que você já tinha */
-    .btn-manage-mini { font-size: 0.7rem; padding: 2px 8px; background: white; border: 1px solid #dee2e6; color: #333; text-decoration: none; }
-    .btn-manage-mini:hover { background: #f8f9fa; color: #000; }
+<style>
+    /* === HARMONIZED STYLE === */
+    .form-section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 0.5rem;
+    }
+
+    .section-label { 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        color: #495057; 
+        margin-bottom: 0.5rem; 
+        display: block; 
+    }
+
+    /* Map */
+    #map { 
+        cursor: crosshair; 
+        z-index: 1; 
+        height: 320px; 
+        border-radius: 8px; 
+        border: 1px solid #dee2e6; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Chips & Tags */
+    .chip-box { 
+        background: #fff; 
+        border: 1px dashed #dee2e6; 
+        border-radius: 6px; 
+        padding: 12px; 
+        min-height: 60px;
+        transition: border-color 0.2s;
+    }
+    .chip-box:hover { border-color: #0d6efd; }
+
+    .selectable-tag { 
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .selectable-tag.selected { 
+        background-color: #0d6efd !important; 
+        color: white !important; 
+        border-color: #0d6efd !important; 
+    }
+
+    /* Mini Button */
+    .btn-manage-mini { 
+        font-size: 0.7rem; 
+        padding: 4px 10px; 
+        background: #f8f9fa; 
+        border: 1px solid #dee2e6; 
+        color: #6c757d; 
+        text-decoration: none; 
+        border-radius: 12px;
+        display: inline-flex; 
+        align-items: center;
+    }
+    .btn-manage-mini:hover { background: #e9ecef; color: #000; }
+    
+    .biobank-logo-placeholder {
+        width: 40px; height: 40px;
+        background-color: #f1f3f5;
+        color: #adb5bd;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
 
-{% if user.is_authenticated %}
-<section class="card shadow-sm border-0 mb-5">
-    <div class="card-header bg-white py-3">
-        <h5 class="card-title mb-0 text-primary"><i class="bi bi-building-add me-2"></i>Register New Biobank</h5>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="h4 mb-1 fw-bold text-dark">
+                <i class="bi bi-building me-2 text-primary"></i>Biobank Repositories
+            </h3>
+            <p class="text-muted small mb-0">Infrastructure and Institution Management</p>
+        </div>
     </div>
-    <div class="card-body">
 
-        <form method="POST" action="{% url 'home' %}?page=biobanks" id="biobankForm">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="add_biobank">
+    {% if user.is_authenticated %}
+    <section class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h5 class="card-title mb-0 text-primary fw-bold">
+                <i class="bi bi-plus-circle me-2"></i>Register New Biobank
+            </h5>
+        </div>
+        
+        <div class="card-body pt-0">
+            <form method="POST" action="{% url 'workspace' %}?page=biobanks" id="biobankForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_biobank">
 
-            <div class="row g-4">
-                <div class="col-lg-7">
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="section-label">Official Name</label>
-                            {{ biobank_form.name }}
+                <div class="row g-5">
+                    
+                    <div class="col-lg-6">
+                        <h5 class="form-section-title">1. General Information</h5>
+                        
+                        <div class="mb-3">
+                            <label class="section-label">Official Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control fw-bold" placeholder="Ex: Institute of Virology Biobank" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="section-label">Default Visibility</label>
-                            {{ biobank_form.visibility }}
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch p-0 ms-0">
+                                <label class="section-label mb-1">Public Availability</label>
+                                <div class="d-flex align-items-center">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="is_public" id="id_is_public">
+                                    <label class="form-check-label small text-muted" for="id_is_public">
+                                        Check to make this biobank visible to external catalogs.
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-12">
-                            <label class="section-label">Institution (Auto-fills from map)</label>
-                            {{ biobank_form.institution }}
+
+                        <div class="mb-3">
+                            <label class="section-label">Scientific Description</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Describe the main purpose and collection types..."></textarea>
                         </div>
-                        <div class="col-12">
-                            <label class="section-label">Address</label>
-                            {{ biobank_form.location_label }}
-                            {{ biobank_form.latitude }}
-                            {{ biobank_form.longitude }}
+
+                        <div class="mt-4">
+                            <h5 class="form-section-title">3. Metadata & Classification</h5>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="section-label mb-0"><i class="bi bi-tags me-1"></i>Tags</label>
+                                    <div class="d-flex gap-2">
+                                        <a href="/?page=tags" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
+                                    </div>
+                                </div>
+                                <div id="tagChipContainer" class="chip-box">
+                                    {% for tag in all_tags %}
+                                        <span class="badge rounded-pill border text-secondary bg-light selectable-tag m-1 p-2"
+                                              data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div id="tagHiddenInputs" style="display:none;"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="section-label mb-0"><i class="bi bi-list-columns-reverse me-1"></i>Keywords</label>
+                                    <div class="d-flex gap-2">
+                                        <a href="/?page=keywords" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add</button>
+                                    </div>
+                                </div>
+                                <div id="keywordChipContainer" class="chip-box d-flex flex-wrap gap-2"></div>
+                                <div id="keywordHiddenInputs" style="display:none;"></div>
+                            </div>
                         </div>
-                        <div class="col-12">
-                            <label class="section-label">Scientific Notes</label>
-                            {{ biobank_form.description }}
+                    </div>
+
+                    <div class="col-lg-6">
+                        <h5 class="form-section-title">2. Geographic Location</h5>
+                        
+                        <div class="mb-3">
+                            <label class="section-label">Address / Label</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" name="location_label" id="id_location_label" class="form-control" placeholder="Search address or click on map...">
+                            </div>
+                            <div class="form-text small text-end" id="searchStatus">Type to search or click map</div>
+                            <input type="hidden" name="latitude" id="id_latitude">
+                            <input type="hidden" name="longitude" id="id_longitude">
+                        </div>
+
+                        <div class="mb-3">
+                            <div id="map"></div>
+                            <small class="text-muted d-block mt-1 text-end fst-italic">Drag pin or click map to auto-fill address.</small>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-5">
-                    <label class="section-label">Location</label>
-                    <div id="map" class="shadow-sm mb-3"></div>
-
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="section-label mb-0">Tags</label>
-                            <a href="/?page=tags" class="btn btn-manage-mini rounded shadow-sm">
-                                <i class="bi bi-tags me-1"></i> Manage Tags
-                            </a>
-                        </div>
-                        <div id="tagChipContainer" class="chip-box mb-2">
-                            {% for tag in all_tags %}
-                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2"
-                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                        <div id="tagHiddenInputs" style="display:none;"></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
-                            <i class="bi bi-plus-circle me-1"></i> New Tag
-                        </button>
-                    </div>
-
-                    <div>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="section-label mb-0">Keywords</label>
-                            <a href="/?page=keywords" class="btn btn-manage-mini rounded shadow-sm">
-                                <i class="bi bi-key me-1"></i> Manage Keywords
-                            </a>
-                        </div>
-                        <div id="keywordChipContainer" class="chip-box mb-2"></div>
-                        <div id="keywordHiddenInputs" style="display:none;"></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
-                            <i class="bi bi-key me-1"></i> Add Keywords
-                        </button>
-                    </div>
+                <div class="text-end mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                        <i class="bi bi-check-lg me-2"></i>Save Biobank
+                    </button>
                 </div>
-            </div>
+            </form>
+        </div>
+    </section>
+    {% endif %}
 
-            <div class="text-end mt-4 pt-3 border-top">
-                <button type="submit" class="btn btn-primary px-5 shadow-sm">Save Biobank</button>
-            </div>
-        </form>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h5 class="card-title mb-0 text-dark fw-bold">Existing Biobanks</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Biobank Name</th>
+                        <th>Location</th>
+                        <th>Manager / Visibility</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for biobank in biobanks %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="biobank-logo-placeholder me-3"><i class="bi bi-building"></i></div>
+                                <div>
+                                    <span class="fw-bold text-dark">{{ biobank.name }}</span>
+                                    <small class="d-block text-muted">{{ biobank.description|truncatechars:40 }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <i class="bi bi-geo-alt text-danger me-1"></i>
+                            {{ biobank.location_label|default:"Not specified" }}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="avatar-xs bg-light rounded-circle text-center me-2 small fw-bold" style="width:24px; height:24px; line-height:24px;">
+                                    {{ biobank.owner.username|first|upper }}
+                                </div>
+                                <span class="small">{{ biobank.owner.get_full_name|default:biobank.owner.username }}</span>
+                            </div>
+                            {% if biobank.is_public %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle small"><i class="bi bi-globe me-1"></i>Public</span>
+                            {% else %}
+                                <span class="badge bg-light text-secondary border small">Restricted</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if biobank.is_active %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Operational</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <form method="POST" action="{% url 'workspace' %}?page=biobanks" class="d-inline" onsubmit="return confirm('Are you sure you want to deactivate this biobank?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="deactivate_biobank">
+                                <input type="hidden" name="biobank_id" value="{{ biobank.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Deactivate">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">No biobanks registered yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</section>
-{% endif %}
+
+</div>
 
 {% include "internal/tags/add_tag.html" %}
 {% include "internal/keywords/add_keyword.html" %}
 
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -119,194 +285,176 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    console.log(">>> Lógica Híbrida (Sample + Biobank Map) Iniciada");
 
-    /* ===============================================================
-       1. MAPA (Específico do Biobank)
-    =============================================================== */
-    function initSmartLocation() {
-        const mapEl = document.getElementById("map");
-        // IDs gerados pelo Django
-        const institutionInput = document.getElementById("id_institution");
-        const latInput = document.getElementById("id_latitude");
-        const lngInput = document.getElementById("id_longitude");
-        const labelInput = document.getElementById("id_location_label");
-
-        if (!mapEl || typeof L === "undefined") return;
-
-        const map = L.map("map").setView([-15.78, -47.92], 4);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
-
-        let marker;
-
-        function updateInputs(lat, lng, address) {
-            if (latInput) latInput.value = lat.toFixed(6);
-            if (lngInput) lngInput.value = lng.toFixed(6);
-            if (address && labelInput) {
-                labelInput.value = address;
-                if (institutionInput && !institutionInput.value) institutionInput.value = address.split(",")[0];
+    // =========================================================
+    // PREVENIR ENVIO DO FORMULÁRIO COM 'ENTER'
+    // =========================================================
+    const biobankForm = document.getElementById("biobankForm");
+    if (biobankForm) {
+        biobankForm.addEventListener("keydown", function(event) {
+            // Se a tecla for Enter
+            if (event.key === "Enter") {
+                // E o elemento focado não for um <textarea> (descrição) nem um <button>
+                if (event.target.tagName !== "TEXTAREA" && event.target.tagName !== "BUTTON") {
+                    event.preventDefault(); // Cancela o envio do formulário
+                }
             }
-        }
+        });
+    }
+    
+    // =========================================================
+    // 1. MAP, GEOCODING & REVERSE GEOCODING
+    // =========================================================
+    if(document.getElementById('map')) {
+        var map = L.map('map').setView([-14.2350, -51.9253], 3); 
 
-        function reverseGeocode(lat, lng) {
-            if(labelInput) labelInput.value = "Searching...";
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var marker;
+        var latInput = document.getElementById('id_latitude');
+        var lngInput = document.getElementById('id_longitude');
+        var addressInput = document.getElementById('id_location_label');
+        var statusLabel = document.getElementById('searchStatus');
+        var searchTimeout = null;
+
+        function getAddressFromCoords(lat, lng) {
+            addressInput.placeholder = "Loading address...";
+            statusLabel.textContent = "Fetching address...";
+            
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                .then(r => r.json())
+                .then(response => response.json())
                 .then(data => {
-                    if (data.display_name) updateInputs(lat, lng, data.display_name);
+                    if(data && data.display_name) {
+                        addressInput.value = data.display_name;
+                        statusLabel.textContent = "Address found!";
+                        statusLabel.className = "form-text small text-end text-success fw-bold";
+                    } else {
+                        statusLabel.textContent = "Address not found.";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    statusLabel.textContent = "Error fetching address.";
                 });
         }
 
-        map.on("click", e => {
-            const { lat, lng } = e.latlng;
-            if (marker) marker.setLatLng([lat, lng]);
-            else marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            reverseGeocode(lat, lng);
+        function updateMarker(lat, lng, fetchAddress=false) {
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+                
+                marker.on('dragend', function(e) {
+                    var coord = e.target.getLatLng();
+                    latInput.value = coord.lat.toFixed(6);
+                    lngInput.value = coord.lng.toFixed(6);
+                    getAddressFromCoords(coord.lat, coord.lng);
+                });
+            }
+            latInput.value = lat.toFixed(6);
+            lngInput.value = lng.toFixed(6);
+            map.setView([lat, lng], 15);
+
+            if(fetchAddress) {
+                getAddressFromCoords(lat, lng);
+            }
+        }
+
+        map.on('click', function(e) {
+            updateMarker(e.latlng.lat, e.latlng.lng, true);
+        });
+
+        addressInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            statusLabel.textContent = "Typing...";
+            statusLabel.className = "form-text small text-end text-muted";
+            
+            searchTimeout = setTimeout(() => {
+                var query = addressInput.value;
+                if(query.length > 3) {
+                    statusLabel.textContent = "Searching...";
+                    
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if(data && data.length > 0) {
+                                var lat = parseFloat(data[0].lat);
+                                var lon = parseFloat(data[0].lon);
+                                updateMarker(lat, lon, false); 
+                                statusLabel.textContent = "Location found!";
+                                statusLabel.className = "form-text small text-end text-success fw-bold";
+                            } else {
+                                statusLabel.textContent = "Location not found.";
+                                statusLabel.className = "form-text small text-end text-danger";
+                            }
+                        })
+                        .catch(err => {
+                            statusLabel.textContent = "Error searching.";
+                        });
+                }
+            }, 1000); 
         });
     }
 
-    /* ===============================================================
-       2. TAGS - LÓGICA "SAMPLE" (Via Submit Event)
-    =============================================================== */
-    function initTagSelector() {
-        const tagChips = document.querySelectorAll(".selectable-tag");
-        const hiddenContainer = document.getElementById("tagHiddenInputs");
 
-        tagChips.forEach(chip => {
-            if (chip.dataset.bound === "1") return;
-            chip.dataset.bound = "1";
-
-            chip.addEventListener("click", function() {
-                const tagId = this.dataset.tagId;
-                // Toggle Visual
-                this.classList.toggle("bg-white");
-                this.classList.toggle("text-dark");
-                this.classList.toggle("bg-primary");
-                this.classList.toggle("text-white");
-
-                // Toggle Hidden Input
-                const existing = hiddenContainer.querySelector(`input[value="${tagId}"]`);
-                if (existing) {
-                    existing.remove();
-                } else {
-                    const input = document.createElement("input");
-                    input.type = "hidden";
-                    input.name = "tags";
-                    input.value = tagId;
-                    hiddenContainer.appendChild(input);
-                }
+    // =========================================================
+    // 2. TAGS (Visual Selection)
+    // =========================================================
+    const hiddenTagContainer = document.getElementById("tagHiddenInputs");
+    
+    document.querySelectorAll(".selectable-tag").forEach(chip => {
+        chip.addEventListener("click", function() {
+            this.classList.toggle("selected");
+            this.classList.toggle("bg-light");
+            this.classList.toggle("text-secondary");
+            
+            hiddenTagContainer.innerHTML = "";
+            document.querySelectorAll(".selectable-tag.selected").forEach(sel => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "tags";
+                input.value = sel.dataset.tagId;
+                hiddenTagContainer.appendChild(input);
             });
         });
-    }
+    });
 
-    // LÓGICA ANTIGA DO SAMPLE (Intercepta Submit)
-    const addTagForm = document.getElementById("addTagForm");
-    if (addTagForm) {
-        addTagForm.addEventListener("submit", function(e) {
-            e.preventDefault(); // Impede o refresh da página
-            console.log(">>> Submit interceptado (Estilo Sample)");
-
-            const fd = new FormData(this);
-            const csrf = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
-
-            fetch("/ajax/add_tag/", {
-                method: "POST",
-                body: fd,
-                headers: { "X-CSRFToken": csrf }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.success && !data.id) {
-                    alert(data.error || "Error");
-                    return;
-                }
-
-                // Cria o chip visualmente
-                const chipContainer = document.getElementById("tagChipContainer");
-                const chip = document.createElement("span");
-                chip.className = "badge rounded-pill border selectable-tag bg-primary text-white border-primary m-1 p-2";
-                chip.dataset.tagId = data.id;
-                chip.innerText = data.name;
-                chip.style.cursor = "pointer";
-                chipContainer.appendChild(chip);
-
-                // Cria o input hidden para salvar
-                const hiddenContainer = document.getElementById("tagHiddenInputs");
-                const hidden = document.createElement("input");
-                hidden.type = "hidden";
-                hidden.name = "tags";
-                hidden.value = data.id;
-                hiddenContainer.appendChild(hidden);
-
-                // Re-bind click events e fecha modal
-                initTagSelector();
-
-                // Fecha modal (Bootstrap 5)
-                const modalEl = document.getElementById("addTagModal");
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                else new bootstrap.Modal(modalEl).hide();
-
-                this.reset();
-            })
-            .catch(err => console.error(err));
-        });
-    }
-
-    /* ===============================================================
-       3. KEYWORDS - LÓGICA "SAMPLE"
-    =============================================================== */
-    const addKeywordForm = document.getElementById("addKeywordForm");
-    if (addKeywordForm) {
-        addKeywordForm.addEventListener("submit", function(e) {
+    // =========================================================
+    // 3. KEYWORDS (AJAX Modal)
+    // =========================================================
+    const btnSaveKw = document.getElementById("btnSaveKeywordAJAX");
+    if(btnSaveKw) {
+        btnSaveKw.onclick = function(e) {
             e.preventDefault();
+            const key = document.getElementById("keywordKey").value;
+            const val = document.getElementById("keywordValue").value;
+            
+            if(key && val) {
+                const container = document.getElementById("keywordChipContainer");
+                const hiddenContainer = document.getElementById("keywordHiddenInputs");
+                
+                const chip = document.createElement("span");
+                chip.className = "badge bg-light text-dark border p-2 m-1 d-inline-flex align-items-center";
+                chip.innerHTML = `<strong>${key}:</strong>&nbsp;${val} <i class="bi bi-x ms-2 text-danger" style="cursor:pointer" onclick="this.parentNode.remove()"></i>`;
+                container.appendChild(chip);
 
-            // Pega pelos names ou IDs
-            const key = (document.getElementById("kw_key") || this.querySelector("[name=key]")).value.trim();
-            const val = (document.getElementById("kw_value") || this.querySelector("[name=value]")).value.trim();
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "keyword_pairs";
+                input.value = `${key}:::${val}`;
+                hiddenContainer.appendChild(input);
 
-            if (!key || !val) {
-                alert("Both fields required");
-                return;
+                document.getElementById("keywordKey").value = "";
+                document.getElementById("keywordValue").value = "";
+                
+                const modalEl = document.getElementById('addKeywordModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
             }
-
-            const container = document.getElementById("keywordChipContainer");
-            const hiddenContainer = document.getElementById("keywordHiddenInputs");
-
-            // Chip Visual
-            const chip = document.createElement("span");
-            chip.className = "badge bg-light text-dark border p-2 m-1";
-            chip.innerHTML = `${key}: ${val} <i class="bi bi-x text-danger ms-2" style="cursor:pointer"></i>`;
-
-            // Input Oculto
-            const pair = `${key}:::${val}`;
-            const hidden = document.createElement("input");
-            hidden.type = "hidden";
-            hidden.name = "keyword_pairs";
-            hidden.value = pair;
-
-            // Remove logic
-            chip.querySelector("i").onclick = () => {
-                chip.remove();
-                hidden.remove();
-            };
-
-            container.appendChild(chip);
-            hiddenContainer.appendChild(hidden);
-
-            // Fecha Modal
-            const modalEl = document.getElementById("addKeywordModal");
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-            else new bootstrap.Modal(modalEl).hide();
-
-            this.reset();
-        });
+        };
     }
-
-    // Inicializa tudo
-    initSmartLocation();
-    initTagSelector();
 });
 </script>
 {% endblock %}

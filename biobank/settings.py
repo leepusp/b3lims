@@ -1,17 +1,34 @@
 import os
+import environ
 from pathlib import Path
 
 # =========================
-# BASE
+# BASE & ENV
 # =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Inicializa o environ
+env = environ.Env(
+    DEBUG=(bool, True)
+)
+# Tenta ler o arquivo .env se ele existir na raiz do projeto
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 # =========================
-# SEGURANÇA / DEBUG
+# SEGURANÇA / DEBUG / PROXY (APACHE)
 # =========================
-SECRET_KEY = "dev-secret-key"  # Trocar para uma chave real em produção
-DEBUG = True
-ALLOWED_HOSTS = []
+SECRET_KEY = env('SECRET_KEY', default="dev-secret-key") 
+DEBUG = env('DEBUG')
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+
+# 1. Autoriza o domínio da USP a enviar formulários POST (Resolve o Erro 403 CSRF)
+CSRF_TRUSTED_ORIGINS = ['https://davinci.icb.usp.br']
+
+# 2. Avisa o Django que o Apache já cuidou do cadeado de segurança (HTTPS)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 3. Avisa o Django que ele está rodando atrás de um subdiretório no Apache
+FORCE_SCRIPT_NAME = '/biobank'
 
 # =========================
 # APLICAÇÕES
@@ -25,13 +42,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # 2. App Principal (Agora contém o Lab Tools)
+    # 2. App Principal
     "core.apps.CoreConfig",
 
-    # REMOVIDO: "lab_tools"
-    # (Não incluímos mais aqui pois foi integrado ao core)
-
-    # 4. Utilitários Externos
+    # 3. Utilitários Externos
+    "import_export",  
     "django_extensions",
     "rest_framework",
     "django_filters",
@@ -63,7 +78,6 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
-            # O Django vai procurar os templates em: ~/biobank/core/interfaces
             BASE_DIR / "core" / "interfaces",
         ],
         "APP_DIRS": True,
@@ -79,30 +93,35 @@ TEMPLATES = [
 ]
 
 # =========================
-# DATABASE (SQLITE PARA DEV)
+# DATABASE
 # =========================
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
 # =========================
-# STATIC FILES (CSS, JS, IMAGES)
+# STATIC FILES (CSS, JS, IMAGES) - CONFIGURAÇÃO APACHE
 # =========================
-STATIC_URL = "/static/"
+# URL base que o navegador vai procurar
+STATIC_URL = "/biobank/static/"
+
+# Onde o Django vai procurar seus arquivos CSS/JS durante o desenvolvimento
 STATICFILES_DIRS = [
-    # O Django vai procurar estáticos em: ~/biobank/core/interfaces
     BASE_DIR / "core" / "interfaces",
+    BASE_DIR / "static",
 ]
+
+# Onde o comando 'collectstatic' vai juntar tudo para o Apache ler
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # =========================
-# MEDIA (UPLOADS DE AMOSTRAS)
+# MEDIA (UPLOADS DE AMOSTRAS E ARQUIVOS)
 # =========================
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/biobank/data/"
+MEDIA_ROOT = BASE_DIR / "data"
+
+# Aumenta o limite de upload para arquivos científicos (ex: 50MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 
 # =========================
 # INTERNACIONALIZAÇÃO
@@ -115,10 +134,10 @@ USE_TZ = True
 # =========================
 # AUTENTICAÇÃO
 # =========================
-LOGIN_URL = "/login/"
-LOGOUT_URL = "/logout/"
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/login/"
+LOGIN_URL = "/biobank/login/"
+LOGOUT_URL = "/biobank/logout/"
+LOGIN_REDIRECT_URL = "/biobank/"
+LOGOUT_REDIRECT_URL = "/biobank/login/"
 
 # =========================
 # DEFAULTS

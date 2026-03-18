@@ -1,251 +1,311 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
 
-{% block title %}Samples · CEPIDB3 Biobank{% endblock %}
-{% block page_title %}Samples{% endblock %}
-{% block page_subtitle %}Manage biological specimens and scientific data{% endblock %}
+{% block title %}New Sample · CEPIDB3 Biobank{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<style>
-    /* Estilos Específicos da Página de Amostras */
-    .timeline-item { border-left: 2px solid #e9ecef; padding-left: 15px; position: relative; padding-bottom: 10px; }
-    .timeline-item::before { content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; background: #0d6efd; border-radius: 50%; }
-    .preview-img { max-width: 100%; height: auto; border-radius: 4px; }
-    .print-alert { background-color: #f8f9fa; border-left: 4px solid #0d6efd; }
-    .section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.5rem; display: block; }
-
-    /* Botões Mini */
-    .btn-manage-mini { font-size: 0.7rem; padding: 2px 8px; background: white; border: 1px solid #dee2e6; color: #333; text-decoration: none; }
-    .btn-manage-mini:hover { background: #f8f9fa; color: #000; }
-
-    /* Área dos Chips (Tags/Keywords) */
-    .chip-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; min-height: 50px; }
-
-    /* Estilo para o Editor do Caderno de Laboratório */
-    #eln-editor { height: 250px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-    .ql-toolbar { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f8f9fa; }
-
-    /* Uploads */
-    .border-dashed { border-style: dashed !important; }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-
-    {# --- Bloco de Mensagens / Alerta de Impressão --- #}
-    {% if messages %}
-        {% for message in messages %}
-            {% if "sample_created_id" in message.extra_tags %}
-                <div class="alert print-alert d-flex justify-content-between align-items-center shadow-sm mb-4" role="alert">
-                    <div>
-                        <i class="bi bi-printer-fill text-primary me-2"></i>
-                        <strong>Amostra Registrada!</strong> Deseja imprimir a etiqueta para o tubo agora?
-                    </div>
-                    <a href="{% url 'print_sample_label' message.message %}" target="_blank" class="btn btn-primary btn-sm">
-                        <i class="bi bi-qr-code-scan me-1"></i> Imprimir Etiqueta
-                    </a>
-                </div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="h4 mb-0"><i class="bi bi-flask me-2"></i>Specimen Inventory</h3>
+            <h3 class="h4 mb-1 fw-bold text-dark"><i class="bi bi-box-seam me-2 text-primary"></i>Register New Sample</h3>
+            <p class="text-muted small mb-0">Fill in the fields below to catalog a new biological specimen.</p>
         </div>
+        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary btn-sm px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
     </div>
 
-    {% if user.is_authenticated %}
-    <section class="card shadow-sm mb-5 border-0">
-        <div class="card-header bg-white py-3">
-            <h5 class="card-title mb-0 text-primary"><i class="bi bi-plus-circle me-2"></i>Register New Sample</h5>
-        </div>
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data" class="sample-form" id="mainSampleForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add_sample">
+    <form method="post" enctype="multipart/form-data" id="mainSampleForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_sample">
+        <input type="hidden" name="scientific_notes" id="scientific_notes_input">
 
-                {# Input oculto para receber o HTML do Quill #}
-                <input type="hidden" name="scientific_notes" id="scientific_notes_input">
-
-                <div class="row g-3">
-                    {# --- Coluna 1: Identificação Básica --- #}
-                    <div class="col-md-4">
-                        <label class="section-label">Sample ID / Barcode</label>
-                        <div class="input-group">
-                            <input name="sample_id" class="form-control" placeholder="Ex: B3-2024-001" required>
-                            <span class="input-group-text bg-light"><i class="bi bi-qr-code"></i></span>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="section-label">Sample Type</label>
-                        <input name="sample_type" class="form-control" placeholder="Ex: Bacterial Isolate, DNA">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="section-label">Organism / Strain</label>
-                        <input name="organism_name" class="form-control" placeholder="Ex: E. coli">
-                    </div>
-
-                    {# --- Coluna 2: Localização e Status --- #}
-                    <div class="col-md-6">
-                        <label class="section-label">Collection (Optional)</label>
-                        <select name="collection" class="form-select">
-                            <option value="">— Independent Sample —</option>
-                            {% for col in collections %}
-                                <option value="{{ col.id }}">{{ col.name }} ({{ col.biobank.name }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="section-label">Storage Location</label>
-                        <input name="storage_location" class="form-control" placeholder="Ex: Freezer -80°C, Rack B">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="section-label">Visibility</label>
-                        <select name="visibility" class="form-select">
-                            <option value="private">Private</option>
-                            <option value="group">Group</option>
-                            <option value="public">Public</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="section-label">Initial Status</label>
-                        <select name="status" class="form-select">
-                            <option value="pending">Aguardando Recebimento</option>
-                            <option value="qc" selected>Em Controle de Qualidade</option>
-                            <option value="available">Disponível</option>
-                        </select>
-                    </div>
-
-                    {# --- Coluna 3: Tags e Keywords (Unified) --- #}
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="section-label mb-0">Tags</label>
-                            <a href="/?page=tags" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
-                                <i class="bi bi-tags me-1"></i> Manage Tags
-                            </a>
-                        </div>
-                        <div id="tagChipContainer" class="chip-box mb-2">
-                            {% for tag in all_tags %}
-                                <span class="badge rounded-pill border text-dark bg-white selectable-tag m-1 p-2"
-                                      data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                        <div id="tagHiddenInputs" style="display:none;"></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
-                            <i class="bi bi-plus-circle me-1"></i> New Tag
-                        </button>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="section-label mb-0">Keywords</label>
-                            <a href="/?page=keywords" target="_blank" class="btn btn-manage-mini rounded shadow-sm">
-                                <i class="bi bi-key me-1"></i> Manage Keywords
-                            </a>
-                        </div>
-                        <div id="keywordChipContainer" class="chip-box mb-2"></div>
-                        <div id="keywordHiddenInputs" style="display:none;"></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
-                            <i class="bi bi-key me-1"></i> Add Keywords
-                        </button>
-                    </div>
-
-                    {# --- Coluna 4: ELN e Arquivos --- #}
-                    <div class="col-12 mt-4">
-                        <label class="section-label"><i class="bi bi-journal-text me-1"></i>Scientific Notebook / ELN</label>
-                        <div id="eln-editor"></div>
-                        <small class="text-muted">Descreva protocolos, medições e observações experimentais aqui.</small>
-                    </div>
-
-                    <div class="col-12 mt-3">
-                        <label class="section-label">Attachments</label>
-                        <div id="fileContainer" class="mb-2"></div>
-                        <button type="button" id="addFileBtn" class="btn btn-sm btn-outline-info"><i class="bi bi-paperclip"></i> Add File</button>
-                    </div>
-                </div>
-
-                <div class="text-end mt-4 border-top pt-3">
-                    <button type="submit" class="btn btn-primary px-5 shadow-sm">Save Specimen</button>
-                </div>
-            </form>
-        </div>
-    </section>
-    {% endif %}
-
-    {# --- Tabela de Listagem de Amostras --- #}
-    <section class="mt-5">
-        <div class="table-responsive bg-white rounded shadow-sm">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr class="small text-uppercase">
-                        <th>Sample ID</th>
-                        <th>Info / Status</th>
-                        <th>Hierarchy / Location</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in samples %}
-                    <tr>
-                        <td>
-                            <div class="fw-bold text-primary">{{ s.sample_id }}</div>
-                            <small class="text-muted" style="font-size: 0.6rem;">{{ s.uuid }}</small>
-                        </td>
-                        <td><div class="small fw-bold">{{ s.organism_name|default:"—" }}</div></td>
-                        <td>
-                            <div class="small"><i class="bi bi-diagram-3 me-1"></i>{{ s.collection.name|default:"Avulsa" }}</div>
-                        </td>
-                        <td class="text-end">
-                            <div class="btn-group">
-                                <a href="{% url 'print_sample_label' s.id %}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer"></i></a>
-                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#historyModal{{ s.id }}"><i class="bi bi-clock-history"></i></button>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                
+                <div class="mb-5">
+                    <h5 class="form-section-title">1. Basic Identification and Lineage</h5>
+                    <div class="row g-4">
+                        
+                        <div class="col-md-4">
+                            <label class="section-label">Sample ID / Barcode <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white text-muted"><i class="bi bi-upc-scan"></i></span>
+                                <input type="text" name="sample_id" id="id_external_identifier" class="form-control fw-bold" placeholder="Ex: SMP-2026-001" required>
+                                <button type="button" id="btnGenerateAutoId" class="btn btn-outline-primary" title="Generate next ID">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
                             </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">No samples found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            <div class="form-text small" id="autoIdHelpText">Select a Sample Type first to generate an ID.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="section-label">Sample Type <span class="text-danger">*</span></label>
+                            <select class="form-select text-dark fw-bold border-primary-subtle" name="sample_type" id="sampleTypeInput" required>
+                                <option value="" selected disabled>Select type...</option>
+                                <option value="Bacterium (Host)">Bacterium (Host)</option>
+                                <option value="Phage (Virus)">Phage (Virus)</option>
+                                <option value="Plasmid">Plasmid</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="section-label">Physical Location (Path Builder)</label>
+                            <p class="small text-muted mb-1" style="font-size: 0.75rem;">Type the location and press <strong>Enter</strong> to create levels. (Ex: Freezer 1 ↵ Box A ↵)</p>
+                            
+                            <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
+                                <input type="hidden" name="storage_location" id="storage_location_hidden">
+                                <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter...">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-12 border-start border-3 border-warning ps-4 mt-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="section-label text-warning-emphasis"><i class="bi bi-diagram-2 me-1"></i>Source Sample (Parent) <span class="badge bg-warning text-dark ms-1">Optional</span></label>
+                                    <input type="text" name="parent_sample_id" list="parentSamplesList" class="form-control border-warning-subtle bg-light" placeholder="Search by ID or type..." autocomplete="off">
+                                    <datalist id="parentSamplesList">
+                                    {% for s in all_samples %}
+                                        <option value="{{ s.sample_id }}">{{ s.organism_name|default:"No Organism" }} ({{ s.sample_type|default:"Generic" }})</option>
+                                    {% endfor %}
+                                    </datalist> 
+                                    <div class="form-text small">Fill this in if this sample is physically derived from another.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="section-label text-warning-emphasis">Relationship Type</label>
+                                    <select name="parent_relationship_type" class="form-select border-warning-subtle bg-light">
+                                        <option value="aliquot" selected>Aliquot (Exact copy in another tube/freezer)</option>
+                                        <option value="passage">Passage / Subculture / Re-plating</option>
+                                        <option value="mutated_from">Mutation / Modification</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 mt-4 mb-2">
+                            <label class="section-label"><i class="bi bi-person-badge me-1"></i>Collaborator / Provider</label>
+                            <input type="text" name="collaborator" class="form-control bg-light" placeholder="Who isolated, donated or provided this sample?">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="biologicalRelationshipsSection" class="p-4 mb-5 bg-success-subtle rounded border border-success d-none">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-diagram-3 fs-5 text-success me-2"></i>
+                        <h6 class="mb-0 text-success fw-bold">Biological Interactions & Storage</h6>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div id="hostBacteriumDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
+                            <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('hostBacteriumContainer', 'host_bacterium[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Infection rate...)')">
+                                <i class="bi bi-plus-lg"></i> Add Host Bacterium
+                            </button>
+                            <div class="form-text small mt-1 text-muted" id="hostBacteriumHelp"></div>
+                        </div>
+
+                        <div id="storedPlasmidsDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Stored Plasmids</label>
+                            <div id="storedPlasmidsContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('storedPlasmidsContainer', 'stored_plasmids[]', 'allSamplesListForJS', 'Specific notes (e.g. Copy number, Stability...)')">
+                                <i class="bi bi-plus-lg"></i> Add Plasmid
+                            </button>
+                        </div>
+
+                        <div id="infectingPhagesDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Infecting Phages (Host-Range)</label>
+                            <div id="infectingPhagesContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('infectingPhagesContainer', 'infecting_phages[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Plaque morphology...)')">
+                                <i class="bi bi-plus-lg"></i> Add Phage
+                            </button>
+                        </div>
+                    </div>
+
+                    <datalist id="allSamplesListForJS">
+                        {% for s in all_samples %}
+                            <option value="{{ s.sample_id }}">{{ s.organism_name }}</option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div id="dynamicTemplateContainer" class="p-4 mb-5 bg-primary-subtle rounded border border-primary d-none">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-magic fs-5 text-primary me-2"></i>
+                        <h6 class="mb-0 text-primary fw-bold">Required Parameters for <span id="templateTypeName"></span></h6>
+                    </div>
+                    <div id="templateFields" class="row g-3"></div>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="form-section-title">2. Governance and Availability</h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white h-100 shadow-sm">
+                                <label class="section-label"><i class="bi bi-shield-lock me-1"></i>Linked Collection</label>
+                                <p class="small text-muted mb-2">Link this sample to a collection to share it with your group.</p>
+                                
+                                <select name="collection" class="form-select border-primary-subtle mb-3">
+                                    <option value="" selected>None (Keep Sample Isolated)</option>
+                                    {% for col in collections %}
+                                    <option value="{{ col.id }}">{{ col.name }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <div class="form-check form-switch custom-switch-lg d-flex align-items-center bg-light p-2 rounded border mt-3">
+                                    <input class="form-check-input ms-0 mt-0 me-3" type="checkbox" role="switch" id="is_public" name="is_public">
+                                    <label class="form-check-label" for="is_public">
+                                        <span class="fw-bold text-dark">Public Availability</span>
+                                        <span class="d-block small text-muted" style="line-height: 1.1;">Allow external researchers to view basic metadata.</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="section-label mb-0"><i class="bi bi-building me-1"></i>Physical Distribution</label>
+                                </div>
+                                
+                                <div class="dropdown mb-3">
+                                    <button class="btn btn-white border w-100 text-start d-flex justify-content-between align-items-center shadow-sm py-2 bg-white"
+                                            type="button" id="biobankDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                        <span id="biobankSelectedText" class="text-muted"><i class="bi bi-building-add me-2"></i>Select storage Biobank...</span>
+                                        <i class="bi bi-chevron-down text-muted small"></i>
+                                    </button>
+
+                                    <div class="dropdown-menu w-100 shadow-lg border-0 p-0 overflow-hidden" style="max-height: 300px;">
+                                        <div class="p-2 bg-light border-bottom">
+                                            <input type="text" class="form-control form-control-sm" id="biobankSearch" placeholder="Filter biobanks...">
+                                        </div>
+                                        <div class="sheets-options-container p-1" id="biobankOptionsList">
+                                            {% for bb in biobanks %}
+                                            <div class="sheets-option p-2 rounded d-flex align-items-center justify-content-between hover-bg-light" data-value="{{ bb.id }}" data-name="{{ bb.name }}">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-xs bg-primary-subtle text-primary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="bi bi-building"></i></div>
+                                                    <span class="fw-medium">{{ bb.name }}</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-primary py-0 px-2 btn-add-bb" style="font-size: 0.75rem;">Select</button>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="selectedBiobanksContainer" class="d-flex flex-column gap-2">
+                                    <div id="noBiobankMsg" class="text-center py-4 text-muted">
+                                        <i class="bi bi-layers opacity-50 display-6"></i>
+                                        <p class="mt-2 mb-0 small">No biobank linked.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="form-section-title">3. Scientific Notes (ELN) and Attachments</h5>
+                    <div class="row g-4">
+                        <div class="col-md-8">
+                            <div id="eln-editor" style="height: 250px;"></div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 bg-light h-100">
+                                <label class="section-label mb-3"><i class="bi bi-paperclip me-1"></i> Attached Files</label>
+                                
+                                <div id="fileContainer" class="d-flex flex-column gap-3 mb-3"></div>
+                                
+                                <button type="button" id="addFileBtn" class="btn btn-sm w-100 btn-outline-secondary bg-white border-dashed shadow-sm">
+                                    <i class="bi bi-plus"></i> Add File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+            
+            <div class="card-footer bg-light border-top p-4 text-end">
+                <a href="{% url 'samples_list' %}" class="btn btn-white border me-2 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                    <i class="bi bi-check2-circle me-2"></i>Save Sample
+                </button>
+            </div>
         </div>
-    </section>
-
-    {# --- Modais (Tags e Keywords) --- #}
-    {% include "internal/tags/add_tag.html" %}
-    {% include "internal/keywords/add_keyword.html" %}
-
+    </form>
 </div>
+
+{% include "internal/tags/add_tag.html" %}
+{% include "internal/keywords/add_keyword.html" %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script src="{% static 'internal/samples/samples.js' %}"></script>
 
 <script>
-    var quill = new Quill('#eln-editor', {
-        theme: 'snow',
-        placeholder: 'Protocolos e observações experimentais...',
-        modules: {
-            toolbar: [
-                [{ 'header': [1, 2, false] }],
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['link', 'blockquote'],
-                ['clean']
-            ]
+    document.addEventListener("DOMContentLoaded", function() {
+
+        // =========================================================
+        // PREVENIR ENVIO DO FORMULÁRIO COM 'ENTER'
+        // =========================================================
+        const mainForm = document.getElementById("mainSampleForm");
+        if (mainForm) {
+            mainForm.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") {
+                    if (event.target.tagName !== "TEXTAREA" && event.target.tagName !== "BUTTON" && event.target.id !== "storageInputVisual") {
+                        event.preventDefault();
+                    }
+                }
+            });
+        }
+
+        // =========================================================
+        // ANEXOS
+        // =========================================================
+        const addFileBtn = document.getElementById("addFileBtn");
+        const fileContainer = document.getElementById("fileContainer");
+
+        if (addFileBtn && fileContainer) {
+            addFileBtn.addEventListener("click", function() {
+                const row = document.createElement("div");
+                row.className = "border p-2 rounded bg-white position-relative shadow-sm";
+                row.innerHTML = `
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="font-size: 0.6rem;" onclick="this.parentElement.remove()"></button>
+                    <div class="mb-2 pe-4">
+                        <label class="small fw-bold text-muted">File <span class="text-danger">*</span></label>
+                        <input type="file" name="file" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <label class="small fw-bold text-muted">Category</label>
+                            <select name="file_category" class="form-select form-select-sm">
+                                <option value="Sequence">Fasta/Sequence</option>
+                                <option value="Protocol">Protocol</option>
+                                <option value="Image">Image/Gel</option>
+                                <option value="Report">Report</option>
+                                <option value="Other" selected>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="small fw-bold text-muted">Description</label>
+                            <input type="text" name="file_description" class="form-control form-control-sm" placeholder="Ex: Gel Result...">
+                        </div>
+                    </div>
+                `;
+                fileContainer.appendChild(row);
+            });
         }
     });
 </script>
-
-<script src="{% static 'internal/samples/samples.js' %}"></script>
 {% endblock %}

@@ -1,17 +1,15 @@
-asgiref==3.11.0
-Django==5.2.8
-django-extensions==4.1
-django-filter==25.2
-djangorestframework==3.16.1
-graphviz==0.21
-pydot==4.0.1
-pyparsing==3.2.5
-sqlparse==0.5.3
-
-# Bibliotecas para Bioinformática e Ciência
-biopython==1.84
-numpy==2.2.1
-
-# Utilitários de ambiente e produção
-python-dotenv==1.0.1
-gunicorn==23.0.0
+Django>=4.2
+biopython>=1.81
+qrcode[pil]>=7.4
+Pillow>=9.5
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+openpyxl>=3.1
+django-environ>=0.10.0
+django-import-export>=3.0
+django-import-export>=3.0
+django-extensions>=3.2
+djangorestframework>=3.14
+markdown>=3.4
+django-filter>=23.0

@@ -1,23 +1,22 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.db.models import Count, Q
+from django.utils import timezone
+from datetime import timedelta
+
 from core.context import base_context
 
-# IMPORTANTE: Importe os modelos assim para evitar erros circulares durante o boot
+# Models
 from core.models.biobanks.biobank import Biobank
 from core.models.collections.collection import Collection
 from core.models.samples.sample import Sample
 from core.models.events.model import Event
 
-# Import do serviço
-from core.services.benchling_service import BenchlingService
-
-# Imports de Views (Certifique-se que esses arquivos existem nos novos caminhos)
-from core.views.internal.biobanks.views import biobanks_view
-from core.views.internal.collections.views import collections_view
-from core.views.internal.samples.views import samples_view
-
-# Imports de Tags e Keywords
+# CORRIGIDO: Nomes das Views atualizados para os novos nomes de lista
+from core.views.internal.biobanks.views import biobanks_list_view
+from core.views.internal.collections.views import collections_list_view
+from core.views.internal.samples.views import samples_list_view
 from core.views.internal.tags.views import (
     tags_view, search_view, create_tag_view, edit_tag_view, delete_tag_view
 )
@@ -27,13 +26,18 @@ from core.views.internal.keywords.views import (
 
 @login_required
 def home(request):
+    """
+    Main router for the LIMS internal area. 
+    It dispatches requests based on the 'page' parameter.
+    """
     page = request.GET.get("page", "workspace")
-    
+
+    # CORRIGIDO: Referências no dicionário ROUTES atualizadas
     ROUTES = {
         "workspace": workspace_view,
-        "biobanks": biobanks_view,
-        "collections": collections_view,
-        "samples": samples_view,
+        "biobanks": biobanks_list_view,    # Nome atualizado
+        "collections": collections_list_view, # Nome atualizado
+        "samples": samples_list_view,
         "tags": tags_view,
         "search_tags": search_view,
         "add_tag": create_tag_view,
@@ -42,51 +46,65 @@ def home(request):
         "keywords": keywords_view,
         "edit_keyword": edit_keyword_view,
         "delete_keyword": delete_keyword_view,
-        "sync_benchling": sync_benchling_view,
     }
-    
+
+    # If the page doesn't exist in ROUTES, default to workspace_view
     view_func = ROUTES.get(page, workspace_view)
+    
+    # We call the specific view function passing the request
     return view_func(request)
 
 def workspace_view(request):
+    """
+    Dashboard logic: KPIs, charts, and recent activities.
+    """
     ctx = base_context(request)
+    
+    # --- 1. KPI COUNTERS ---
+    total_samples = Sample.objects.filter(is_active=True).count()
+    
+    # Samples in Quality Control or Pending
+    pending_qc = Sample.objects.filter(
+        is_active=True, 
+        status__in=['pending', 'qc']
+    ).count()
+    
+   # New samples in the last 30 days
+    last_30_days = timezone.now() - timedelta(days=30)
+    new_samples = Sample.objects.filter(
+        is_active=True, 
+        created_at__gte=last_30_days
+    ).count()
+
+    total_collections = Collection.objects.filter(is_active=True).count()
+
+    # --- 2. CHART DATA (Distribution by Sample Type) ---
+    type_distribution = (
+        Sample.objects.filter(is_active=True)
+        .values('sample_type')
+        .annotate(total=Count('id'))
+        .order_by('-total')[:5]
+    )
+    
+    chart_labels = [item['sample_type'] or 'Other' for item in type_distribution]
+    chart_data = [item['total'] for item in type_distribution]
+
+    # --- 3. RECENT ACTIVITY (Audit Trail) ---
+    recent_activity = (
+        Event.objects.all()
+        .select_related('performed_by', 'sample')
+        .order_by("-timestamp")[:8]
+    )
+
+    # --- 4. CONTEXT UPDATE ---
     ctx["stats"] = {
-        "total_biobanks": Biobank.objects.filter(is_active=True).count(),
-        "total_collections": Collection.objects.filter(is_active=True).count(),
-        "total_samples": Sample.objects.filter(is_active=True).count(),
-        "total_tags": len(ctx.get("all_tags", [])),
-        "recent_activity": Event.objects.all().order_by("-timestamp")[:8]
+        "total_samples": total_samples,
+        "pending_qc": pending_qc,
+        "new_samples_30d": new_samples,
+        "total_collections": total_collections,
+        "recent_activity": recent_activity,
+        "chart_labels": chart_labels,
+        "chart_data": chart_data,
     }
+
     return render(request, "internal/workspace/workspace.html", ctx)
-
-def sync_benchling_view(request):
-    """
-    View de execução que utiliza o BenchlingService para espelhar dados na nuvem.
-    """
-    messages.info(request, "Iniciando comunicação com o Benchling SDK...")
-    
-    try:
-        service = BenchlingService()
-        # Selecionamos as últimas 5 amostras ativas para sincronizar
-        samples_to_sync = Sample.objects.filter(is_active=True).order_by('-id')[:5]
-        
-        if not samples_to_sync.exists():
-            messages.warning(request, "Nenhuma amostra disponível para sincronização.")
-            return redirect("/?page=workspace")
-
-        success_count = 0
-        for sample in samples_to_sync:
-            # Chama o método de criação de Custom Entity definido no seu serviço
-            result_id = service.sync_sample_to_benchling(sample)
-            if result_id:
-                success_count += 1
-        
-        if success_count > 0:
-            messages.success(request, f"Sucesso! {success_count} amostras foram espelhadas no Benchling Registry.")
-        else:
-            messages.error(request, "Falha na criação das entidades. Verifique os IDs de Schema e Registry no serviço.")
-
-    except Exception as e:
-        messages.error(request, f"Erro na integração: {str(e)}")
-    
-    return redirect("/?page=workspace")

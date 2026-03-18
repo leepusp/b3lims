@@ -1,0 +1,370 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Edit Sample - {{ sample.sample_id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+    .relation-row-item { transition: all 0.2s ease-in-out; }
+    .relation-row-item:hover { background-color: #f1f8f5 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 900px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Sample</h2>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary">{{ sample.sample_id }}</span>
+                {% if form.instance.sample_type %}
+                    <span class="badge bg-info text-dark"><i class="bi bi-tag me-1"></i>{{ form.instance.sample_type }}</span>
+                {% endif %}
+                <span class="text-muted small fw-bold ms-2">{{ sample.organism_name }}</span>
+            </div>
+        </div>
+        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="mainSampleForm">
+        {% csrf_token %}
+        
+        <input type="hidden" name="scientific_notes" id="scientific_notes_input" value="{{ sample.scientific_notes|default:'' }}">
+        
+        <input type="hidden" id="init_hosts" value="{{ current_host_id|default:'' }}">
+        <input type="hidden" id="init_plasmids" value="{{ current_plasmids_string|default:'' }}">
+        <input type="hidden" id="init_phages" value="{{ current_phages_string|default:'' }}">
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                
+                <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">1. General Data & Governance</h5>
+                <div class="row g-3">
+                    
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_id.label }}</label>
+                        {{ form.sample_id }}
+                    </div>
+                    
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_type.label }}</label>
+                        {{ form.sample_type }}
+                        <div class="form-text small text-warning">The biological type cannot be changed.</div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.status.label }}</label>
+                        {{ form.status }}
+                    </div>
+                    
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Physical Location</label>
+                        <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
+                            <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ sample.storage_location|default:'' }}">
+                            <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level & Enter...">
+                        </div>
+                        <div class="form-text small" style="font-size: 0.70rem;">(Ex: Freezer 1 ↵ Box A ↵)</div>
+                    </div>
+
+                    <div class="col-md-12 mt-2 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase"><i class="bi bi-person-badge me-1"></i>Collaborator / Provider</label>
+                        <input type="text" name="collaborator" class="form-control bg-light" value="{{ sample.collaborator|default:'' }}" placeholder="Who isolated, donated or provided this sample?">
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.biobank.label }}</label>
+                        {{ form.biobank }}
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.collections.label }}</label>
+                        {{ form.collections }}
+                    </div>
+
+                    <div class="col-12 mt-3 mb-2">
+                        <div class="form-check form-switch bg-light p-3 rounded border">
+                            {{ form.is_public }}
+                            <label class="form-check-label fw-bold ms-2" for="{{ form.is_public.id_for_label }}">
+                                {{ form.is_public.label }}
+                            </label>
+                            <div class="form-text ms-4 ps-2">Check to allow external researchers to view metadata.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="biologicalRelationshipsSection" class="mt-5 p-4 bg-success-subtle border border-success rounded d-none">
+                    <h5 class="text-uppercase text-success fw-bold small mb-3 border-bottom border-success pb-2">
+                        <i class="bi bi-diagram-3 me-2"></i>Biological Interactions & Storage
+                    </h5>
+                    <div class="row g-4">
+                        
+                        <div id="hostBacteriumDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
+                            <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('hostBacteriumContainer', 'host_bacterium[]', '', 'Specific notes (e.g. EOP, Infection rate...)')">
+                                <i class="bi bi-plus-lg"></i> Add Host Bacterium
+                            </button>
+                            <div class="form-text small mt-1 text-muted" id="hostBacteriumHelp"></div>
+                        </div>
+
+                        <div id="storedPlasmidsDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Stored Plasmids</label>
+                            <div id="storedPlasmidsContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('storedPlasmidsContainer', 'stored_plasmids[]', '', 'Specific notes (e.g. Copy number, Stability...)')">
+                                <i class="bi bi-plus-lg"></i> Add Plasmid
+                            </button>
+                        </div>
+
+                        <div id="infectingPhagesDiv" class="col-md-12 d-none">
+                            <label class="small fw-bold text-dark mb-2">Infecting Phages (Host-Range)</label>
+                            <div id="infectingPhagesContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('infectingPhagesContainer', 'infecting_phages[]', '', 'Specific notes (e.g. EOP, Plaque morphology...)')">
+                                <i class="bi bi-plus-lg"></i> Add Phage
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
+                {% for field in form %}
+                    {% if field.name not in "sample_id,sample_type,organism_name,status,is_public,storage_location,biobank,collections,scientific_notes,collaborator" %}
+                        {% if forloop.first or forloop.counter0 == 0 %} 
+                            <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
+                                <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
+                                    <i class="bi bi-magic me-2"></i>Biological Properties
+                                </h5>
+                                <div class="row g-3">
+                        {% endif %}
+                        
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label fw-bold text-primary-emphasis small">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
+                            {% if field.help_text %}<div class="form-text small">{{ field.help_text }}</div>{% endif %}
+                        </div>
+
+                        {% if forloop.last %} </div> </div> {% endif %}
+                    {% endif %}
+                {% endfor %}
+
+                <div class="mt-5 mb-4">
+                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">
+                        <i class="bi bi-diagram-2 me-2 text-warning"></i>Biological Traceability (Network)
+                    </h5>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light shadow-sm h-100 border-start border-3 border-warning">
+                                <div class="card-header bg-white border-bottom fw-bold text-secondary py-3">
+                                    <i class="bi bi-arrow-up-right me-2 text-warning"></i>Source (Derived from...)
+                                </div>
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        {% for rel in parents %}
+                                            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center p-3">
+                                                <div>
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle mb-1">{{ rel.get_relationship_type_display }}</span><br>
+                                                    <a href="{% url 'sample_edit' rel.source_sample.id %}" class="fw-bold text-decoration-none">{{ rel.source_sample.sample_id }}</a>
+                                                    <small class="d-block text-muted">{{ rel.source_sample.sample_type|default:"Generic" }}</small>
+                                                </div>
+                                            </li>
+                                        {% empty %}
+                                            <li class="list-group-item bg-transparent text-muted small p-3 text-center">No origin registered. (Primary Sample)</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light shadow-sm h-100 border-start border-3 border-secondary">
+                                <div class="card-header bg-white border-bottom fw-bold text-secondary py-3">
+                                    <i class="bi bi-arrow-return-right me-2 text-secondary"></i>Target (Generated / Aliquots...)
+                                </div>
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        {% for rel in children %}
+                                            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center p-3">
+                                                <div>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mb-1">{{ rel.get_relationship_type_display }}</span><br>
+                                                    <a href="{% url 'sample_edit' rel.target_sample.id %}" class="fw-bold text-decoration-none">{{ rel.target_sample.sample_id }}</a>
+                                                </div>
+                                            </li>
+                                        {% empty %}
+                                            <li class="list-group-item bg-transparent text-muted small p-3 text-center">No generated samples derived from this.</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 mb-4">
+                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Scientific Notes (ELN)</h5>
+                    <div id="eln-editor" class="bg-white" style="height: 250px;">{{ sample.scientific_notes|safe }}</div>
+                </div>
+
+                <div class="mt-5">
+                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Files and Attachments</h5>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Saved Files</label>
+                            {% if sample_files %}
+                            <ul class="list-group list-group-flush border rounded shadow-sm">
+                                {% for anexo in sample_files %}
+                                <li class="list-group-item bg-light">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-primary small"><i class="bi bi-file-earmark-text me-1"></i>{{ anexo.category }}</span>
+                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">Download</a>
+                                    </div>
+                                    <div class="text-truncate small fw-bold">{{ anexo.file.name|slice:"15:" }}...</div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                                <div class="p-3 bg-light rounded text-center border text-muted small">No files attached.</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light h-100">
+                                <label class="form-label fw-bold text-muted small text-uppercase mb-3"><i class="bi bi-cloud-arrow-up me-1"></i> Upload New Files</label>
+                                <div id="fileContainer" class="d-flex flex-column gap-3 mb-3 mt-2"></div>
+                                <button type="button" id="addFileBtn" class="btn btn-sm w-100 btn-outline-secondary bg-white border-dashed shadow-sm">
+                                    <i class="bi bi-plus me-1"></i>Add File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="card-footer bg-light border-top p-4 text-end">
+                <a href="{% url 'samples_list' %}" class="btn btn-white border me-2 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                    <i class="bi bi-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script src="{% static 'internal/samples/samples.js' %}"></script>
+
+<script>
+    // Função Auxiliar para criar a linha já preenchida com os dados do Banco
+    function addRelationRowWithData(containerId, nameParam, notesPlaceholder, prefilledId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const row = document.createElement('div');
+        row.className = "d-flex gap-2 align-items-center bg-white p-2 border rounded relation-row-item shadow-sm mb-2";
+        row.innerHTML = `
+            <div style="flex: 1;">
+                <input type="text" name="${nameParam}" class="form-control form-control-sm border-success-subtle" value="${prefilledId}" required autocomplete="off">
+            </div>
+            <div style="flex: 1.5;">
+                <input type="text" name="${nameParam.replace('[]', '_notes[]')}" class="form-control form-control-sm" placeholder="${notesPlaceholder}">
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('.relation-row-item').remove()"><i class="bi bi-trash"></i></button>
+        `;
+        container.appendChild(row);
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. Mostrar/Esconder as caixas de Relação Biológica com base no Sample Type
+        const typeInput = document.querySelector('input[name="sample_type"]');
+        const selectedType = typeInput ? typeInput.value : '';
+        
+        const bioRelSection = document.getElementById('biologicalRelationshipsSection');
+        const hostBacteriumDiv = document.getElementById('hostBacteriumDiv');
+        const storedPlasmidsDiv = document.getElementById('storedPlasmidsDiv');
+        const infectingPhagesDiv = document.getElementById('infectingPhagesDiv');
+        const hostHelpText = document.getElementById('hostBacteriumHelp');
+
+        if(bioRelSection && selectedType) {
+            if(selectedType === 'Bacterium (Host)') {
+                bioRelSection.classList.remove('d-none');
+                storedPlasmidsDiv.classList.remove('d-none');
+                infectingPhagesDiv.classList.remove('d-none');
+            } else if(selectedType === 'Phage (Virus)') {
+                bioRelSection.classList.remove('d-none');
+                hostBacteriumDiv.classList.remove('d-none');
+                hostHelpText.innerText = "Add the bacteria this phage infects.";
+            } else if(selectedType === 'Plasmid') {
+                bioRelSection.classList.remove('d-none');
+                hostBacteriumDiv.classList.remove('d-none');
+                hostHelpText.innerText = "Add the bacteria where this plasmid is stored/propagated.";
+            }
+        }
+
+        // 2. Preencher Automaticamente os Dados que Vieram do Banco (Magia aqui!)
+        const initHosts = document.getElementById('init_hosts')?.value;
+        const initPlasmids = document.getElementById('init_plasmids')?.value;
+        const initPhages = document.getElementById('init_phages')?.value;
+
+        if(initHosts) {
+            initHosts.split(',').forEach(id => {
+                if(id.trim()) addRelationRowWithData('hostBacteriumContainer', 'host_bacterium[]', 'Specific notes...', id.trim());
+            });
+        }
+        if(initPlasmids) {
+            initPlasmids.split(',').forEach(id => {
+                if(id.trim()) addRelationRowWithData('storedPlasmidsContainer', 'stored_plasmids[]', 'Copy number, Stability...', id.trim());
+            });
+        }
+        if(initPhages) {
+            initPhages.split(',').forEach(id => {
+                if(id.trim()) addRelationRowWithData('infectingPhagesContainer', 'infecting_phages[]', 'EOP, Morphology...', id.trim());
+            });
+        }
+
+        // 3. Prevenir Enter para não enviar o formulário sem querer
+        const mainForm = document.getElementById("mainSampleForm");
+        if (mainForm) {
+            mainForm.addEventListener("keydown", function(event) {
+                if (event.key === "Enter" && event.target.tagName !== "TEXTAREA" && event.target.tagName !== "BUTTON" && event.target.id !== "storageInputVisual") {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // 4. Anexos
+        const addFileBtn = document.getElementById("addFileBtn");
+        const fileContainer = document.getElementById("fileContainer");
+        if (addFileBtn && fileContainer) {
+            addFileBtn.addEventListener("click", function() {
+                const row = document.createElement("div");
+                row.className = "border p-2 rounded bg-white position-relative shadow-sm";
+                row.innerHTML = `
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="font-size: 0.6rem;" onclick="this.parentElement.remove()"></button>
+                    <div class="mb-2 pe-4">
+                        <input type="file" name="file" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <select name="file_category" class="form-select form-select-sm">
+                                <option value="Sequence">Fasta/Sequence</option>
+                                <option value="Other" selected>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <input type="text" name="file_description" class="form-control form-control-sm" placeholder="Description...">
+                        </div>
+                    </div>
+                `;
+                fileContainer.appendChild(row);
+            });
+        }
+    });
+</script>
+{% endblock %}

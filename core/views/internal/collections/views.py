@@ -9,7 +9,7 @@ from core.forms import CollectionForm
 
 from core.models import (
     Collection,
-    CollectionUserRole,
+    Biobank,
     Tag,
     Keyword,
     KeywordValue,
@@ -18,133 +18,89 @@ from core.models import (
 from core.permissions.collections import (
     can_view_collection,
     can_edit_collection,
-    can_manage_collection_permissions,
 )
 
 @login_required
-def collections_view(request):
-    """
-    View interna para gerenciamento de Collections.
-    Suporta criação, desativação (soft-delete) e exclusão definitiva (admin).
-    """
+def collections_list_view(request): # Nome alterado para bater com urls.py
     user = request.user
     action = request.POST.get("action") if request.method == "POST" else None
 
-    # ============================================================
     # 1. CREATE COLLECTION
-    # ============================================================
     if action == "add_collection":
         form = CollectionForm(request.POST)
 
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Salva a instância básica
                     collection = form.save(commit=False)
                     collection.owner = user
                     collection.is_active = True
                     collection.save()
 
-                    # ACL: Define o criador como OWNER científico
-                    CollectionUserRole.objects.create(
-                        user=user,
-                        collection=collection,
-                        role=CollectionUserRole.OWNER
-                    )
-
-                    # Processamento de TAGS
+                    # --- Lógica de Múltiplos Biobancos ---
+                    bb_ids_raw = request.POST.get("biobanks_ids", "")
+                    bb_ids = [bb_id for bb_id in bb_ids_raw.split(",") if bb_id.strip()]
+                    
+                    if bb_ids:
+                        collection.biobanks.set(bb_ids)
+                    
+                    # --- Tags ---
                     selected_tags = request.POST.getlist("tags")
                     if selected_tags:
                         collection.tags.set(selected_tags)
 
-                    # Processamento de KEYWORDS (Padrão Chave:::Valor)
+                    # --- Keywords ---
                     pairs = request.POST.getlist("keyword_pairs")
                     for raw in pairs:
-                        if ":::" not in raw:
-                            continue
-
+                        if ":::" not in raw: continue
                         key, value = raw.split(":::")
-                        key, value = key.strip(), value.strip()
-
-                        if key and value:
-                            keyword_obj, _ = Keyword.objects.get_or_create(name=key)
-                            kv, _ = KeywordValue.objects.get_or_create(
-                                keyword=keyword_obj,
-                                value=value
-                            )
+                        if key.strip() and value.strip():
+                            keyword_obj, _ = Keyword.objects.get_or_create(name=key.strip())
+                            kv, _ = KeywordValue.objects.get_or_create(keyword=keyword_obj, value=value.strip())
                             collection.keywords.add(kv)
 
-                    messages.success(request, "Collection criada com sucesso!")
-                    return redirect("/?page=collections")
+                    messages.success(request, "Collection created successfully!")
+                    return redirect("collections_list") # CORRIGIDO: Nome da rota
 
             except Exception as e:
-                messages.error(request, f"Erro ao criar Collection: {e}")
-                return redirect("/?page=collections")
+                messages.error(request, f"Error creating Collection: {e}") # CORRIGIDO: Indentação
+                return redirect("collections_list") # CORRIGIDO: Nome da rota
         else:
-            messages.error(request, "Dados inválidos no formulário.")
-            return redirect("/?page=collections")
+            errors = form.errors.as_text()
+            messages.error(request, f"Invalid data: {errors}")
+            return redirect("collections_list") # CORRIGIDO: Nome da rota
 
-    # ============================================================
-    # 2. DEACTIVATE COLLECTION (SOFT DELETE)
-    # ============================================================
+    # 2. DEACTIVATE
     elif action == "deactivate_collection":
         cid = request.POST.get("collection_id")
         collection = get_object_or_404(Collection, id=cid)
-
-        if not can_manage_collection_permissions(user, collection):
+        
+        if not can_edit_collection(user, collection):
             raise PermissionDenied
-
+            
         collection.is_active = False
         collection.save(update_fields=["is_active"])
+        messages.success(request, "Collection deactivated successfully.")
+        return redirect("collections_list") # CORRIGIDO: Nome da rota
 
-        messages.success(request, "Collection desativada com sucesso.")
-        return redirect("/?page=collections")
-
-    # ============================================================
-    # 3. DELETE COLLECTION (HARD DELETE – ADMIN ONLY)
-    # ============================================================
-    elif action == "delete_collection":
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied
-
-        cid = request.POST.get("collection_id")
-        collection = get_object_or_404(Collection, id=cid)
-        collection.delete()
-
-        messages.success(request, "Collection removida permanentemente.")
-        return redirect("/?page=collections")
-
-    # ============================================================
-    # 4. LISTAGEM E FORMULÁRIO (GET)
-    # ============================================================
-    initial = {}
-    biobank_id = request.GET.get("biobank")
-    if biobank_id:
-        initial["biobank"] = biobank_id
-
-    form = CollectionForm(initial=initial)
-
-    # Base Context (Sidebar, User data, etc)
+    # 3. LISTAGEM (GET)
     ctx = base_context(request)
-    ctx["collection_form"] = form
-    ctx["all_tags"] = Tag.objects.all().order_by("name")
     
-    # Suporte para tags recém-criadas via AJAX/Modal
-    ctx["preselect_tag"] = request.session.pop("new_tag_id", None)
+    ctx["biobanks"] = Biobank.objects.filter(is_active=True).order_by("name")
+    ctx["all_tags"] = Tag.objects.all().order_by("name")
+    ctx["collection_form"] = CollectionForm()
 
-    # Filtragem de listagem (Apenas Ativas)
+    # Filtro opcional via URL
+    biobank_id = request.GET.get("biobank")
     collections_qs = Collection.objects.filter(is_active=True)
+    
     if biobank_id:
-        collections_qs = collections_qs.filter(biobank_id=biobank_id)
+        collections_qs = collections_qs.filter(biobanks__id=biobank_id)
 
     visible_collections = []
     for c in collections_qs:
         if can_view_collection(user, c):
             c.can_edit = can_edit_collection(user, c)
-            c.can_manage_members = can_manage_collection_permissions(user, c)
-            
-            # Otimização: Carrega papéis dos membros para exibição
-            c.members_roles = c.user_roles.select_related("user").all()
             visible_collections.append(c)
 
     ctx["collections"] = visible_collections

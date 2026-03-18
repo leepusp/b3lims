@@ -14,8 +14,8 @@ def public_collection_list(request):
 
     collections = (
         Collection.objects
-        .filter(visibility__in=["public", "biobank"])
-        .select_related("biobank")
+        .filter(is_public=True)  # <--- CORREÇÃO 1: "visibility" trocado por "is_public"
+        # .select_related("biobank")  # <--- CORREÇÃO 2: Removido pois não existe campo "biobank" na Collection
         .prefetch_related("tags")
         .order_by("name")
     )
@@ -38,7 +38,7 @@ def public_collection_list(request):
         request,
         "public/collections/list.html",
         context,
-    )
+   )
 
 
 def public_collection_detail(request, collection_id):
@@ -49,7 +49,7 @@ def public_collection_detail(request, collection_id):
     collection = get_object_or_404(
         Collection,
         id=collection_id,
-        visibility__in=["public", "biobank"],
+        is_public=True,  # <--- CORREÇÃO 3: "visibility" trocado por "is_public"
     )
 
     context = {

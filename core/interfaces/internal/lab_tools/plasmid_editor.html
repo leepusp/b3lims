@@ -1,0 +1,75 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} · Biobank{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'ove/assets/index-DFFvZeo2.css' %}">
+
+<style>
+    /* O container precisa ter altura definida */
+    #ove-root {
+        height: 800px;
+        width: 100%;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .editor-header {
+        background-color: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="editor-header shadow-sm d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 fw-bold mb-0"><i class="bi bi-vector-pen me-2 text-primary"></i>Plasmid Editor</h1>
+            <small class="text-muted">Design and edit circular vectors and plasmids.</small>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-upload me-1"></i> Import GenBank
+            </button>
+            <button class="btn btn-sm btn-primary">
+                <i class="bi bi-save me-1"></i> Save Design
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div id="ove-root" class="shadow-sm"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{% static 'ove/assets/index-DNdCKMCL.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Biobank: Inicializando Plasmid Editor...');
+        
+        if (window.createOVE) {
+            try {
+                // Inicializa o editor
+                window.createOVE('ove-root');
+            } catch (error) {
+                console.error('Biobank: Erro ao executar window.createOVE:', error);
+            }
+        } else {
+            console.error('Biobank: window.createOVE não encontrado.');
+        }
+    });
+</script>
+{% endblock %}

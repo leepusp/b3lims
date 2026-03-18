@@ -1,0 +1,190 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Chemicals · Biobank LIMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chem-icon {
+        width: 40px; height: 40px;
+        background: #f8f9fa;
+        color: #6c757d;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .bg-available { background-color: #198754; }
+    .bg-low { background-color: #ffc107; }
+    .bg-expired { background-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="h4 mb-1 fw-bold text-dark">
+                <i class="bi bi-flask me-2 text-primary"></i>Chemicals & Solutions
+            </h3>
+            <p class="text-muted small mb-0">Manage laboratory reagents, solvents, and prepared solutions.</p>
+        </div>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addChemicalModal">
+            <i class="bi bi-plus-lg me-2"></i>New Reagent
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Search by name, CAS or formula..." value="{{ request.GET.q }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">Status: All</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="low_stock" {% if request.GET.status == 'low_stock' %}selected{% endif %}>Low Stock</option>
+                        <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Expired</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-light w-100 border">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Reagent Name</th>
+                        <th>Formula / CAS</th>
+                        <th>Quantity</th>
+                        <th>Location</th>
+                        <th>Expiry</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for chem in chemicals %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="chem-icon me-3"><i class="bi bi-moisture"></i></div>
+                                <div>
+                                    <span class="d-block fw-bold text-dark">{{ chem.name }}</span>
+                                    {% if chem.msds_link %}
+                                        <a href="{{ chem.msds_link }}" target="_blank" class="small text-decoration-none text-info">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>MSDS
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small fw-bold">{{ chem.formula|default:"-" }}</div>
+                            <div class="small text-muted">{{ chem.cas_number|default:"" }}</div>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ chem.quantity }}</span></td>
+                        <td class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ chem.location|default:"Unassigned" }}</td>
+                        <td>
+                            {% if chem.expiry_date %}
+                                <span class="small {% if chem.expiry_date < today %}text-danger fw-bold{% endif %}">
+                                    {{ chem.expiry_date|date:"Y-m-d" }}
+                                </span>
+                            {% else %}
+                                <span class="small text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if chem.status == 'available' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Available</span>
+                            {% elif chem.status == 'low_stock' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Low Stock</span>
+                            {% elif chem.status == 'expired' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Expired</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ chem.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-light border" title="Edit"><i class="bi bi-pencil"></i></button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-flask display-4 opacity-25 mb-3"></i>
+                            <p class="mb-0">No chemicals registered yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addChemicalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Register New Chemical</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'chemical_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Common Name *</label>
+                            <input type="text" name="name" class="form-control" placeholder="Ex: Ethanol 99%" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Formula</label>
+                            <input type="text" name="formula" class="form-control" placeholder="C2H5OH">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">CAS Number</label>
+                            <input type="text" name="cas_number" class="form-control" placeholder="64-17-5">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Quantity *</label>
+                            <input type="text" name="quantity" class="form-control" placeholder="Ex: 500mL" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Storage Location</label>
+                            <input type="text" name="location" class="form-control" placeholder="Ex: Flammables Cabinet">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Expiry Date</label>
+                            <input type="date" name="expiry_date" class="form-control">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Hazard Notes / Warnings</label>
+                            <textarea name="hazard_notes" class="form-control" rows="2" placeholder="Ex: Flammable, Toxic if swallowed..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link (URL)</label>
+                            <input type="url" name="msds_link" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Register Reagent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

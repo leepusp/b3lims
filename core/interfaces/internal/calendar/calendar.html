@@ -1,0 +1,247 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Lab Calendar · Biobank LIMS{% endblock %}
+
+{% block extra_css %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+
+<style>
+    /* Layout do Calendário */
+    .fc-header-toolbar {
+        font-size: 0.9rem;
+    }
+    .fc-button-primary {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+    }
+    .fc-button-active {
+        background-color: #0b5ed7 !important;
+    }
+    .fc-event {
+        cursor: pointer;
+        border: none;
+        padding: 2px 4px;
+        font-size: 0.75rem;
+        border-radius: 4px;
+    }
+    
+    /* Cores dos Eventos por Tipo */
+    .evt-entry { background-color: #d1e7dd; color: #0f5132; border-left: 3px solid #198754; }
+    .evt-qc { background-color: #fff3cd; color: #664d03; border-left: 3px solid #ffc107; }
+    .evt-freeze { background-color: #cff4fc; color: #055160; border-left: 3px solid #0dcaf0; }
+    .evt-maintenance { background-color: #f8d7da; color: #842029; border-left: 3px solid #dc3545; }
+    .evt-booking { background-color: #e2e3e5; color: #41464b; border-left: 3px solid #6c757d; }
+
+    /* Estilo do Sidebar de Legenda */
+    .filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        height: 100%;
+        border: 1px solid #e9ecef;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 0.85rem;
+        color: #6c757d;
+        cursor: pointer;
+    }
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 h-100">
+    
+    <div class="row h-100 g-4">
+        <div class="col-lg-3">
+            <div class="d-flex flex-column gap-4">
+                
+                <button class="btn btn-primary w-100 py-3 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createEventModal">
+                    <i class="bi bi-plus-lg me-2"></i> Schedule Activity
+                </button>
+
+                <div class="filter-section shadow-sm">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-3 ls-1">Calendars & Filters</h6>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="" id="filterSamples" checked>
+                        <label class="form-check-label small" for="filterSamples">Sample Entry & QC</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="" id="filterEquipment" checked>
+                        <label class="form-check-label small" for="filterEquipment">Equipment Booking</label>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" value="" id="filterMaintenance" checked>
+                        <label class="form-check-label small" for="filterMaintenance">Maintenance Tasks</label>
+                    </div>
+
+                    <hr class="text-muted opacity-25">
+
+                    <h6 class="fw-bold text-dark text-uppercase small mb-3 ls-1">Legend</h6>
+                    <div class="legend-item"><div class="legend-dot bg-success"></div>Sample Entry</div>
+                    <div class="legend-item"><div class="legend-dot bg-warning"></div>Quality Control</div>
+                    <div class="legend-item"><div class="legend-dot bg-info"></div>Freeze / Storage</div>
+                    <div class="legend-item"><div class="legend-dot bg-secondary"></div>Equipment Booking</div>
+                    <div class="legend-item"><div class="legend-dot bg-danger"></div>Maintenance</div>
+                </div>
+
+                <div class="card bg-light border-0">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                            <strong class="small text-dark">Did you know?</strong>
+                        </div>
+                        <p class="small text-muted mb-0" style="font-size: 0.8rem;">
+                            Click on any date slot to quickly schedule a machine reservation or log a maintenance task.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4">
+                    <div id="calendar" style="min-height: 700px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="createEventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Schedule Activity</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="scheduleForm">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Title / Task Name</label>
+                        <input type="text" class="form-control" placeholder="Ex: Flow Cytometer Booking" required>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Start Date</label>
+                            <input type="datetime-local" class="form-control" id="modalStartDate" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">End Date</label>
+                            <input type="datetime-local" class="form-control" id="modalEndDate">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Category</label>
+                        <select class="form-select">
+                            <option value="booking">Equipment Booking</option>
+                            <option value="maintenance">Maintenance / Cleaning</option>
+                            <option value="meeting">Lab Meeting</option>
+                            <option value="deadline">Project Deadline</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Description</label>
+                        <textarea class="form-control" rows="2" placeholder="Add details..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="alert('Funcionalidade de agendamento será implementada no backend na próxima etapa!')">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+
+    // 1. Preparar dados do Django para JS
+    // Convertemos os eventos do backend para o formato que o FullCalendar entende
+    var dbEvents = [
+        {% for e in events %}
+        {
+            title: "{{ e.get_event_type_display }} - {{ e.sample.sample_id }}",
+            start: "{{ e.timestamp|date:'Y-m-d\TH:i:s' }}", // Formato ISO
+            
+            // Definição de Classes CSS baseada no tipo
+            classNames: [
+                {% if e.event_type == 'entry' %}'evt-entry'
+                {% elif e.event_type == 'qc_check' %}'evt-qc'
+                {% elif e.event_type == 'freeze' %}'evt-freeze'
+                {% else %}'evt-booking'{% endif %}
+            ],
+            
+            extendedProps: {
+                user: "{{ e.performed_by.username }}",
+                location: "{{ e.location_snapshot|default:'' }}"
+            }
+        },
+        {% endfor %}
+    ];
+
+    // 2. Inicializar FullCalendar
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        themeSystem: 'bootstrap5',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        events: dbEvents,
+        
+        // Interações
+        editable: false, // Por enquanto read-only para eventos passados
+        selectable: true, // Permite selecionar dias
+        nowIndicator: true,
+        height: 'auto',
+
+        // Click no dia vazio -> Abrir Modal de Criação
+        dateClick: function(info) {
+            // Preenche a data no modal automaticamente
+            var dateStr = info.dateStr + 'T09:00'; // Define hora padrão
+            document.getElementById('modalStartDate').value = dateStr;
+            
+            // Abre o modal
+            var myModal = new bootstrap.Modal(document.getElementById('createEventModal'));
+            myModal.show();
+        },
+
+        // Renderização customizada (Tooltip simples)
+        eventDidMount: function(info) {
+            var tooltip = new bootstrap.Tooltip(info.el, {
+                title: info.event.title + " by " + info.event.extendedProps.user,
+                placement: 'top',
+                trigger: 'hover',
+                container: 'body'
+            });
+        }
+    });
+
+    calendar.render();
+});
+</script>
+{% endblock %}

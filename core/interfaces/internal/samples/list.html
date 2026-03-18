@@ -1,0 +1,161 @@
+{% extends "internal/common/manage_base.html" %}
+
+{% block title %}Samples Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ensures the table area has enough space for dropdown menus to breathe */
+    .table-responsive {
+        min-height: 300px !important;
+        padding-bottom: 150px; 
+    }
+</style>
+{% endblock %}
+
+{# --- 1. TITLE AND SUBTITLE --- #}
+{% block manage_title %}Sample Management{% endblock %}
+{% block manage_subtitle %}View and manage the entire biological inventory (Total: {{ samples.count }}){% endblock %}
+
+{# --- 2. ACTION BUTTONS --- #}
+{% block manage_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'samples_network' %}" class="btn btn-info text-white fw-bold shadow-sm">
+        <i class="bi bi-diagram-3-fill me-2"></i>Network View
+    </a>
+    <a href="{% url 'export_samples_csv' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-download me-2"></i>Export
+    </a>
+    <a href="{% url 'sample_add' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>New Sample
+    </a>
+</div>
+{% endblock %}
+
+{# --- 3. FILTERS E SEARCH INTEGRADO --- #}
+{% block manage_filters %}
+<form method="get" class="d-flex gap-3 w-100 justify-content-between align-items-center bg-white p-2 rounded border shadow-sm" id="filterForm">
+    
+    <div class="input-group input-group-sm" style="max-width: 350px;">
+        <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control border-start-0" placeholder="Search ID or Organism..." value="{{ request.GET.q|default:'' }}">
+        
+        {% if request.GET.q %}
+            <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary" title="Clear search">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        {% endif %}
+        <button type="submit" class="d-none"></button>
+    </div>
+
+    <div class="d-flex gap-2">
+        <select name="status" class="form-select form-select-sm bg-light" style="min-width: 140px;" onchange="document.getElementById('filterForm').submit()">
+            <option value="">Status: All</option>
+            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="qc" {% if request.GET.status == 'qc' %}selected{% endif %}>In QC</option>
+            <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+            <option value="depleted" {% if request.GET.status == 'depleted' %}selected{% endif %}>Depleted</option>
+        </select>
+
+        <select name="collection" class="form-select form-select-sm bg-light" style="min-width: 160px;" onchange="document.getElementById('filterForm').submit()">
+            <option value="">Collection: All</option>
+            {% for col in filter_collections %}
+                <option value="{{ col.id }}" {% if request.GET.collection == col.id|stringformat:"i" %}selected{% endif %}>{{ col.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+{% endblock %}
+
+{# --- 4. TABLE HEADER --- #}
+{% block table_header %}
+    <th class="ps-4">ID / Barcode</th>
+    <th>Identification</th>
+    <th>Biological Type</th>
+    <th>Storage Location</th>
+    <th>Status</th>
+    <th>Created at</th>
+    <th class="text-end pe-4">Actions</th>
+{% endblock %}
+
+{# --- 5. TABLE BODY --- #}
+{% block table_body %}
+    {% for sample in samples %}
+    <tr>
+        <td class="ps-4 fw-bold text-primary align-middle">
+            <a href="{% url 'sample_edit' sample.id %}" class="text-decoration-none">
+                {{ sample.sample_id }}
+            </a>
+        </td>
+        <td class="align-middle">
+            {% if sample.organism_name %}
+                <span class="badge bg-light text-dark border">{{ sample.organism_name }}</span>
+            {% else %}
+                <span class="text-muted small">-</span>
+            {% endif %}
+        </td>
+        <td class="align-middle fw-medium">
+            {% if 'Bacterium' in sample.sample_type %}
+                <i class="fas fa-bacterium text-success me-2" title="Bacteria"></i>
+            {% elif 'Phage' in sample.sample_type %}
+                <i class="fas fa-virus text-danger me-2" title="Phage"></i>
+            {% elif 'Plasmid' in sample.sample_type %}
+                <i class="fas fa-dna text-info me-2" title="Plasmid"></i>
+            {% else %}
+                <i class="fas fa-vial text-secondary me-2" title="Generic Sample"></i>
+            {% endif %}
+            {{ sample.sample_type|default:"Not defined" }}
+        </td>
+        <td class="align-middle">
+            {% if sample.storage_location %}
+                <small class="d-block fw-bold text-dark"><i class="fas fa-box-open me-1 text-muted"></i>{{ sample.storage_location }}</small>
+            {% else %}
+                <small class="d-block fw-bold text-muted">Pending Storage</small>
+            {% endif %}
+            <small class="text-muted"><i class="fas fa-building me-1"></i>{{ sample.biobank.name|default:"No Biobank" }}</small>
+        </td>
+        <td class="align-middle">
+            {% if sample.status == 'available' %}
+                <span class="badge bg-success-subtle text-success">Available</span>
+            {% elif sample.status == 'pending' %}
+                <span class="badge bg-warning-subtle text-warning">Pending</span>
+            {% elif sample.status == 'qc' %}
+                <span class="badge bg-info-subtle text-info">QC</span>
+            {% elif sample.status == 'rejected' %}
+                <span class="badge bg-danger-subtle text-danger">Rejected</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ sample.get_status_display }}</span>
+            {% endif %}
+        </td>
+        <td class="small text-muted align-middle">{{ sample.created_at|date:"d/m/Y" }}</td>
+        <td class="text-end pe-4 align-middle">
+            
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light border dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                    Options
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                    <li>
+                        <a class="dropdown-item py-2" href="{% url 'sample_edit' sample.id %}">
+                            <i class="fas fa-edit text-primary me-2" style="width: 15px; text-align: center;"></i>Edit Sample
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item py-2" href="{% url 'print_sample_label' sample.id %}" target="_blank">
+                            <i class="fas fa-qrcode text-secondary me-2" style="width: 15px; text-align: center;"></i>Print Label
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="7" class="text-center py-5 text-muted">
+            <i class="fas fa-vials fa-3x mb-3 text-secondary opacity-50"></i>
+            <p class="mb-1">No samples found.</p>
+            <small>Try changing filters or create a new sample.</small>
+        </td>
+    </tr>
+    {% endfor %}
+{% endblock %}

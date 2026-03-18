@@ -1,0 +1,250 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Biological Network{% endblock %}
+
+{% block extra_css %}
+<style>
+    #network-container {
+        width: 100%;
+        height: 75vh;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background-color: #f8f9fa;
+        cursor: grab;
+    }
+    #network-container:active {
+        cursor: grabbing;
+    }
+    /* Estilos para os painéis flutuantes no grafo */
+    .network-controls {
+        background: white;
+        border-bottom: 1px solid #dee2e6;
+        padding: 15px;
+        border-radius: 0.375rem 0.375rem 0 0;
+    }
+</style>
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 fw-bold mb-1"><i class="bi bi-diagram-3-fill me-2 text-info"></i>Biological Network</h2>
+            <p class="text-muted small mb-0">Interactive map of all samples, derivations, and ecological interactions.</p>
+        </div>
+        <div>
+            <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary shadow-sm">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        
+        <div class="network-controls d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            
+            <div class="input-group input-group-sm shadow-sm" style="max-width: 400px;">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="nodeSearch" class="form-control border-start-0" placeholder="Filter by ID or Organism...">
+                <button class="btn btn-outline-secondary border-start-0" type="button" id="btnResetSearch" title="Clear Filter">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button class="btn btn-primary" type="button" id="btnFocusNode" title="Locate and Zoom">
+                    <i class="bi bi-crosshair me-1"></i>Locate
+                </button>
+            </div>
+
+            <div class="d-flex gap-3 align-items-center bg-light p-2 rounded border">
+                <span class="small fw-bold text-muted text-uppercase me-2">Show Types:</span>
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input type-toggle" type="checkbox" id="toggleBacteria" value="bacteria" checked>
+                    <label class="form-check-label fw-bold" for="toggleBacteria" style="color: #198754;">Bacteria</label>
+                </div>
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input type-toggle" type="checkbox" id="togglePhage" value="phage" checked>
+                    <label class="form-check-label fw-bold" for="togglePhage" style="color: #dc3545;">Phages</label>
+                </div>
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input type-toggle" type="checkbox" id="togglePlasmid" value="plasmid" checked>
+                    <label class="form-check-label fw-bold" for="togglePlasmid" style="color: #0dcaf0;">Plasmids</label>
+                </div>
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input type-toggle" type="checkbox" id="toggleGeneric" value="generic" checked>
+                    <label class="form-check-label fw-bold text-secondary" for="toggleGeneric">Other</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div id="network-container"></div>
+        </div>
+        
+        <div class="card-footer bg-white border-top small text-muted d-flex gap-4 p-3">
+            <span><i class="bi bi-dash-lg" style="color: #adb5bd; stroke-width: 3px;"></i> Derivation/Lineage</span>
+            <span><i class="bi bi-dash" style="color: #adb5bd; border-style: dashed;"></i> Storage/Location</span>
+            <span><i class="bi bi-dash-lg" style="color: #dc3545; stroke-width: 3px;"></i> Infection (Host-Range)</span>
+            
+            <span class="ms-auto"><i class="bi bi-mouse me-1"></i>Scroll to zoom, click and drag to move nodes.</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. CARREGAR OS DADOS BRUTOS DO DJANGO
+        var rawNodes = new vis.DataSet({{ nodes_json|safe }});
+        var rawEdges = new vis.DataSet({{ edges_json|safe }});
+
+        // 2. ESTADO DOS FILTROS
+        var filterState = {
+            searchQuery: "",
+            types: {
+                bacteria: true,
+                phage: true,
+                plasmid: true,
+                generic: true
+            }
+        };
+
+        // 3. O DATAVIEW (O segredo para filtrar em tempo real)
+        // O DataView atua como um "óculos" sobre os rawNodes. Ele decide o que é desenhado.
+        var nodesView = new vis.DataView(rawNodes, {
+            filter: function (node) {
+                // Filtro 1: O tipo está ligado no Switch?
+                if (!filterState.types[node.group]) {
+                    return false;
+                }
+
+                // Filtro 2: A barra de pesquisa tem texto?
+                if (filterState.searchQuery) {
+                    var term = filterState.searchQuery.toLowerCase();
+                    var labelMatch = (node.label || "").toLowerCase().includes(term);
+                    var titleMatch = (node.title || "").toLowerCase().includes(term);
+                    
+                    if (!labelMatch && !titleMatch) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        });
+
+        // 4. INICIALIZAR A REDE
+        var container = document.getElementById('network-container');
+        var data = {
+            nodes: nodesView, // Usamos a View filtrada em vez dos dados puros!
+            edges: rawEdges
+        };
+        
+        var options = {
+            nodes: {
+                shape: 'dot',
+                size: 22,
+                font: { size: 14, face: 'system-ui', color: '#333' },
+                borderWidth: 2,
+                shadow: true
+            },
+            groups: {
+                bacteria: { color: { background: '#198754', border: '#146c43' } },
+                phage: { color: { background: '#dc3545', border: '#b02a37' } },
+                plasmid: { color: { background: '#0dcaf0', border: '#0aa2c0' } },
+                generic: { color: { background: '#6c757d', border: '#5c636a' } }
+            },
+            edges: {
+                smooth: { type: 'continuous' },
+                color: { inherit: false, color: '#adb5bd' },
+                width: 2
+            },
+            physics: {
+                forceAtlas2Based: {
+                    gravitationalConstant: -50,
+                    centralGravity: 0.01,
+                    springLength: 120,
+                    springConstant: 0.08
+                },
+                maxVelocity: 50,
+                solver: 'forceAtlas2Based',
+                timestep: 0.35,
+                stabilization: { iterations: 150 }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                navigationButtons: true,
+                keyboard: true
+            }
+        };
+        
+        var network = new vis.Network(container, data, options);
+
+        // ==========================================
+        // 5. EVENT LISTENERS DOS BOTÕES DE FILTRO
+        // ==========================================
+
+        // Atualizar quando os Toggles (Switches) mudam
+        document.querySelectorAll('.type-toggle').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function(e) {
+                filterState.types[e.target.value] = e.target.checked;
+                nodesView.refresh(); // O Vis.js recalcula tudo instantaneamente
+            });
+        });
+
+        // Atualizar quando escreve na barra de pesquisa (Filtro em tempo real)
+        const searchInput = document.getElementById('nodeSearch');
+        searchInput.addEventListener('input', function(e) {
+            filterState.searchQuery = e.target.value;
+            nodesView.refresh();
+        });
+
+        // Botão de Limpar Pesquisa
+        document.getElementById('btnResetSearch').addEventListener('click', function() {
+            searchInput.value = "";
+            filterState.searchQuery = "";
+            nodesView.refresh();
+            network.fit({ animation: { duration: 1000, easingFunction: 'easeInOutQuad' } });
+        });
+
+        // Botão de "Focus/Locate" - Encontra o nó e dá Zoom!
+        document.getElementById('btnFocusNode').addEventListener('click', function() {
+            var term = searchInput.value.toLowerCase();
+            if (!term) return;
+
+            // Procura o ID do primeiro nó que corresponde à pesquisa
+            var targetNodeId = null;
+            var currentNodes = nodesView.get(); // Pega os nós atualmente visíveis
+            
+            for (var i = 0; i < currentNodes.length; i++) {
+                if ((currentNodes[i].label || "").toLowerCase().includes(term) || 
+                    (currentNodes[i].title || "").toLowerCase().includes(term)) {
+                    targetNodeId = currentNodes[i].id;
+                    break; // Pega o primeiro que bater
+                }
+            }
+
+            if (targetNodeId !== null) {
+                // Seleciona o nó visualmente
+                network.selectNodes([targetNodeId]);
+                // Faz a câmara "voar" até ele com Zoom
+                network.focus(targetNodeId, {
+                    scale: 1.5,
+                    animation: {
+                        duration: 1000,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            } else {
+                alert("No node matches this search. Make sure the type toggle is ON.");
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,56 +1,53 @@
 # Biological Sample Collections Database (Biobank LIMS)
 
-Tudo aqui deveria estar escrito em ingles!!!!!
+This project is a Biobank developed for CEPID B3 — Center for Research, Innovation and Dissemination in Bacterial and Bacteriophage Biology.
 
-Este projeto é um Biobank desenvolvido para o CEPID B3 — Centro de Pesquisa, Inovação e Difusão em Biologia de Bactérias e Bacteriófagos.
+The system was designed to centralize the storage, organization, and distribution of biological assets of high scientific value, promoting traceability, legal compliance, and collaboration among researchers.
 
-O sistema foi projetado para centralizar o armazenamento, organização e distribuição de patrimônio biológico de alto valor científico, promovendo rastreabilidade, conformidade legal e colaboração entre pesquisadores.
+# Installation and Configuration
 
-# Instalação e Configuração
+Follow the steps below to configure the development environment locally.
 
-Siga os passos abaixo para configurar o ambiente de desenvolvimento localmente.
-
-# 1. Pré-requisitos
+# 1. Prerequisites
 
 Python 3.10+
 
 Git
 
-# 2. Clonar o Repositório
+# 2. Clone the Repository
 
-git clone https://github.com/leepbioinfo/biobank.git
-cd biobank
+git clone https://github.com/leepbioinfo/biobank.git cd biobank
 
-# 3. Configurar Ambiente Virtual
+# 3. Configure Virtual Environment
 
 python3 -m venv biobank-env
 
-# Ativar no Linux/macOS
+# Activate on Linux/macOS
 
 source biobank-env/bin/activate
 
-# Ativar no Windows
+# Activate on Windows
 
 biobank-env\Scripts\activate
 
-# 4.Instalar Dependências
+# 4. Install Dependencies
 
 pip install -r requirements.txt
 
-# 5. Configurar Banco de Dados
+# 5. Configure Database
 
-python manage.py makemigrations
+python manage.py makemigrations python manage.py migrate
+
 python manage.py migrate
 
-# 6. Criar Usuário Administrador
+# 6. Create Administrator User
 
 python manage.py createsuperuser
 
-# 7. Execução
+# 7. Execution
 
 python manage.py runserver
 
+# License
 
-# Licença
-
-Este projeto é desenvolvido para fins acadêmicos e científicos no âmbito do CEPID B3 — FAPESP.
+This project is developed for academic and scientific purposes within the scope of CEPID B3 — FAPESP.

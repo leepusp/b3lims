@@ -4,114 +4,308 @@
 {% block title %}Workspace · Biobank LIMS{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/workspace/workspace.css' %}">
 <style>
-    /* Layout Grid Principal */
-    .workspace-grid { 
-        display: grid; 
-        grid-template-columns: 1fr 320px; 
-        gap: 24px; 
-        margin-top: 20px; 
+    /* KPI Cards */
+    .kpi-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden;
+        background: white;
     }
-
-    /* Cabeçalho do Dashboard */
-    .workspace-header { 
-        border-bottom: 1px solid #e5e7eb; 
-        padding-bottom: 20px; 
-        margin-bottom: 20px; 
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+    }
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
         display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 1.5rem;
     }
 
-    /* Estilização das Seções e Sidebar */
-    .workspace-section { 
-        background: white; 
-        border-radius: 12px; 
-        border: 1px solid #e5e7eb; 
-        padding: 24px; 
-        margin-bottom: 24px; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    /* Action Buttons */
+    .action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        background: white;
+        text-decoration: none;
+        transition: all 0.2s;
+        height: 100%;
     }
-
-    .workspace-sidebar .sidebar-box { 
-        background: white; 
-        border: 1px solid #e5e7eb; 
-        border-radius: 12px; 
-        padding: 20px; 
-        margin-bottom: 20px; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    .action-btn:hover {
+        background: #f8f9fa;
+        border-color: #dee2e6;
+        color: #0d6efd;
+        transform: translateY(-2px);
     }
+    .action-btn i { font-size: 2rem; margin-bottom: 0.5rem; }
 
-    /* Tipografia de Métricas */
-    .metric-value { 
-        font-size: 2.2rem; 
-        font-weight: 700; 
-        color: #0d6efd; 
-        line-height: 1.2;
+    /* Calendar / Timeline Widget */
+    .calendar-widget {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
     }
+    .calendar-header {
+        background: #435ebe;
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .calendar-day { font-size: 3rem; font-weight: 700; line-height: 1; }
+    .calendar-month { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; }
+    .calendar-body { padding: 1.5rem; }
 
-    /* Melhoria Responsiva */
-    @media (max-width: 992px) {
-        .workspace-grid { 
-            grid-template-columns: 1fr; 
-        }
-        .workspace-sidebar {
-            order: -1; /* Sidebar aparece no topo em telas pequenas */
-        }
+    .agenda-item {
+        display: flex;
+        align-items: start;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px dashed #e9ecef;
+    }
+    .agenda-item:last-child { border-bottom: none; margin-bottom: 0; }
+    .agenda-time {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #6c757d;
+        min-width: 60px;
+    }
+    .agenda-marker {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 15px;
+        margin-top: 5px;
+        flex-shrink: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <header class="workspace-header">
+
+    <div class="d-flex justify-content-between align-items-end mb-5">
         <div>
-            <h1 class="fw-bold h2 mb-1">Operational Workspace</h1>
-            <p class="text-muted mb-0">Management and cloud synchronization for CEBID B3.</p>
+            <h2 class="h3 fw-bold text-dark mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h2>
+            <p class="text-muted mb-0">Laboratory Information Management System Dashboard.</p>
         </div>
-        <div class="text-end d-none d-md-block">
-            <span class="badge bg-light text-dark border p-2">
-                <i class="bi bi-calendar3 me-2"></i>{% now "d/m/Y" %}
-            </span>
-        </div>
-    </header>
 
-    {% if messages %}
-        <div class="row mb-3">
-            <div class="col-12">
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
-                        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
-                        {% elif message.tags == 'info' %}<i class="bi bi-info-circle-fill me-2"></i>
-                        {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        {% if user.is_superuser %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'workspace_backup' %}" class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
+                <i class="bi bi-hdd-network me-2"></i> System Backup
+            </a>
+            <a href="{% url 'admin:index' %}" target="_blank" class="btn btn-dark d-flex align-items-center shadow-sm">
+                <i class="bi bi-shield-lock-fill me-2"></i> Admin Panel
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-8">
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card kpi-card h-100 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="kpi-icon bg-primary-subtle text-primary me-3">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Samples</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ stats.total_samples }}</h3>
+                            </div>
+                        </div>
                     </div>
-                {% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <div class="card kpi-card h-100 shadow-sm border-start border-4 border-warning">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="kpi-icon bg-warning-subtle text-warning me-3">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Pending QC</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ stats.pending_qc }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card kpi-card h-100 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="kpi-icon bg-success-subtle text-success me-3">
+                                <i class="bi bi-graph-up-arrow"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">New (30d)</h6>
+                                <h3 class="mb-0 fw-bold text-dark">+{{ stats.new_samples_30d }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card kpi-card h-100 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="kpi-icon bg-info-subtle text-info me-3">
+                                <i class="bi bi-collection"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Collections</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ stats.total_collections }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <div class="mb-4">
+                <h5 class="fw-bold text-secondary mb-3 small text-uppercase ls-1">Quick Actions</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'sample_add' %}" class="action-btn shadow-sm">
+                            <i class="bi bi-plus-circle-fill text-primary"></i>
+                            <span class="fw-bold">Register Sample</span>
+                            <small class="text-muted mt-1 text-center">Add new specimen</small>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <a href="{% url 'collections_list' %}" class="action-btn shadow-sm">
+                            <i class="bi bi-folder-plus text-success"></i>
+                            <span class="fw-bold">New Collection</span>
+                            <small class="text-muted mt-1 text-center">Create project</small>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <a href="{% url 'notebook_index' %}" class="action-btn shadow-sm">
+                            <i class="bi bi-journal-text text-info"></i>
+                            <span class="fw-bold">Lab Notebook</span>
+                            <small class="text-muted mt-1 text-center">Open ELN</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-dark h6">Sample Types Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="samplesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
-    {% endif %}
 
-    <div class="workspace-grid">
-        <section class="workspace-main">
-            {% include "internal/workspace/partials/metrics.html" %}
-            
-            <div class="mt-4">
-                {% include "internal/workspace/partials/recent_activity.html" %}
+        <div class="col-lg-4">
+
+            <div class="calendar-widget shadow-sm mb-4">
+                <div class="calendar-header">
+                    <div class="calendar-day">{% now "d" %}</div>
+                    <div class="calendar-month">{% now "F Y" %}</div>
+                    <div class="small opacity-75 mt-1">{% now "l" %}</div>
+                </div>
+                <div class="calendar-body">
+                    <h6 class="fw-bold text-secondary small text-uppercase mb-3">Today's Activity</h6>
+
+                    {% if stats.recent_activity %}
+                        <div class="agenda-list">
+                            {% for event in stats.recent_activity|slice:":5" %}
+                            <div class="agenda-item">
+                                <div class="agenda-time">{{ event.timestamp|date:"H:i" }}</div>
+                                <div class="agenda-marker
+                                    {% if event.event_type == 'entry' %}bg-success
+                                    {% elif event.event_type == 'qc_check' %}bg-warning
+                                    {% else %}bg-primary{% endif %}">
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark small">{{ event.get_event_type_display }}</div>
+                                    <div class="text-muted small">Sample: {{ event.sample.sample_id }}</div>
+                                    <div class="text-muted small" style="font-size: 0.7rem;">
+                                        by {{ event.performed_by.username }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted small">
+                            No activities recorded today.
+                        </div>
+                    {% endif %}
+
+                    <div class="mt-3 pt-3 border-top text-center">
+                        <a href="{% url 'lab_calendar' %}" class="btn btn-sm btn-light w-100 text-primary fw-bold">View Full Calendar</a>
+                    </div>
+                </div>
             </div>
-        </section>
 
-        <aside class="workspace-sidebar">
-            {% include "internal/workspace/partials/scope.html" %}
-            
-            {% include "internal/workspace/partials/quick_actions.html" %}
-
-            <div class="alert alert-warning border-0 shadow-sm small">
-                <i class="bi bi-lightbulb me-2"></i>
-                <strong>Pro Tip:</strong> Use the <b>Sync to Benchling</b> button to mirror your local inventory to the cloud registry.
+           <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="fw-bold text-secondary small text-uppercase mb-3">System Status</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small"><i class="bi bi-check-circle-fill text-success me-2"></i>Database</span>
+                        <span class="badge bg-success-subtle text-success">Online</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small"><i class="bi bi-shield-check text-success me-2"></i>Backup</span>
+                        <span class="text-muted small">Active</span>
+                    </div>
+                </div>
             </div>
-        </aside>
+
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('samplesChart');
+    if (ctx) {
+        const labels = {{ stats.chart_labels|safe }};
+        const data = {{ stats.chart_data|safe }};
+
+        if (labels.length > 0) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#6c757d'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        } else {
+            ctx.parentElement.innerHTML = '<div class="text-center py-5 text-muted small">No data available for charts.</div>';
+        }
+    }
+});
+</script>
 {% endblock %}
