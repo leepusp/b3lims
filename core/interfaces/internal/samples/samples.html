@@ -24,14 +24,15 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="add_sample">
         <input type="hidden" name="scientific_notes" id="scientific_notes_input">
+        <input type="hidden" id="emptyPlasmidsData" value="{{ empty_plasmids_json|default:'[]' }}">
 
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
-                
+
                 <div class="mb-5">
                     <h5 class="form-section-title">1. Basic Identification and Lineage</h5>
                     <div class="row g-4">
-                        
+
                         <div class="col-md-4">
                             <label class="section-label">Sample ID / Barcode <span class="text-danger">*</span></label>
                             <div class="input-group">
@@ -58,13 +59,13 @@
                         <div class="col-md-4">
                             <label class="section-label">Physical Location (Path Builder)</label>
                             <p class="small text-muted mb-1" style="font-size: 0.75rem;">Type the location and press <strong>Enter</strong> to create levels. (Ex: Freezer 1 ↵ Box A ↵)</p>
-                            
+
                             <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
                                 <input type="hidden" name="storage_location" id="storage_location_hidden">
                                 <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter...">
                             </div>
                         </div>
-                        
+
                         <div class="col-md-12 border-start border-3 border-warning ps-4 mt-4">
                             <div class="row">
                                 <div class="col-md-6">
@@ -74,7 +75,7 @@
                                     {% for s in all_samples %}
                                         <option value="{{ s.sample_id }}">{{ s.organism_name|default:"No Organism" }} ({{ s.sample_type|default:"Generic" }})</option>
                                     {% endfor %}
-                                    </datalist> 
+                                    </datalist>
                                     <div class="form-text small">Fill this in if this sample is physically derived from another.</div>
                                 </div>
 
@@ -102,7 +103,7 @@
                         <i class="bi bi-diagram-3 fs-5 text-success me-2"></i>
                         <h6 class="mb-0 text-success fw-bold">Biological Interactions & Storage</h6>
                     </div>
-                    
+
                     <div class="row g-4">
                         <div id="hostBacteriumDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
@@ -152,7 +153,7 @@
                             <div class="p-3 border rounded bg-white h-100 shadow-sm">
                                 <label class="section-label"><i class="bi bi-shield-lock me-1"></i>Linked Collection</label>
                                 <p class="small text-muted mb-2">Link this sample to a collection to share it with your group.</p>
-                                
+
                                 <select name="collection" class="form-select border-primary-subtle mb-3">
                                     <option value="" selected>None (Keep Sample Isolated)</option>
                                     {% for col in collections %}
@@ -175,7 +176,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <label class="section-label mb-0"><i class="bi bi-building me-1"></i>Physical Distribution</label>
                                 </div>
-                                
+
                                 <div class="dropdown mb-3">
                                     <button class="btn btn-white border w-100 text-start d-flex justify-content-between align-items-center shadow-sm py-2 bg-white"
                                             type="button" id="biobankDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
@@ -213,18 +214,59 @@
                 </div>
 
                 <div class="mb-5">
-                    <h5 class="form-section-title">3. Scientific Notes (ELN) and Attachments</h5>
+                    <h5 class="form-section-title">3. Metadata & Classification</h5>
+                    <div class="row g-4">
+                        
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <label class="section-label mb-0"><i class="bi bi-tags me-1 text-primary"></i>Tags</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                                        <i class="bi bi-plus"></i> New Tag
+                                    </button>
+                                </div>
+                                <div class="form-text small text-muted mb-2">Click to select/unselect tags for this sample:</div>
+                                <div id="tagChipContainer" class="d-flex flex-wrap gap-1">
+                                    {% for tag in all_tags %}
+                                        <span class="badge rounded-pill border selectable-tag m-1 p-2 text-dark bg-light" data-tag-id="{{ tag.id }}" style="cursor:pointer;">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div id="tagHiddenInputs"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white h-100 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <label class="section-label mb-0"><i class="bi bi-key me-1 text-warning"></i>Custom Keywords</label>
+                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+                                        <i class="bi bi-plus"></i> Add Pair
+                                    </button>
+                                </div>
+                                <div class="form-text small text-muted mb-2">Add specific Key/Value pairs (e.g., Target Gene: eGFP):</div>
+                                <div id="keywordChipContainer" class="d-flex flex-wrap gap-1">
+                                    <div class="default-msg text-muted small w-100 text-center py-3 border border-dashed rounded bg-light">No custom keywords added yet.</div>
+                                </div>
+                                <div id="keywordHiddenInputs"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="form-section-title">4. Scientific Notes (ELN) and Attachments</h5>
                     <div class="row g-4">
                         <div class="col-md-8">
                             <div id="eln-editor" style="height: 250px;"></div>
                         </div>
-                        
+
                         <div class="col-md-4">
                             <div class="border rounded p-3 bg-light h-100">
                                 <label class="section-label mb-3"><i class="bi bi-paperclip me-1"></i> Attached Files</label>
-                                
+
                                 <div id="fileContainer" class="d-flex flex-column gap-3 mb-3"></div>
-                                
+
                                 <button type="button" id="addFileBtn" class="btn btn-sm w-100 btn-outline-secondary bg-white border-dashed shadow-sm">
                                     <i class="bi bi-plus"></i> Add File
                                 </button>
@@ -232,8 +274,8 @@
                         </div>
                     </div>
                 </div>
-            </div> 
-            
+            </div>
+
             <div class="card-footer bg-light border-top p-4 text-end">
                 <a href="{% url 'samples_list' %}" class="btn btn-white border me-2 px-4">Cancel</a>
                 <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">

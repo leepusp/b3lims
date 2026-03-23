@@ -1,6 +1,6 @@
 Django>=4.2
 biopython>=1.81
-qrcode[pil]>=7.4
+qrcode>=7.4
 Pillow>=9.5
 numpy>=1.24
 pandas>=2.0

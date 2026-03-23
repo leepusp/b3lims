@@ -1,4 +1,4 @@
-import json  # <-- Adicionado para o Grafo
+import json  # <-- Adicionado para o Grafo e Auto-preenchimento
 import qrcode
 import io
 import base64
@@ -38,7 +38,7 @@ from core.permissions.collections import can_edit_collection
 @login_required
 def samples_list_view(request):
     user = request.user
-    
+
     qs = Sample.objects.filter(is_active=True).select_related('biobank', 'owner').prefetch_related('collections').order_by("-created_at")
 
     query = request.GET.get('q')
@@ -80,16 +80,16 @@ def sample_create_view(request):
             try:
                 sample_id_base = request.POST.get("sample_id")
                 sample_type = request.POST.get("sample_type")
-                scientific_notes = request.POST.get("scientific_notes") 
+                scientific_notes = request.POST.get("scientific_notes")
                 storage_location = request.POST.get("storage_location", "")
                 is_public = request.POST.get("is_public") == "true" or request.POST.get("is_public") == "on"
-                
+
                 if sample_type == "Bacterium (Host)":
                     genus = request.POST.get("genus", "").strip()
                     species = request.POST.get("species", "").strip()
                     strain = request.POST.get("strain", "").strip()
                     organism_name = f"{genus} {species} {strain}".strip()
-                    
+
                 elif sample_type == "Phage (Virus)":
                     genus = request.POST.get("genus", "").strip()
                     taxonomy = request.POST.get("taxonomy", "").strip()
@@ -99,7 +99,7 @@ def sample_create_view(request):
                     construction = request.POST.get("construction_name", "").strip()
                     backbone = request.POST.get("backbone_name", "").strip()
                     organism_name = construction if construction else backbone
-                    
+
                 elif sample_type == "Other":
                     organism_name = request.POST.get("custom_organism_name", "Unknown Sample").strip()
                 else:
@@ -140,18 +140,26 @@ def sample_create_view(request):
                             if Sample.objects.filter(sample_id=final_id).exists():
                                 raise ValueError(f"The ID '{final_id}' already exists in the system.")
 
+                            # ======================================================
+                            # CORREÇÃO: Injetar o Collaborator nas notas científicas
+                            # ======================================================
+                            collaborator_input = request.POST.get("collaborator", "").strip()
+                            final_notes = scientific_notes
+                            if collaborator_input:
+                                final_notes = f"<p><strong>Collaborator / Provider:</strong> {collaborator_input}</p>" + (final_notes or "")
+
                             base_data = {
                                 "sample_id": final_id,
-                                "organism_name": organism_name, 
+                                "organism_name": organism_name,
                                 "sample_type": sample_type,
                                 "biobank": biobank,
-                                "scientific_notes": scientific_notes,
+                                "scientific_notes": final_notes, # Salva as notas atualizadas
                                 "is_public": is_public,
                                 "owner": user,
                                 "is_active": True,
                                 "status": "pending",
                                 "storage_location": storage_location,
-                                "collaborator": request.POST.get("collaborator", "").strip()
+                                # "collaborator" Removido daqui para não dar erro no DB!
                             }
 
                             # BACTERIA
@@ -177,7 +185,7 @@ def sample_create_view(request):
                                     official_name=request.POST.get("official_name", ""),
                                     aliases=request.POST.get("aliases", ""),
                                     phage_name=request.POST.get("phage_name", ""),
-                                    genus=request.POST.get("genus", ""), 
+                                    genus=request.POST.get("genus", ""),
                                     morphotype=request.POST.get("morphotype"),
                                     taxonomy=request.POST.get("taxonomy"),
                                     lifestyle=request.POST.get("lifestyle"),
@@ -193,12 +201,12 @@ def sample_create_view(request):
                             elif sample_type == "Plasmid":
                                 r_b_markers = request.POST.get("backbone_resistance_markers", "")
                                 r_b_list = [r.strip() for r in r_b_markers.split(",") if r.strip()]
-                                
+
                                 r_i_markers = request.POST.get("insert_resistance_markers", "")
                                 r_i_list = [r.strip() for r in r_i_markers.split(",") if r.strip()]
-                                
+
                                 is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
-                                
+
                                 sample = Plasmid.objects.create(
                                     **base_data,
                                     backbone_name=request.POST.get("backbone_name", ""),
@@ -218,7 +226,7 @@ def sample_create_view(request):
 
                             else:
                                 sample = Sample.objects.create(**base_data)
-                            
+
                             # Collections & Parents
                             if collection_obj:
                                 sample.collections.add(collection_obj)
@@ -246,7 +254,7 @@ def sample_create_view(request):
                                         value=value.strip()
                                     )
                                     sample.keywords.add(kv)
-                                    
+
                             # =========================================================
                             # RELAÇÕES BIOLÓGICAS (LINHAS DINÂMICAS)
                             # =========================================================
@@ -319,14 +327,14 @@ def sample_create_view(request):
                     files = request.FILES.getlist("file")
                     categories = request.POST.getlist("file_category")
                     descriptions = request.POST.getlist("file_description")
-                    from core.models.samples.sample import SampleStorageLevel 
-                    
+                    from core.models.samples.sample import SampleStorageLevel
+
                     for sample in created_samples:
                         for k, f in enumerate(files):
                             cat = categories[k] if k < len(categories) else "Other"
                             desc = descriptions[k] if k < len(descriptions) else ""
                             SampleFile.objects.create(sample=sample, file=f, category=cat, description=desc)
-                            
+
                         if storage_location:
                             limpo = storage_location.replace('>', '|').replace(',', '|').replace(';', '|')
                             fatias = [f.strip() for f in limpo.split('|') if f.strip()]
@@ -339,12 +347,20 @@ def sample_create_view(request):
             except ValueError as ve:
                 messages.error(request, str(ve))
             except Exception as e:
-                print(f"CRITICAL ERROR CREATE SAMPLE: {e}") 
+                print(f"CRITICAL ERROR CREATE SAMPLE: {e}")
                 messages.error(request, f"Error processing sample: {str(e)}")
 
     user_biobanks = Biobank.objects.filter(
         Q(owner=user) | Q(is_public=True)
     ).distinct()
+
+    # ==============================================================
+    # CORREÇÃO: Passar os Empty Plasmids em JSON para o JS trabalhar
+    # ==============================================================
+    empty_plasmids = list(Plasmid.objects.filter(is_active=True, is_empty_vector=True).values(
+        'sample_id', 'backbone_name', 'backbone_aliases', 'vector_type',
+        'induction_system', 'origin_of_replication', 'backbone_size_bp', 'backbone_resistance_markers'
+    ))
 
     ctx = base_context(request)
     ctx.update({
@@ -352,6 +368,7 @@ def sample_create_view(request):
         "all_tags": Tag.objects.all(),
         "biobanks": user_biobanks,
         "all_samples": Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
+        "empty_plasmids_json": json.dumps(empty_plasmids),  # <--- Adicionado aqui
     })
     return render(request, "internal/samples/samples.html", ctx)
 
@@ -379,33 +396,33 @@ def print_sample_label(request, sample_id):
 
 @login_required
 def export_samples_csv(request):
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig') 
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = 'attachment; filename="advanced_samples_report.csv"'
-    writer = csv.writer(response, delimiter=';') 
-    
+    writer = csv.writer(response, delimiter=';')
+
     headers = [
-        'ID / Barcode', 'Biological Type', 'Organism', 'Status', 'Visibility', 
+        'ID / Barcode', 'Biological Type', 'Organism', 'Status', 'Visibility',
         'Collections', 'Biobank', 'Storage Location', 'Owner', 'Created At',
         'Phage: Genus', 'Phage: Morphotype', 'Phage: Taxonomy', 'Phage: Lifestyle', 'Genome (Type)', 'Genome Size (bp)',
         'Bacteria: Genus', 'Bacteria: Species', 'Bacteria: Strain', 'Genotype', 'Resistance Markers',
         'Plasmid: Backbone', 'Plasmid: Insert', 'Plasmid Size (bp)'
     ]
     writer.writerow(headers)
-    
+
     samples = Sample.objects.filter(is_active=True).select_related('biobank', 'owner').prefetch_related('collections')
-    
+
     for s in samples:
         cols = ", ".join([c.name for c in s.collections.all()])
 
         row = [
-            s.sample_id, s.sample_type or '', s.organism_name or '', 
-            s.get_status_display(), "Public" if s.is_public else "Private", 
-            cols, 
+            s.sample_id, s.sample_type or '', s.organism_name or '',
+            s.get_status_display(), "Public" if s.is_public else "Private",
+            cols,
             s.biobank.name if s.biobank else '',
             s.storage_location or '',
             s.owner.username, s.created_at.strftime('%Y-%m-%d %H:%M')
         ]
-        
+
         p_genus = morphotype = taxonomy = lifestyle = genome_type = genome_size = ""
         b_genus = species = strain = genotype = resistance = ""
         plasmid_backbone = plasmid_insert = plasmid_size = ""
@@ -417,7 +434,7 @@ def export_samples_csv(request):
             lifestyle = s.phage.lifestyle or ""
             genome_type = s.phage.genome_type or ""
             genome_size = s.phage.genome_size_bp or ""
-            
+
         elif hasattr(s, 'bacteria'):
             b_genus = s.bacteria.genus or ""
             species = s.bacteria.species or ""
@@ -429,7 +446,7 @@ def export_samples_csv(request):
             plasmid_backbone = s.plasmid.backbone_name or ""
             plasmid_insert = s.plasmid.insert_name if not s.plasmid.is_empty_vector else "N/A (Empty Vector)"
             plasmid_size = s.plasmid.total_size_bp or ""
-            
+
             b_res = s.plasmid.backbone_resistance_markers or []
             i_res = s.plasmid.insert_resistance_markers or []
             all_res = b_res + i_res
@@ -440,18 +457,18 @@ def export_samples_csv(request):
             b_genus, species, strain, genotype, resistance,
             plasmid_backbone, plasmid_insert, plasmid_size
         ])
-        
+
         writer.writerow(row)
-        
+
     return response
 
 # =========================================================
-# 4. EDIT VIEW 
+# 4. EDIT VIEW
 # =========================================================
 @login_required
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
-    
+
     if hasattr(base_sample, 'bacteria'): real_sample = base_sample.bacteria
     elif hasattr(base_sample, 'phage'): real_sample = base_sample.phage
     elif hasattr(base_sample, 'plasmid'): real_sample = base_sample.plasmid
@@ -459,9 +476,9 @@ def sample_edit_view(request, sample_id):
 
     if not can_edit_sample(request.user, real_sample) and not request.user.is_superuser:
         raise PermissionDenied
-    
+
     FormClass = get_form_class_for_sample(real_sample)
-    
+
     if request.method == "POST":
         form = FormClass(request.POST, request.FILES, instance=real_sample)
         if form.is_valid():
@@ -469,22 +486,22 @@ def sample_edit_view(request, sample_id):
             tag_ids = request.POST.getlist("tags")
             if tag_ids:
                 real_sample.tags.set(tag_ids)
-                
+
             storage_location = form.cleaned_data.get('storage_location', '')
             from core.models.samples.sample import SampleStorageLevel
-            
+
             SampleStorageLevel.objects.filter(sample=real_sample).delete()
-            
+
             if storage_location:
                 limpo = storage_location.replace('>', '|').replace(',', '|').replace(';', '|')
                 fatias = [f.strip() for f in limpo.split('|') if f.strip()]
                 for nivel_atual, nome_fatia in enumerate(fatias):
                     SampleStorageLevel.objects.create(sample=real_sample, name=nome_fatia, level_index=nivel_atual)
-            
+
             files = request.FILES.getlist("file")
             categories = request.POST.getlist("file_category")
             descriptions = request.POST.getlist("file_description")
-            
+
             for k, f in enumerate(files):
                 cat = categories[k] if k < len(categories) else "Other"
                 desc = descriptions[k] if k < len(descriptions) else ""
@@ -497,8 +514,8 @@ def sample_edit_view(request, sample_id):
     else:
         form = FormClass(instance=real_sample)
 
-    parents = base_sample.incoming_relationships.all() 
-    children = base_sample.outgoing_relationships.all() 
+    parents = base_sample.incoming_relationships.all()
+    children = base_sample.outgoing_relationships.all()
     sample_files = SampleFile.objects.filter(sample=base_sample).order_by('-uploaded_at')
 
     # Passa as relações salvas para o frontend renderizar as linhas
@@ -520,7 +537,7 @@ def sample_edit_view(request, sample_id):
 
     ctx = base_context(request)
     ctx.update({
-        'form': form, 
+        'form': form,
         'sample': real_sample,
         'parents': parents,
         'children': children,
@@ -533,12 +550,12 @@ def sample_edit_view(request, sample_id):
 
 
 # =========================================================
-# 5. RELATIONSHIPS 
+# 5. RELATIONSHIPS
 # =========================================================
 @login_required
 def sample_relate_view(request, sample_id):
     current_sample = get_object_or_404(Sample, id=sample_id)
-    
+
     if not can_edit_sample(request.user, current_sample) and not request.user.is_superuser:
         raise PermissionDenied
 
@@ -556,7 +573,7 @@ def sample_relate_view(request, sample_id):
                 for t_id in target_ids:
                     target_sample = Sample.objects.get(id=t_id)
                     if current_sample == target_sample: continue
-                    
+
                     direction = request.POST.get(f"direction_{t_id}") or request.POST.get("direction", "out")
                     rel_type = request.POST.get(f"type_{t_id}") or request.POST.get("relationship_type")
                     eop = request.POST.get(f"eop_{t_id}") or request.POST.get("eop")
@@ -573,7 +590,7 @@ def sample_relate_view(request, sample_id):
                         notes=general_notes,
                         created_by=request.user
                     )
-                    
+
                     Event.objects.create(
                         sample=current_sample,
                         performed_by=request.user,
@@ -584,12 +601,12 @@ def sample_relate_view(request, sample_id):
                     if rel_type == "infects":
                         phage_obj = None
                         bacteria_obj = None
-                        
+
                         if hasattr(source, 'phage') and hasattr(destination, 'bacteria'):
                             phage_obj, bacteria_obj = source.phage, destination.bacteria
                         elif hasattr(destination, 'phage') and hasattr(source, 'bacteria'):
                             phage_obj, bacteria_obj = destination.phage, source.bacteria
-                            
+
                         if phage_obj and bacteria_obj:
                             HostRange.objects.update_or_create(
                                 phage=phage_obj, bacteria=bacteria_obj,
@@ -597,10 +614,10 @@ def sample_relate_view(request, sample_id):
                             )
 
             messages.success(request, f"Relationships connected successfully for {len(target_ids)} sample(s)!")
-        
-        except Exception as e: 
+
+        except Exception as e:
             messages.error(request, f"Error processing relationship: {str(e)}")
-            
+
     return redirect("samples_list")
 
 
@@ -659,5 +676,5 @@ def samples_network_view(request):
         "nodes_json": json.dumps(nodes),
         "edges_json": json.dumps(edges)
     })
-    
+
     return render(request, "internal/samples/network.html", ctx)

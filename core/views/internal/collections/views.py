@@ -21,7 +21,7 @@ from core.permissions.collections import (
 )
 
 @login_required
-def collections_list_view(request): # Nome alterado para bater com urls.py
+def collections_list_view(request):
     user = request.user
     action = request.POST.get("action") if request.method == "POST" else None
 
@@ -37,13 +37,9 @@ def collections_list_view(request): # Nome alterado para bater com urls.py
                     collection.is_active = True
                     collection.save()
 
-                    # --- Lógica de Múltiplos Biobancos ---
-                    bb_ids_raw = request.POST.get("biobanks_ids", "")
-                    bb_ids = [bb_id for bb_id in bb_ids_raw.split(",") if bb_id.strip()]
-                    
-                    if bb_ids:
-                        collection.biobanks.set(bb_ids)
-                    
+                    # --- REMOVIDA A TENTATIVA DE SALVAR BIOBANKS DIRETAMENTE NA COLEÇÃO ---
+                    # Um Biobank é associado à Amostra (Sample), e não à pasta lógica (Collection).
+
                     # --- Tags ---
                     selected_tags = request.POST.getlist("tags")
                     if selected_tags:
@@ -59,43 +55,39 @@ def collections_list_view(request): # Nome alterado para bater com urls.py
                             kv, _ = KeywordValue.objects.get_or_create(keyword=keyword_obj, value=value.strip())
                             collection.keywords.add(kv)
 
-                    messages.success(request, "Collection created successfully!")
-                    return redirect("collections_list") # CORRIGIDO: Nome da rota
+                messages.success(request, "Collection created successfully!")
+                return redirect("collections_list")
 
             except Exception as e:
-                messages.error(request, f"Error creating Collection: {e}") # CORRIGIDO: Indentação
-                return redirect("collections_list") # CORRIGIDO: Nome da rota
+                messages.error(request, f"Error creating Collection: {e}")
+                return redirect("collections_list")
         else:
             errors = form.errors.as_text()
             messages.error(request, f"Invalid data: {errors}")
-            return redirect("collections_list") # CORRIGIDO: Nome da rota
+            return redirect("collections_list")
 
     # 2. DEACTIVATE
     elif action == "deactivate_collection":
         cid = request.POST.get("collection_id")
         collection = get_object_or_404(Collection, id=cid)
-        
+
         if not can_edit_collection(user, collection):
             raise PermissionDenied
-            
+
         collection.is_active = False
         collection.save(update_fields=["is_active"])
         messages.success(request, "Collection deactivated successfully.")
-        return redirect("collections_list") # CORRIGIDO: Nome da rota
+        return redirect("collections_list")
 
     # 3. LISTAGEM (GET)
     ctx = base_context(request)
-    
+
     ctx["biobanks"] = Biobank.objects.filter(is_active=True).order_by("name")
     ctx["all_tags"] = Tag.objects.all().order_by("name")
     ctx["collection_form"] = CollectionForm()
 
-    # Filtro opcional via URL
-    biobank_id = request.GET.get("biobank")
-    collections_qs = Collection.objects.filter(is_active=True)
-    
-    if biobank_id:
-        collections_qs = collections_qs.filter(biobanks__id=biobank_id)
+    # Puxa todas as coleções (Removido o filtro quebra-banco de biobanks__id)
+    collections_qs = Collection.objects.filter(is_active=True).order_by("-created_at")
 
     visible_collections = []
     for c in collections_qs:
