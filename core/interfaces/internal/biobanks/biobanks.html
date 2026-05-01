@@ -24,8 +24,11 @@
         font-weight: 600; 
         color: #495057; 
         margin-bottom: 0.5rem; 
-        display: block; 
+        display: flex; 
+        align-items: center;
     }
+    
+    .section-label i { cursor: help; }
 
     /* Map */
     #map { 
@@ -115,13 +118,19 @@
                         <h5 class="form-section-title">1. General Information</h5>
                         
                         <div class="mb-3">
-                            <label class="section-label">Official Name <span class="text-danger">*</span></label>
+                            <label class="section-label">
+                                Official Name <span class="text-danger ms-1">*</span>
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="The registered name of the institution or specific freezer farm (e.g., 'ICB-USP Main Freezer')."></i>
+                            </label>
                             <input type="text" name="name" class="form-control fw-bold" placeholder="Ex: Institute of Virology Biobank" required>
                         </div>
 
                         <div class="mb-4">
                             <div class="form-check form-switch p-0 ms-0">
-                                <label class="section-label mb-1">Public Availability</label>
+                                <label class="section-label mb-1">
+                                    Public Availability
+                                    <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="If checked, basic metadata about this Biobank will be visible to external researchers looking for collaborations."></i>
+                                </label>
                                 <div class="d-flex align-items-center">
                                     <input class="form-check-input ms-0 me-2" type="checkbox" name="is_public" id="id_is_public">
                                     <label class="form-check-label small text-muted" for="id_is_public">
@@ -132,7 +141,10 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="section-label">Scientific Description</label>
+                            <label class="section-label">
+                                Scientific Description
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Briefly describe what kind of samples are stored here and the main research lines."></i>
+                            </label>
                             <textarea name="description" class="form-control" rows="4" placeholder="Describe the main purpose and collection types..."></textarea>
                         </div>
 
@@ -141,7 +153,10 @@
                             
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="section-label mb-0"><i class="bi bi-tags me-1"></i>Tags</label>
+                                    <label class="section-label mb-0">
+                                        <i class="bi bi-tags me-1"></i>Tags
+                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Quick visual labels to classify the biobank (e.g., 'BSL-3', 'Cryogenic')."></i>
+                                    </label>
                                     <div class="d-flex gap-2">
                                         <a href="/?page=tags" target="_blank" class="btn-manage-mini">Manage</a>
                                         <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
@@ -158,7 +173,10 @@
 
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="section-label mb-0"><i class="bi bi-list-columns-reverse me-1"></i>Keywords</label>
+                                    <label class="section-label mb-0">
+                                        <i class="bi bi-list-columns-reverse me-1"></i>Keywords
+                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Add specific key/value pairs for advanced filtering (e.g., 'Funding Agency: FAPESP')."></i>
+                                    </label>
                                     <div class="d-flex gap-2">
                                         <a href="/?page=keywords" target="_blank" class="btn-manage-mini">Manage</a>
                                         <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add</button>
@@ -174,7 +192,10 @@
                         <h5 class="form-section-title">2. Geographic Location</h5>
                         
                         <div class="mb-3">
-                            <label class="section-label">Address / Label</label>
+                            <label class="section-label">
+                                Address / Label
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Type the address to auto-center the map, or click anywhere on the map to auto-fill this field."></i>
+                            </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
                                 <input type="text" name="location_label" id="id_location_label" class="form-control" placeholder="Search address or click on map...">
@@ -282,179 +303,5 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-    // =========================================================
-    // PREVENIR ENVIO DO FORMULÁRIO COM 'ENTER'
-    // =========================================================
-    const biobankForm = document.getElementById("biobankForm");
-    if (biobankForm) {
-        biobankForm.addEventListener("keydown", function(event) {
-            // Se a tecla for Enter
-            if (event.key === "Enter") {
-                // E o elemento focado não for um <textarea> (descrição) nem um <button>
-                if (event.target.tagName !== "TEXTAREA" && event.target.tagName !== "BUTTON") {
-                    event.preventDefault(); // Cancela o envio do formulário
-                }
-            }
-        });
-    }
-    
-    // =========================================================
-    // 1. MAP, GEOCODING & REVERSE GEOCODING
-    // =========================================================
-    if(document.getElementById('map')) {
-        var map = L.map('map').setView([-14.2350, -51.9253], 3); 
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        var marker;
-        var latInput = document.getElementById('id_latitude');
-        var lngInput = document.getElementById('id_longitude');
-        var addressInput = document.getElementById('id_location_label');
-        var statusLabel = document.getElementById('searchStatus');
-        var searchTimeout = null;
-
-        function getAddressFromCoords(lat, lng) {
-            addressInput.placeholder = "Loading address...";
-            statusLabel.textContent = "Fetching address...";
-            
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                .then(response => response.json())
-                .then(data => {
-                    if(data && data.display_name) {
-                        addressInput.value = data.display_name;
-                        statusLabel.textContent = "Address found!";
-                        statusLabel.className = "form-text small text-end text-success fw-bold";
-                    } else {
-                        statusLabel.textContent = "Address not found.";
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    statusLabel.textContent = "Error fetching address.";
-                });
-        }
-
-        function updateMarker(lat, lng, fetchAddress=false) {
-            if (marker) {
-                marker.setLatLng([lat, lng]);
-            } else {
-                marker = L.marker([lat, lng], {draggable: true}).addTo(map);
-                
-                marker.on('dragend', function(e) {
-                    var coord = e.target.getLatLng();
-                    latInput.value = coord.lat.toFixed(6);
-                    lngInput.value = coord.lng.toFixed(6);
-                    getAddressFromCoords(coord.lat, coord.lng);
-                });
-            }
-            latInput.value = lat.toFixed(6);
-            lngInput.value = lng.toFixed(6);
-            map.setView([lat, lng], 15);
-
-            if(fetchAddress) {
-                getAddressFromCoords(lat, lng);
-            }
-        }
-
-        map.on('click', function(e) {
-            updateMarker(e.latlng.lat, e.latlng.lng, true);
-        });
-
-        addressInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            statusLabel.textContent = "Typing...";
-            statusLabel.className = "form-text small text-end text-muted";
-            
-            searchTimeout = setTimeout(() => {
-                var query = addressInput.value;
-                if(query.length > 3) {
-                    statusLabel.textContent = "Searching...";
-                    
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if(data && data.length > 0) {
-                                var lat = parseFloat(data[0].lat);
-                                var lon = parseFloat(data[0].lon);
-                                updateMarker(lat, lon, false); 
-                                statusLabel.textContent = "Location found!";
-                                statusLabel.className = "form-text small text-end text-success fw-bold";
-                            } else {
-                                statusLabel.textContent = "Location not found.";
-                                statusLabel.className = "form-text small text-end text-danger";
-                            }
-                        })
-                        .catch(err => {
-                            statusLabel.textContent = "Error searching.";
-                        });
-                }
-            }, 1000); 
-        });
-    }
-
-
-    // =========================================================
-    // 2. TAGS (Visual Selection)
-    // =========================================================
-    const hiddenTagContainer = document.getElementById("tagHiddenInputs");
-    
-    document.querySelectorAll(".selectable-tag").forEach(chip => {
-        chip.addEventListener("click", function() {
-            this.classList.toggle("selected");
-            this.classList.toggle("bg-light");
-            this.classList.toggle("text-secondary");
-            
-            hiddenTagContainer.innerHTML = "";
-            document.querySelectorAll(".selectable-tag.selected").forEach(sel => {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = "tags";
-                input.value = sel.dataset.tagId;
-                hiddenTagContainer.appendChild(input);
-            });
-        });
-    });
-
-    // =========================================================
-    // 3. KEYWORDS (AJAX Modal)
-    // =========================================================
-    const btnSaveKw = document.getElementById("btnSaveKeywordAJAX");
-    if(btnSaveKw) {
-        btnSaveKw.onclick = function(e) {
-            e.preventDefault();
-            const key = document.getElementById("keywordKey").value;
-            const val = document.getElementById("keywordValue").value;
-            
-            if(key && val) {
-                const container = document.getElementById("keywordChipContainer");
-                const hiddenContainer = document.getElementById("keywordHiddenInputs");
-                
-                const chip = document.createElement("span");
-                chip.className = "badge bg-light text-dark border p-2 m-1 d-inline-flex align-items-center";
-                chip.innerHTML = `<strong>${key}:</strong>&nbsp;${val} <i class="bi bi-x ms-2 text-danger" style="cursor:pointer" onclick="this.parentNode.remove()"></i>`;
-                container.appendChild(chip);
-
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = "keyword_pairs";
-                input.value = `${key}:::${val}`;
-                hiddenContainer.appendChild(input);
-
-                document.getElementById("keywordKey").value = "";
-                document.getElementById("keywordValue").value = "";
-                
-                const modalEl = document.getElementById('addKeywordModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                modal.hide();
-            }
-        };
-    }
-});
-</script>
+<script src="{% static 'internal/biobanks/biobank.js' %}"></script>
 {% endblock %}

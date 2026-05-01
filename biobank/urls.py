@@ -54,6 +54,9 @@ from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import molecular as molecular_views
 from core.views.internal.lab_tools import plasmid as plasmid_views
 
+# 9. QR CODE (PAGE)
+from core.views.internal.samples.views import sample_qr_scan_view
+
 # ================= ROTAS (URLPATTERNS) =================
 
 urlpatterns = [
@@ -106,7 +109,13 @@ urlpatterns = [
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/lab-tools/molecular/', molecular_views.molecular_viewer, name='molecular_index'),
     path('internal/lab-tools/plasmid/', plasmid_views.plasmid_editor, name='plasmid_editor'),
+
+
+    # ---------------- QR CODE (PAGE) --------------------------------
+    path('samples/scan/<uuid:uuid>/', sample_qr_scan_view, name='sample_qr_scan'),
+
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

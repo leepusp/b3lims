@@ -3,6 +3,7 @@ import qrcode
 import io
 import base64
 import csv
+from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -140,9 +141,6 @@ def sample_create_view(request):
                             if Sample.objects.filter(sample_id=final_id).exists():
                                 raise ValueError(f"The ID '{final_id}' already exists in the system.")
 
-                            # ======================================================
-                            # CORREÇÃO: Injetar o Collaborator nas notas científicas
-                            # ======================================================
                             collaborator_input = request.POST.get("collaborator", "").strip()
                             final_notes = scientific_notes
                             if collaborator_input:
@@ -153,13 +151,12 @@ def sample_create_view(request):
                                 "organism_name": organism_name,
                                 "sample_type": sample_type,
                                 "biobank": biobank,
-                                "scientific_notes": final_notes, # Salva as notas atualizadas
+                                "scientific_notes": final_notes,
                                 "is_public": is_public,
                                 "owner": user,
                                 "is_active": True,
                                 "status": "pending",
                                 "storage_location": storage_location,
-                                # "collaborator" Removido daqui para não dar erro no DB!
                             }
 
                             # BACTERIA
@@ -207,6 +204,12 @@ def sample_create_view(request):
 
                                 is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
 
+                                b_size_raw = request.POST.get("backbone_size_bp", "")
+                                b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
+                                
+                                i_size_raw = request.POST.get("insert_size_bp", "")
+                                i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
+
                                 sample = Plasmid.objects.create(
                                     **base_data,
                                     backbone_name=request.POST.get("backbone_name", ""),
@@ -214,12 +217,12 @@ def sample_create_view(request):
                                     vector_type=request.POST.get("vector_type", ""),
                                     induction_system=request.POST.get("induction_system", ""),
                                     origin_of_replication=request.POST.get("origin_of_replication", ""),
-                                    backbone_size_bp=request.POST.get("backbone_size_bp") or 0,
+                                    backbone_size_bp=b_size,
                                     backbone_resistance_markers=r_b_list,
                                     is_empty_vector=is_empty,
                                     insert_name=request.POST.get("insert_name", ""),
                                     purpose=request.POST.get("purpose", ""),
-                                    insert_size_bp=request.POST.get("insert_size_bp") or 0,
+                                    insert_size_bp=i_size,
                                     insert_resistance_markers=r_i_list,
                                     construction_name=request.POST.get("construction_name", "")
                                 )
@@ -354,9 +357,6 @@ def sample_create_view(request):
         Q(owner=user) | Q(is_public=True)
     ).distinct()
 
-    # ==============================================================
-    # CORREÇÃO: Passar os Empty Plasmids em JSON para o JS trabalhar
-    # ==============================================================
     empty_plasmids = list(Plasmid.objects.filter(is_active=True, is_empty_vector=True).values(
         'sample_id', 'backbone_name', 'backbone_aliases', 'vector_type',
         'induction_system', 'origin_of_replication', 'backbone_size_bp', 'backbone_resistance_markers'
@@ -368,13 +368,13 @@ def sample_create_view(request):
         "all_tags": Tag.objects.all(),
         "biobanks": user_biobanks,
         "all_samples": Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
-        "empty_plasmids_json": json.dumps(empty_plasmids),  # <--- Adicionado aqui
+        "empty_plasmids_json": json.dumps(empty_plasmids),
     })
     return render(request, "internal/samples/samples.html", ctx)
 
 
 # =========================================================
-# 3. PRINT & CSV EXPORT
+# 3. PRINT & QR CODE SCAN VIEW
 # =========================================================
 @login_required
 def print_sample_label(request, sample_id):
@@ -382,16 +382,48 @@ def print_sample_label(request, sample_id):
     if not can_view_sample(request.user, sample):
         raise PermissionDenied
 
-    qr_data = str(sample.uuid)
+    # A MÁGICA: Gera a URL completa e absoluta (ex: https://davinci.icb.usp.br/biobank/samples/scan/1234-5678/)
+    qr_url = request.build_absolute_uri(reverse('sample_qr_scan', args=[sample.uuid]))
+
     qr = qrcode.QRCode(version=1, box_size=10, border=0)
-    qr.add_data(qr_data)
+    qr.add_data(qr_url) # <--- Embutimos a URL no QR Code!
     qr.make(fit=True)
+    
     img = qr.make_image(fill_color="black", back_color="white")
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     qr_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
     return render(request, "internal/samples/print_label.html", {'sample': sample, 'qr_code': qr_base64})
+
+
+def sample_qr_scan_view(request, uuid):
+    """
+    Página mobile-friendly acessada ao ler o QR Code com o celular.
+    """
+    sample = get_object_or_404(Sample, uuid=uuid)
+    
+    # Validação de Segurança e Redirecionamento Dinâmico (Usa o reverse para não perder o prefixo /biobank/)
+    if not sample.is_public:
+        if not request.user.is_authenticated:
+            login_url = reverse('login')
+            next_url = reverse('sample_qr_scan', args=[sample.uuid])
+            return redirect(f"{login_url}?next={next_url}")
+        
+        from core.permissions.samples import can_view_sample
+        if not can_view_sample(request.user, sample):
+            raise PermissionDenied("You do not have permission to view this sample.")
+
+    # Descobrir o subtipo exato para exibir na ficha (Bacteria, Phage, Plasmid)
+    if hasattr(sample, 'bacteria'): real_sample = sample.bacteria
+    elif hasattr(sample, 'phage'): real_sample = sample.phage
+    elif hasattr(sample, 'plasmid'): real_sample = sample.plasmid
+    else: real_sample = sample
+
+    ctx = base_context(request) if request.user.is_authenticated else {}
+    ctx['sample'] = real_sample
+    
+    return render(request, "internal/samples/qr_view.html", ctx)
 
 
 @login_required

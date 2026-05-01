@@ -5,6 +5,9 @@ from django.contrib.auth.models import User
 from core.models.tags import Tag
 from core.models.keywords import KeywordValue
 
+# NOVO: Importação do Grupo de Pesquisa
+from core.models.research_groups.model import ResearchGroup
+
 class Collection(models.Model):
     """
     Coleção científica independente.
@@ -23,8 +26,6 @@ class Collection(models.Model):
         help_text="Finalidade científica da coleção"
     )
 
-    # REMOVIDO: biobank = models.ForeignKey(...)
-
     # =========================
     # GOVERNANÇA / PERMISSÕES
     # =========================
@@ -33,6 +34,16 @@ class Collection(models.Model):
         on_delete=models.PROTECT,
         related_name="owned_collections",
         help_text="Responsável científico/PI pela coleção",
+    )
+
+    # NOVO: Vínculo com o Laboratório/Grupo de Pesquisa (Pilar 1)
+    research_group = models.ForeignKey(
+        ResearchGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collections",
+        help_text="Grupo de Pesquisa ao qual esta coleção pertence."
     )
 
     # Novo formato simplificado

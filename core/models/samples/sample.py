@@ -8,6 +8,9 @@ from core.models.biobanks.biobank import Biobank
 from core.models.tags.model import Tag
 from core.models.keywords.model import KeywordValue
 
+# NOVO: Importação do Grupo de Pesquisa
+from core.models.research_groups.model import ResearchGroup
+
 class Sample(models.Model):
     """
     Amostra biológica CEPIDB3. 
@@ -35,6 +38,16 @@ class Sample(models.Model):
     collections = models.ManyToManyField(Collection, blank=True, related_name="samples")
     
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_samples")
+
+    # NOVO: Vínculo com o Laboratório/Grupo de Pesquisa
+    research_group = models.ForeignKey(
+        ResearchGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="samples",
+        help_text="Grupo de Pesquisa (Laboratório) ao qual esta amostra pertence."
+    )
 
     # Status e Governança
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

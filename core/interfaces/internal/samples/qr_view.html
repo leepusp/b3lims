@@ -1,0 +1,85 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Sample Details - {{ sample.sample_id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+    
+    <div class="text-center mb-4">
+        <i class="bi bi-upc-scan display-4 text-primary mb-2 d-block"></i>
+        <h2 class="fw-bold">{{ sample.sample_id }}</h2>
+        <span class="badge bg-primary fs-6">{{ sample.sample_type }}</span>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white fw-bold py-3">
+            <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted small">Organism / Item</span>
+                <span class="fw-bold text-end">{{ sample.organism_name|default:"-" }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted small">Status</span>
+                <span class="fw-medium">{{ sample.get_status_display }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted small">Registered By</span>
+                <span class="fw-medium">{{ sample.owner.get_full_name|default:sample.owner.username }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted small">Registration Date</span>
+                <span class="fw-medium">{{ sample.created_at|date:"d/m/Y H:i" }}</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white fw-bold py-3">
+            <i class="bi bi-clipboard2-data me-2 text-success"></i>Biological Properties
+        </div>
+        <ul class="list-group list-group-flush">
+            
+            {% if sample.sample_type == "Bacterium (Host)" %}
+                <li class="list-group-item"><strong>Species:</strong> {{ sample.genus }} {{ sample.species }} {{ sample.strain }}</li>
+                <li class="list-group-item"><strong>Genotype:</strong> {{ sample.genotype|default:"-" }}</li>
+                <li class="list-group-item"><strong>Resistance:</strong> {{ sample.resistance_markers|join:", "|default:"-" }}</li>
+            
+            {% elif sample.sample_type == "Phage (Virus)" %}
+                <li class="list-group-item"><strong>Morphotype:</strong> {{ sample.morphotype|default:"-" }}</li>
+                <li class="list-group-item"><strong>Genome:</strong> {{ sample.genome_type|default:"-" }} ({{ sample.genome_size_bp|default:"-" }} bp)</li>
+                <li class="list-group-item"><strong>Lifestyle:</strong> {{ sample.lifestyle|default:"-" }}</li>
+            
+            {% elif sample.sample_type == "Plasmid" %}
+                <li class="list-group-item"><strong>Backbone:</strong> {{ sample.backbone_name|default:"-" }}</li>
+                <li class="list-group-item"><strong>Insert:</strong> {{ sample.insert_name|default:"Empty Vector" }}</li>
+                <li class="list-group-item"><strong>Total Size:</strong> {{ sample.total_size_bp }} bp</li>
+            
+            {% else %}
+                <li class="list-group-item text-muted fst-italic">No specific metadata registered.</li>
+            {% endif %}
+
+        </ul>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white fw-bold py-3">
+            <i class="bi bi-geo-alt me-2 text-danger"></i>Storage Location
+        </div>
+        <div class="card-body">
+            <p class="mb-2"><strong>Biobank:</strong> {{ sample.biobank.name|default:"Not assigned" }}</p>
+            {% if sample.storage_location %}
+                <p class="mb-0 text-danger fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i>Path: {{ sample.storage_location }}</p>
+            {% else %}
+                <p class="mb-0 text-muted fst-italic">Physical path not specified.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary w-100 mb-2">Back to LIMS</a>
+    </div>
+
+</div>
+{% endblock %}

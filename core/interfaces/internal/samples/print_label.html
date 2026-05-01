@@ -1,56 +1,90 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Etiqueta LIMS - {{ sample.sample_id }}</title>
+    <title>Print Label - {{ sample.sample_id }}</title>
     <style>
-        /* Configuração para etiquetas de 25mm x 25mm (Criotubos padrão) */
-        @page {
-            size: 25mm 25mm;
-            margin: 0;
+        /* CSS otimizado para impressão de etiquetas de tubo de ensaio/criotubo */
+        @media print {
+            @page { margin: 0; }
+            body { margin: 0; padding: 0; background: white; }
+            .no-print { display: none; }
         }
-        body {
-            margin: 0;
-            padding: 1mm;
-            font-family: 'Courier New', Courier, monospace;
-            text-align: center;
-            background-color: white;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            display: flex; 
+            justify-content: center; 
+            background: #f4f4f4;
         }
-        .label-wrapper {
+        .label-container {
+            width: 50mm; /* Tamanho padrão de etiqueta de criotubo */
+            height: 25mm;
+            background: white;
+            border: 1px dashed #ccc; /* Guia de corte (não aparece na impressora real) */
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 23mm; /* Ajuste fino para margens */
+            padding: 2mm;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         .qr-code {
-            width: 14mm;
-            height: 14mm;
+            width: 20mm;
+            height: 20mm;
+            margin-right: 2mm;
         }
-        .info {
-            font-size: 7px;
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        .text-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .sample-id {
+            font-size: 8pt;
             font-weight: bold;
+            margin-bottom: 2px;
+            word-wrap: break-word;
+        }
+        .organism {
+            font-size: 6pt;
             line-height: 1.1;
-            margin-top: 1mm;
-            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
         .date {
-            font-size: 6px;
-            font-weight: normal;
-        }
-        /* Esconde elementos na impressão caso necessário */
-        @media print {
-            .no-print { display: none; }
+            font-size: 5pt;
+            margin-top: 2px;
+            color: #333;
         }
     </style>
 </head>
-<body onload="window.print()">
-    <div class="label-wrapper">
-        <img src="data:image/png;base64,{{ qr_code }}" class="qr-code">
-        <div class="info">
-            {{ sample.sample_id }}<br>
-            <span class="date">{{ sample.created_at|date:"d/m/Y" }}</span>
+<body>
+
+    <div class="no-print" style="position: absolute; top: 10px; left: 10px;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-weight: bold; cursor: pointer;">
+            🖨️ Print Label
+        </button>
+        <p style="font-size: 12px; color: #666;">Set margins to "None" in print dialog.</p>
+    </div>
+
+    <div class="label-container">
+        <div class="qr-code">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR">
+        </div>
+        <div class="text-info">
+            <div class="sample-id">{{ sample.sample_id }}</div>
+            <div class="organism">{{ sample.organism_name|default:sample.sample_type|truncatechars:35 }}</div>
+            <div class="date">{{ sample.created_at|date:"d/m/Y" }}</div>
         </div>
     </div>
+
 </body>
 </html>
