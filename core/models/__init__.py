@@ -5,6 +5,8 @@ from .keywords.model import Keyword, KeywordValue
 
 from .samples.sample import Sample
 from .samples.sample_files import SampleFile
-from .samples.subtypes import Bacteria, Phage, Plasmid, HostRange  # <-- APENAS ESTES AQUI AGORA
+from .samples.subtypes import Bacteria, Phage, Plasmid, HostRange
+from .samples.relationship import SampleRelationship
+from .samples.intake import SampleImportBatch, SampleIntakeRecord
 
 from .events.model import Event

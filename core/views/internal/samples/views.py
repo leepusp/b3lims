@@ -24,7 +24,9 @@ from core.models import (
     Bacteria,
     Phage,
     Plasmid,
-    HostRange  # <-- Adicionado para o Grafo
+    HostRange,  # <-- Adicionado para o Grafo
+    SampleImportBatch,
+    SampleIntakeRecord,
 )
 from core.models.events.model import Event
 from core.models.samples.relationship import SampleRelationship
@@ -32,6 +34,7 @@ from core.models.samples.relationship import SampleRelationship
 from core.forms import SampleForm, get_form_class_for_sample
 from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample
 from core.permissions.collections import can_edit_collection
+from core.services.sample_intake import import_sample_table
 
 # =========================================================
 # 1. DASHBOARD (LISTING & FILTERS)
@@ -344,6 +347,13 @@ def sample_create_view(request):
                             for nivel_atual, nome_fatia in enumerate(fatias):
                                 SampleStorageLevel.objects.create(sample=sample, name=nome_fatia, level_index=nivel_atual)
 
+                intake_record_id = request.POST.get("intake_record_id")
+                if intake_record_id and created_samples:
+                    SampleIntakeRecord.objects.filter(id=intake_record_id).update(
+                        sample=created_samples[0],
+                        status="used_for_sample",
+                    )
+
                 messages.success(request, f"{len(created_samples)} sample(s) registered successfully!")
                 return redirect("samples_list")
 
@@ -362,6 +372,33 @@ def sample_create_view(request):
         'induction_system', 'origin_of_replication', 'backbone_size_bp', 'backbone_resistance_markers'
     ))
 
+    intake_prefill = {}
+    intake_id = request.GET.get("intake_id")
+
+    if intake_id:
+        intake_record = get_object_or_404(SampleIntakeRecord, id=intake_id)
+
+        if intake_record.batch.uploaded_by != request.user and not request.user.is_superuser:
+            raise PermissionDenied("You do not have permission to use this intake record.")
+
+        normalized = intake_record.normalized_data or {}
+
+        intake_prefill = {
+            **normalized,
+            "intake_record_id": intake_record.id,
+            "sample_id": intake_record.imported_sample_id or "",
+            "sample_type": intake_record.sample_type or "",
+            "organism_name": intake_record.organism_name or "",
+            "storage_location": intake_record.storage_location or "",
+            "provider": intake_record.provider or "",
+            "scientific_notes": intake_record.scientific_notes or "",
+            "is_public": intake_record.is_public,
+            "matched_biobank_id": intake_record.matched_biobank_id,
+            "matched_biobank_name": intake_record.matched_biobank.name if intake_record.matched_biobank else "",
+            "matched_collection_id": intake_record.matched_collection_id,
+            "matched_collection_name": intake_record.matched_collection.name if intake_record.matched_collection else "",
+        }
+
     ctx = base_context(request)
     ctx.update({
         "collections": Collection.objects.all(),
@@ -369,6 +406,7 @@ def sample_create_view(request):
         "biobanks": user_biobanks,
         "all_samples": Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
         "empty_plasmids_json": json.dumps(empty_plasmids),
+        "intake_prefill": intake_prefill,
     })
     return render(request, "internal/samples/samples.html", ctx)
 
@@ -710,3 +748,64 @@ def samples_network_view(request):
     })
 
     return render(request, "internal/samples/network.html", ctx)
+
+
+
+# === SAMPLE INTAKE IMPORT VIEWS ===
+@login_required
+def sample_import_view(request):
+    """
+    Upload a CSV/XLSX table and stage its rows as SampleIntakeRecord objects.
+    The records can later be used to pre-fill the normal sample registration form.
+    """
+    if request.method == "POST":
+        upload = request.FILES.get("sample_table")
+
+        if not upload:
+            messages.error(request, "Please select a CSV or Excel file.")
+            return redirect("samples_import")
+
+        try:
+            batch = SampleImportBatch.objects.create(
+                uploaded_by=request.user,
+                original_file=upload,
+                original_filename=upload.name,
+                status="uploaded",
+            )
+
+            import_sample_table(batch)
+
+            messages.success(
+                request,
+                f"Table imported: {batch.total_rows} row(s), "
+                f"{batch.valid_rows} ready, {batch.invalid_rows} with errors."
+            )
+            return redirect("samples_import_batch", batch_id=batch.id)
+
+        except Exception as e:
+            messages.error(request, f"Error importing sample table: {e}")
+            return redirect("samples_import")
+
+    ctx = base_context(request)
+    ctx.update({
+        "recent_batches": SampleImportBatch.objects.filter(uploaded_by=request.user)[:10],
+        "selected_batch": None,
+        "records": [],
+    })
+    return render(request, "internal/samples/import.html", ctx)
+
+
+@login_required
+def sample_import_batch_detail_view(request, batch_id):
+    batch = get_object_or_404(SampleImportBatch, id=batch_id)
+
+    if batch.uploaded_by != request.user and not request.user.is_superuser:
+        raise PermissionDenied("You do not have permission to view this import batch.")
+
+    ctx = base_context(request)
+    ctx.update({
+        "recent_batches": SampleImportBatch.objects.filter(uploaded_by=request.user)[:10],
+        "selected_batch": batch,
+        "records": batch.records.select_related("matched_biobank", "matched_collection", "sample").all(),
+    })
+    return render(request, "internal/samples/import.html", ctx)

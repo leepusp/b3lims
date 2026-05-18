@@ -192,6 +192,17 @@ document.addEventListener("DOMContentLoaded", () => {
             textInput.focus();
         }
 
+        window.setStorageLocationFromText = function(value) {
+            if (!value) return;
+            levels = String(value)
+                .replace(/,/g, ">")
+                .replace(/;/g, ">")
+                .split(">")
+                .map(v => v.trim())
+                .filter(Boolean);
+            renderLevels();
+        };
+
         container.addEventListener('click', (e) => {
             if (e.target.tagName === 'I' && e.target.hasAttribute('data-index')) {
                 levels.splice(e.target.dataset.index, 1);
@@ -504,6 +515,109 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    /* --- 8. SAMPLE INTAKE PREFILL --- */
+    function applySampleIntakePrefill() {
+        const script = document.getElementById("sampleIntakePrefillData");
+        if (!script) return;
+
+        let data = {};
+        try {
+            data = JSON.parse(script.textContent || "{}");
+        } catch (err) {
+            console.warn("Could not parse sample intake prefill data.", err);
+            return;
+        }
+
+        if (!data || Object.keys(data).length === 0) return;
+
+        function setField(name, value) {
+            if (value === undefined || value === null || value === "") return;
+
+            const el = document.getElementsByName(name)[0];
+            if (!el) return;
+
+            if (el.type === "checkbox") {
+                el.checked = value === true || value === "true" || value === "1" || value === 1 || value === "yes" || value === "sim";
+            } else {
+                el.value = value;
+            }
+
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        const intakeInput = document.getElementById("intake_record_id_input");
+        if (intakeInput && data.intake_record_id) {
+            intakeInput.value = data.intake_record_id;
+        }
+
+        setField("sample_id", data.sample_id);
+
+        const typeInput = document.getElementById("sampleTypeInput");
+        if (typeInput && data.sample_type) {
+            typeInput.value = data.sample_type;
+            typeInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        setField("custom_organism_name", data.organism_name);
+        setField("collaborator", data.provider);
+        setField("is_public", data.is_public);
+
+        const collectionSelect = document.getElementsByName("collection")[0];
+        if (collectionSelect && data.matched_collection_id) {
+            collectionSelect.value = String(data.matched_collection_id);
+            collectionSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        if (data.storage_location && window.setStorageLocationFromText) {
+            window.setStorageLocationFromText(data.storage_location);
+        }
+
+        if (data.scientific_notes && quill) {
+            quill.root.innerHTML = data.scientific_notes;
+        }
+
+        const dynamicFields = [
+            "official_name",
+            "aliases",
+            "genus",
+            "species",
+            "strain",
+            "genotype",
+            "isolation_source",
+            "resistance_markers",
+            "phage_name",
+            "morphotype",
+            "taxonomy",
+            "lifestyle",
+            "isolation_method",
+            "genome_type",
+            "genome_size_bp",
+            "temp_C",
+            "ncbi_accession",
+            "backbone_name",
+            "backbone_aliases",
+            "vector_type",
+            "induction_system",
+            "origin_of_replication",
+            "backbone_size_bp",
+            "backbone_resistance_markers",
+            "is_empty_vector",
+            "construction_name",
+            "insert_name",
+            "purpose",
+            "insert_size_bp",
+            "insert_resistance_markers"
+        ];
+
+        dynamicFields.forEach(name => setField(name, data[name]));
+
+        if (data.matched_biobank_id) {
+            const btn = document.querySelector(`.sheets-option[data-value="${data.matched_biobank_id}"] .btn-add-bb`);
+            if (btn) btn.click();
+        }
+    }
+
     // --- INITIALIZATIONS ---
     initTagSystem();
     initTagAJAX();
@@ -512,4 +626,5 @@ document.addEventListener("DOMContentLoaded", () => {
     initBiobankLogic();
     initDynamicTemplates();
     initPrefixLogic();
+    applySampleIntakePrefill();
 });

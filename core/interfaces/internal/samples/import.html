@@ -1,0 +1,168 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Import Samples · CEPIDB3 Biobank{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="h4 mb-1 fw-bold text-dark">
+                <i class="bi bi-table me-2 text-primary"></i>Import Sample Table
+            </h3>
+            <p class="text-muted small mb-0">
+                Upload a CSV/XLSX table to stage sample records before final registration.
+            </p>
+        </div>
+
+        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Samples
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <strong>Upload table</strong>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">CSV or Excel file</label>
+                            <input type="file" name="sample_table" class="form-control" accept=".csv,.tsv,.txt,.xlsx,.xls" required>
+                            <div class="form-text">
+                                Accepted columns include sample_id, sample_type, organism_name, biobank, collection and storage_location.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-upload me-1"></i>Upload and validate
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <strong>Recent imports</strong>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for batch in recent_batches %}
+                        <a href="{% url 'samples_import_batch' batch.id %}" class="list-group-item list-group-item-action">
+                            <div class="fw-bold small">
+                                {{ batch.original_filename|default:"Uploaded table" }}
+                            </div>
+                            <div class="text-muted small">
+                                {{ batch.created_at|date:"d/m/Y H:i" }} ·
+                                {{ batch.valid_rows }}/{{ batch.total_rows }} ready
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="list-group-item text-muted small">
+                            No imported tables yet.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Imported rows</strong>
+                        {% if selected_batch %}
+                            <span class="text-muted small ms-2">
+                                {{ selected_batch.original_filename }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if selected_batch %}
+                        <span class="badge bg-light text-dark border">
+                            {{ selected_batch.valid_rows }} ready · {{ selected_batch.invalid_rows }} with errors
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Row</th>
+                                <th>Sample ID</th>
+                                <th>Type</th>
+                                <th>Organism</th>
+                                <th>Biobank / Collection</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    <td class="text-muted small">{{ record.row_number }}</td>
+                                    <td class="fw-bold text-primary">
+                                        {{ record.imported_sample_id|default:"-" }}
+                                    </td>
+                                    <td>{{ record.sample_type|default:"-" }}</td>
+                                    <td>{{ record.organism_name|default:"-" }}</td>
+                                    <td>
+                                        <div class="small">
+                                            <i class="bi bi-building me-1 text-muted"></i>
+                                            {{ record.matched_biobank.name|default:record.biobank_name|default:"No biobank" }}
+                                        </div>
+                                        <div class="small text-muted">
+                                            <i class="bi bi-collection me-1"></i>
+                                            {{ record.matched_collection.name|default:record.collection_name|default:"No collection" }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if record.validation_errors %}
+                                            <span class="badge bg-danger-subtle text-danger">Needs review</span>
+                                            <div class="small text-danger mt-1">
+                                                {{ record.validation_errors|join:", " }}
+                                            </div>
+                                        {% elif record.validation_warnings %}
+                                            <span class="badge bg-warning-subtle text-warning">Ready with warnings</span>
+                                            <div class="small text-warning mt-1">
+                                                {{ record.validation_warnings|join:", " }}
+                                            </div>
+                                        {% elif record.status == "used_for_sample" %}
+                                            <span class="badge bg-success-subtle text-success">Used</span>
+                                        {% else %}
+                                            <span class="badge bg-success-subtle text-success">Ready</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if not record.validation_errors %}
+                                            <a href="{% url 'sample_add' %}?intake_id={{ record.id }}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-magic me-1"></i>Use to fill form
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                Review needed
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-5">
+                                        <i class="bi bi-table display-6 d-block mb-2 opacity-50"></i>
+                                        Upload a table or select a previous import batch.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

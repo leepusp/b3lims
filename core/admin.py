@@ -17,7 +17,9 @@ from core.models import (
     Bacteria,
     Phage,
     HostRange,
-    Plasmid
+    Plasmid,
+    SampleImportBatch,
+    SampleIntakeRecord
 )
 
 class SampleResource(resources.ModelResource):
@@ -87,3 +89,17 @@ class SampleFileAdmin(admin.ModelAdmin):
 class EventAdmin(admin.ModelAdmin):
     list_display = ("sample", "event_type", "timestamp", "performed_by")
     readonly_fields = ("timestamp",)
+
+
+@admin.register(SampleImportBatch)
+class SampleImportBatchAdmin(admin.ModelAdmin):
+    list_display = ("id", "original_filename", "uploaded_by", "status", "total_rows", "valid_rows", "invalid_rows", "created_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("original_filename", "uploaded_by__username")
+
+
+@admin.register(SampleIntakeRecord)
+class SampleIntakeRecordAdmin(admin.ModelAdmin):
+    list_display = ("row_number", "imported_sample_id", "sample_type", "organism_name", "status", "matched_biobank", "matched_collection")
+    list_filter = ("status", "sample_type")
+    search_fields = ("imported_sample_id", "organism_name", "biobank_name", "collection_name")

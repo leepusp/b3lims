@@ -40,6 +40,8 @@ from core.views.internal.samples.views import (
     sample_edit_view,
     sample_relate_view,
     samples_network_view,  # <-- FUNÇÃO DO GRAFO IMPORTADA AQUI
+    sample_import_view,
+    sample_import_batch_detail_view,
 )
 
 # 6. CHEMICALS (REAGENTES)
@@ -86,6 +88,8 @@ urlpatterns = [
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
     path("samples/", samples_list_view, name="samples_list"),
+    path("samples/import/", sample_import_view, name="samples_import"),
+    path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
