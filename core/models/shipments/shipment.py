@@ -1,3 +1,4 @@
+import uuid
 from uuid import uuid4
 import hashlib
 
@@ -431,6 +432,206 @@ class ShipmentChecklistItem(models.Model):
         self.completed_at = timezone.now()
         if save:
             self.save()
+
+
+class ShipmentReceipt(models.Model):
+    PACKAGE_CONDITION_CHOICES = [
+        ("not_checked", "Not checked"),
+        ("intact", "Intact"),
+        ("damaged", "Damaged"),
+        ("leak_detected", "Leak detected"),
+        ("temperature_issue", "Temperature issue"),
+        ("missing_items", "Missing items"),
+        ("rejected", "Rejected"),
+    ]
+
+    shipment = models.OneToOneField(
+        Shipment,
+        on_delete=models.CASCADE,
+        related_name="receipt",
+    )
+
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="shipment_receipts",
+    )
+
+    package_condition = models.CharField(
+        max_length=40,
+        choices=PACKAGE_CONDITION_CHOICES,
+        default="not_checked",
+    )
+
+    package_integrity_confirmed = models.BooleanField(default=False)
+    documents_received = models.BooleanField(default=False)
+    items_checked = models.BooleanField(default=False)
+
+    received_at = models.DateTimeField(default=timezone.now)
+
+    created_intake_batch = models.ForeignKey(
+        "core.SampleImportBatch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="shipment_receipts",
+    )
+
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Shipment receipt"
+        verbose_name_plural = "Shipment receipts"
+
+    def __str__(self):
+        return f"Receipt for {self.shipment}"
+
+
+class ShipmentDeclaration(models.Model):
+    MATERIAL_CLASSIFICATIONS = [
+        ("exempt_biological_material", "Material biológico isento"),
+        ("category_b_un3373", "Substância biológica Categoria B - UN3373"),
+        ("requires_review", "Requer revisão do biobanco"),
+    ]
+
+    shipment = models.OneToOneField(
+        Shipment,
+        on_delete=models.CASCADE,
+        related_name="declaration",
+    )
+
+    sender_full_name = models.CharField(max_length=255)
+    sender_document = models.CharField(max_length=80, blank=True)
+    sender_institution = models.CharField(max_length=255)
+    sender_address = models.TextField(blank=True)
+    sender_phone_email = models.CharField(max_length=255, blank=True)
+
+    recipient_name = models.CharField(max_length=255, blank=True)
+    recipient_institution = models.CharField(max_length=255, blank=True)
+    recipient_address = models.TextField(blank=True)
+    recipient_phone_email = models.CharField(max_length=255, blank=True)
+
+    material_type = models.CharField(max_length=80, blank=True)
+    risk_class = models.CharField(max_length=40, default="unknown")
+    biosafety_level = models.CharField(max_length=40, default="unknown")
+    is_ogm = models.BooleanField(default=False)
+    is_genetic_heritage = models.BooleanField(default=False)
+    is_international = models.BooleanField(default=False)
+
+    additional_description = models.TextField(blank=True)
+    content_description = models.TextField(blank=True)
+    quantity_volume = models.CharField(max_length=255, blank=True)
+    purpose = models.CharField(max_length=255, default="Pesquisa científica")
+
+    material_classification = models.CharField(
+        max_length=80,
+        choices=MATERIAL_CLASSIFICATIONS,
+        default="requires_review",
+    )
+
+    transport_conditions = models.TextField(blank=True)
+
+    confirms_no_prohibited_dangerous_goods = models.BooleanField(default=False)
+    confirms_no_leakage_or_contamination_risk = models.BooleanField(default=False)
+    confirms_transport_safety = models.BooleanField(default=False)
+
+    confirms_primary_container = models.BooleanField(default=False)
+    confirms_secondary_packaging = models.BooleanField(default=False)
+    confirms_absorbent_material = models.BooleanField(default=False)
+    confirms_rigid_outer_packaging = models.BooleanField(default=False)
+    confirms_triple_packaging = models.BooleanField(default=False)
+
+    confirms_sender_recipient_identification = models.BooleanField(default=False)
+    confirms_fragile_label = models.BooleanField(default=False)
+    confirms_biohazard_label = models.BooleanField(default=False)
+    confirms_un3373_label_when_applicable = models.BooleanField(default=False)
+    confirms_accompanying_documents = models.BooleanField(default=False)
+
+    accepts_sender_declaration = models.BooleanField(default=False)
+    accepts_content_declaration = models.BooleanField(default=False)
+    accepts_responsibility = models.BooleanField(default=False)
+
+    declaration_place = models.CharField(max_length=255, blank=True)
+    signer_name = models.CharField(max_length=255, blank=True)
+    signer_document = models.CharField(max_length=80, blank=True)
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Shipment declaration"
+        verbose_name_plural = "Shipment declarations"
+
+    def __str__(self):
+        return f"Declaration for {self.shipment}"
+
+
+class ShipmentAccessToken(models.Model):
+    ACCESS_TYPES = [
+        ("public_tracking", "Public tracking"),
+        ("public_edit", "Public edit"),
+        ("internal_scan", "Internal scan"),
+    ]
+
+    shipment = models.ForeignKey(
+        Shipment,
+        on_delete=models.CASCADE,
+        related_name="access_tokens",
+    )
+
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    access_type = models.CharField(
+        max_length=40,
+        choices=ACCESS_TYPES,
+        default="public_tracking",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_shipment_access_tokens",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Shipment access token"
+        verbose_name_plural = "Shipment access tokens"
+        indexes = [
+            models.Index(fields=["token", "access_type", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.shipment} - {self.access_type}"
+
+    def is_valid(self):
+        if not self.is_active:
+            return False
+
+        if self.expires_at and self.expires_at <= timezone.now():
+            return False
+
+        return True
 
 
 class ShipmentEvent(models.Model):

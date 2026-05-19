@@ -1,0 +1,156 @@
+{% extends "public/base.html" %}
+
+{% block title %}Documentos da Remessa · Biobank CEPID B3{% endblock %}
+
+{% block content %}
+
+<section class="mb-4">
+    <h1 class="fw-semibold mb-2">
+        Documentos da Remessa
+    </h1>
+    <p class="text-muted mb-0">
+        Remessa {{ shipment.shipment_code }}. Baixe, assine fora do sistema e envie os documentos assinados quando aplicável.
+    </p>
+</section>
+
+{% if pending_signature_count > 0 %}
+<div class="alert alert-warning">
+    Existem {{ pending_signature_count }} documento(s) que ainda precisam de assinatura ou envio do arquivo assinado.
+</div>
+{% else %}
+<div class="alert alert-success">
+    Todos os documentos que exigem assinatura possuem arquivo enviado. Aguarde a revisão interna da equipe do biobanco.
+</div>
+{% endif %}
+
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-semibold mb-2">
+            Liberação de etiquetas e QR final
+        </h2>
+
+        {% if can_release_final_outputs %}
+            <div class="alert alert-success mb-0">
+                A remessa foi aprovada internamente. As etiquetas finais e o QR final
+                de embalagem estão liberados pela equipe do biobanco.
+            </div>
+        {% elif pending_signature_count == 0 %}
+            <div class="alert alert-info mb-0">
+                Todos os documentos obrigatórios assinados foram enviados.
+                A remessa está aguardando revisão interna. As etiquetas finais
+                e o QR final de embalagem serão liberados após aprovação do biobanco.
+            </div>
+        {% else %}
+            <div class="alert alert-warning mb-3">
+                As etiquetas finais e o QR final de embalagem ainda estão bloqueados.
+                Envie todos os documentos obrigatórios assinados para continuar.
+            </div>
+
+            <ul class="mb-0">
+                {% for document in pending_required_documents %}
+                    <li>
+                        {{ document.get_document_type_display }}
+                        <span class="text-muted small">({{ document.document_type }})</span>
+                    </li>
+                {% empty %}
+                    <li class="text-muted">Nenhum documento obrigatório pendente.</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-semibold">
+        Documentos requeridos
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Status</th>
+                    <th>Assinatura</th>
+                    <th>Arquivo gerado/modelo</th>
+                    <th>Arquivo assinado</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for document in documents %}
+                    <tr>
+                        <td>
+                            <strong>{{ document.get_document_type_display }}</strong>
+                            <div class="small text-muted">{{ document.document_type }}</div>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-secondary">
+                                {{ document.get_status_display }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if document.requires_signature %}
+                                <span class="badge text-bg-warning">Requer assinatura</span>
+                            {% else %}
+                                <span class="badge text-bg-light text-dark">Não obrigatória</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if document.generated_file %}
+                                <a href="{{ document.generated_file.url }}" class="btn btn-sm btn-outline-secondary">
+                                    Baixar
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Ainda não gerado</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if document.signed_file %}
+                                <a href="{{ document.signed_file.url }}" class="btn btn-sm btn-outline-success">
+                                    Ver assinado
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Não enviado</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end">
+                            {% if document.requires_signature %}
+                                <a href="{% url 'public_shipment_document_upload' access_token.token document.id %}"
+                                   class="btn btn-sm btn-primary">
+                                    Enviar assinado
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Sem ação</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            Nenhum documento requerido foi encontrado para esta remessa.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4 d-flex gap-2">
+    <a href="{% url 'public_shipment_track' access_token.token %}" class="btn btn-outline-secondary">
+        Voltar ao rastreio
+    </a>
+
+    <a href="{% url 'public_shipments_portal' %}" class="btn btn-outline-primary">
+        Área de remessas
+    </a>
+</div>
+
+{% endblock %}

@@ -1,4 +1,5 @@
-from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view
+from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
+from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
 from django.contrib import admin
 from django.urls import path
@@ -34,6 +35,7 @@ from core.views.internal.collections.views import collections_list_view
 
 # 5. SAMPLES (AMOSTRAS)
 from core.views.internal.samples.views import (
+    sample_create_shipment_view,
     print_sample_label,
     samples_list_view,
     sample_create_view,
@@ -63,6 +65,13 @@ from core.views.internal.samples.views import sample_qr_scan_view
 # ================= ROTAS (URLPATTERNS) =================
 
 urlpatterns = [
+    path("public/shipments/", public_shipments_portal_view, name="public_shipments_portal"),
+    path("public/shipments/new/", public_shipment_new_view, name="public_shipment_new"),
+    path("public/shipments/submitted/<uuid:token>/", public_shipment_submitted_view, name="public_shipment_submitted"),
+    path("public/shipments/track/<uuid:token>/", public_shipment_track_view, name="public_shipment_track"),
+    path("public/shipments/documents/<uuid:token>/", public_shipment_documents_view, name="public_shipment_documents"),
+    path("public/shipments/documents/<uuid:token>/upload/<int:document_id>/", public_shipment_document_upload_view, name="public_shipment_document_upload"),
+
     # ---------------- PUBLIC PAGES ----------------
     path("public/", public_home, name="public_home"),
     path("public/about/", public_about, name="public_about"),
@@ -89,6 +98,11 @@ urlpatterns = [
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
     path("shipments/", shipments_list_view, name="shipments"),
+    path("shipments/scan/<uuid:shipment_uuid>/", shipment_scan_view, name="shipment_scan"),
+    path("shipments/<int:shipment_id>/approve-documents/", shipment_approve_documents_view, name="shipment_approve_documents"),
+    path("shipments/<int:shipment_id>/package-labels/", shipment_package_labels_view, name="shipment_package_labels"),
+    path("shipments/<int:shipment_id>/documents-review/", shipment_documents_review_view, name="shipment_documents_review"),
+    path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
     path("shipments/<int:shipment_id>/", shipment_detail_view, name="shipment_detail"),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/import/", sample_import_view, name="samples_import"),
@@ -96,6 +110,7 @@ urlpatterns = [
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
+    path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),
     path("samples/<int:sample_id>/relate/", sample_relate_view, name="sample_relate"),
     path("samples/export/", export_samples_csv, name="export_samples_csv"),

@@ -11,4 +11,14 @@ from .samples.intake import SampleImportBatch, SampleIntakeRecord
 
 from .events.model import Event
 
-from .shipments import Shipment, ShipmentItem, TransportClassification, ShipmentDocument, ShipmentChecklistItem, ShipmentEvent
+from .shipments import (
+    Shipment,
+    ShipmentItem,
+    TransportClassification,
+    ShipmentDocument,
+    ShipmentChecklistItem,
+    ShipmentReceipt,
+    ShipmentDeclaration,
+    ShipmentAccessToken,
+    ShipmentEvent,
+)

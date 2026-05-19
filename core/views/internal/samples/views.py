@@ -36,6 +36,7 @@ from core.permissions.samples import can_view_sample, can_edit_sample, can_delet
 from core.permissions.collections import can_edit_collection
 from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
+from core.services.shipment_factory import create_shipment_from_sample
 
 # =========================================================
 # 1. DASHBOARD (LISTING & FILTERS)
@@ -755,3 +756,24 @@ def sample_import_batch_detail_view(request, batch_id):
         "records": batch.records.select_related("matched_biobank", "matched_collection", "sample").all(),
     })
     return render(request, "internal/samples/import.html", ctx)
+
+
+@login_required
+def sample_create_shipment_view(request, sample_id):
+    sample = get_object_or_404(
+        Sample.objects.select_related("biobank", "owner"),
+        id=sample_id,
+    )
+
+    shipment = create_shipment_from_sample(
+        sample=sample,
+        user=request.user,
+        flow_type="outgoing_shipment",
+    )
+
+    messages.success(
+        request,
+        f"Draft shipment {shipment.shipment_code} created from sample {sample.sample_id}."
+    )
+
+    return redirect("shipment_detail", shipment_id=shipment.id)

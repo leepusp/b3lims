@@ -88,6 +88,12 @@
             <a href="{% url 'sample_edit' sample.id %}" class="text-decoration-none">
                 {{ sample.sample_id }}
             </a>
+                            <form method="post" action="{% url 'sample_create_shipment' sample.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Create shipment">
+                                    <i class="bi bi-truck"></i>
+                                </button>
+                            </form>
         </td>
         <td class="align-middle">
             {% if sample.organism_name %}

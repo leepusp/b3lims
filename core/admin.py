@@ -112,6 +112,8 @@ from core.models import (
     TransportClassification,
     ShipmentDocument,
     ShipmentChecklistItem,
+    ShipmentReceipt,
+    ShipmentAccessToken,
     ShipmentEvent,
 )
 
@@ -138,6 +140,13 @@ class TransportClassificationInline(admin.StackedInline):
     max_num = 1
 
 
+
+class ShipmentReceiptInline(admin.StackedInline):
+    model = ShipmentReceipt
+    extra = 0
+    max_num = 1
+    readonly_fields = ["created_at", "updated_at"]
+
 @admin.register(Shipment)
 class ShipmentAdmin(admin.ModelAdmin):
     list_display = [
@@ -162,12 +171,67 @@ class ShipmentAdmin(admin.ModelAdmin):
         ShipmentItemInline,
         ShipmentDocumentInline,
         ShipmentChecklistItemInline,
+        ShipmentReceiptInline,
     ]
 
 
 @admin.register(ShipmentEvent)
+
+
+
 class ShipmentEventAdmin(admin.ModelAdmin):
     list_display = ["shipment", "event_type", "actor", "created_at"]
     list_filter = ["event_type", "created_at"]
     search_fields = ["shipment__shipment_code", "notes"]
 
+
+
+@admin.register(ShipmentReceipt)
+class ShipmentReceiptAdmin(admin.ModelAdmin):
+    list_display = [
+        "shipment",
+        "package_condition",
+        "package_integrity_confirmed",
+        "documents_received",
+        "items_checked",
+        "received_by",
+        "received_at",
+    ]
+    list_filter = [
+        "package_condition",
+        "package_integrity_confirmed",
+        "documents_received",
+        "items_checked",
+        "received_at",
+    ]
+    search_fields = [
+        "shipment__shipment_code",
+        "notes",
+    ]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(ShipmentAccessToken)
+class ShipmentAccessTokenAdmin(admin.ModelAdmin):
+    list_display = [
+        "shipment",
+        "access_type",
+        "token",
+        "is_active",
+        "expires_at",
+        "created_at",
+    ]
+    list_filter = [
+        "access_type",
+        "is_active",
+        "created_at",
+    ]
+    search_fields = [
+        "shipment__shipment_code",
+        "token",
+    ]
+    readonly_fields = [
+        "token",
+        "created_at",
+        "updated_at",
+    ]

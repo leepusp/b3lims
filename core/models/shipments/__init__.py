@@ -4,5 +4,8 @@ from .shipment import (
     TransportClassification,
     ShipmentDocument,
     ShipmentChecklistItem,
+    ShipmentReceipt,
+    ShipmentDeclaration,
+    ShipmentAccessToken,
     ShipmentEvent,
 )

@@ -1,0 +1,111 @@
+{% extends "public/base.html" %}
+
+{% block title %}Rastreio da Remessa · Biobank CEPID B3{% endblock %}
+
+{% block content %}
+
+<section class="mb-4">
+    <h1 class="fw-semibold mb-2">
+        Rastreio da Remessa
+    </h1>
+    <p class="text-muted mb-0">
+        Informações públicas limitadas da remessa {{ shipment.shipment_code }}.
+    </p>
+</section>
+
+<div class="alert alert-secondary">
+    Esta página é destinada ao acompanhamento da embalagem. Ela não dá acesso a documentos,
+    arquivos assinados, envio de arquivos ou ações internas do biobanco.
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-semibold">
+                Status
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="text-muted">Código:</span>
+                    <strong>{{ shipment.shipment_code }}</strong>
+                </div>
+
+                <div class="mb-2">
+                    <span class="text-muted">Status atual:</span>
+                    <strong>{{ shipment.get_status_display }}</strong>
+                </div>
+
+                <div class="mb-2">
+                    <span class="text-muted">Fluxo:</span>
+                    {{ shipment.get_flow_type_display }}
+                </div>
+
+                <div>
+                    <span class="text-muted">Criada em:</span>
+                    {{ shipment.created_at|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-semibold">
+                Rota institucional
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="text-muted">Origem:</span>
+                    {{ shipment.sender_institution|default:"Não informado" }}
+                </div>
+
+                <div>
+                    <span class="text-muted">Destino:</span>
+                    {{ shipment.recipient_institution|default:"Biobank CEPID B3" }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-white fw-semibold">
+        Itens declarados
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>ID externo</th>
+                    <th>Material</th>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td>{{ item.imported_sample_id }}</td>
+                        <td>{{ item.material_name }}</td>
+                        <td>{{ item.sample_type }}</td>
+                        <td>{{ item.quantity }} {{ item.quantity_unit }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-muted">
+                            Nenhum item registrado.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3 mb-0">
+    Em caso de divergência, dano na embalagem ou necessidade de conferência,
+    entre em contato com a equipe responsável pelo biobanco.
+</div>
+
+{% endblock %}

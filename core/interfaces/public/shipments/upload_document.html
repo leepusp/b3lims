@@ -1,0 +1,65 @@
+{% extends "public/base.html" %}
+
+{% block title %}Enviar Documento Assinado · Biobank CEPID B3{% endblock %}
+
+{% block content %}
+
+<section class="mb-4">
+    <h1 class="fw-semibold mb-2">
+        Enviar Documento Assinado
+    </h1>
+    <p class="text-muted mb-0">
+        Remessa {{ shipment.shipment_code }} · {{ document.get_document_type_display }}
+    </p>
+</section>
+
+{% if error_message %}
+<div class="alert alert-warning">
+    {{ error_message }}
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <p class="text-muted">
+            Baixe o documento ou modelo quando disponível, assine manualmente ou digitalmente fora do sistema
+            e envie aqui o arquivo assinado em PDF, DOCX ou imagem.
+        </p>
+
+        {% if document.generated_file %}
+            <div class="mb-3">
+                <a href="{{ document.generated_file.url }}" class="btn btn-outline-secondary">
+                    Baixar documento/modelo
+                </a>
+            </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Arquivo assinado</label>
+                <input type="file"
+                       name="signed_file"
+                       class="form-control"
+                       accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                       required>
+                <div class="form-text">
+                    Envie o documento assinado. A equipe do biobanco fará a revisão interna.
+                </div>
+            </div>
+
+            <div class="text-end">
+                <a href="{% url 'public_shipment_documents' access_token.token %}" class="btn btn-outline-secondary me-2">
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn btn-primary">
+                    Enviar arquivo assinado
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

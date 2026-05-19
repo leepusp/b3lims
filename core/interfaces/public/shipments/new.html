@@ -1,0 +1,290 @@
+{% extends "public/base.html" %}
+
+{% block title %}Nova Remessa · Biobank CEPID B3{% endblock %}
+
+{% block content %}
+
+<section class="mb-4">
+    <h1 class="fw-semibold mb-2">
+        Declaração para Remessa de Material Biológico
+    </h1>
+    <p class="text-muted mb-0">
+        Preencha os dados do remetente, conteúdo, classificação de risco,
+        acondicionamento, rotulagem e responsabilidade pela remessa.
+    </p>
+</section>
+
+<form method="post" class="card border-0 shadow-sm">
+    {% csrf_token %}
+
+    <div class="card-body p-4">
+
+        <h2 class="h5 border-bottom pb-2 mb-3">1. Remetente</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Nome do remetente / responsável</label>
+                <input type="text" name="sender_responsible_name" class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">CPF/RG</label>
+                <input type="text" name="sender_document" class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Instituição do remetente</label>
+                <input type="text" name="sender_institution" class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Endereço do remetente</label>
+                <input type="text" name="sender_address" class="form-control">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Telefone</label>
+                <input type="text" name="sender_phone" class="form-control">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">E-mail</label>
+                <input type="email" name="sender_email" class="form-control" required>
+            </div>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">2. Destinatário</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Nome do destinatário/responsável</label>
+                <input type="text" name="recipient_name" class="form-control" value="BBAMS / Biobank team">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Instituição destinatária</label>
+                <input type="text" name="recipient_institution" class="form-control" value="{{ destination_biobank.name|default:'BBAMS' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Endereço do destinatário</label>
+                <input type="text" name="recipient_address" class="form-control">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Telefone/E-mail do destinatário</label>
+                <input type="text" name="recipient_phone_email" class="form-control">
+            </div>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">3. Identificação da Remessa</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Identificação externa da amostra</label>
+                <input type="text" name="imported_sample_id" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Nome/descrição do material</label>
+                <input type="text" name="material_name" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Tipo de material</label>
+                <select name="material_type" class="form-select" required>
+                    <option value="bacteria">Bactéria</option>
+                    <option value="phage">Bacteriófago</option>
+                    <option value="plasmid">Plasmídeo</option>
+                    <option value="dna">DNA</option>
+                    <option value="other">Outro</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Classe de risco</label>
+                <select name="risk_class" class="form-select" required>
+                    <option value="CR1">Classe de risco 1</option>
+                    <option value="CR2">Classe de risco 2 / Categoria B - UN3373</option>
+                    <option value="CR3">Classe de risco 3</option>
+                    <option value="CR4">Classe de risco 4</option>
+                    <option value="unknown">Não informado / requer revisão</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Nível de biossegurança</label>
+                <select name="biosafety_level" class="form-select" required>
+                    <option value="NB1">NB-1</option>
+                    <option value="NB2">NB-2</option>
+                    <option value="NB3">NB-3</option>
+                    <option value="NB4">NB-4</option>
+                    <option value="unknown">Não informado / requer revisão</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Organismo Geneticamente Modificado</label>
+                <select name="is_ogm" class="form-select" required>
+                    <option value="false">Não</option>
+                    <option value="true">Sim</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check mt-2">
+                    <input type="checkbox" name="is_genetic_heritage" class="form-check-input" id="is_genetic_heritage">
+                    <label for="is_genetic_heritage" class="form-check-label">
+                        Envolve patrimônio genético brasileiro
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check mt-2">
+                    <input type="checkbox" name="is_international" class="form-check-input" id="is_international">
+                    <label for="is_international" class="form-check-label">
+                        Remessa internacional
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Descrição adicional</label>
+                <textarea name="additional_description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">4. Declaração de Conteúdo</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Descrição do conteúdo</label>
+                <input type="text" name="content_description" class="form-control" placeholder="Ex.: amostras microbiológicas, plasmídeo, bacteriófago">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Quantidade/volume</label>
+                <input type="text" name="quantity_volume" class="form-control" placeholder="Ex.: 1 criotubo, 500 µL">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Finalidade</label>
+                <input type="text" name="purpose" class="form-control" value="Pesquisa científica">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Quantidade</label>
+                <input type="text" name="quantity" class="form-control" value="1">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Unidade</label>
+                <input type="text" name="quantity_unit" class="form-control" value="tubo">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Tipo de recipiente</label>
+                <input type="text" name="container_type" class="form-control" value="criotubo">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Condição de armazenamento</label>
+                <input type="text" name="storage_condition" class="form-control" placeholder="Ex.: -80°C, refrigerado">
+            </div>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">5. Condições de Transporte</h2>
+
+        <div class="mb-4">
+            <label class="form-label">Condições adotadas para conservação e transporte</label>
+            <textarea name="temperature_condition" class="form-control" rows="2" placeholder="Ex.: temperatura ambiente, refrigerado, gelo seco, -80°C"></textarea>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">6. Conformidade, Embalagem e Rotulagem</h2>
+
+        <div class="row g-2 mb-4">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" name="confirms_no_prohibited_dangerous_goods" class="form-check-input" required>
+                    <label class="form-check-label">A remessa não contém substâncias perigosas proibidas para transporte.</label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" name="confirms_no_leakage_or_contamination_risk" class="form-check-input" required>
+                    <label class="form-check-label">O material foi acondicionado para evitar vazamentos, quebras ou contaminação.</label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" name="confirms_transport_safety" class="form-check-input" required>
+                    <label class="form-check-label">O transporte nas condições especificadas não apresenta risco indevido.</label>
+                </div>
+            </div>
+
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_primary_container" class="form-check-input"><label class="form-check-label">Recipiente primário estanque e vedado.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_secondary_packaging" class="form-check-input"><label class="form-check-label">Embalagem secundária resistente e estanque.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_absorbent_material" class="form-check-input"><label class="form-check-label">Material absorvente suficiente quando aplicável.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_rigid_outer_packaging" class="form-check-input"><label class="form-check-label">Embalagem externa rígida adequada ao transporte.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_triple_packaging" class="form-check-input"><label class="form-check-label">Sistema de embalagem tripla utilizado quando aplicável.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_sender_recipient_identification" class="form-check-input" required><label class="form-check-label">Identificação clara de remetente e destinatário.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_fragile_label" class="form-check-input"><label class="form-check-label">Indicação de “Frágil” quando aplicável.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_biohazard_label" class="form-check-input"><label class="form-check-label">Sinalização de risco biológico quando aplicável.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_un3373_label_when_applicable" class="form-check-input"><label class="form-check-label">Marcação “UN 3373” quando aplicável.</label></div></div>
+            <div class="col-md-6"><div class="form-check"><input type="checkbox" name="confirms_accompanying_documents" class="form-check-input" required><label class="form-check-label">Documentação de acompanhamento preenchida.</label></div></div>
+        </div>
+
+        <h2 class="h5 border-bottom pb-2 mb-3">7. Responsabilidade</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Local</label>
+                <input type="text" name="declaration_place" class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Nome para assinatura</label>
+                <input type="text" name="signer_name" class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Documento de identificação</label>
+                <input type="text" name="signer_document" class="form-control">
+            </div>
+        </div>
+
+        <div class="alert alert-warning">
+            Ao enviar este formulário, o remetente declara que as informações fornecidas são verdadeiras
+            e que está ciente da responsabilidade pela conformidade da remessa.
+        </div>
+
+        <div class="form-check mb-2">
+            <input type="checkbox" name="accepts_sender_declaration" class="form-check-input" required>
+            <label class="form-check-label">Aceito a Declaração do Remetente para Remessa de Material Biológico.</label>
+        </div>
+
+        <div class="form-check mb-2">
+            <input type="checkbox" name="accepts_content_declaration" class="form-check-input" required>
+            <label class="form-check-label">Aceito a Declaração de Conteúdo – Remessa de Material Biológico.</label>
+        </div>
+
+        <div class="form-check">
+            <input type="checkbox" name="accepts_responsibility" class="form-check-input" required>
+            <label class="form-check-label">Declaro estar ciente das responsabilidades administrativas e legais relacionadas ao envio.</label>
+        </div>
+    </div>
+
+    <div class="card-footer bg-white text-end">
+        <a href="{% url 'public_shipments_portal' %}" class="btn btn-outline-secondary me-2">
+            Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+            Enviar declaração e gerar QR
+        </button>
+    </div>
+</form>
+
+{% endblock %}

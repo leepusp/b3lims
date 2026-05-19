@@ -1,0 +1,171 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Document Review · {{ shipment.shipment_code }}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h3 class="mb-1">
+                Document Review · {{ shipment.shipment_code }}
+            </h3>
+            <p class="text-muted mb-0">
+                Review signed documents before approving final package labels and package QR.
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'shipment_detail' shipment.id %}" class="btn btn-outline-secondary btn-sm">
+                Back to shipment
+            </a>
+
+            {% if can_release_final_outputs %}
+                <a href="{% url 'shipment_package_labels' shipment.id %}" class="btn btn-primary btn-sm">
+                    Open final package labels
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pending_required_documents %}
+        <div class="alert alert-warning">
+            There are required signed documents still pending.
+        </div>
+    {% elif can_release_final_outputs %}
+        <div class="alert alert-success">
+            Documents were approved. Final package labels and QR are released.
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Required signed documents are uploaded. Review the files below and approve or request correction.
+        </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white fw-semibold">
+            Submitted documents
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Status</th>
+                        <th>Requires signature</th>
+                        <th>Generated/model file</th>
+                        <th>Signed file</th>
+                        <th style="width: 32%;">Correction request</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for document in documents %}
+                        <tr>
+                            <td>
+                                <strong>{{ document.get_document_type_display }}</strong>
+                                <div class="small text-muted">{{ document.document_type }}</div>
+                            </td>
+
+                            <td>
+                                <span class="badge text-bg-secondary">
+                                    {{ document.get_status_display }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if document.requires_signature %}
+                                    <span class="badge text-bg-warning">Required</span>
+                                {% else %}
+                                    <span class="badge text-bg-light text-dark">Not required</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if document.generated_file %}
+                                    <a href="{{ document.generated_file.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Open model/generated
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Not generated</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if document.signed_file %}
+                                    <a href="{{ document.signed_file.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success">
+                                        Open signed file
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if document.requires_signature %}
+                                    <form method="post"
+                                          action="{% url 'shipment_request_document_correction' shipment.id document.id %}">
+                                        {% csrf_token %}
+                                        <div class="input-group input-group-sm">
+                                            <input type="text"
+                                                   name="correction_note"
+                                                   class="form-control"
+                                                   placeholder="Correction note to sender">
+                                            <button type="submit"
+                                                    class="btn btn-outline-warning">
+                                                Request correction
+                                            </button>
+                                        </div>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted small">No correction action required.</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No documents registered for this shipment.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="mb-2">Approval</h5>
+            <p class="text-muted">
+                Approve only after checking the signed uploaded documents.
+                Approval releases the final external package labels and package QR.
+            </p>
+
+            <form method="post"
+                  action="{% url 'shipment_approve_documents' shipment.id %}"
+                  class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">
+                    Approve signed documents and release labels
+                </button>
+            </form>
+
+            {% if can_release_final_outputs %}
+                <a href="{% url 'shipment_package_labels' shipment.id %}"
+                   class="btn btn-outline-primary ms-2">
+                    Open final package labels
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

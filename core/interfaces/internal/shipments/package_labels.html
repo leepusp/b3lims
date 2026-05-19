@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <title>Etiquetas da Remessa {{ shipment.shipment_code }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #111827;
+            margin: 18px;
+            background: #ffffff;
+        }
+
+        .print-actions {
+            margin-bottom: 18px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 10px;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 10px 0;
+        }
+
+        h2 {
+            font-size: 16px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .small {
+            font-size: 11px;
+            color: #374151;
+        }
+
+        .label-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .label-card {
+            border: 2px solid #111827;
+            padding: 14px;
+            min-height: 170px;
+            break-inside: avoid;
+        }
+
+        .label-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .field {
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .field strong {
+            display: inline-block;
+            min-width: 110px;
+        }
+
+        .qr {
+            text-align: center;
+        }
+
+        .qr img {
+            width: 150px;
+            height: 150px;
+        }
+
+        .cut-section {
+            border-top: 2px solid #111827;
+            padding-top: 12px;
+            margin-top: 10px;
+        }
+
+        .cut-title {
+            text-align: center;
+            font-family: Georgia, serif;
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .cut-note {
+            text-align: center;
+            font-style: italic;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .external-label-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .cut-label {
+            border: 2px dashed #111827;
+            min-height: 130px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            break-inside: avoid;
+        }
+
+        .fragile-label {
+            color: #b91c1c;
+            border-color: #b91c1c;
+            font-weight: 800;
+            font-size: 30px;
+            text-transform: uppercase;
+            flex-direction: column;
+        }
+
+        .fragile-icons {
+            font-size: 24px;
+            margin-top: 8px;
+            letter-spacing: 0.25em;
+        }
+
+        .biohazard-label {
+            flex-direction: column;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .biohazard-symbol {
+            font-size: 54px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .un3373-label {
+            flex-direction: column;
+        }
+
+        .un3373-diamond {
+            width: 120px;
+            height: 120px;
+            border: 4px solid #111827;
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+
+        .un3373-diamond span {
+            transform: rotate(-45deg);
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .restricted-label {
+            grid-column: 1 / -1;
+            min-height: 150px;
+            font-family: Georgia, serif;
+            flex-direction: column;
+        }
+
+        .restricted-label .warning-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .restricted-label .warning-text {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.45;
+            max-width: 820px;
+        }
+
+        .notice-box {
+            border: 1px solid #111827;
+            padding: 10px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+
+        @media print {
+            .print-actions {
+                display: none;
+            }
+
+            body {
+                margin: 10mm;
+            }
+
+            .label-card,
+            .cut-label {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="print-actions">
+    <button onclick="window.print()">Imprimir etiquetas</button>
+    <a href="{% url 'shipment_detail' shipment.id %}">Voltar à remessa</a>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1>Etiquetas e QR Final da Remessa</h1>
+        <p>{{ shipment.shipment_code }}</p>
+    </div>
+    <div class="small">
+        Gerado pelo Biobank CEPID B3<br>
+        Status: {{ shipment.get_status_display }}
+    </div>
+</div>
+
+<div class="label-grid">
+
+    <div class="label-card">
+        <div class="label-title">Identificação Externa</div>
+
+        <div class="field"><strong>Remessa:</strong> {{ shipment.shipment_code }}</div>
+        <div class="field"><strong>Origem:</strong> {{ shipment.sender_institution|default:"Não informado" }}</div>
+        <div class="field"><strong>Destino:</strong> {{ shipment.recipient_institution|default:"BBAMS / Biobank" }}</div>
+        <div class="field"><strong>Responsável:</strong> {{ shipment.sender_responsible_name|default:"Não informado" }}</div>
+        <div class="field"><strong>Temperatura:</strong> {{ shipment.temperature_condition|default:"Não informado" }}</div>
+
+        {% if classification %}
+            <div class="field"><strong>Classe risco:</strong> {{ classification.risk_class }}</div>
+            <div class="field"><strong>Biossegurança:</strong> {{ classification.biosafety_level }}</div>
+            <div class="field"><strong>OGM:</strong> {% if classification.is_ogm %}Sim{% else %}Não{% endif %}</div>
+        {% endif %}
+    </div>
+
+    <div class="label-card qr">
+        <div class="label-title">QR Final da Embalagem</div>
+
+        <img src="{{ package_qr_data_uri }}" alt="QR final da remessa">
+
+        <p class="small">
+            Escaneie para rastrear a remessa.
+        </p>
+
+        {% if public_tracking_url %}
+            <p class="small">{{ public_tracking_url }}</p>
+        {% else %}
+            <p class="small">{{ shipment.shipment_code }}</p>
+        {% endif %}
+    </div>
+
+    <div class="label-card">
+        <div class="label-title">Conteúdo Declarado</div>
+
+        {% for item in items %}
+            <div class="field"><strong>ID externo:</strong> {{ item.imported_sample_id }}</div>
+            <div class="field"><strong>Material:</strong> {{ item.material_name }}</div>
+            <div class="field"><strong>Tipo:</strong> {{ item.sample_type }}</div>
+            <div class="field"><strong>Quantidade:</strong> {{ item.quantity }} {{ item.quantity_unit }}</div>
+            <hr>
+        {% empty %}
+            <p>Nenhum item registrado.</p>
+        {% endfor %}
+    </div>
+
+    <div class="label-card">
+        <div class="label-title">Condições de Manuseio</div>
+
+        <div class="field"><strong>Frágil:</strong> Sim</div>
+
+        {% if label_flags.show_biohazard %}
+            <div class="field"><strong>Risco biológico:</strong> Sim</div>
+        {% else %}
+            <div class="field"><strong>Risco biológico:</strong> Não obrigatório pela classificação atual</div>
+        {% endif %}
+
+        {% if label_flags.show_un3373 %}
+            <div class="field"><strong>UN 3373:</strong> Sim</div>
+        {% else %}
+            <div class="field"><strong>UN 3373:</strong> Não obrigatório pela classificação atual</div>
+        {% endif %}
+
+        {% if label_flags.show_triple_packaging_notice %}
+            <div class="notice-box">
+                Utilizar embalagem tripla e documentação de acompanhamento conforme a classificação da remessa.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<div class="cut-section">
+    <div class="cut-title">Etiquetas para Embalagem Externa</div>
+    <div class="cut-note">
+        Recortar pela linha pontilhada e fixar na embalagem externa do material transportado.
+    </div>
+
+    <div class="external-label-grid">
+
+        {% if label_flags.show_fragile %}
+            <div class="cut-label fragile-label">
+                <div>Cuidado<br>Frágil</div>
+                <div class="fragile-icons">☂ ↑ ⚠</div>
+            </div>
+        {% endif %}
+
+        {% if label_flags.show_biohazard %}
+            <div class="cut-label biohazard-label">
+                <div class="biohazard-symbol">☣</div>
+                <div>Risco Biológico</div>
+            </div>
+        {% endif %}
+
+        {% if label_flags.show_un3373 %}
+            <div class="cut-label un3373-label">
+                <div class="un3373-diamond">
+                    <span>UN 3373</span>
+                </div>
+                <strong>Substância Biológica Categoria B</strong>
+            </div>
+        {% endif %}
+
+        {% if label_flags.show_restricted_opening %}
+            <div class="cut-label restricted-label">
+                <div class="warning-title">CUIDADO:</div>
+                <div class="warning-text">
+                    Abertura autorizada apenas no interior do laboratório por técnico especializado.<br>
+                    O acesso a este conteúdo é restrito à equipe técnica devidamente capacitada.
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+</body>
+</html>

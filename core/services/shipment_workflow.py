@@ -50,6 +50,7 @@ def sync_shipment_requirements(shipment, actor=None):
             defaults={
                 "status": "draft",
                 "requires_signature": document_type in [
+                    "content_declaration",
                     "sender_declaration",
                     "ogm_transport_notification",
                     "mta_ttm",

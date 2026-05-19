@@ -22,7 +22,105 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
+    
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-qr-code me-2"></i>Shipment QR
+            </div>
+            <div class="card-body text-center">
+                {% if shipment_qr_data_uri %}
+                    <img src="{{ shipment_qr_data_uri }}" alt="Shipment QR Code" class="img-fluid mb-3" style="max-width: 220px;">
+                    <div class="small text-muted text-break">{{ shipment_scan_url }}</div>
+                {% else %}
+                    <div class="text-muted">QR code not available.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-box-seam me-2"></i>Receipt
+            </div>
+            <div class="card-body">
+                {% if receipt %}
+                    <div class="mb-2">
+                        <span class="text-muted">Received by:</span>
+                        {{ receipt.received_by|default:"Not defined" }}
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-muted">Received at:</span>
+                        {{ receipt.received_at|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-muted">Package:</span>
+                        {{ receipt.get_package_condition_display }}
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-muted">Integrity:</span>
+                        {{ receipt.package_integrity_confirmed|yesno:"Confirmed,Pending" }}
+                    </div>
+                    <div>
+                        <span class="text-muted">Items checked:</span>
+                        {{ receipt.items_checked|yesno:"Yes,No" }}
+                    </div>
+                {% else %}
+                    <p class="text-muted">This shipment has not been received yet.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="mark_received">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check2-circle me-2"></i>Mark as Received
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-table me-2"></i>Intake
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Generate intake records from shipment items not yet linked to final samples.
+                </p>
+
+                {% if receipt and receipt.created_intake_batch %}
+                    <div class="alert alert-success py-2">
+                        Intake batch generated.
+                    </div>
+                    <a href="{% url 'sample_import_batch_detail' receipt.created_intake_batch.id %}" class="btn btn-outline-primary">
+                        Open Intake Batch
+                    </a>
+                {% elif receipt and shipment.status == "received_pending_qc" %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_intake_records">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-down-square me-2"></i>Create Intake Records
+                        </button>
+                    </form>
+                {% elif receipt %}
+                    <div class="alert alert-warning py-2 mb-0">
+                        Shipment was received, but it is not pending QC. Intake generation is locked.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning py-2 mb-0">
+                        First mark this shipment as received. Intake records will be released after receipt confirmation.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Route</div>
@@ -186,4 +284,28 @@
         </div>
     </div>
 </div>
+
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white fw-semibold">
+        Document review and final package outputs
+    </div>
+
+    <div class="card-body">
+        <p class="text-muted">
+            Open the signed documents, review their content, request corrections when needed,
+            and approve only after the documentation is valid.
+        </p>
+
+        <a href="{% url 'shipment_documents_review' shipment.id %}"
+           class="btn btn-primary">
+            Review signed documents
+        </a>
+
+        <a href="{% url 'shipment_package_labels' shipment.id %}"
+           class="btn btn-outline-primary ms-2">
+            Open final package labels
+        </a>
+    </div>
+</div>
+
 {% endblock %}

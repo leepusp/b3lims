@@ -1,0 +1,79 @@
+{% extends "public/base.html" %}
+
+{% block title %}Remessa de Material Biológico · Biobank CEPID B3{% endblock %}
+
+{% block content %}
+
+<section class="mb-5">
+    <div class="py-4">
+        <h1 class="fw-semibold mb-3">
+            Remessa de Material Biológico
+        </h1>
+        <p class="fs-5 text-muted mb-0">
+            Área pública para submissão e acompanhamento de remessas destinadas ao biobanco.
+        </p>
+    </div>
+</section>
+
+<section class="mb-4">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-3">
+                        Enviar material ao biobanco
+                    </h2>
+
+                    <p class="text-muted">
+                        Preencha a declaração do remetente, a declaração de conteúdo,
+                        os dados da amostra, a classificação de risco, as condições
+                        de embalagem e o transporte.
+                    </p>
+
+                    <a href="{% url 'public_shipment_new' %}" class="btn btn-primary">
+                        Iniciar submissão
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-semibold mb-3">
+                        Acompanhar remessa
+                    </h2>
+
+                    <p class="text-muted">
+                        Informe o token público ou use o QR gerado após a submissão.
+                    </p>
+
+                    {% if error_message %}
+                        <div class="alert alert-warning py-2">
+                            {{ error_message }}
+                        </div>
+                    {% endif %}
+
+                    <form method="get">
+                        <label class="form-label">Token de rastreio</label>
+                        <input type="text"
+                               name="token"
+                               class="form-control mb-3"
+                               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+
+                        <button type="submit" class="btn btn-outline-primary">
+                            Acompanhar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="alert alert-secondary">
+    Após a submissão, a equipe do biobanco fará a revisão interna antes do recebimento,
+    controle de qualidade e entrada da amostra.
+</div>
+
+{% endblock %}
