@@ -57,6 +57,12 @@
             <i class="bi bi-droplet"></i>
             <span class="nav-label">Samples</span>
         </a>
+        <a href="{% url 'shipments' %}"
+           class="nav-link {% if 'shipments' in request.path %}active{% endif %}">
+            <i class="bi bi-truck"></i>
+            <span class="nav-label">Transport</span>
+        </a>
+
 
         <a href="{% url 'chemicals_list' %}"
            class="nav-link {% if 'chemicals' in request.path %}active{% endif %}">
