@@ -75,3 +75,14 @@ environment.yml
 # Other
 # ----------------------
 .DS_Store
+
+# Runtime uploaded data
+data/
+!data/.gitkeep
+
+# Local database
+db.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc

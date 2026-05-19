@@ -1,0 +1,189 @@
+{% extends "internal/common/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-truck me-2 text-primary"></i>{{ shipment.shipment_code }}
+            </h2>
+            <p class="text-muted mb-0">{{ shipment.get_flow_type_display }} · {{ shipment.get_status_display }}</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="sync_requirements">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-repeat me-2"></i>Sync Requirements
+                </button>
+            </form>
+            <a href="{% url 'shipments' %}" class="btn btn-outline-secondary">Back</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Route</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="small text-muted">Origin</div>
+                        <div class="fw-semibold">
+                            {% if shipment.origin_biobank %}
+                                {{ shipment.origin_biobank.name }}
+                            {% else %}
+                                {{ shipment.sender_institution|default:"Not defined" }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="small text-muted">Destination</div>
+                        <div class="fw-semibold">
+                            {% if shipment.destination_biobank %}
+                                {{ shipment.destination_biobank.name }}
+                            {% else %}
+                                {{ shipment.recipient_institution|default:"Not defined" }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="small text-muted">Temperature</div>
+                    <div>{{ shipment.temperature_condition|default:"Not defined" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Classification</div>
+                <div class="card-body">
+                    {% if classification %}
+                        <div class="mb-2"><span class="text-muted">Material:</span> {{ classification.get_material_type_display }}</div>
+                        <div class="mb-2"><span class="text-muted">Risk:</span> {{ classification.get_risk_class_display }}</div>
+                        <div class="mb-2"><span class="text-muted">Biosafety:</span> {{ classification.get_biosafety_level_display }}</div>
+                        <div class="mb-2"><span class="text-muted">OGM:</span> {{ classification.is_ogm|yesno:"Yes,No" }}</div>
+                        <div class="mb-2"><span class="text-muted">UN3373:</span> {{ classification.requires_un3373_label|yesno:"Required,Not required" }}</div>
+                        <div><span class="text-muted">Triple packaging:</span> {{ classification.requires_triple_packaging|yesno:"Required,Not required" }}</div>
+                    {% else %}
+                        <p class="text-muted mb-0">No classification registered yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Transport</div>
+                <div class="card-body">
+                    <div class="mb-2"><span class="text-muted">Method:</span> {{ shipment.transport_method|default:"Not defined" }}</div>
+                    <div class="mb-2"><span class="text-muted">Carrier:</span> {{ shipment.carrier_name|default:"Not defined" }}</div>
+                    <div class="mb-2"><span class="text-muted">Tracking:</span> {{ shipment.tracking_code|default:"Not defined" }}</div>
+                    <div><span class="text-muted">Expected arrival:</span> {{ shipment.expected_arrival_date|default:"Not defined" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold">Items</div>
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sample ID</th>
+                                <th>Material</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.imported_sample_id }}</td>
+                                <td>{{ item.material_name }}</td>
+                                <td>{{ item.sample_type }}</td>
+                                <td>{{ item.quantity }} {{ item.quantity_unit }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-4">No items.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white fw-bold">Documents</div>
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Document</th>
+                                <th>Status</th>
+                                <th>Signature</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documents %}
+                            <tr>
+                                <td>{{ doc.get_document_type_display }}</td>
+                                <td><span class="badge bg-secondary">{{ doc.get_status_display }}</span></td>
+                                <td>{{ doc.requires_signature|yesno:"Required,Not required" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted py-4">No documents. Click Sync Requirements.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold">Checklist</div>
+                <div class="list-group list-group-flush">
+                    {% for item in checklist_items %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold">{{ item.label }}</div>
+                            <div class="small text-muted">{{ item.get_checklist_type_display }}</div>
+                        </div>
+                        {% if item.is_completed %}
+                            <span class="badge bg-success">Done</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-center text-muted py-4">
+                        No checklist items. Click Sync Requirements.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white fw-bold">Events</div>
+                <div class="list-group list-group-flush">
+                    {% for event in events %}
+                    <div class="list-group-item">
+                        <div class="fw-semibold">{{ event.get_event_type_display }}</div>
+                        <div class="small text-muted">{{ event.created_at|date:"d/m/Y H:i" }} · {{ event.actor|default:"System" }}</div>
+                        {% if event.notes %}
+                        <div class="small mt-1">{{ event.notes }}</div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-center text-muted py-4">No events.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

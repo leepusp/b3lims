@@ -1,7 +1,8 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
 
-{% block title %}New Sample · CEPIDB3 Biobank{% endblock %}
+{% block title %}New Sample · CEPIDB3 Biobank
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
@@ -24,6 +25,8 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="add_sample">
         <input type="hidden" name="scientific_notes" id="scientific_notes_input">
+        <input type="hidden" name="intake_record_id" id="intake_record_id_input" value="{{ intake_prefill.intake_record_id|default:'' }}">
+        {{ intake_prefill|json_script:"sampleIntakePrefillData" }}
         <input type="hidden" id="emptyPlasmidsData" value="{{ empty_plasmids_json|default:'[]' }}">
 
         <div class="card shadow-sm border-0">
@@ -37,7 +40,7 @@
                             <label class="section-label">Sample ID / Barcode <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-white text-muted"><i class="bi bi-upc-scan"></i></span>
-                                <input type="text" name="sample_id" id="id_external_identifier" class="form-control fw-bold" placeholder="Ex: SMP-2026-001" required>
+                                <input type="text" name="sample_id" id="id_external_identifier" class="form-control fw-bold" placeholder="Ex: SMP-2026-001" value="{{ intake_prefill.sample_id|default:'' }}" required>
                                 <button type="button" id="btnGenerateAutoId" class="btn btn-outline-primary" title="Generate next ID">
                                     <i class="bi bi-arrow-clockwise"></i>
                                 </button>
@@ -48,11 +51,11 @@
                         <div class="col-md-4">
                             <label class="section-label">Sample Type <span class="text-danger">*</span></label>
                             <select class="form-select text-dark fw-bold border-primary-subtle" name="sample_type" id="sampleTypeInput" required>
-                                <option value="" selected disabled>Select type...</option>
-                                <option value="Bacterium (Host)">Bacterium (Host)</option>
-                                <option value="Phage (Virus)">Phage (Virus)</option>
-                                <option value="Plasmid">Plasmid</option>
-                                <option value="Other">Other</option>
+                                <option value="" {% if not intake_prefill.sample_type %}selected{% endif %} disabled>Select type...</option>
+                                <option value="Bacterium (Host)" {% if intake_prefill.sample_type == "Bacterium (Host)" %}selected{% endif %}>Bacterium (Host)</option>
+                                <option value="Phage (Virus)" {% if intake_prefill.sample_type == "Phage (Virus)" %}selected{% endif %}>Phage (Virus)</option>
+                                <option value="Plasmid" {% if intake_prefill.sample_type == "Plasmid" %}selected{% endif %}>Plasmid</option>
+                                <option value="Other" {% if intake_prefill.sample_type == "Other" %}selected{% endif %}>Other</option>
                             </select>
                         </div>
 
@@ -61,8 +64,8 @@
                             <p class="small text-muted mb-1" style="font-size: 0.75rem;">Type the location and press <strong>Enter</strong> to create levels. (Ex: Freezer 1 ↵ Box A ↵)</p>
 
                             <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
-                                <input type="hidden" name="storage_location" id="storage_location_hidden">
-                                <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter...">
+                                <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ intake_prefill.storage_location|default:'' }}">
+                                <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter..." value="{{ intake_prefill.storage_location|default:'' }}">
                             </div>
                         </div>
 
@@ -92,7 +95,7 @@
 
                         <div class="col-md-12 mt-4 mb-2">
                             <label class="section-label"><i class="bi bi-person-badge me-1"></i>Collaborator / Provider</label>
-                            <input type="text" name="collaborator" class="form-control bg-light" placeholder="Who isolated, donated or provided this sample?">
+                            <input type="text" name="collaborator" class="form-control bg-light" placeholder="Who isolated, donated or provided this sample?" value="{{ intake_prefill.provider|default:'' }}">
                         </div>
 
                     </div>
@@ -155,14 +158,14 @@
                                 <p class="small text-muted mb-2">Link this sample to a collection to share it with your group.</p>
 
                                 <select name="collection" class="form-select border-primary-subtle mb-3">
-                                    <option value="" selected>None (Keep Sample Isolated)</option>
+                                    <option value="" {% if not intake_prefill.matched_collection_id %}selected{% endif %}>None (Keep Sample Isolated)</option>
                                     {% for col in collections %}
-                                    <option value="{{ col.id }}">{{ col.name }}</option>
+                                    <option value="{{ col.id }}" {% if intake_prefill.matched_collection_id == col.id %}selected{% endif %}>{{ col.name }}</option>
                                     {% endfor %}
                                 </select>
 
                                 <div class="form-check form-switch custom-switch-lg d-flex align-items-center bg-light p-2 rounded border mt-3">
-                                    <input class="form-check-input ms-0 mt-0 me-3" type="checkbox" role="switch" id="is_public" name="is_public">
+                                    <input class="form-check-input ms-0 mt-0 me-3" type="checkbox" role="switch" id="is_public" name="is_public" {% if intake_prefill.is_public %}checked{% endif %}>
                                     <label class="form-check-label" for="is_public">
                                         <span class="fw-bold text-dark">Public Availability</span>
                                         <span class="d-block small text-muted" style="line-height: 1.1;">Allow external researchers to view basic metadata.</span>
@@ -203,7 +206,27 @@
                                 </div>
 
                                 <div id="selectedBiobanksContainer" class="d-flex flex-column gap-2">
-                                    <div id="noBiobankMsg" class="text-center py-4 text-muted">
+                                    {% if intake_prefill.matched_biobank_id %}
+                                    <div class="d-flex align-items-center justify-content-between bg-white border rounded p-3 mb-2 bb-row shadow-sm" data-bb-id="{{ intake_prefill.matched_biobank_id }}">
+                                        <div class="d-flex align-items-center flex-grow-1">
+                                            <i class="bi bi-building me-3 text-primary fs-5"></i>
+                                            <div class="flex-grow-1">
+                                                <span class="fw-bold d-block mb-1">{{ intake_prefill.matched_biobank_name }}</span>
+                                                <input type="hidden" name="dist_biobank_id[]" value="{{ intake_prefill.matched_biobank_id }}">
+                                                <input type="hidden" name="dist_collection_id[]" value="{{ intake_prefill.matched_collection_id|default:'' }}">
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <span class="text-muted small">Aliquots Qty:</span>
+                                                    <input type="number" name="dist_quantity[]" class="form-control form-control-sm" value="1" min="1" style="width: 80px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-link text-danger remove-bb ms-3">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+
+                                    <div id="noBiobankMsg" class="text-center py-4 text-muted" {% if intake_prefill.matched_biobank_id %}style="display:none;"{% endif %}>
                                         <i class="bi bi-layers opacity-50 display-6"></i>
                                         <p class="mt-2 mb-0 small">No biobank linked.</p>
                                     </div>
@@ -294,6 +317,139 @@
 {% block extra_js %}
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 <script src="{% static 'internal/samples/samples.js' %}"></script>
+
+<script id="intakeDynamicPrefillScript">
+(function() {
+    function runIntakePrefill() {
+        const payload = document.getElementById("sampleIntakePrefillData");
+        if (!payload) return;
+
+        let data = {};
+        try {
+            data = JSON.parse(payload.textContent || "{}");
+        } catch (err) {
+            console.warn("Could not parse sample intake payload.", err);
+            return;
+        }
+
+        if (!data || Object.keys(data).length === 0) return;
+
+        function truthy(value) {
+            return value === true || value === "true" || value === "1" || value === 1 || value === "yes" || value === "sim";
+        }
+
+        function setField(name, value) {
+            if (value === undefined || value === null || value === "") return;
+
+            const el = document.getElementsByName(name)[0];
+            if (!el) return;
+
+            if (el.type === "checkbox") {
+                el.checked = truthy(value);
+            } else {
+                el.value = value;
+            }
+
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        function applyBaseFields() {
+            setField("sample_id", data.sample_id);
+            setField("collaborator", data.provider);
+            setField("is_public", data.is_public);
+
+            const intakeInput = document.getElementById("intake_record_id_input");
+            if (intakeInput && data.intake_record_id) {
+                intakeInput.value = data.intake_record_id;
+            }
+
+            const typeInput = document.getElementById("sampleTypeInput");
+            if (typeInput && data.sample_type) {
+                typeInput.value = data.sample_type;
+                typeInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+
+            const collectionSelect = document.getElementsByName("collection")[0];
+            if (collectionSelect && data.matched_collection_id) {
+                collectionSelect.value = String(data.matched_collection_id);
+                collectionSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        }
+
+        function applyDynamicFields() {
+            [
+                "official_name",
+                "aliases",
+                "genus",
+                "species",
+                "strain",
+                "genotype",
+                "isolation_source",
+                "resistance_markers",
+                "phage_name",
+                "morphotype",
+                "taxonomy",
+                "lifestyle",
+                "isolation_method",
+                "genome_type",
+                "genome_size_bp",
+                "temp_C",
+                "ncbi_accession",
+                "backbone_name",
+                "backbone_aliases",
+                "vector_type",
+                "induction_system",
+                "origin_of_replication",
+                "backbone_size_bp",
+                "backbone_resistance_markers",
+                "is_empty_vector",
+                "construction_name",
+                "insert_name",
+                "purpose",
+                "insert_size_bp",
+                "insert_resistance_markers",
+                "custom_organism_name"
+            ].forEach(function(name) {
+                setField(name, data[name]);
+            });
+
+            if (data.sample_type === "Plasmid") {
+                setField("backbone_name", data.backbone_name || data.organism_name);
+                setField("construction_name", data.construction_name || data.organism_name);
+            }
+
+            if (data.sample_type === "Other") {
+                setField("custom_organism_name", data.organism_name);
+            }
+        }
+
+        applyBaseFields();
+
+        // samples.js creates the dynamic fields after sample_type changes.
+        // Repeat a few times to avoid race conditions.
+        let attempts = 0;
+        const timer = setInterval(function() {
+            applyBaseFields();
+            applyDynamicFields();
+
+            attempts += 1;
+            if (attempts >= 10) {
+                clearInterval(timer);
+            }
+        }, 250);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", runIntakePrefill);
+    } else {
+        runIntakePrefill();
+    }
+
+    window.addEventListener("load", runIntakePrefill);
+})();
+</script>
+
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {

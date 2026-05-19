@@ -35,6 +35,7 @@ from core.forms import SampleForm, get_form_class_for_sample
 from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample
 from core.permissions.collections import can_edit_collection
 from core.services.sample_intake import import_sample_table
+from core.services.sample_export import export_samples_table
 
 # =========================================================
 # 1. DASHBOARD (LISTING & FILTERS)
@@ -466,75 +467,20 @@ def sample_qr_scan_view(request, uuid):
 
 @login_required
 def export_samples_csv(request):
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = 'attachment; filename="advanced_samples_report.csv"'
-    writer = csv.writer(response, delimiter=';')
+    """
+    Export samples using the standardized table schema.
 
-    headers = [
-        'ID / Barcode', 'Biological Type', 'Organism', 'Status', 'Visibility',
-        'Collections', 'Biobank', 'Storage Location', 'Owner', 'Created At',
-        'Phage: Genus', 'Phage: Morphotype', 'Phage: Taxonomy', 'Phage: Lifestyle', 'Genome (Type)', 'Genome Size (bp)',
-        'Bacteria: Genus', 'Bacteria: Species', 'Bacteria: Strain', 'Genotype', 'Resistance Markers',
-        'Plasmid: Backbone', 'Plasmid: Insert', 'Plasmid Size (bp)'
-    ]
-    writer.writerow(headers)
+    Supported query parameters:
+    - format=csv|xlsx
+    - schema=standard|full
+    - biobank=<name_or_id>
+    - collection=<name_or_id>
+    - sample_type=<Sample Type>
+    - status=<status>
+    - include_inactive=1
+    """
+    return export_samples_table(request)
 
-    samples = Sample.objects.filter(is_active=True).select_related('biobank', 'owner').prefetch_related('collections')
-
-    for s in samples:
-        cols = ", ".join([c.name for c in s.collections.all()])
-
-        row = [
-            s.sample_id, s.sample_type or '', s.organism_name or '',
-            s.get_status_display(), "Public" if s.is_public else "Private",
-            cols,
-            s.biobank.name if s.biobank else '',
-            s.storage_location or '',
-            s.owner.username, s.created_at.strftime('%Y-%m-%d %H:%M')
-        ]
-
-        p_genus = morphotype = taxonomy = lifestyle = genome_type = genome_size = ""
-        b_genus = species = strain = genotype = resistance = ""
-        plasmid_backbone = plasmid_insert = plasmid_size = ""
-
-        if hasattr(s, 'phage'):
-            p_genus = s.phage.genus or ""
-            morphotype = s.phage.morphotype or ""
-            taxonomy = s.phage.taxonomy or ""
-            lifestyle = s.phage.lifestyle or ""
-            genome_type = s.phage.genome_type or ""
-            genome_size = s.phage.genome_size_bp or ""
-
-        elif hasattr(s, 'bacteria'):
-            b_genus = s.bacteria.genus or ""
-            species = s.bacteria.species or ""
-            strain = s.bacteria.strain or ""
-            genotype = s.bacteria.genotype or ""
-            resistance = ", ".join(s.bacteria.resistance_markers) if isinstance(s.bacteria.resistance_markers, list) else s.bacteria.resistance_markers
-
-        elif hasattr(s, 'plasmid'):
-            plasmid_backbone = s.plasmid.backbone_name or ""
-            plasmid_insert = s.plasmid.insert_name if not s.plasmid.is_empty_vector else "N/A (Empty Vector)"
-            plasmid_size = s.plasmid.total_size_bp or ""
-
-            b_res = s.plasmid.backbone_resistance_markers or []
-            i_res = s.plasmid.insert_resistance_markers or []
-            all_res = b_res + i_res
-            resistance = ", ".join(all_res) if all_res else ""
-
-        row.extend([
-            p_genus, morphotype, taxonomy, lifestyle, genome_type, genome_size,
-            b_genus, species, strain, genotype, resistance,
-            plasmid_backbone, plasmid_insert, plasmid_size
-        ])
-
-        writer.writerow(row)
-
-    return response
-
-# =========================================================
-# 4. EDIT VIEW
-# =========================================================
 @login_required
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)

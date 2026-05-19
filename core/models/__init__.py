@@ -10,3 +10,5 @@ from .samples.relationship import SampleRelationship
 from .samples.intake import SampleImportBatch, SampleIntakeRecord
 
 from .events.model import Event
+
+from .shipments import Shipment, ShipmentItem, TransportClassification, ShipmentDocument, ShipmentChecklistItem, ShipmentEvent

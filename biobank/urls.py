@@ -1,3 +1,4 @@
+from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view
 # core/urls.py
 from django.contrib import admin
 from django.urls import path
@@ -87,6 +88,8 @@ urlpatterns = [
     path("collections/", collections_list_view, name="collections_list"),
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
+    path("shipments/", shipments_list_view, name="shipments"),
+    path("shipments/<int:shipment_id>/", shipment_detail_view, name="shipment_detail"),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/import/", sample_import_view, name="samples_import"),
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),

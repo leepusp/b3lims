@@ -103,3 +103,71 @@ class SampleIntakeRecordAdmin(admin.ModelAdmin):
     list_display = ("row_number", "imported_sample_id", "sample_type", "organism_name", "status", "matched_biobank", "matched_collection")
     list_filter = ("status", "sample_type")
     search_fields = ("imported_sample_id", "organism_name", "biobank_name", "collection_name")
+
+
+# Shipment / transport administration
+from core.models import (
+    Shipment,
+    ShipmentItem,
+    TransportClassification,
+    ShipmentDocument,
+    ShipmentChecklistItem,
+    ShipmentEvent,
+)
+
+
+class ShipmentItemInline(admin.TabularInline):
+    model = ShipmentItem
+    extra = 0
+    autocomplete_fields = ["sample", "intake_record"]
+
+
+class ShipmentDocumentInline(admin.TabularInline):
+    model = ShipmentDocument
+    extra = 0
+
+
+class ShipmentChecklistItemInline(admin.TabularInline):
+    model = ShipmentChecklistItem
+    extra = 0
+
+
+class TransportClassificationInline(admin.StackedInline):
+    model = TransportClassification
+    extra = 0
+    max_num = 1
+
+
+@admin.register(Shipment)
+class ShipmentAdmin(admin.ModelAdmin):
+    list_display = [
+        "shipment_code",
+        "flow_type",
+        "status",
+        "origin_biobank",
+        "destination_biobank",
+        "requested_by",
+        "created_at",
+    ]
+    list_filter = ["flow_type", "status", "origin_biobank", "destination_biobank"]
+    search_fields = [
+        "shipment_code",
+        "sender_institution",
+        "recipient_institution",
+        "tracking_code",
+    ]
+    readonly_fields = ["uuid", "shipment_code", "created_at", "updated_at"]
+    inlines = [
+        TransportClassificationInline,
+        ShipmentItemInline,
+        ShipmentDocumentInline,
+        ShipmentChecklistItemInline,
+    ]
+
+
+@admin.register(ShipmentEvent)
+class ShipmentEventAdmin(admin.ModelAdmin):
+    list_display = ["shipment", "event_type", "actor", "created_at"]
+    list_filter = ["event_type", "created_at"]
+    search_fields = ["shipment__shipment_code", "notes"]
+
