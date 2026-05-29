@@ -1,3 +1,5 @@
+from core.models import Shipment, TransportClassification, ShipmentEvent
+from core.shipment_forms import ShipmentSetupForm, ShipmentItemSetupForm, TransportClassificationSetupForm
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpResponseForbidden
@@ -333,3 +335,97 @@ def _shipment_package_label_flags(classification):
         "show_restricted_opening": show_restricted_opening,
         "show_triple_packaging_notice": show_triple_packaging_notice,
     }
+
+
+
+@login_required
+def shipment_edit_view(request, shipment_id):
+    shipment = get_object_or_404(Shipment, id=shipment_id)
+    item = shipment.items.order_by("id").first()
+
+    classification, _ = TransportClassification.objects.get_or_create(
+        shipment=shipment,
+        defaults={
+            "material_type": "unknown",
+            "risk_class": "unknown",
+            "biosafety_level": "unknown",
+            "is_ogm": False,
+            "is_genetic_heritage": False,
+            "is_international": False,
+        },
+    )
+
+    if request.method == "POST":
+        shipment_form = ShipmentSetupForm(
+            request.POST,
+            instance=shipment,
+            prefix="shipment",
+        )
+        item_form = ShipmentItemSetupForm(
+            request.POST,
+            instance=item,
+            prefix="item",
+        ) if item else None
+        classification_form = TransportClassificationSetupForm(
+            request.POST,
+            instance=classification,
+            prefix="classification",
+        )
+
+        forms_valid = shipment_form.is_valid() and classification_form.is_valid()
+
+        if item_form is not None:
+            forms_valid = forms_valid and item_form.is_valid()
+
+        if forms_valid:
+            shipment = shipment_form.save()
+
+            if item_form is not None:
+                item_form.save()
+
+            classification = classification_form.save()
+            classification.apply_default_rules(save=True)
+
+            ShipmentEvent.objects.create(
+                shipment=shipment,
+                event_type="updated",
+                actor=request.user,
+                notes="Shipment setup updated by internal user.",
+            )
+
+            if "sync_requirements" in request.POST or "continue_review" in request.POST:
+                result = sync_shipment_requirements(shipment, actor=request.user)
+                messages.success(
+                    request,
+                    result.get("message", "Shipment requirements synchronized."),
+                )
+            else:
+                messages.success(request, "Shipment draft saved.")
+
+            if "continue_review" in request.POST:
+                return redirect("shipment_detail", shipment_id=shipment.id)
+
+            return redirect("shipment_edit", shipment_id=shipment.id)
+
+        messages.error(request, "Please review the shipment fields before continuing.")
+
+    else:
+        shipment_form = ShipmentSetupForm(instance=shipment, prefix="shipment")
+        item_form = ShipmentItemSetupForm(instance=item, prefix="item") if item else None
+        classification_form = TransportClassificationSetupForm(
+            instance=classification,
+            prefix="classification",
+        )
+
+    return render(
+        request,
+        "internal/shipments/edit.html",
+        {
+            "shipment": shipment,
+            "item": item,
+            "classification": classification,
+            "shipment_form": shipment_form,
+            "item_form": item_form,
+            "classification_form": classification_form,
+        },
+    )

@@ -1,3 +1,4 @@
+from core.views.internal.shipments.views import shipment_edit_view
 from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
 from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
@@ -103,6 +104,7 @@ urlpatterns = [
     path("shipments/<int:shipment_id>/package-labels/", shipment_package_labels_view, name="shipment_package_labels"),
     path("shipments/<int:shipment_id>/documents-review/", shipment_documents_review_view, name="shipment_documents_review"),
     path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
+    path("shipments/<int:shipment_id>/edit/", shipment_edit_view, name="shipment_edit"),
     path("shipments/<int:shipment_id>/", shipment_detail_view, name="shipment_detail"),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/import/", sample_import_view, name="samples_import"),

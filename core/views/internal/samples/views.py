@@ -36,6 +36,7 @@ from core.permissions.samples import can_view_sample, can_edit_sample, can_delet
 from core.permissions.collections import can_edit_collection
 from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
+from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
 from core.services.shipment_factory import create_shipment_from_sample
 
 # =========================================================
@@ -483,13 +484,124 @@ def export_samples_csv(request):
     return export_samples_table(request)
 
 @login_required
+
+
+def _safe_sample_text(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _posted_sample_identity(request):
+    """
+    Try to recover the user-facing identification from POST data.
+
+    The edit form may vary by sample subtype, so we check generic and
+    subtype-specific fields.
+    """
+    for key in [
+        "organism_name",
+        "identification",
+        "name",
+        "display_name",
+        "phage_name",
+        "backbone_name",
+        "construction_name",
+        "insert_name",
+        "strain",
+        "species",
+    ]:
+        value = _safe_sample_text(request.POST.get(key, ""))
+        if value:
+            return value
+
+    return ""
+
+
+def _infer_sample_identity(base_sample, real_sample=None):
+    """
+    Preserve or infer the sample identification shown in the sample list/edit.
+
+    Priority:
+    1. Existing base Sample organism_name
+    2. Subtype/display fields
+    3. sample_id
+    """
+    objects = [base_sample]
+
+    if real_sample is not None and real_sample is not base_sample:
+        objects.append(real_sample)
+
+    for obj in objects:
+        for attr in [
+            "organism_name",
+            "name",
+            "display_name",
+            "phage_name",
+            "backbone_name",
+            "construction_name",
+            "insert_name",
+            "strain",
+            "species",
+            "sample_id",
+        ]:
+            if hasattr(obj, attr):
+                value = _safe_sample_text(getattr(obj, attr, ""))
+                if value:
+                    return value
+
+    return ""
+
+
+def _sync_sample_after_successful_edit(base_sample, real_sample, request, identity_before):
+    """
+    After a successful internal edit:
+    - do not allow a blank form submission to erase identification
+    - mark the sample as available/approved
+    """
+    try:
+        base_sample.refresh_from_db()
+    except Exception:
+        pass
+
+    posted_identity = _posted_sample_identity(request)
+    existing_identity = _safe_sample_text(getattr(base_sample, "organism_name", ""))
+    inferred_identity = _infer_sample_identity(base_sample, real_sample)
+
+    final_identity = (
+        posted_identity
+        or existing_identity
+        or _safe_sample_text(identity_before)
+        or inferred_identity
+    )
+
+    update_fields = []
+
+    if hasattr(base_sample, "organism_name") and final_identity:
+        base_sample.organism_name = final_identity
+        update_fields.append("organism_name")
+
+    if hasattr(base_sample, "status"):
+        base_sample.status = "available"
+        update_fields.append("status")
+
+    if update_fields:
+        base_sample.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    return final_identity
+
+
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
 
-    if hasattr(base_sample, 'bacteria'): real_sample = base_sample.bacteria
-    elif hasattr(base_sample, 'phage'): real_sample = base_sample.phage
-    elif hasattr(base_sample, 'plasmid'): real_sample = base_sample.plasmid
-    else: real_sample = base_sample
+    if hasattr(base_sample, 'bacteria'):
+        real_sample = base_sample.bacteria
+    elif hasattr(base_sample, 'phage'):
+        real_sample = base_sample.phage
+    elif hasattr(base_sample, 'plasmid'):
+        real_sample = base_sample.plasmid
+    else:
+        real_sample = base_sample
 
     if not can_edit_sample(request.user, real_sample) and not request.user.is_superuser:
         raise PermissionDenied
@@ -498,22 +610,38 @@ def sample_edit_view(request, sample_id):
 
     if request.method == "POST":
         form = FormClass(request.POST, request.FILES, instance=real_sample)
+
         if form.is_valid():
-            form.save()
+            identity_before = _safe_sample_text(getattr(base_sample, "organism_name", ""))
+            real_sample = form.save()
+
+            _sync_sample_after_successful_edit(
+                base_sample=base_sample,
+                real_sample=real_sample,
+                request=request,
+                identity_before=identity_before,
+            )
+
             tag_ids = request.POST.getlist("tags")
             if tag_ids:
-                real_sample.tags.set(tag_ids)
+                base_sample.tags.set(tag_ids)
 
-            storage_location = form.cleaned_data.get('storage_location', '')
-            from core.models.samples.sample import SampleStorageLevel
-
-            SampleStorageLevel.objects.filter(sample=real_sample).delete()
+            storage_location = form.cleaned_data.get("storage_location", "")
 
             if storage_location:
-                limpo = storage_location.replace('>', '|').replace(',', '|').replace(';', '|')
-                fatias = [f.strip() for f in limpo.split('|') if f.strip()]
-                for nivel_atual, nome_fatia in enumerate(fatias):
-                    SampleStorageLevel.objects.create(sample=real_sample, name=nome_fatia, level_index=nivel_atual)
+                assign_sample_storage_from_text(
+                    sample=base_sample,
+                    storage_location_text=storage_location,
+                    replace_existing=True,
+                    sync_legacy_field=True,
+                )
+            else:
+                assign_sample_storage_from_text(
+                    sample=base_sample,
+                    storage_location_text="",
+                    replace_existing=True,
+                    sync_legacy_field=True,
+                )
 
             files = request.FILES.getlist("file")
             categories = request.POST.getlist("file_category")
@@ -526,8 +654,8 @@ def sample_edit_view(request, sample_id):
 
             messages.success(request, "Sample updated successfully!")
             return redirect("samples_list")
-        else:
-            messages.error(request, "Error updating. Please check the fields.")
+
+        messages.error(request, "Error updating. Please check the fields.")
     else:
         form = FormClass(instance=real_sample)
 
@@ -535,7 +663,6 @@ def sample_edit_view(request, sample_id):
     children = base_sample.outgoing_relationships.all()
     sample_files = SampleFile.objects.filter(sample=base_sample).order_by('-uploaded_at')
 
-    # Passa as relações salvas para o frontend renderizar as linhas
     current_host_id = ""
     current_plasmids_string = ""
     current_phages_string = ""
@@ -552,6 +679,12 @@ def sample_edit_view(request, sample_id):
         hosts = SampleRelationship.objects.filter(target_sample=real_sample, relationship_type="STORAGE")
         current_host_id = ",".join([h.source_sample.sample_id for h in hosts])
 
+    current_storage_paths = get_all_storage_paths(base_sample)
+    current_storage_location = "; ".join(current_storage_paths) if current_storage_paths else (base_sample.storage_location or "")
+
+    if "storage_location" in form.fields and current_storage_location:
+        form.initial["storage_location"] = current_storage_location
+
     ctx = base_context(request)
     ctx.update({
         'form': form,
@@ -561,7 +694,9 @@ def sample_edit_view(request, sample_id):
         'sample_files': sample_files,
         'current_host_id': current_host_id,
         'current_plasmids_string': current_plasmids_string,
-        'current_phages_string': current_phages_string
+        'current_phages_string': current_phages_string,
+        'current_storage_location': current_storage_location,
+        'current_storage_paths': current_storage_paths,
     })
     return render(request, "internal/samples/edit.html", ctx)
 
@@ -776,4 +911,4 @@ def sample_create_shipment_view(request, sample_id):
         f"Draft shipment {shipment.shipment_code} created from sample {sample.sample_id}."
     )
 
-    return redirect("shipment_detail", shipment_id=shipment.id)
+    return redirect("shipment_edit", shipment_id=shipment.id)
