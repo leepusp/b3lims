@@ -549,6 +549,15 @@ def notebook_create_molecular_sequence_api(request, entry_id):
         sequence = (data.get("sequence") or "").strip()
         description = (data.get("description") or "").strip()
 
+        features_raw = data.get("features_json", [])
+        if isinstance(features_raw, str):
+            features_raw = features_raw.strip() or "[]"
+            features_json = json.loads(features_raw)
+        elif isinstance(features_raw, list):
+            features_json = features_raw
+        else:
+            features_json = []
+
         linked_sample = None
         linked_sample_id = data.get("linked_sample_id")
         if linked_sample_id:
@@ -562,6 +571,7 @@ def notebook_create_molecular_sequence_api(request, entry_id):
             topology=topology,
             sequence=sequence,
             description=description,
+            features_json=features_json,
             linked_sample=linked_sample,
             source_entry=entry,
             owner=request.user,

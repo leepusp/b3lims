@@ -357,23 +357,6 @@
                             </ul>
 
                         </div>
-
-
-                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
-
-                            <i class="bi bi-info-circle me-1"></i>
-
-                            Use <strong>Insert → Molecular biology</strong> to prepare DNA, plasmid, primer or protein records in
-
-                            <strong>Relevant items → Molecular items</strong>.
-
-                        </div>
-
-                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            DNA, plasmids, primers and proteins should be created in
-                            <strong>Relevant items → Molecular items</strong>, then opened in the molecular workspace.
-                        </div>
                     </div>
 
                     <div id="blocks-container">
@@ -479,7 +462,7 @@
                             </div>
                         {% empty %}
                             <div class="text-muted small border rounded p-3 bg-light">
-                                No structured blocks yet. Add a table, image, code block, sequence or Slurm job block.
+                                No structured blocks yet. Add a text, table, image, code/plot or Slurm job block.
                             </div>
                         {% endfor %}
                     </div>
@@ -872,27 +855,111 @@
         tabButton.click();
     }
 
-    function prepareMolecularItem(sequenceType, topology) {
-        activateEntryTab("items-tab");
-
-        setTimeout(function() {
-            const typeInput = document.getElementById("molecular-item-type");
-            const topologyInput = document.getElementById("molecular-item-topology");
-            const nameInput = document.getElementById("molecular-item-name");
-            const sequenceInput = document.getElementById("molecular-item-sequence");
-
-            if (typeInput) typeInput.value = sequenceType || "dna";
-            if (topologyInput) topologyInput.value = topology || "linear";
-
-            if (nameInput) {
-                nameInput.focus();
-                nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            } else if (sequenceInput) {
-                sequenceInput.focus();
-                sequenceInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-        }, 150);
+    function repeatToLength(motif, length) {
+        let sequence = "";
+        while (sequence.length < length) {
+            sequence += motif;
+        }
+        return sequence.slice(0, length);
     }
+
+    function molecularDefaults(sequenceType, topology) {
+        if (sequenceType === "plasmid") {
+            const sequence = repeatToLength("ATGCGTACGATCGATTAACCGGTTGCAAGCTTGATATCGAATTCCCGGG", 5968);
+
+            return {
+                name: "pBR322_EGFR_plasmid",
+                sequence_type: "plasmid",
+                topology: "circular",
+                description: "Default circular plasmid record with example promoter, CDS, resistance marker and origin annotations.",
+                sequence: sequence,
+                features_json: [
+                    {name: "M13_fwd_primer", type: "primer", start: 120, end: 150, strand: "+", notes: "Forward sequencing primer"},
+                    {name: "CMV_promoter", type: "promoter", start: 240, end: 760, strand: "+", notes: "Example mammalian promoter"},
+                    {name: "EGFR_signal_peptide", type: "signal_peptide", start: 860, end: 1100, strand: "+", notes: "Example signal peptide"},
+                    {name: "EGFR_CDS", type: "CDS", start: 1101, end: 3640, strand: "+", notes: "Example coding sequence"},
+                    {name: "SV40_polyA", type: "terminator", start: 3700, end: 4050, strand: "+", notes: "Polyadenylation signal"},
+                    {name: "Ampicillin", type: "resistance", start: 4300, end: 5200, strand: "+", notes: "Antibiotic resistance marker"},
+                    {name: "pBR322_origin", type: "origin", start: 5250, end: 5750, strand: "+", notes: "Replication origin"}
+                ]
+            };
+        }
+
+        if (sequenceType === "dna") {
+            const sequence = repeatToLength("ATGCGTACGATCGATTAACCGGTTGCAAGCTT", 1200);
+
+            return {
+                name: "New_DNA_sequence",
+                sequence_type: "dna",
+                topology: topology || "linear",
+                description: "Default linear DNA sequence with example promoter and CDS features.",
+                sequence: sequence,
+                features_json: [
+                    {name: "promoter", type: "promoter", start: 80, end: 220, strand: "+", notes: ""},
+                    {name: "CDS", type: "CDS", start: 260, end: 980, strand: "+", notes: ""}
+                ]
+            };
+        }
+
+        if (sequenceType === "primer") {
+            return {
+                name: "New_primer",
+                sequence_type: "primer",
+                topology: "linear",
+                description: "Default primer record.",
+                sequence: "ATGCGTACGATCGATTAACC",
+                features_json: [
+                    {name: "primer_binding_site", type: "primer", start: 1, end: 20, strand: "+", notes: ""}
+                ]
+            };
+        }
+
+        if (sequenceType === "protein") {
+            return {
+                name: "New_protein",
+                sequence_type: "protein",
+                topology: "linear",
+                description: "Default protein record.",
+                sequence: "MKTIIALSYIFCLVFADYKDDDDK",
+                features_json: [
+                    {name: "signal_peptide", type: "domain", start: 1, end: 18, strand: ".", notes: ""}
+                ]
+            };
+        }
+
+        return {
+            name: "New_molecular_item",
+            sequence_type: sequenceType || "dna",
+            topology: topology || "linear",
+            description: "",
+            sequence: "",
+            features_json: []
+        };
+    }
+
+    function prepareMolecularItem(sequenceType, topology) {
+        const payload = molecularDefaults(sequenceType, topology);
+        const detailTemplate = "{% url 'molecular_sequence_detail' 0 %}";
+
+        saveStatus.textContent = "Creating molecular item...";
+
+        postJson("{% url 'notebook_create_molecular_sequence_api' active_entry.id %}", payload)
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.href = detailTemplate.replace("/0/", `/${data.id}/`);
+                } else {
+                    saveStatus.textContent = "Molecular item error";
+                    saveStatus.classList.add("text-danger");
+                    alert(data.message || "Could not create molecular item.");
+                }
+            })
+            .catch(error => {
+                saveStatus.textContent = "Molecular item error";
+                saveStatus.classList.add("text-danger");
+                alert(error);
+            });
+    }
+
 
     function insertProtocolStep() {
         activateEntryTab("protocol-tab");
