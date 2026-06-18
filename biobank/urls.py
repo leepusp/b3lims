@@ -38,6 +38,7 @@ from core.views.internal.biobanks.views import biobanks_list_view
 from core.views.internal.collections.views import collections_list_view
 
 # 5. SAMPLES (AMOSTRAS)
+from core.views.internal.samples.file_curation import sample_file_curation_view
 from core.views.internal.samples.views import (
     sample_create_shipment_view,
     print_sample_label,
@@ -111,6 +112,7 @@ urlpatterns = [
     path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
     path("shipments/<int:shipment_id>/edit/", shipment_edit_view, name="shipment_edit"),
     path("shipments/<int:shipment_id>/", shipment_detail_view, name="shipment_detail"),
+    path("samples/file-curation/", sample_file_curation_view, name="sample_file_curation"),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/import/", sample_import_view, name="samples_import"),
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
