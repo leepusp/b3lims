@@ -4,14 +4,7 @@
 
 {% block content %}
 <style>
-    .molecule-workspace {
-        max-width: 1320px;
-    }
-
-    .sequence-map-card {
-        min-height: 380px;
-    }
-
+    .molecule-workspace { max-width: 1360px; }
     .molecule-map-wrapper {
         border: 1px solid #dee2e6;
         border-radius: .75rem;
@@ -19,42 +12,68 @@
         overflow: auto;
         padding: 1rem;
     }
-
     .molecule-map-svg {
         width: 100%;
-        min-width: 760px;
+        min-width: 620px;
         height: auto;
         display: block;
     }
-
     .feature-chip {
         display: inline-flex;
         align-items: center;
         gap: .35rem;
         border: 1px solid #dee2e6;
         border-radius: 999px;
-        padding: .2rem .55rem;
+        padding: .2rem .6rem;
         background: #f8f9fa;
         font-size: .8rem;
         margin: .15rem;
+        cursor: default;
     }
-
     .feature-color-dot {
         width: .75rem;
         height: .75rem;
         border-radius: 50%;
         display: inline-block;
     }
-
+    .features-table input,
+    .features-table select {
+        min-width: 84px;
+    }
+    .feat-shape {
+        cursor: pointer;
+        transition: opacity .12s ease;
+    }
+    .feat-shape.dim {
+        opacity: .25;
+    }
+    .feat-row.active td {
+        background: #eef4ff;
+    }
+    .map-pos-label {
+        font: 11px ui-monospace, Menlo, monospace;
+        fill: #8a8f98;
+    }
+    .map-feat-label {
+        font: 12px system-ui, sans-serif;
+    }
+    .map-center-name {
+        font: 600 18px system-ui, sans-serif;
+        fill: #212529;
+    }
+    .map-center-len {
+        font: 13px ui-monospace, Menlo, monospace;
+        fill: #6c757d;
+    }
+    .leader {
+        stroke: #c3c8cf;
+        stroke-width: 1;
+        fill: none;
+    }
     .sequence-textarea {
         min-height: 300px;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
         font-size: .85rem;
-    }
-
-    .features-table input,
-    .features-table select {
-        min-width: 90px;
     }
 </style>
 
@@ -71,12 +90,12 @@
             </div>
 
             <h3 class="mb-1">
-                <i class="bi bi-dna me-2 text-success"></i>{{ molecule.name }}
+                <i class="bi bi-dna me-2 text-success"></i><span id="mol-title">{{ molecule.name }}</span>
             </h3>
 
             <div class="d-flex flex-wrap gap-2">
                 <span class="badge bg-success-subtle text-success border border-success-subtle">{{ molecule.get_sequence_type_display }}</span>
-                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ molecule.get_topology_display }}</span>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" id="molecule-topology-badge">{{ molecule.get_topology_display }}</span>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="molecule-length-badge">{{ molecule.length }} bp/aa</span>
                 {% if molecule.gc_content is not None %}
                     <span class="badge bg-info-subtle text-info border border-info-subtle" id="molecule-gc-badge">GC {{ molecule.gc_content }}%</span>
@@ -111,7 +130,7 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="features-tab" data-bs-toggle="tab" data-bs-target="#features-pane" type="button" role="tab">
-                Features
+                Features JSON
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -129,26 +148,75 @@
     <div class="tab-content">
 
         <div class="tab-pane fade show active" id="map-pane" role="tabpanel" aria-labelledby="map-tab">
-            <div class="card sequence-map-card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <div class="fw-bold">
-                        <i class="bi bi-bullseye me-2"></i>Sequence map
-                    </div>
-                    <div class="small text-muted">
-                        Rendered from sequence length and features
+            <div class="row g-3">
+                <div class="col-xl-7 order-xl-2">
+                    <div class="card h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <ul class="nav nav-tabs card-header-tabs" id="mapTabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active" type="button" data-view="circular">
+                                        Plasmid
+                                    </button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" type="button" data-view="linear">
+                                        Linear
+                                    </button>
+                                </li>
+                            </ul>
+                            <span class="small text-muted">Rendered from sequence and features</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="molecule-map-wrapper">
+                                <svg id="molecule-map-svg" class="molecule-map-svg" viewBox="0 0 1000 560" role="img" aria-label="Molecular sequence map"></svg>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="small fw-bold text-muted mb-1">Feature legend</div>
+                                <div id="feature-legend" class="d-flex flex-wrap"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="molecule-map-wrapper">
-                        <svg id="molecule-map-svg" class="molecule-map-svg" viewBox="0 0 1000 560" role="img" aria-label="Molecular sequence map"></svg>
-                    </div>
 
-                    <div class="mt-3">
-                        <div class="small fw-bold text-muted mb-1">Features</div>
-                        <div id="feature-legend" class="d-flex flex-wrap"></div>
+                <div class="col-xl-5 order-xl-1">
+                    <div class="card h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <span class="fw-bold"><i class="bi bi-list-ul me-2"></i>Feature editor</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addFeatureRow()">
+                                <i class="bi bi-plus-lg me-1"></i>Add feature
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="small text-muted mb-2">
+                                Edit any feature field. The map updates live.
+                            </div>
+
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm align-middle mb-0 features-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 22%;">Name</th>
+                                            <th style="width: 16%;">Type</th>
+                                            <th style="width: 13%;">Start</th>
+                                            <th style="width: 13%;">End</th>
+                                            <th style="width: 13%;">Strand</th>
+                                            <th style="width: 40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="feature-table-body"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="form-text mt-2">
+                                Coordinates are 1-based and must be within sequence length.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {{ molecule.features_json|json_script:"features-json-data" }}
         </div>
 
         <div class="tab-pane fade" id="sequence-pane" role="tabpanel" aria-labelledby="sequence-tab">
@@ -186,9 +254,9 @@
                     <textarea id="molecule-description" class="form-control mb-3" rows="3">{{ molecule.description }}</textarea>
 
                     <label class="form-label small text-muted">Sequence</label>
-                    <textarea id="molecule-sequence" class="form-control sequence-textarea" rows="14" spellcheck="false">{{ molecule.sequence }}</textarea>
+                    <textarea id="molecule-sequence" class="form-control sequence-textarea" spellcheck="false">{{ molecule.sequence }}</textarea>
                     <div class="form-text">
-                        Sequence is normalized on save: whitespace is removed and letters are converted to uppercase.
+                        Whitespace is removed and letters are uppercased on save.
                     </div>
                 </div>
             </div>
@@ -196,51 +264,19 @@
 
         <div class="tab-pane fade" id="features-pane" role="tabpanel" aria-labelledby="features-tab">
             <div class="card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <div class="fw-bold">
-                        <i class="bi bi-list-ul me-2"></i>Feature editor
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addFeatureRow()">
-                        <i class="bi bi-plus-lg me-1"></i>Add feature
-                    </button>
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-braces me-2"></i>Raw features JSON
                 </div>
-
                 <div class="card-body">
-                    <div class="small text-muted mb-3">
-                        Define annotations such as promoters, CDS, tags, primers, restriction sites, origins and resistance markers.
+                    <textarea id="molecule-features-json" class="form-control font-monospace" rows="18" spellcheck="false"></textarea>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadFeaturesFromRawJson()">
+                            Load JSON into editor
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="syncFeaturesRawJson()">
+                            Refresh JSON from editor
+                        </button>
                     </div>
-
-                    <div class="table-responsive border rounded">
-                        <table class="table table-sm align-middle mb-0 features-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 20%;">Name</th>
-                                    <th style="width: 16%;">Type</th>
-                                    <th style="width: 12%;">Start</th>
-                                    <th style="width: 12%;">End</th>
-                                    <th style="width: 12%;">Strand</th>
-                                    <th>Notes</th>
-                                    <th style="width: 70px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="feature-table-body"></tbody>
-                        </table>
-                    </div>
-
-                    <details class="mt-3">
-                        <summary class="small text-muted">Advanced: raw features JSON</summary>
-                        <textarea id="molecule-features-json" class="form-control font-monospace mt-2" rows="10" spellcheck="false"></textarea>
-                        <div class="d-flex gap-2 mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadFeaturesFromRawJson()">
-                                Load JSON into table
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="syncFeaturesRawJson()">
-                                Refresh JSON from table
-                            </button>
-                        </div>
-                    </details>
-
-                    <script type="application/json" id="features-json-data">{{ features_json|safe }}</script>
                 </div>
             </div>
         </div>
@@ -317,10 +353,15 @@
     const notebookUrl = "{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}";
     const saveStatus = document.getElementById("save-status");
 
+    const SVGNS = "http://www.w3.org/2000/svg";
     const featureColors = [
         "#8ecae6", "#ffb703", "#90be6d", "#f28482", "#cdb4db",
         "#bde0fe", "#f6bd60", "#84a59d", "#f5cac3", "#a3cef1"
     ];
+
+    let currentView = document.getElementById("molecule-topology")?.value === "circular" ? "circular" : "linear";
+    let hoverIndex = -1;
+    let moleculeFeatures = parseInitialFeatures();
 
     function postJson(url, payload) {
         return fetch(url, {
@@ -331,6 +372,16 @@
             },
             body: JSON.stringify(payload)
         }).then(response => response.json());
+    }
+
+    function el(tag, attrs = {}, children = []) {
+        const node = document.createElementNS(SVGNS, tag);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        (Array.isArray(children) ? children : [children]).forEach(child => {
+            if (child === null || child === undefined) return;
+            node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+        });
+        return node;
     }
 
     function escapeHtml(value) {
@@ -348,17 +399,10 @@
 
         try {
             const parsed = JSON.parse(dataElement.textContent || "[]");
-            return Array.isArray(parsed) ? parsed : [];
+            return Array.isArray(parsed) ? parsed.map(normalizeFeature) : [];
         } catch (_error) {
             return [];
         }
-    }
-
-    let moleculeFeatures = parseInitialFeatures();
-
-    function getSequenceLength() {
-        const sequence = (document.getElementById("molecule-sequence")?.value || "").replace(/\s+/g, "");
-        return sequence.length || 1;
     }
 
     function normalizeFeature(feature) {
@@ -372,10 +416,73 @@
         };
     }
 
+    function getSequenceText() {
+        return (document.getElementById("molecule-sequence")?.value || "").replace(/\s+/g, "");
+    }
+
+    function getSequenceLength() {
+        const length = getSequenceText().length;
+        return length > 0 ? length : 1;
+    }
+
+    function colorFor(index) {
+        return featureColors[index % featureColors.length];
+    }
+
+    function niceStep(length) {
+        const target = length / 8;
+        const pow = Math.pow(10, Math.floor(Math.log10(target)));
+        return [1, 2, 5, 10].map(multiplier => multiplier * pow).find(candidate => candidate >= target) || 10 * pow;
+    }
+
+    function assignLanes(features) {
+        const items = features
+            .map((feature, index) => ({
+                ...feature,
+                _idx: feature._idx ?? index,
+                _s: Math.min(parseInt(feature.start, 10), parseInt(feature.end, 10)),
+                _e: Math.max(parseInt(feature.start, 10), parseInt(feature.end, 10)),
+            }))
+            .sort((a, b) => a._s - b._s || b._e - a._e);
+
+        const laneEnds = [];
+
+        items.forEach(feature => {
+            let lane = laneEnds.findIndex(end => feature._s > end);
+            if (lane === -1) {
+                lane = laneEnds.length;
+                laneEnds.push(feature._e);
+            } else {
+                laneEnds[lane] = feature._e;
+            }
+            feature._lane = lane;
+        });
+
+        return items;
+    }
+
     function validFeature(feature, sequenceLength) {
         const start = parseInt(feature.start, 10);
         const end = parseInt(feature.end, 10);
         return feature.name && Number.isFinite(start) && Number.isFinite(end) && start >= 1 && end >= start && end <= sequenceLength;
+    }
+
+    function polar(cx, cy, radius, degrees) {
+        const angle = degrees * Math.PI / 180;
+        return [
+            cx + radius * Math.cos(angle),
+            cy + radius * Math.sin(angle),
+        ];
+    }
+
+    function sectorPath(cx, cy, innerRadius, outerRadius, startDegrees, endDegrees) {
+        const [x1o, y1o] = polar(cx, cy, outerRadius, startDegrees);
+        const [x2o, y2o] = polar(cx, cy, outerRadius, endDegrees);
+        const [x2i, y2i] = polar(cx, cy, innerRadius, endDegrees);
+        const [x1i, y1i] = polar(cx, cy, innerRadius, startDegrees);
+        const large = Math.abs(endDegrees - startDegrees) > 180 ? 1 : 0;
+
+        return `M ${x1o} ${y1o} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${innerRadius} ${innerRadius} 0 ${large} 0 ${x1i} ${y1i} Z`;
     }
 
     function renderFeatureEditor() {
@@ -387,7 +494,7 @@
         if (!moleculeFeatures.length) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-muted small p-3">
+                    <td colspan="6" class="text-muted small p-3">
                         No features yet. Click <strong>Add feature</strong> to annotate this sequence.
                     </td>
                 </tr>
@@ -398,36 +505,20 @@
         }
 
         tableBody.innerHTML = moleculeFeatures.map((feature, index) => `
-            <tr>
-                <td>
-                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(feature.name)}"
-                           placeholder="AmpR, ori, CDS..." oninput="updateFeatureField(${index}, 'name', this.value)">
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(feature.type)}"
-                           placeholder="CDS, promoter..." oninput="updateFeatureField(${index}, 'type', this.value)">
-                </td>
-                <td>
-                    <input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.start)}"
-                           oninput="updateFeatureField(${index}, 'start', this.value)">
-                </td>
-                <td>
-                    <input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.end)}"
-                           oninput="updateFeatureField(${index}, 'end', this.value)">
-                </td>
+            <tr class="feat-row" onmouseenter="setHover(${index})" onmouseleave="setHover(-1)">
+                <td><input class="form-control form-control-sm" value="${escapeHtml(feature.name)}" oninput="updateFeatureField(${index}, 'name', this.value)"></td>
+                <td><input class="form-control form-control-sm" value="${escapeHtml(feature.type)}" oninput="updateFeatureField(${index}, 'type', this.value)"></td>
+                <td><input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.start)}" oninput="updateFeatureField(${index}, 'start', this.value)"></td>
+                <td><input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.end)}" oninput="updateFeatureField(${index}, 'end', this.value)"></td>
                 <td>
                     <select class="form-select form-select-sm" onchange="updateFeatureField(${index}, 'strand', this.value)">
                         <option value="+" ${feature.strand === "+" ? "selected" : ""}>+</option>
-                        <option value="-" ${feature.strand === "-" ? "selected" : ""}>-</option>
-                        <option value="." ${feature.strand === "." ? "selected" : ""}>.</option>
+                        <option value="-" ${feature.strand === "-" ? "selected" : ""}>−</option>
+                        <option value="." ${feature.strand === "." ? "selected" : ""}>·</option>
                     </select>
                 </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(feature.notes)}"
-                           placeholder="Optional notes" oninput="updateFeatureField(${index}, 'notes', this.value)">
-                </td>
                 <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFeatureRow(${index})">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeFeatureRow(${index})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -456,12 +547,14 @@
     function addFeatureRow() {
         moleculeFeatures.push({ name: "", type: "", start: "", end: "", strand: "+", notes: "" });
         renderFeatureEditor();
+        renderMoleculeMap();
         saveStatus.textContent = "Unsaved...";
     }
 
     function removeFeatureRow(index) {
         moleculeFeatures.splice(index, 1);
         renderFeatureEditor();
+        renderMoleculeMap();
         saveStatus.textContent = "Unsaved...";
     }
 
@@ -493,139 +586,192 @@
         return moleculeFeatures.map(normalizeFeature);
     }
 
-    function polarToCartesian(cx, cy, r, angleDegrees) {
-        const angleRadians = (angleDegrees - 90) * Math.PI / 180.0;
-        return {
-            x: cx + (r * Math.cos(angleRadians)),
-            y: cy + (r * Math.sin(angleRadians))
-        };
+    function renderLegend(validFeatures) {
+        const legend = document.getElementById("feature-legend");
+        if (!legend) return;
+
+        if (!validFeatures.length) {
+            legend.innerHTML = '<span class="text-muted small">No valid features to render yet.</span>';
+            return;
+        }
+
+        legend.innerHTML = validFeatures.map(feature => `
+            <span class="feature-chip" data-idx="${feature._idx}" onmouseenter="setHover(${feature._idx})" onmouseleave="setHover(-1)">
+                <span class="feature-color-dot" style="background:${colorFor(feature._idx)}"></span>
+                ${escapeHtml(feature.name)} <span class="text-muted">${escapeHtml(feature.type || "feature")}</span>
+            </span>
+        `).join("");
     }
 
-    function describeArc(cx, cy, r, startAngle, endAngle) {
-        const start = polarToCartesian(cx, cy, r, endAngle);
-        const end = polarToCartesian(cx, cy, r, startAngle);
-        const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-        return [
-            "M", start.x, start.y,
-            "A", r, r, 0, largeArcFlag, 0, end.x, end.y
-        ].join(" ");
+    function wireFeatureHover(group, index) {
+        group.addEventListener("mouseenter", () => setHover(index));
+        group.addEventListener("mouseleave", () => setHover(-1));
+    }
+
+    function setHover(index) {
+        hoverIndex = index;
+        document.querySelectorAll(".feat-row").forEach((row, rowIndex) => {
+            row.classList.toggle("active", rowIndex === index);
+        });
+        renderMoleculeMap();
     }
 
     function renderMoleculeMap() {
         const svg = document.getElementById("molecule-map-svg");
-        const legend = document.getElementById("feature-legend");
-        if (!svg || !legend) return;
+        if (!svg) return;
+
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
 
         const sequenceLength = getSequenceLength();
-        const topology = document.getElementById("molecule-topology")?.value || "linear";
-        const name = document.getElementById("molecule-name")?.value || "Molecule";
         const validFeatures = moleculeFeatures
-            .map(normalizeFeature)
+            .map((feature, index) => ({ ...normalizeFeature(feature), _idx: index }))
             .filter(feature => validFeature(feature, sequenceLength));
 
-        if (topology === "circular") {
-            renderCircularMap(svg, name, sequenceLength, validFeatures);
+        if (currentView === "circular") {
+            renderCircularMap(svg, sequenceLength, validFeatures);
         } else {
-            renderLinearMap(svg, name, sequenceLength, validFeatures);
+            renderLinearMap(svg, sequenceLength, validFeatures);
         }
 
-        legend.innerHTML = validFeatures.length
-            ? validFeatures.map((feature, index) => `
-                <span class="feature-chip">
-                    <span class="feature-color-dot" style="background:${featureColors[index % featureColors.length]}"></span>
-                    ${escapeHtml(feature.name)} <span class="text-muted">(${escapeHtml(feature.type || "feature")})</span>
-                </span>
-            `).join("")
-            : `<span class="text-muted small">No valid features to render yet.</span>`;
+        renderLegend(validFeatures);
+
+        document.getElementById("molecule-length-badge").textContent = sequenceLength + " bp/aa";
+        document.getElementById("molecule-length").textContent = sequenceLength + " bp/aa";
     }
 
-    function renderCircularMap(svg, name, sequenceLength, features) {
+    function renderCircularMap(svg, sequenceLength, features) {
         const cx = 500;
-        const cy = 280;
-        const radius = 170;
-
-        let content = `
-            <rect x="0" y="0" width="1000" height="560" fill="#ffffff"/>
-            <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="#555" stroke-width="10"/>
-            <circle cx="${cx}" cy="${cy}" r="${radius - 42}" fill="none" stroke="#dee2e6" stroke-width="1"/>
-            <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="30" font-weight="700">${escapeHtml(name)}</text>
-            <text x="${cx}" y="${cy + 24}" text-anchor="middle" font-size="18" fill="#555">${sequenceLength} bp</text>
-        `;
-
-        [0, 90, 180, 270].forEach(angle => {
-            const outer = polarToCartesian(cx, cy, radius + 8, angle);
-            const inner = polarToCartesian(cx, cy, radius - 8, angle);
-            const label = Math.round((angle / 360) * sequenceLength) || sequenceLength;
-            const textPoint = polarToCartesian(cx, cy, radius + 32, angle);
-            content += `
-                <line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" stroke="#333" stroke-width="2"/>
-                <text x="${textPoint.x}" y="${textPoint.y}" text-anchor="middle" dominant-baseline="middle" font-size="13">${label}</text>
-            `;
-        });
-
-        features.forEach((feature, index) => {
-            const startAngle = ((feature.start - 1) / sequenceLength) * 360;
-            const endAngle = (feature.end / sequenceLength) * 360;
-            const featureRadius = radius - 28 - ((index % 3) * 18);
-            const color = featureColors[index % featureColors.length];
-            const path = describeArc(cx, cy, featureRadius, startAngle, endAngle);
-            const midAngle = (startAngle + endAngle) / 2;
-            const labelPoint = polarToCartesian(cx, cy, radius + 80 + ((index % 2) * 20), midAngle);
-            const anchor = labelPoint.x >= cx ? "start" : "end";
-
-            content += `
-                <path d="${path}" fill="none" stroke="${color}" stroke-width="16" stroke-linecap="round"/>
-                <line x1="${polarToCartesian(cx, cy, featureRadius, midAngle).x}" y1="${polarToCartesian(cx, cy, featureRadius, midAngle).y}"
-                      x2="${labelPoint.x}" y2="${labelPoint.y}" stroke="#adb5bd" stroke-width="1"/>
-                <text x="${labelPoint.x}" y="${labelPoint.y}" text-anchor="${anchor}" dominant-baseline="middle" font-size="13">
-                    ${escapeHtml(feature.name)}
-                </text>
-            `;
-        });
+        const cy = 288;
+        const radius = 168;
+        const ringInner = 8;
+        const laneWidth = 22;
+        const arrowDegrees = 4;
+        const angleOf = position => -90 + (position / sequenceLength) * 360;
 
         svg.setAttribute("viewBox", "0 0 1000 560");
-        svg.innerHTML = content;
-    }
 
-    function renderLinearMap(svg, name, sequenceLength, features) {
-        const width = 1000;
-        const y = 230;
-        const x0 = 90;
-        const x1 = 930;
-        const usable = x1 - x0;
+        svg.appendChild(el("rect", { x: 0, y: 0, width: 1000, height: 560, fill: "#ffffff" }));
+        svg.appendChild(el("circle", { cx, cy, r: radius, fill: "none", stroke: "#adb5bd", "stroke-width": 3 }));
 
-        let content = `
-            <rect x="0" y="0" width="1000" height="420" fill="#ffffff"/>
-            <text x="90" y="55" font-size="28" font-weight="700">${escapeHtml(name)}</text>
-            <text x="90" y="82" font-size="16" fill="#555">${sequenceLength} bp · linear</text>
-            <line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#555" stroke-width="7" stroke-linecap="round"/>
-        `;
+        const step = niceStep(sequenceLength);
+        for (let position = 0; position < sequenceLength; position += step) {
+            const angle = angleOf(position === 0 ? 1 : position);
+            const [x1, y1] = polar(cx, cy, radius - 5, angle);
+            const [x2, y2] = polar(cx, cy, radius + 5, angle);
+            const [xl, yl] = polar(cx, cy, radius + 20, angle);
+            const anchor = Math.cos(angle * Math.PI / 180) > .15 ? "start" : Math.cos(angle * Math.PI / 180) < -.15 ? "end" : "middle";
 
-        for (let i = 0; i <= 5; i++) {
-            const pos = Math.round((sequenceLength / 5) * i);
-            const x = x0 + (usable * i / 5);
-            content += `
-                <line x1="${x}" y1="${y - 14}" x2="${x}" y2="${y + 14}" stroke="#333" stroke-width="2"/>
-                <text x="${x}" y="${y + 38}" text-anchor="middle" font-size="13">${pos}</text>
-            `;
+            svg.appendChild(el("line", { x1, y1, x2, y2, stroke: "#ced4da", "stroke-width": 1 }));
+            svg.appendChild(el("text", { x: xl, y: yl + 4, "text-anchor": anchor, class: "map-pos-label" }, String(position === 0 ? 1 : position)));
         }
 
-        features.forEach((feature, index) => {
-            const startX = x0 + ((feature.start - 1) / sequenceLength) * usable;
-            const endX = x0 + (feature.end / sequenceLength) * usable;
-            const featureWidth = Math.max(8, endX - startX);
-            const rowY = y - 65 - ((index % 4) * 34);
-            const color = featureColors[index % featureColors.length];
+        svg.appendChild(el("text", { x: cx, y: cy - 4, "text-anchor": "middle", class: "map-center-name" }, document.getElementById("mol-title").textContent));
+        svg.appendChild(el("text", { x: cx, y: cy + 18, "text-anchor": "middle", class: "map-center-len" }, sequenceLength + " bp"));
 
-            content += `
-                <rect x="${startX}" y="${rowY}" width="${featureWidth}" height="22" rx="5" fill="${color}" stroke="#555" stroke-width=".5"/>
-                <text x="${startX + featureWidth / 2}" y="${rowY - 8}" text-anchor="middle" font-size="13">${escapeHtml(feature.name)}</text>
-                <line x1="${startX + featureWidth / 2}" y1="${rowY + 22}" x2="${startX + featureWidth / 2}" y2="${y - 4}" stroke="#adb5bd" stroke-width="1"/>
-            `;
+        assignLanes(features).forEach(feature => {
+            const color = colorFor(feature._idx);
+            const outerRadius = radius - ringInner - feature._lane * laneWidth;
+            const innerRadius = outerRadius - 14;
+            const isPoint = feature._s === feature._e;
+            const group = el("g", { class: "feat-shape", "data-idx": feature._idx });
+            group.classList.toggle("dim", hoverIndex !== -1 && hoverIndex !== feature._idx);
+
+            if (isPoint) {
+                const angle = angleOf(feature._s);
+                const [x1, y1] = polar(cx, cy, innerRadius, angle);
+                const [x2, y2] = polar(cx, cy, outerRadius, angle);
+                group.appendChild(el("line", { x1, y1, x2, y2, stroke: color, "stroke-width": 3 }));
+            } else {
+                const startAngle = angleOf(feature._s);
+                const endAngle = angleOf(feature._e);
+                const forward = feature.strand !== "-";
+                let bodyStart = startAngle;
+                let bodyEnd = endAngle;
+
+                if (feature.strand === "+") bodyEnd = Math.max(startAngle, endAngle - arrowDegrees);
+                if (feature.strand === "-") bodyStart = Math.min(endAngle, startAngle + arrowDegrees);
+
+                group.appendChild(el("path", { d: sectorPath(cx, cy, innerRadius, outerRadius, bodyStart, bodyEnd), fill: color, stroke: "#00000022" }));
+
+                if (feature.strand === "+" || feature.strand === "-") {
+                    const tipAngle = forward ? endAngle : startAngle;
+                    const baseAngle = forward ? endAngle - arrowDegrees : startAngle + arrowDegrees;
+                    const [tx, ty] = polar(cx, cy, (innerRadius + outerRadius) / 2, tipAngle);
+                    const [box, boy] = polar(cx, cy, outerRadius, baseAngle);
+                    const [bix, biy] = polar(cx, cy, innerRadius, baseAngle);
+
+                    group.appendChild(el("path", { d: `M ${box} ${boy} L ${tx} ${ty} L ${bix} ${biy} Z`, fill: color, stroke: "#00000022" }));
+                }
+            }
+
+            const midAngle = angleOf((feature._s + feature._e) / 2);
+            const right = Math.cos(midAngle * Math.PI / 180) >= 0;
+            const [lineX, lineY] = polar(cx, cy, outerRadius + 2, midAngle);
+            const labelX = right ? cx + radius + 58 : cx - radius - 58;
+            const labelY = cy + (radius + 46 + (feature._idx % 2) * 18) * Math.sin(midAngle * Math.PI / 180);
+
+            group.appendChild(el("path", { d: `M ${lineX} ${lineY} L ${labelX + (right ? -6 : 6)} ${labelY}`, class: "leader" }));
+            group.appendChild(el("text", { x: labelX, y: labelY + 4, "text-anchor": right ? "start" : "end", class: "map-feat-label", fill: "#343a40" }, feature.name || "(no name)"));
+
+            wireFeatureHover(group, feature._idx);
+            svg.appendChild(group);
         });
+    }
+
+    function renderLinearMap(svg, sequenceLength, features) {
+        const width = 1000;
+        const left = 60;
+        const right = 60;
+        const baseY = 120;
+        const laneHeight = 26;
+        const featureHeight = 16;
+        const xOf = position => left + (position / sequenceLength) * (width - left - right);
 
         svg.setAttribute("viewBox", "0 0 1000 420");
-        svg.innerHTML = content;
+
+        svg.appendChild(el("rect", { x: 0, y: 0, width: 1000, height: 420, fill: "#ffffff" }));
+        svg.appendChild(el("line", { x1: left, y1: baseY, x2: width - right, y2: baseY, stroke: "#adb5bd", "stroke-width": 3 }));
+        svg.appendChild(el("text", { x: width / 2, y: 40, "text-anchor": "middle", class: "map-center-name" }, document.getElementById("mol-title").textContent + " (" + sequenceLength + " bp)"));
+
+        const step = niceStep(sequenceLength);
+        for (let position = 0; position <= sequenceLength; position += step) {
+            const x = xOf(position === 0 ? 1 : position);
+            svg.appendChild(el("line", { x1: x, y1: baseY - 6, x2: x, y2: baseY + 6, stroke: "#ced4da" }));
+            svg.appendChild(el("text", { x, y: baseY - 12, "text-anchor": "middle", class: "map-pos-label" }, String(position === 0 ? 1 : position)));
+        }
+
+        assignLanes(features).forEach(feature => {
+            const color = colorFor(feature._idx);
+            const y = baseY + 24 + feature._lane * laneHeight;
+            const x1 = xOf(feature._s);
+            const x2 = xOf(feature._e);
+            const featureWidth = Math.max(2, x2 - x1);
+            const group = el("g", { class: "feat-shape", "data-idx": feature._idx });
+            group.classList.toggle("dim", hoverIndex !== -1 && hoverIndex !== feature._idx);
+
+            if (feature._s === feature._e) {
+                group.appendChild(el("line", { x1, y1: baseY + 4, x2: x1, y2: y + featureHeight, stroke: color, "stroke-width": 3 }));
+                group.appendChild(el("circle", { cx: x1, cy: y + featureHeight / 2, r: 4, fill: color }));
+            } else {
+                const head = Math.min(10, featureWidth * .4);
+                let path;
+
+                if (feature.strand === "-") {
+                    path = `M ${x1 + head} ${y} L ${x2} ${y} L ${x2} ${y + featureHeight} L ${x1 + head} ${y + featureHeight} L ${x1} ${y + featureHeight / 2} Z`;
+                } else if (feature.strand === "+") {
+                    path = `M ${x1} ${y} L ${x2 - head} ${y} L ${x2} ${y + featureHeight / 2} L ${x2 - head} ${y + featureHeight} L ${x1} ${y + featureHeight} Z`;
+                } else {
+                    path = `M ${x1} ${y} L ${x2} ${y} L ${x2} ${y + featureHeight} L ${x1} ${y + featureHeight} Z`;
+                }
+
+                group.appendChild(el("path", { d: path, fill: color, stroke: "#00000022" }));
+            }
+
+            group.appendChild(el("text", { x: (x1 + x2) / 2, y: y + featureHeight + 13, "text-anchor": "middle", class: "map-feat-label", fill: "#343a40" }, feature.name || "(no name)"));
+
+            wireFeatureHover(group, feature._idx);
+            svg.appendChild(group);
+        });
     }
 
     function saveMolecule() {
@@ -645,6 +791,7 @@
                 if (data.status === "success") {
                     saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString();
 
+                    document.getElementById("mol-title").textContent = data.name;
                     document.getElementById("molecule-length").textContent = data.length + " bp/aa";
                     document.getElementById("molecule-length-badge").textContent = data.length + " bp/aa";
                     document.getElementById("molecule-gc-content").textContent = data.gc_content ?? "-";
@@ -688,12 +835,32 @@
             });
     }
 
+    document.querySelectorAll("#mapTabs .nav-link").forEach(button => {
+        button.addEventListener("click", () => {
+            currentView = button.dataset.view;
+            document.querySelectorAll("#mapTabs .nav-link").forEach(tab => tab.classList.remove("active"));
+            button.classList.add("active");
+
+            const topologyInput = document.getElementById("molecule-topology");
+            if (topologyInput) topologyInput.value = currentView === "circular" ? "circular" : "linear";
+
+            renderMoleculeMap();
+        });
+    });
+
     ["molecule-name", "molecule-sequence-type", "molecule-topology", "molecule-description", "molecule-sequence", "molecule-features-json"].forEach(function(elementId) {
         const element = document.getElementById(elementId);
         if (!element) return;
 
         const eventName = element.tagName === "SELECT" ? "change" : "input";
         element.addEventListener(eventName, function() {
+            if (elementId === "molecule-topology") {
+                currentView = element.value === "circular" ? "circular" : "linear";
+                document.querySelectorAll("#mapTabs .nav-link").forEach(tab => {
+                    tab.classList.toggle("active", tab.dataset.view === currentView);
+                });
+            }
+
             saveStatus.textContent = "Unsaved...";
             renderMoleculeMap();
         });
