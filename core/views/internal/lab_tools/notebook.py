@@ -261,7 +261,7 @@ def _notebook_entry_template(template_key):
 
 @login_required
 def notebook_create(request):
-    template_key = request.GET.get("template", "experiment")
+    template_key = request.GET.get("template", "blank")
     template = _notebook_entry_template(template_key)
 
     new_entry = NotebookEntry.objects.create(
