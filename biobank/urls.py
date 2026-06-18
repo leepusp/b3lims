@@ -25,6 +25,7 @@ from core.views.public.collections import (
 from core.views.auth import CoreLoginView, logout_user
 
 # 3. INTERNAL LIMS (CORE / WORKSPACE)
+from core.views.internal.health import healthz_view
 from core.views.internal.workspace.views import home
 from core.views.internal.backup import workspace_backup_view
 
@@ -87,6 +88,7 @@ urlpatterns = [
     path("logout/", logout_user, name="logout"),
 
     # ---------------- INTERNAL: DASHBOARD & SYSTEM ----------------
+    path("healthz/", healthz_view, name="healthz"),
     path("", home, name="workspace"),
     path("backup/", workspace_backup_view, name="workspace_backup"),
 
