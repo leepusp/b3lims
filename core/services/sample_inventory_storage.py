@@ -11,6 +11,7 @@ from django.db.models import ForeignKey
 from django.utils import timezone
 
 from core.models.samples.sample import Sample
+from core.models.samples.sample_files import SampleFile
 
 
 def safe_name(value, fallback="unnamed"):
@@ -85,6 +86,36 @@ def serialize_sample(sample):
     return payload
 
 
+def serialize_sample_file(sample_file, compute_checksum=True):
+    relative_path = str(sample_file.file.name)
+    absolute_path = ""
+
+    try:
+        absolute_path = sample_file.file.path
+    except Exception:
+        absolute_path = str(Path(settings.MEDIA_ROOT) / relative_path)
+
+    path = Path(absolute_path)
+    exists = path.exists() and path.is_file()
+
+    sha256 = ""
+    if compute_checksum and exists:
+        sha256 = sha256_file(path)
+
+    return {
+        "id": sample_file.id,
+        "relative_path": relative_path,
+        "absolute_path": absolute_path,
+        "exists": exists,
+        "description": sample_file.description,
+        "mime_type": sample_file.mime_type,
+        "file_size": sample_file.file_size,
+        "category": sample_file.category,
+        "uploaded_at": sample_file.uploaded_at.isoformat() if sample_file.uploaded_at else "",
+        "sha256": sha256,
+    }
+
+
 def find_exact_media_matches_for_sample(sample, compute_checksums=False):
     """
     Finds current MEDIA_ROOT files that directly contain the sample_id token.
@@ -154,11 +185,19 @@ def write_sample_manifest(sample, compute_file_checksums=False):
         compute_checksums=compute_file_checksums,
     )
 
+    curated_files = [
+        serialize_sample_file(sample_file, compute_checksum=compute_file_checksums)
+        for sample_file in sample.files.all().order_by("category", "file", "id")
+    ]
+
     manifest = {
         "schema": "biobank.sample_manifest.v1",
         "sample": serialize_sample(sample),
         "workspace": str(workspace),
         "media_matches": media_matches,
+        "media_match_count": len(media_matches),
+        "curated_files": curated_files,
+        "curated_file_count": len(curated_files),
         "generated_at": timezone.now().isoformat(),
     }
 
@@ -171,6 +210,7 @@ def write_sample_manifest(sample, compute_file_checksums=False):
         "workspace": str(workspace),
         "manifest_path": str(manifest_path),
         "media_match_count": len(media_matches),
+        "curated_file_count": len(curated_files),
     }
 
 
@@ -198,6 +238,7 @@ def sample_index_row(sample, manifest_info):
         "updated_at": sample.updated_at.isoformat() if sample.updated_at else "",
         "manifest_path": manifest_info["manifest_path"],
         "media_match_count": manifest_info["media_match_count"],
+        "curated_file_count": manifest_info["curated_file_count"],
     }
 
 
@@ -227,6 +268,7 @@ def write_samples_index(rows):
         "updated_at",
         "manifest_path",
         "media_match_count",
+        "curated_file_count",
     ]
 
     with tsv_path.open("w", newline="", encoding="utf-8") as handle:
