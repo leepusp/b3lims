@@ -145,8 +145,7 @@ LOGOUT_REDIRECT_URL = "/biobank/login/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# ---------------------------------------------------------------------
-# Biobank persistent filesystem storage
+
 # ---------------------------------------------------------------------
 # Default mode for DaVinci testing stores notebook artifacts in:
 # /home/<username>/biobank_notebooks/
@@ -154,9 +153,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Future shared deployment can set:
 # BIOBANK_NOTEBOOK_STORAGE_MODE=public
 # BIOBANK_NOTEBOOK_ROOT=/home/public/biobank/users
+
+
+# ---------------------------------------------------------------------
+# Biobank persistent filesystem storage
+# ---------------------------------------------------------------------
+# Personal ELN/notebook artifacts are stored in the Linux user's home:
+# /home/<username>/biobank_notebooks/
+#
+# Shared institutional Biobank data are stored under:
+# /home/public/apps/biobank/storage/
 BIOBANK_NOTEBOOK_STORAGE_MODE = os.environ.get("BIOBANK_NOTEBOOK_STORAGE_MODE", "home")
-BIOBANK_STORAGE_ROOT = Path(os.environ.get("BIOBANK_STORAGE_ROOT", "/home/public/biobank"))
+BIOBANK_STORAGE_ROOT = Path(os.environ.get("BIOBANK_STORAGE_ROOT", "/home/public/apps/biobank/storage"))
+
 BIOBANK_NOTEBOOK_ROOT = Path(os.environ.get("BIOBANK_NOTEBOOK_ROOT", str(BIOBANK_STORAGE_ROOT / "users")))
 BIOBANK_GROUP_ROOT = Path(os.environ.get("BIOBANK_GROUP_ROOT", str(BIOBANK_STORAGE_ROOT / "groups")))
 BIOBANK_INVENTORY_ROOT = Path(os.environ.get("BIOBANK_INVENTORY_ROOT", str(BIOBANK_STORAGE_ROOT / "inventory")))
+BIOBANK_SAMPLE_DOCS_ROOT = Path(os.environ.get("BIOBANK_SAMPLE_DOCS_ROOT", str(BIOBANK_STORAGE_ROOT / "sample_docs")))
+BIOBANK_MANIFESTS_ROOT = Path(os.environ.get("BIOBANK_MANIFESTS_ROOT", str(BIOBANK_STORAGE_ROOT / "manifests")))
+BIOBANK_SHARED_ROOT = Path(os.environ.get("BIOBANK_SHARED_ROOT", str(BIOBANK_STORAGE_ROOT / "shared")))
 
