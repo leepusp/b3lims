@@ -27,9 +27,6 @@ staticfiles/
 # Node / Electron (OVE)
 # ----------------------
 node_modules/
-ove-electron/node_modules/
-ove-electron/dist/
-ove-electron/build/
 
 # ----------------------
 # Build / Packaging
