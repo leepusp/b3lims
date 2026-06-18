@@ -351,10 +351,47 @@
                                 <div class="small">{{ link.snapshot_json.organism_name }}</div>
                                 <div class="small text-muted">{{ link.snapshot_json.sample_type }}</div>
 
+                                <div class="mt-2 pt-2 border-top">
+                                    <div class="small fw-bold text-muted mb-1">
+                                        <i class="bi bi-paperclip me-1"></i>Sample files
+                                    </div>
+
+                                    {% for sample_file in link.sample.files.all %}
+                                        <div class="small border rounded bg-light p-2 mb-1">
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div class="text-break">
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1">
+                                                        {{ sample_file.category }}
+                                                    </span>
+                                                    {{ sample_file.file.name }}
+                                                </div>
+                                                {% if sample_file.file %}
+                                                    <a href="{{ sample_file.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: .7rem;">
+                                                        Open
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+
+                                            {% if sample_file.description %}
+                                                <div class="text-muted mt-1">{{ sample_file.description }}</div>
+                                            {% endif %}
+
+                                            {% if sample_file.file_size %}
+                                                <div class="text-muted mt-1">{{ sample_file.file_size }} bytes</div>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <div class="small text-muted">No files linked to this sample.</div>
+                                    {% endfor %}
+                                </div>
+
                                 <div class="d-flex gap-2 mt-2">
                                     <button class="btn btn-sm btn-outline-primary" onclick="insertSampleSnapshot({{ forloop.counter0 }})">
                                         Insert snapshot
                                     </button>
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'sample_edit' link.sample.id %}" target="_blank">
+                                        Open sample
+                                    </a>
                                     <button class="btn btn-sm btn-outline-danger" onclick="unlinkSample({{ link.id }})">
                                         Remove
                                     </button>

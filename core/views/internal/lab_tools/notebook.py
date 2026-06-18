@@ -81,6 +81,33 @@ def build_sample_snapshot(sample):
         if hasattr(sample, field_name):
             snapshot[field_name] = _safe_str(getattr(sample, field_name, ""))
 
+    sample_files = []
+    try:
+        for sample_file in sample.files.all().order_by("-uploaded_at"):
+            file_name = _safe_str(getattr(sample_file.file, "name", ""))
+            file_url = ""
+            try:
+                file_url = sample_file.file.url if sample_file.file else ""
+            except Exception:
+                file_url = ""
+
+            sample_files.append(
+                {
+                    "id": sample_file.id,
+                    "name": file_name,
+                    "url": file_url,
+                    "category": _safe_str(getattr(sample_file, "category", "")),
+                    "description": _safe_str(getattr(sample_file, "description", "")),
+                    "mime_type": _safe_str(getattr(sample_file, "mime_type", "")),
+                    "file_size": getattr(sample_file, "file_size", None),
+                    "uploaded_at": sample_file.uploaded_at.isoformat() if sample_file.uploaded_at else "",
+                }
+            )
+    except Exception:
+        sample_files = []
+
+    snapshot["sample_files"] = sample_files
+
     return snapshot
 
 
@@ -108,7 +135,12 @@ def notebook_index(request):
         active_entry = entries.first()
 
     if active_entry:
-        linked_sample_links = active_entry.sample_links.select_related("sample").order_by("-linked_at")
+        linked_sample_links = (
+            active_entry.sample_links
+            .select_related("sample")
+            .prefetch_related("sample__files")
+            .order_by("-linked_at")
+        )
         blocks = active_entry.blocks.all()
         attachments = active_entry.attachments.all()
 
