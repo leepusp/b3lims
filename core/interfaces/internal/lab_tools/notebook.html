@@ -518,7 +518,12 @@
 
         const data = {
             title: document.getElementById("entry-title").value,
-            content: quill.root.innerHTML
+            content: quill.root.innerHTML,
+            entry_type: document.getElementById("entry-type")?.value || "experiment",
+            status: document.getElementById("entry-status")?.value || "draft",
+            visibility: document.getElementById("entry-visibility")?.value || "private",
+            project: document.getElementById("entry-project")?.value || "",
+            experiment_date: document.getElementById("entry-experiment-date")?.value || null
         };
 
         postJson("{% url 'notebook_save_api' active_entry.id %}", data)
