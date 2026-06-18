@@ -89,18 +89,6 @@
             <span class="nav-label">ELN Notebook</span>
         </a>
 
-        <a href="{% url 'molecular_index' %}"
-           class="nav-link {% if 'molecular' in request.path %}active{% endif %}">
-            <i class="bi bi-box"></i>
-            <span class="nav-label">Molecular Viewer</span>
-        </a>
-
-        <a href="{% url 'plasmid_editor' %}"
-           class="nav-link {% if 'plasmid' in request.path %}active{% endif %}">
-            <i class="bi bi-vector-pen"></i>
-            <span class="nav-label">Plasmid Editor</span>
-        </a>
-
     </nav>
 
     <div class="sidebar-footer"

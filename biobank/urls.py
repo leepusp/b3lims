@@ -60,8 +60,6 @@ from core.views.internal.keywords.views import keywords_view
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import analysis as notebook_analysis_views
-from core.views.internal.lab_tools import molecular as molecular_views
-from core.views.internal.lab_tools import plasmid as plasmid_views
 
 # 9. QR CODE (PAGE)
 from core.views.internal.samples.views import sample_qr_scan_view
@@ -143,8 +141,6 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
     path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
     path('internal/lab-tools/notebook/api/run-analysis/<int:entry_id>/', notebook_analysis_views.run_notebook_analysis, name='run_notebook_analysis'),
-    path('internal/lab-tools/molecular/', molecular_views.molecular_viewer, name='molecular_index'),
-    path('internal/lab-tools/plasmid/', plasmid_views.plasmid_editor, name='plasmid_editor'),
 
 
     # ---------------- QR CODE (PAGE) --------------------------------
