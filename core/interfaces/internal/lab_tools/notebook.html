@@ -304,21 +304,70 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('text')">
-                            <i class="bi bi-text-paragraph me-1"></i>Text block
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('table')">
-                            <i class="bi bi-table me-1"></i>Table
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('code')">
-                            <i class="bi bi-code-square me-1"></i>Code / plot
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('image')">
-                            <i class="bi bi-image me-1"></i>Image
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('slurm_job')">
-                            <i class="bi bi-cpu me-1"></i>Slurm job
-                        </button>
+                        <div class="btn-group me-2">
+
+                            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+                                <i class="bi bi-plus-lg me-1"></i>Insert
+
+                            </button>
+
+                            <ul class="dropdown-menu">
+
+                                <li><h6 class="dropdown-header">Basic blocks</h6></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="createBlock('text')"><i class="bi bi-text-left me-2"></i>Text block</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="createBlock('table')"><i class="bi bi-table me-2"></i>Table</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="createBlock('image')"><i class="bi bi-image me-2"></i>Image</button></li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <li><h6 class="dropdown-header">Scientific record</h6></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="insertProtocolStep()"><i class="bi bi-list-check me-2"></i>Protocol step</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="insertObservationBlock()"><i class="bi bi-eye me-2"></i>Observation</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="focusSampleSearch()"><i class="bi bi-box-seam me-2"></i>Sample reference</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="focusEntryAttachment()"><i class="bi bi-paperclip me-2"></i>File attachment</button></li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <li><h6 class="dropdown-header">Molecular biology</h6></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="prepareMolecularItem('dna', 'linear')"><i class="bi bi-dna me-2"></i>DNA sequence</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="prepareMolecularItem('plasmid', 'circular')"><i class="bi bi-record-circle me-2"></i>Plasmid</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="prepareMolecularItem('primer', 'linear')"><i class="bi bi-arrow-right-short me-2"></i>Primer</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="prepareMolecularItem('protein', 'linear')"><i class="bi bi-diagram-3 me-2"></i>Protein</button></li>
+
+                                <li><hr class="dropdown-divider"></li>
+
+                                <li><h6 class="dropdown-header">Computation</h6></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="createBlock('code')"><i class="bi bi-code-square me-2"></i>Code / plot</button></li>
+
+                                <li><button class="dropdown-item" type="button" onclick="createBlock('slurm_job')"><i class="bi bi-cpu me-2"></i>Slurm job</button></li>
+
+                            </ul>
+
+                        </div>
+
+
+                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+
+                            <i class="bi bi-info-circle me-1"></i>
+
+                            Use <strong>Insert → Molecular biology</strong> to prepare DNA, plasmid, primer or protein records in
+
+                            <strong>Relevant items → Molecular items</strong>.
+
+                        </div>
 
                         <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
                             <i class="bi bi-info-circle me-1"></i>
@@ -809,6 +858,92 @@
             },
             body: JSON.stringify(payload)
         }).then(response => response.json());
+    }
+
+    function activateEntryTab(tabButtonId) {
+        const tabButton = document.getElementById(tabButtonId);
+        if (!tabButton) return;
+
+        if (window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(tabButton).show();
+            return;
+        }
+
+        tabButton.click();
+    }
+
+    function prepareMolecularItem(sequenceType, topology) {
+        activateEntryTab("items-tab");
+
+        setTimeout(function() {
+            const typeInput = document.getElementById("molecular-item-type");
+            const topologyInput = document.getElementById("molecular-item-topology");
+            const nameInput = document.getElementById("molecular-item-name");
+            const sequenceInput = document.getElementById("molecular-item-sequence");
+
+            if (typeInput) typeInput.value = sequenceType || "dna";
+            if (topologyInput) topologyInput.value = topology || "linear";
+
+            if (nameInput) {
+                nameInput.focus();
+                nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            } else if (sequenceInput) {
+                sequenceInput.focus();
+                sequenceInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }, 150);
+    }
+
+    function insertProtocolStep() {
+        activateEntryTab("protocol-tab");
+
+        setTimeout(function() {
+            const protocolInput = document.getElementById("entry-protocol-content");
+            if (!protocolInput) return;
+
+            const current = protocolInput.value || "";
+            const addition = current.trim()
+                ? "\n\nStep title\n- Objective:\n- Materials:\n- Procedure:\n- Expected result:\n"
+                : "Step title\n- Objective:\n- Materials:\n- Procedure:\n- Expected result:\n";
+
+            protocolInput.value = current + addition;
+            protocolInput.focus();
+            protocolInput.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            saveStatus.textContent = "Unsaved...";
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(saveEntry, 1000);
+        }, 150);
+    }
+
+    function insertObservationBlock() {
+        createBlock("text");
+    }
+
+    function focusSampleSearch() {
+        const candidates = [
+            document.getElementById("sample-search"),
+            document.getElementById("sample-search-input"),
+            document.querySelector("input[placeholder*='Sample ID']"),
+            document.querySelector("input[placeholder*='organism']")
+        ].filter(Boolean);
+
+        if (!candidates.length) return;
+
+        candidates[0].focus();
+        candidates[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function focusEntryAttachment() {
+        activateEntryTab("files-tab");
+
+        setTimeout(function() {
+            const fileInput = document.getElementById("entry-attachment-file");
+            if (!fileInput) return;
+
+            fileInput.focus();
+            fileInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
     }
 
     function createMolecularItem() {
