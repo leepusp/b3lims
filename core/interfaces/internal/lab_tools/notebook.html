@@ -169,7 +169,7 @@
         <main class="notebook-panel">
             {% if active_entry %}
                 <div class="p-3 border-bottom">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 mb-2">
                         <input type="text"
                                id="entry-title"
                                class="form-control border-0 fw-bold fs-5"
@@ -181,6 +181,52 @@
                         <button class="btn btn-success btn-sm" onclick="saveEntry()">
                             <i class="bi bi-save"></i>
                         </button>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Entry type</label>
+                            <select id="entry-type" class="form-select form-select-sm">
+                                {% for value, label in active_entry.ENTRY_TYPE_CHOICES %}
+                                    <option value="{{ value }}" {% if active_entry.entry_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Status</label>
+                            <select id="entry-status" class="form-select form-select-sm">
+                                {% for value, label in active_entry.STATUS_CHOICES %}
+                                    <option value="{{ value }}" {% if active_entry.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Visibility</label>
+                            <select id="entry-visibility" class="form-select form-select-sm">
+                                {% for value, label in active_entry.VISIBILITY_CHOICES %}
+                                    <option value="{{ value }}" {% if active_entry.visibility == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Experiment date</label>
+                            <input type="date"
+                                   id="entry-experiment-date"
+                                   class="form-control form-control-sm"
+                                   value="{{ active_entry.experiment_date|date:'Y-m-d' }}">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label small text-muted mb-1">Project</label>
+                            <input type="text"
+                                   id="entry-project"
+                                   class="form-control form-control-sm"
+                                   value="{{ active_entry.project }}"
+                                   placeholder="Project, campaign, grant, workflow or analysis context">
+                        </div>
                     </div>
                 </div>
 

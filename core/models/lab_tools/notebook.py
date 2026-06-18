@@ -22,8 +22,49 @@ class NotebookEntry(models.Model):
     structured blocks provide tables, images, code, sequence/plasmid records,
     Slurm job references, and sample-linked snapshots.
     """
+    ENTRY_TYPE_CHOICES = [
+        ("experiment", "Experiment"),
+        ("protocol", "Protocol"),
+        ("analysis", "Analysis"),
+        ("inventory", "Inventory"),
+        ("meeting", "Meeting / discussion"),
+        ("other", "Other"),
+    ]
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("in_progress", "In progress"),
+        ("completed", "Completed"),
+        ("reviewed", "Reviewed"),
+        ("archived", "Archived"),
+    ]
+
+    VISIBILITY_CHOICES = [
+        ("private", "Private"),
+        ("lab", "Lab"),
+        ("shared", "Shared"),
+    ]
+
     title = models.CharField(max_length=255, default="Untitled experiment")
     content = models.TextField(blank=True)
+
+    entry_type = models.CharField(
+        max_length=32,
+        choices=ENTRY_TYPE_CHOICES,
+        default="experiment",
+    )
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default="draft",
+    )
+    project = models.CharField(max_length=255, blank=True)
+    experiment_date = models.DateField(null=True, blank=True)
+    visibility = models.CharField(
+        max_length=32,
+        choices=VISIBILITY_CHOICES,
+        default="private",
+    )
 
     mentions = models.ManyToManyField(
         Sample,

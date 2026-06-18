@@ -177,6 +177,9 @@ def notebook_create_from_sample(request, sample_id):
     entry = NotebookEntry.objects.create(
         title=f"ELN - {sample.sample_id}",
         author=request.user,
+        entry_type="experiment",
+        status="draft",
+        visibility="private",
         content=(
             f"<h2>{sample.sample_id}</h2>"
             f"<p><strong>Sample type:</strong> {sample.sample_type or ''}</p>"
@@ -202,6 +205,9 @@ def notebook_create(request):
     new_entry = NotebookEntry.objects.create(
         title="New experiment",
         author=request.user,
+        entry_type="experiment",
+        status="draft",
+        visibility="private",
         content="",
     )
     return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")
@@ -218,6 +224,23 @@ def notebook_save_api(request, entry_id):
         data = json.loads(request.body)
         entry.title = data.get("title", entry.title)
         entry.content = data.get("content", "")
+
+        entry_type = data.get("entry_type")
+        status = data.get("status")
+        visibility = data.get("visibility")
+
+        if entry_type in {choice[0] for choice in NotebookEntry.ENTRY_TYPE_CHOICES}:
+            entry.entry_type = entry_type
+
+        if status in {choice[0] for choice in NotebookEntry.STATUS_CHOICES}:
+            entry.status = status
+
+        if visibility in {choice[0] for choice in NotebookEntry.VISIBILITY_CHOICES}:
+            entry.visibility = visibility
+
+        entry.project = data.get("project", entry.project) or ""
+        entry.experiment_date = data.get("experiment_date") or None
+
         entry.save()
         return JsonResponse({"status": "success"})
     except Exception as exc:
