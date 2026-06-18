@@ -119,6 +119,7 @@ urlpatterns = [
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),
+    path("samples/<int:sample_id>/notebook/create/", notebook_views.notebook_create_from_sample, name="notebook_create_from_sample"),
     path("samples/<int:sample_id>/relate/", sample_relate_view, name="sample_relate"),
     path("samples/export/", export_samples_csv, name="export_samples_csv"),
 

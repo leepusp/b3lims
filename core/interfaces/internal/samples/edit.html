@@ -25,9 +25,14 @@
                 <span class="text-muted small fw-bold ms-2">{{ sample.organism_name }}</span>
             </div>
         </div>
-        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Back
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'notebook_create_from_sample' sample.id %}" class="btn btn-outline-success">
+                <i class="bi bi-journal-plus me-2"></i>New ELN entry
+            </a>
+            <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back
+            </a>
+        </div>
     </div>
 
     <form method="POST" enctype="multipart/form-data" id="mainSampleForm">

@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Q
 from django.http import JsonResponse
@@ -14,6 +15,7 @@ from core.models.lab_tools.notebook import (
     NotebookSampleLink,
 )
 from core.models.samples.sample import Sample
+from core.permissions.samples import can_view_sample
 
 
 def _sample_display_name(sample):
@@ -161,6 +163,38 @@ def notebook_index(request):
             "attachments": attachments,
         },
     )
+
+
+@login_required
+def notebook_create_from_sample(request, sample_id):
+    sample = get_object_or_404(Sample, id=sample_id)
+
+    if not can_view_sample(request.user, sample) and not request.user.is_superuser:
+        raise PermissionDenied
+
+    snapshot = build_sample_snapshot(sample)
+
+    entry = NotebookEntry.objects.create(
+        title=f"ELN - {sample.sample_id}",
+        author=request.user,
+        content=(
+            f"<h2>{sample.sample_id}</h2>"
+            f"<p><strong>Sample type:</strong> {sample.sample_type or ''}</p>"
+            f"<p><strong>Organism:</strong> {sample.organism_name or ''}</p>"
+            f"<p><strong>Status:</strong> {sample.status or ''}</p>"
+        ),
+    )
+
+    NotebookSampleLink.objects.create(
+        entry=entry,
+        sample=sample,
+        snapshot_json=snapshot,
+        linked_by=request.user,
+    )
+
+    entry.mentions.add(sample)
+
+    return redirect(f"{reverse('notebook_index')}?entry_id={entry.id}")
 
 
 @login_required
