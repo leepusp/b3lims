@@ -224,6 +224,7 @@ def notebook_save_api(request, entry_id):
         data = json.loads(request.body)
         entry.title = data.get("title", entry.title)
         entry.content = data.get("content", "")
+        entry.protocol_content = data.get("protocol_content", entry.protocol_content) or ""
 
         entry_type = data.get("entry_type")
         status = data.get("status")

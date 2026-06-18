@@ -244,7 +244,37 @@
                 </div>
 
                 <div class="notebook-panel-body">
-                    <div class="card mb-3">
+                    <ul class="nav nav-tabs mb-3" id="entryTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes-pane" type="button" role="tab">
+                                Notes
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="protocol-tab" data-bs-toggle="tab" data-bs-target="#protocol-pane" type="button" role="tab">
+                                Protocol
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items-pane" type="button" role="tab">
+                                Relevant items
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata-pane" type="button" role="tab">
+                                Metadata
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="files-tab" data-bs-toggle="tab" data-bs-target="#files-pane" type="button" role="tab">
+                                Files
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="entryTabContent">
+                        <div class="tab-pane fade show active" id="notes-pane" role="tabpanel" aria-labelledby="notes-tab">
+                            <div class="card mb-3">
                         <div class="card-header bg-white fw-bold">
                             <i class="bi bi-pencil-square me-2"></i>Main note
                         </div>
@@ -383,6 +413,161 @@
                                 No structured blocks yet. Add a table, image, code block, sequence or Slurm job block.
                             </div>
                         {% endfor %}
+                    </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="protocol-pane" role="tabpanel" aria-labelledby="protocol-tab">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold">
+                                    <i class="bi bi-list-check me-2"></i>Protocol
+                                </div>
+                                <div class="card-body">
+                                    <label class="form-label small text-muted">
+                                        Protocol, ordered steps, reagent setup, expected outputs and acceptance criteria.
+                                    </label>
+                                    <textarea id="entry-protocol-content"
+                                              class="form-control"
+                                              rows="16"
+                                              placeholder="Describe the protocol steps, reagents, checkpoints and expected results...">{{ active_entry.protocol_content }}</textarea>
+                                    <div class="form-text">
+                                        This field is saved together with the entry. Later it can be converted into structured protocol steps.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="items-pane" role="tabpanel" aria-labelledby="items-tab">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold">
+                                    <i class="bi bi-diagram-3 me-2"></i>Relevant items
+                                </div>
+                                <div class="card-body">
+                                    {% for link in linked_sample_links %}
+                                        <div class="border rounded p-3 mb-3 bg-light">
+                                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                                <div>
+                                                    <div class="fw-bold">{{ link.sample.sample_id }}</div>
+                                                    <div class="small">{{ link.sample.organism_name }}</div>
+                                                    <div class="small text-muted">{{ link.sample.sample_type }}</div>
+                                                </div>
+                                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'sample_edit' link.sample.id %}" target="_blank">
+                                                    Open sample
+                                                </a>
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <div class="small fw-bold text-muted mb-1">
+                                                    <i class="bi bi-paperclip me-1"></i>Sample files
+                                                </div>
+                                                {% for sample_file in link.sample.files.all %}
+                                                    <div class="small border rounded bg-white p-2 mb-1">
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1">
+                                                            {{ sample_file.category }}
+                                                        </span>
+                                                        <span class="text-break">{{ sample_file.file.name }}</span>
+                                                        {% if sample_file.file %}
+                                                            <a href="{{ sample_file.file.url }}" target="_blank" class="ms-2">Open</a>
+                                                        {% endif %}
+                                                    </div>
+                                                {% empty %}
+                                                    <div class="small text-muted">No files linked to this sample.</div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-muted small border rounded p-3 bg-light">
+                                            No relevant items linked yet. Use the Linked samples panel to add samples.
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold">
+                                    <i class="bi bi-info-circle me-2"></i>Metadata
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row small mb-0">
+                                        <dt class="col-sm-3">Entry type</dt>
+                                        <dd class="col-sm-9">{{ active_entry.get_entry_type_display }}</dd>
+
+                                        <dt class="col-sm-3">Status</dt>
+                                        <dd class="col-sm-9">{{ active_entry.get_status_display }}</dd>
+
+                                        <dt class="col-sm-3">Visibility</dt>
+                                        <dd class="col-sm-9">{{ active_entry.get_visibility_display }}</dd>
+
+                                        <dt class="col-sm-3">Project</dt>
+                                        <dd class="col-sm-9">{{ active_entry.project|default:"-" }}</dd>
+
+                                        <dt class="col-sm-3">Experiment date</dt>
+                                        <dd class="col-sm-9">{{ active_entry.experiment_date|default:"-" }}</dd>
+
+                                        <dt class="col-sm-3">Created</dt>
+                                        <dd class="col-sm-9">{{ active_entry.created_at|date:"Y-m-d H:i" }}</dd>
+
+                                        <dt class="col-sm-3">Updated</dt>
+                                        <dd class="col-sm-9">{{ active_entry.updated_at|date:"Y-m-d H:i" }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="files-pane" role="tabpanel" aria-labelledby="files-tab">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold">
+                                    <i class="bi bi-folder2-open me-2"></i>Entry files
+                                </div>
+                                <div class="card-body">
+                                    <div class="border rounded bg-light p-3 mb-3">
+                                        <label class="form-label small text-muted">Upload attachment to this notebook entry</label>
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <input type="file" id="entry-attachment-file" class="form-control form-control-sm">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" id="entry-attachment-caption" class="form-control form-control-sm" placeholder="Caption or description">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="uploadEntryAttachment()">
+                                                    Upload
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% for attachment in attachments %}
+                                        <div class="small border rounded p-2 mb-2">
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1">
+                                                        {{ attachment.attachment_type }}
+                                                    </span>
+                                                    <span class="fw-bold text-break">{{ attachment.file.name }}</span>
+                                                    {% if attachment.caption %}
+                                                        <div class="text-muted mt-1">{{ attachment.caption }}</div>
+                                                    {% endif %}
+                                                    {% if attachment.checksum_sha256 %}
+                                                        <div class="text-muted mt-1">SHA256: {{ attachment.checksum_sha256 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% if attachment.file %}
+                                                    <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        Open
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-muted small border rounded p-3 bg-light">
+                                            No files attached directly to this notebook entry.
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             {% else %}
@@ -527,6 +712,45 @@
         }).then(response => response.json());
     }
 
+    function uploadEntryAttachment() {
+        const fileInput = document.getElementById("entry-attachment-file");
+        const captionInput = document.getElementById("entry-attachment-caption");
+
+        if (!fileInput || !fileInput.files.length) {
+            alert("Select a file to upload.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        formData.append("caption", captionInput ? captionInput.value : "");
+
+        saveStatus.textContent = "Uploading...";
+
+        fetch("{% url 'notebook_upload_attachment_api' active_entry.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                window.location.reload();
+            } else {
+                saveStatus.textContent = "Upload error";
+                saveStatus.classList.add("text-danger");
+                alert(data.message || "Attachment upload failed.");
+            }
+        })
+        .catch(error => {
+            saveStatus.textContent = "Upload error";
+            saveStatus.classList.add("text-danger");
+            alert(error);
+        });
+    }
+
     function deleteEntry() {
         const titleInput = document.getElementById("entry-title");
         const entryTitle = titleInput ? titleInput.value : "this entry";
@@ -564,6 +788,7 @@
         const data = {
             title: document.getElementById("entry-title").value,
             content: quill.root.innerHTML,
+            protocol_content: document.getElementById("entry-protocol-content")?.value || "",
             entry_type: document.getElementById("entry-type")?.value || "experiment",
             status: document.getElementById("entry-status")?.value || "draft",
             visibility: document.getElementById("entry-visibility")?.value || "private",
@@ -593,6 +818,18 @@
         saveStatus.textContent = "Unsaved...";
         clearTimeout(timeoutId);
         timeoutId = setTimeout(saveEntry, 2000);
+    });
+
+    ["entry-type", "entry-status", "entry-visibility", "entry-project", "entry-experiment-date", "entry-protocol-content"].forEach(function(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        const eventName = element.tagName === "SELECT" ? "change" : "input";
+        element.addEventListener(eventName, function() {
+            saveStatus.textContent = "Unsaved...";
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(saveEntry, 1000);
+        });
     });
 
     function filterEntries(query) {

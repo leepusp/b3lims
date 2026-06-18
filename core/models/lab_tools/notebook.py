@@ -47,6 +47,7 @@ class NotebookEntry(models.Model):
 
     title = models.CharField(max_length=255, default="Untitled experiment")
     content = models.TextField(blank=True)
+    protocol_content = models.TextField(blank=True)
 
     entry_type = models.CharField(
         max_length=32,
