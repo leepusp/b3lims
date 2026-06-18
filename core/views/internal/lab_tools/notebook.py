@@ -229,146 +229,30 @@ def _notebook_entry_template(template_key):
         "blank": {
             "title": "Untitled entry",
             "entry_type": "other",
-            "content": "",
-            "protocol_content": "",
         },
         "experiment": {
             "title": "New experiment",
             "entry_type": "experiment",
-            "content": (
-                "<h2>Objective</h2>"
-                "<p>Describe the scientific question, hypothesis or goal.</p>"
-                "<h2>Summary</h2>"
-                "<p>Briefly summarize the experiment design and expected outcome.</p>"
-                "<h2>Observations</h2>"
-                "<p>Record observations, deviations and relevant notes.</p>"
-            ),
-            "protocol_content": (
-                "1. Objective\n"
-                "2. Materials and reagents\n"
-                "3. Experimental setup\n"
-                "4. Procedure\n"
-                "5. Quality-control checkpoints\n"
-                "6. Expected results\n"
-            ),
         },
         "protocol": {
             "title": "New protocol",
             "entry_type": "protocol",
-            "content": (
-                "<h2>Protocol overview</h2>"
-                "<p>Describe what this protocol is used for and when it should be applied.</p>"
-                "<h2>Safety notes</h2>"
-                "<p>List biosafety, chemical or operational precautions.</p>"
-            ),
-            "protocol_content": (
-                "Purpose\n"
-                "- \n\n"
-                "Materials\n"
-                "- \n\n"
-                "Procedure\n"
-                "1. \n"
-                "2. \n"
-                "3. \n\n"
-                "Acceptance criteria\n"
-                "- \n\n"
-                "Troubleshooting\n"
-                "- \n"
-            ),
         },
         "analysis": {
             "title": "New analysis",
             "entry_type": "analysis",
-            "content": (
-                "<h2>Analysis goal</h2>"
-                "<p>Describe the dataset, question and expected output.</p>"
-                "<h2>Inputs</h2>"
-                "<p>List files, samples, paths or accession identifiers.</p>"
-                "<h2>Results summary</h2>"
-                "<p>Summarize findings and interpretation.</p>"
-            ),
-            "protocol_content": (
-                "Input data\n"
-                "- \n\n"
-                "Software / environment\n"
-                "- \n\n"
-                "Commands or workflow\n"
-                "```bash\n"
-                "# commands here\n"
-                "```\n\n"
-                "Output files\n"
-                "- \n"
-            ),
         },
         "sample_characterization": {
             "title": "Sample characterization",
             "entry_type": "experiment",
-            "content": (
-                "<h2>Sample characterization</h2>"
-                "<p>Link the sample in Relevant items and describe the characterization goal.</p>"
-                "<h2>Phenotype / genotype / QC</h2>"
-                "<p>Record observations, measurements and QC results.</p>"
-            ),
-            "protocol_content": (
-                "1. Link sample record\n"
-                "2. Confirm sample identity\n"
-                "3. Record phenotype/genotype/QC metadata\n"
-                "4. Attach raw files or images\n"
-                "5. Summarize interpretation\n"
-            ),
         },
         "plasmid_construction": {
             "title": "Plasmid construction",
             "entry_type": "experiment",
-            "content": (
-                "<h2>Plasmid construction</h2>"
-                "<p>Describe backbone, insert, assembly strategy and host strain.</p>"
-                "<h2>Design rationale</h2>"
-                "<p>Record cloning/design decisions.</p>"
-                "<h2>Validation</h2>"
-                "<p>Record colony PCR, digestion, sequencing or expression validation.</p>"
-            ),
-            "protocol_content": (
-                "Backbone\n"
-                "- \n\n"
-                "Insert\n"
-                "- \n\n"
-                "Assembly strategy\n"
-                "- Gibson / Golden Gate / restriction-ligation / other\n\n"
-                "Transformation host\n"
-                "- \n\n"
-                "Validation plan\n"
-                "1. Colony screening\n"
-                "2. Miniprep\n"
-                "3. Restriction digest / PCR\n"
-                "4. Sequencing confirmation\n"
-            ),
         },
         "sequencing_bioinformatics": {
             "title": "Sequencing / bioinformatics analysis",
             "entry_type": "analysis",
-            "content": (
-                "<h2>Sequencing / bioinformatics analysis</h2>"
-                "<p>Describe samples, sequencing data, pipeline and biological objective.</p>"
-                "<h2>Dataset</h2>"
-                "<p>Record FASTQ/FASTA/VCF/count-table paths and metadata.</p>"
-                "<h2>Interpretation</h2>"
-                "<p>Summarize main biological and technical findings.</p>"
-            ),
-            "protocol_content": (
-                "Data location\n"
-                "- \n\n"
-                "Environment\n"
-                "- Conda/module/container:\n\n"
-                "Workflow\n"
-                "1. Input validation\n"
-                "2. QC\n"
-                "3. Alignment/assembly/annotation/counting\n"
-                "4. Statistical analysis\n"
-                "5. Figures/tables\n\n"
-                "Output directory\n"
-                "- \n"
-            ),
         },
     }
 
@@ -386,8 +270,8 @@ def notebook_create(request):
         entry_type=template["entry_type"],
         status="draft",
         visibility="private",
-        content=template["content"],
-        protocol_content=template["protocol_content"],
+        content="",
+        protocol_content="",
     )
 
     return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")
