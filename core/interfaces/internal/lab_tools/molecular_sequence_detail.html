@@ -1,0 +1,275 @@
+{% extends 'internal/common/base.html' %}
+{% load static %}
+
+{% block title %}Molecular Item - {{ molecule.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 1200px;">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <div class="text-muted small">
+                <a href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}" class="text-decoration-none">
+                    ELN Notebook
+                </a>
+                <span class="mx-1">/</span>
+                Molecular item
+            </div>
+            <h3 class="mb-1">
+                <i class="bi bi-dna me-2 text-success"></i>{{ molecule.name }}
+            </h3>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-success-subtle text-success border border-success-subtle">{{ molecule.get_sequence_type_display }}</span>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ molecule.get_topology_display }}</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ molecule.length }} bp/aa</span>
+                {% if molecule.gc_content is not None %}
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">GC {{ molecule.gc_content }}%</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm" onclick="saveMolecule()">
+                <i class="bi bi-save me-1"></i>Save
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteMolecule()">
+                <i class="bi bi-trash me-1"></i>Delete
+            </button>
+        </div>
+    </div>
+
+    <div id="save-status" class="small text-muted mb-2">Saved</div>
+
+    <ul class="nav nav-tabs mb-3" id="moleculeTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="sequence-tab" data-bs-toggle="tab" data-bs-target="#sequence-pane" type="button" role="tab">
+                Sequence
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="features-tab" data-bs-toggle="tab" data-bs-target="#features-pane" type="button" role="tab">
+                Features
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata-pane" type="button" role="tab">
+                Metadata
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="linked-tab" data-bs-toggle="tab" data-bs-target="#linked-pane" type="button" role="tab">
+                Linked items
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="sequence-pane" role="tabpanel" aria-labelledby="sequence-tab">
+            <div class="card">
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-code-square me-2"></i>Sequence editor
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small text-muted">Name</label>
+                            <input type="text" id="molecule-name" class="form-control form-control-sm" value="{{ molecule.name }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Type</label>
+                            <select id="molecule-sequence-type" class="form-select form-select-sm">
+                                {% for value, label in sequence_types %}
+                                    <option value="{{ value }}" {% if molecule.sequence_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Topology</label>
+                            <select id="molecule-topology" class="form-select form-select-sm">
+                                {% for value, label in topologies %}
+                                    <option value="{{ value }}" {% if molecule.topology == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <label class="form-label small text-muted">Description</label>
+                    <textarea id="molecule-description" class="form-control mb-3" rows="3">{{ molecule.description }}</textarea>
+
+                    <label class="form-label small text-muted">Sequence</label>
+                    <textarea id="molecule-sequence" class="form-control font-monospace" rows="14" spellcheck="false">{{ molecule.sequence }}</textarea>
+                    <div class="form-text">
+                        Sequence is normalized on save: whitespace is removed and letters are converted to uppercase.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="features-pane" role="tabpanel" aria-labelledby="features-tab">
+            <div class="card">
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-list-ul me-2"></i>Features JSON
+                </div>
+                <div class="card-body">
+                    <label class="form-label small text-muted">
+                        Store features as a JSON list. A visual feature editor will be added later.
+                    </label>
+                    <textarea id="molecule-features-json" class="form-control font-monospace" rows="16" spellcheck="false">{{ molecule.features_json|default:"[]" }}</textarea>
+                    <div class="form-text">
+                        Example: [{"name":"promoter","type":"promoter","start":1,"end":120,"strand":"+"}]
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
+            <div class="card">
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-info-circle me-2"></i>Metadata
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-0">
+                        <dt class="col-sm-3">Length</dt>
+                        <dd class="col-sm-9" id="molecule-length">{{ molecule.length }} bp/aa</dd>
+
+                        <dt class="col-sm-3">GC content</dt>
+                        <dd class="col-sm-9" id="molecule-gc-content">{{ molecule.gc_content|default:"-" }}</dd>
+
+                        <dt class="col-sm-3">SHA256</dt>
+                        <dd class="col-sm-9 font-monospace text-break" id="molecule-checksum">{{ molecule.checksum_sha256|default:"-" }}</dd>
+
+                        <dt class="col-sm-3">Owner</dt>
+                        <dd class="col-sm-9">{{ molecule.owner|default:"-" }}</dd>
+
+                        <dt class="col-sm-3">Created</dt>
+                        <dd class="col-sm-9">{{ molecule.created_at|date:"Y-m-d H:i" }}</dd>
+
+                        <dt class="col-sm-3">Updated</dt>
+                        <dd class="col-sm-9">{{ molecule.updated_at|date:"Y-m-d H:i" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="linked-pane" role="tabpanel" aria-labelledby="linked-tab">
+            <div class="card">
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-link-45deg me-2"></i>Linked items
+                </div>
+                <div class="card-body">
+                    {% if molecule.source_entry %}
+                        <div class="border rounded p-3 mb-2 bg-light">
+                            <div class="small text-muted">Source ELN entry</div>
+                            <a href="{% url 'notebook_index' %}?entry_id={{ molecule.source_entry.id }}" class="fw-bold text-decoration-none">
+                                {{ molecule.source_entry.title }}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if molecule.linked_sample %}
+                        <div class="border rounded p-3 mb-2 bg-light">
+                            <div class="small text-muted">Linked sample</div>
+                            <a href="{% url 'sample_edit' molecule.linked_sample.id %}" class="fw-bold text-decoration-none" target="_blank">
+                                {{ molecule.linked_sample.sample_id }}
+                            </a>
+                            <div class="small">{{ molecule.linked_sample.organism_name }}</div>
+                            <div class="small text-muted">{{ molecule.linked_sample.sample_type }}</div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted small border rounded p-3 bg-light">
+                            No linked sample yet. Linking controls will be added in the next phase.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrfToken = "{{ csrf_token }}";
+    const updateUrl = "{% url 'molecular_sequence_update_api' molecule.id %}";
+    const deleteUrl = "{% url 'molecular_sequence_delete_api' molecule.id %}";
+    const notebookUrl = "{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}";
+    const saveStatus = document.getElementById("save-status");
+
+    function postJson(url, payload) {
+        return fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify(payload)
+        }).then(response => response.json());
+    }
+
+    function saveMolecule() {
+        const payload = {
+            name: document.getElementById("molecule-name").value,
+            sequence_type: document.getElementById("molecule-sequence-type").value,
+            topology: document.getElementById("molecule-topology").value,
+            description: document.getElementById("molecule-description").value,
+            sequence: document.getElementById("molecule-sequence").value,
+            features_json: document.getElementById("molecule-features-json").value || "[]"
+        };
+
+        saveStatus.textContent = "Saving...";
+
+        postJson(updateUrl, payload)
+            .then(data => {
+                if (data.status === "success") {
+                    saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString();
+
+                    document.getElementById("molecule-length").textContent = data.length + " bp/aa";
+                    document.getElementById("molecule-gc-content").textContent = data.gc_content ?? "-";
+                    document.getElementById("molecule-checksum").textContent = data.checksum_sha256 || "-";
+                } else {
+                    saveStatus.textContent = "Save error";
+                    saveStatus.classList.add("text-danger");
+                    alert(data.message || "Could not save molecular item.");
+                }
+            })
+            .catch(error => {
+                saveStatus.textContent = "Save error";
+                saveStatus.classList.add("text-danger");
+                alert(error);
+            });
+    }
+
+    function deleteMolecule() {
+        const moleculeName = document.getElementById("molecule-name").value || "this molecular item";
+        if (!window.confirm(`Delete molecular item "${moleculeName}"?`)) {
+            return;
+        }
+
+        saveStatus.textContent = "Deleting...";
+
+        postJson(deleteUrl, {})
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.href = data.redirect_url || notebookUrl;
+                } else {
+                    saveStatus.textContent = "Delete error";
+                    saveStatus.classList.add("text-danger");
+                    alert(data.message || "Could not delete molecular item.");
+                }
+            })
+            .catch(error => {
+                saveStatus.textContent = "Delete error";
+                saveStatus.classList.add("text-danger");
+                alert(error);
+            });
+    }
+
+    ["molecule-name", "molecule-sequence-type", "molecule-topology", "molecule-description", "molecule-sequence", "molecule-features-json"].forEach(function(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        const eventName = element.tagName === "SELECT" ? "change" : "input";
+        element.addEventListener(eventName, function() {
+            saveStatus.textContent = "Unsaved...";
+        });
+    });
+</script>
+{% endblock %}

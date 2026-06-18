@@ -114,6 +114,24 @@ def build_sample_snapshot(sample):
     return snapshot
 
 
+def _get_molecular_sequence_for_user(sequence_id, user):
+    molecule = get_object_or_404(
+        MolecularSequence.objects.select_related("source_entry", "linked_sample", "owner"),
+        id=sequence_id,
+    )
+
+    if user.is_superuser:
+        return molecule
+
+    if molecule.owner_id == user.id:
+        return molecule
+
+    if molecule.source_entry and molecule.source_entry.author_id == user.id:
+        return molecule
+
+    raise PermissionDenied
+
+
 def _get_entry_for_user(entry_id, user):
     return get_object_or_404(
         NotebookEntry.objects.prefetch_related("sample_links", "blocks", "attachments"),
@@ -516,6 +534,103 @@ def notebook_delete_entry_api(request, entry_id):
             "status": "success",
             "deleted_title": deleted_title,
             "redirect_url": reverse("notebook_index"),
+        }
+    )
+
+
+@login_required
+def molecular_sequence_detail(request, sequence_id):
+    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+
+    return render(
+        request,
+        "internal/lab_tools/molecular_sequence_detail.html",
+        {
+            "molecule": molecule,
+            "sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
+            "topologies": MolecularSequence.TOPOLOGY_CHOICES,
+        },
+    )
+
+
+@login_required
+def molecular_sequence_update_api(request, sequence_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+
+    try:
+        data = json.loads(request.body)
+
+        sequence_type = data.get("sequence_type", molecule.sequence_type)
+        topology = data.get("topology", molecule.topology)
+
+        valid_sequence_types = {choice[0] for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES}
+        valid_topologies = {choice[0] for choice in MolecularSequence.TOPOLOGY_CHOICES}
+
+        if sequence_type not in valid_sequence_types:
+            return JsonResponse({"status": "error", "message": "Invalid sequence type"}, status=400)
+
+        if topology not in valid_topologies:
+            return JsonResponse({"status": "error", "message": "Invalid topology"}, status=400)
+
+        name = (data.get("name") or "").strip()
+        if not name:
+            return JsonResponse({"status": "error", "message": "Name is required"}, status=400)
+
+        molecule.name = name
+        molecule.sequence_type = sequence_type
+        molecule.topology = topology
+        molecule.description = data.get("description", "") or ""
+        molecule.sequence = data.get("sequence", "") or ""
+
+        features_raw = data.get("features_json", "[]")
+        if isinstance(features_raw, str):
+            features_raw = features_raw.strip() or "[]"
+            molecule.features_json = json.loads(features_raw)
+        elif isinstance(features_raw, list):
+            molecule.features_json = features_raw
+        else:
+            return JsonResponse({"status": "error", "message": "Features must be a JSON list"}, status=400)
+
+        molecule.save()
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "id": molecule.id,
+                "name": molecule.name,
+                "sequence_type": molecule.sequence_type,
+                "topology": molecule.topology,
+                "length": molecule.length,
+                "gc_content": molecule.gc_content,
+                "checksum_sha256": molecule.checksum_sha256,
+            }
+        )
+    except json.JSONDecodeError as exc:
+        return JsonResponse({"status": "error", "message": f"Invalid JSON: {exc}"}, status=400)
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+
+
+@login_required
+def molecular_sequence_delete_api(request, sequence_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+    redirect_url = reverse("notebook_index")
+
+    if molecule.source_entry_id:
+        redirect_url = f"{reverse('notebook_index')}?entry_id={molecule.source_entry_id}"
+
+    molecule.delete()
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "redirect_url": redirect_url,
         }
     )
 

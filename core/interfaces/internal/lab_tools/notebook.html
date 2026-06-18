@@ -563,9 +563,14 @@
                                                         <div class="small mt-1">{{ molecule.description }}</div>
                                                     {% endif %}
                                                 </div>
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                    Molecular item
-                                                </span>
+                                                <div class="d-flex flex-column align-items-end gap-1">
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                        Molecular item
+                                                    </span>
+                                                    <a href="{% url 'molecular_sequence_detail' molecule.id %}" class="btn btn-sm btn-outline-success">
+                                                        Open
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     {% empty %}
