@@ -643,14 +643,38 @@ def sample_edit_view(request, sample_id):
                     sync_legacy_field=True,
                 )
 
+            remove_file_ids = request.POST.getlist("remove_file_ids")
+            removed_count = 0
+            if remove_file_ids:
+                removed_count, _ = SampleFile.objects.filter(
+                    sample=base_sample,
+                    id__in=remove_file_ids,
+                ).delete()
+
             files = request.FILES.getlist("file")
             categories = request.POST.getlist("file_category")
             descriptions = request.POST.getlist("file_description")
+            valid_categories = {choice[0] for choice in SampleFile.VIEW_CATEGORIES}
 
             for k, f in enumerate(files):
-                cat = categories[k] if k < len(categories) else "Other"
+                cat = categories[k] if k < len(categories) else "raw"
+                if cat not in valid_categories:
+                    cat = "raw"
+
                 desc = descriptions[k] if k < len(descriptions) else ""
-                SampleFile.objects.create(sample=base_sample, file=f, category=cat, description=desc)
+                sample_file = SampleFile.objects.create(
+                    sample=base_sample,
+                    file=f,
+                    category=cat,
+                    description=desc,
+                )
+
+                # SampleFile.save() may auto-detect category from extension.
+                # Preserve the explicit category selected in the edit form.
+                SampleFile.objects.filter(pk=sample_file.pk).update(category=cat)
+
+            if removed_count:
+                messages.info(request, f"{removed_count} sample file link(s) removed. Physical files were kept in storage.")
 
             messages.success(request, "Sample updated successfully!")
             return redirect("samples_list")

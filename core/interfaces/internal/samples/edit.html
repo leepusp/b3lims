@@ -217,14 +217,48 @@
                             <ul class="list-group list-group-flush border rounded shadow-sm">
                                 {% for anexo in sample_files %}
                                 <li class="list-group-item bg-light">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="fw-bold text-primary small"><i class="bi bi-file-earmark-text me-1"></i>{{ anexo.category }}</span>
-                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">Download</a>
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                        <div>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                <i class="bi bi-file-earmark-text me-1"></i>{{ anexo.category }}
+                                            </span>
+                                            {% if anexo.file_size %}
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">{{ anexo.file_size }} bytes</span>
+                                            {% endif %}
+                                        </div>
+                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">
+                                            Open
+                                        </a>
                                     </div>
-                                    <div class="text-truncate small fw-bold">{{ anexo.file.name|slice:"15:" }}...</div>
+
+                                    <div class="small fw-bold text-break">{{ anexo.file.name }}</div>
+
+                                    {% if anexo.description %}
+                                        <div class="small text-muted mt-1">{{ anexo.description }}</div>
+                                    {% endif %}
+
+                                    {% if anexo.mime_type %}
+                                        <div class="small text-muted mt-1">MIME: {{ anexo.mime_type }}</div>
+                                    {% endif %}
+
+                                    <div class="form-check mt-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="remove_file_ids"
+                                            value="{{ anexo.id }}"
+                                            id="remove-file-{{ anexo.id }}"
+                                        >
+                                        <label class="form-check-label small text-danger" for="remove-file-{{ anexo.id }}">
+                                            Remove this file link when saving
+                                        </label>
+                                    </div>
                                 </li>
                                 {% endfor %}
                             </ul>
+                            <div class="form-text small text-muted mt-2">
+                                Removing a link does not delete the physical file from storage.
+                            </div>
                             {% else %}
                                 <div class="p-3 bg-light rounded text-center border text-muted small">No files attached.</div>
                             {% endif %}
