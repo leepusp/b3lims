@@ -115,3 +115,7 @@ Etiquetas
 Package
 Resumo
 Shipment
+
+# Legacy runtime data moved outside MEDIA_ROOT/project tree
+data.legacy_after_media_migration_*/
+legacy_project_data/
