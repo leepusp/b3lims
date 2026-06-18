@@ -118,7 +118,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # MEDIA (UPLOADS DE AMOSTRAS E ARQUIVOS)
 # =========================
 MEDIA_URL = "/biobank/data/"
-MEDIA_ROOT = os.environ.get("BIOBANK_MEDIA_ROOT", "/home/public/apps/biobank/storage/media")
+MEDIA_ROOT = os.environ.get("BIOBANK_MEDIA_ROOT", "/home/public/apps/biobank/storage/data")
 
 # Aumenta o limite de upload para arquivos científicos (ex: 50MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
