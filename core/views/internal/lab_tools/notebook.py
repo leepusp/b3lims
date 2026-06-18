@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from core.models.lab_tools.notebook import (
+    MolecularSequence,
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
@@ -130,6 +131,7 @@ def notebook_index(request):
     linked_sample_links = []
     blocks = []
     attachments = []
+    molecular_sequences = []
 
     if active_entry_id:
         active_entry = _get_entry_for_user(active_entry_id, request.user)
@@ -145,6 +147,7 @@ def notebook_index(request):
         )
         blocks = active_entry.blocks.all()
         attachments = active_entry.attachments.all()
+        molecular_sequences = active_entry.molecular_sequences.all().order_by("-updated_at", "-id")
 
     linked_samples_json = json.dumps(
         [link.snapshot_json for link in linked_sample_links],
@@ -161,6 +164,9 @@ def notebook_index(request):
             "linked_samples_json": linked_samples_json,
             "blocks": blocks,
             "attachments": attachments,
+            "molecular_sequences": molecular_sequences,
+            "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
+            "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
         },
     )
 
@@ -512,6 +518,67 @@ def notebook_delete_entry_api(request, entry_id):
             "redirect_url": reverse("notebook_index"),
         }
     )
+
+
+@login_required
+def notebook_create_molecular_sequence_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    try:
+        data = json.loads(request.body)
+
+        sequence_type = data.get("sequence_type", "dna")
+        topology = data.get("topology", "linear")
+
+        valid_sequence_types = {choice[0] for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES}
+        valid_topologies = {choice[0] for choice in MolecularSequence.TOPOLOGY_CHOICES}
+
+        if sequence_type not in valid_sequence_types:
+            sequence_type = "dna"
+
+        if topology not in valid_topologies:
+            topology = "linear"
+
+        name = (data.get("name") or "").strip()
+        if not name:
+            return JsonResponse({"status": "error", "message": "Name is required"}, status=400)
+
+        sequence = (data.get("sequence") or "").strip()
+        description = (data.get("description") or "").strip()
+
+        linked_sample = None
+        linked_sample_id = data.get("linked_sample_id")
+        if linked_sample_id:
+            linked_sample = get_object_or_404(Sample, id=linked_sample_id)
+            if not can_view_sample(request.user, linked_sample) and not request.user.is_superuser:
+                raise PermissionDenied
+
+        molecular_sequence = MolecularSequence.objects.create(
+            name=name,
+            sequence_type=sequence_type,
+            topology=topology,
+            sequence=sequence,
+            description=description,
+            linked_sample=linked_sample,
+            source_entry=entry,
+            owner=request.user,
+        )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "id": molecular_sequence.id,
+                "name": molecular_sequence.name,
+                "sequence_type": molecular_sequence.sequence_type,
+                "topology": molecular_sequence.topology,
+                "length": molecular_sequence.length,
+            }
+        )
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
 
 
 @login_required

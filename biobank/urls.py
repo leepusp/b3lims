@@ -140,6 +140,7 @@ urlpatterns = [
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/lab-tools/notebook/api/link-sample/<int:entry_id>/', notebook_views.notebook_link_sample_api, name='notebook_link_sample_api'),
     path('internal/lab-tools/notebook/api/unlink-sample/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_sample_api, name='notebook_unlink_sample_api'),
+    path('internal/lab-tools/notebook/api/molecular-sequence/create/<int:entry_id>/', notebook_views.notebook_create_molecular_sequence_api, name='notebook_create_molecular_sequence_api'),
     path('internal/lab-tools/notebook/api/block/create/<int:entry_id>/', notebook_views.notebook_create_block_api, name='notebook_create_block_api'),
     path('internal/lab-tools/notebook/api/block/update/<int:block_id>/', notebook_views.notebook_update_block_api, name='notebook_update_block_api'),
     path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
