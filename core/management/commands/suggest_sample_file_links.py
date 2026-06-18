@@ -52,6 +52,24 @@ STOPWORDS = {
     "bacterium",
     "plasmid",
     "phage",
+    "bbams",
+    "rio",
+    "formulario",
+    "formulário",
+    "importacao",
+    "importação",
+    "fapesp",
+    "thermo",
+}
+
+GLOBAL_FILE_CATEGORIES = {
+    "import_file",
+    "shipment_document",
+    "table",
+}
+
+VALID_SAMPLEFILE_CATEGORIES = {
+    choice[0] for choice in SampleFile._meta.get_field("category").choices
 }
 
 
@@ -63,14 +81,19 @@ def normalize_text(value):
 
 def tokens(value):
     result = set()
+
     for token in normalize_text(value).split():
         if len(token) < 3:
             continue
+
         if token in STOPWORDS:
             continue
+
         if token.isdigit() and 1900 <= int(token) <= 2100:
             continue
+
         result.add(token)
+
     return result
 
 
@@ -95,11 +118,10 @@ def sample_text(sample):
 def score_file_against_sample(relative_path, sample):
     rel_norm = normalize_text(relative_path)
     sample_id_norm = normalize_text(sample.sample_id).replace(" ", "")
+    compact_rel = rel_norm.replace(" ", "")
 
     score = 0
     reasons = []
-
-    compact_rel = rel_norm.replace(" ", "")
 
     if sample_id_norm and sample_id_norm in compact_rel:
         score += 100
@@ -114,13 +136,20 @@ def score_file_against_sample(relative_path, sample):
         score += len(overlap) * 10
         reasons.extend(overlap)
 
-    # Plasmid names like pET-28a are often split into pet and 28a.
+    # Plasmid names like pET-28a are usually split into "pet" and "28a".
     if sample.sample_type and "plasmid" in sample.sample_type.casefold():
         if {"pet", "28a"} <= file_tokens and {"pet", "28a"} <= sample_tokens:
             score += 40
             reasons.append("plasmid_name_pet_28a")
 
     return score, sorted(set(reasons))
+
+
+def category_for_link_command(category):
+    if category in VALID_SAMPLEFILE_CATEGORIES:
+        return category
+
+    return "raw"
 
 
 class Command(BaseCommand):
@@ -143,6 +172,14 @@ class Command(BaseCommand):
             "--include-linked",
             action="store_true",
             help="Also suggest links for files already linked.",
+        )
+        parser.add_argument(
+            "--include-global-files",
+            action="store_true",
+            help=(
+                "Also suggest links for global files such as sample imports, "
+                "exports and shipment documents. Disabled by default to avoid noise."
+            ),
         )
         parser.add_argument(
             "--category",
@@ -191,6 +228,9 @@ class Command(BaseCommand):
             if not options["include_linked"] and relative_path in linked_paths:
                 continue
 
+            if not options["include_global_files"] and category in GLOBAL_FILE_CATEGORIES:
+                continue
+
             if options["category"] and category != options["category"]:
                 continue
 
@@ -205,11 +245,12 @@ class Command(BaseCommand):
             suggestions.sort(key=lambda item: (-item[0], item[2].sample_id))
 
             for score, reasons, sample in suggestions[: options["top"]]:
+                link_category = category_for_link_command(category)
                 command = (
                     "python manage.py link_sample_file "
                     f"{shlex.quote(sample.sample_id)} "
                     f"{shlex.quote(relative_path)} "
-                    f"--category {shlex.quote(category if category in ['raw', 'image', 'table', 'sequence', 'pdf'] else 'raw')} "
+                    f"--category {shlex.quote(link_category)} "
                     f"--description {shlex.quote('Curated link suggested from media index; review before treating as final.')}"
                 )
 
