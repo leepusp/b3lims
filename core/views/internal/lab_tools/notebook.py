@@ -1,56 +1,368 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.db.models import Q
 import json
 
-from core.models.lab_tools.notebook import NotebookEntry
+from django.contrib.auth.decorators import login_required
+from django.db import models
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from core.models.lab_tools.notebook import (
+    NotebookAttachment,
+    NotebookBlock,
+    NotebookEntry,
+    NotebookSampleLink,
+)
 from core.models.samples.sample import Sample
+
+
+def _sample_display_name(sample):
+    sample_id = getattr(sample, "sample_id", "") or f"sample-{sample.pk}"
+    organism = getattr(sample, "organism_name", "") or getattr(sample, "name", "") or ""
+    sample_type = getattr(sample, "sample_type", "") or ""
+
+    parts = [sample_id]
+    if organism:
+        parts.append(organism)
+    if sample_type:
+        parts.append(f"({sample_type})")
+
+    return " - ".join(parts)
+
+
+def _safe_str(value):
+    if value is None:
+        return ""
+    return str(value)
+
+
+def build_sample_snapshot(sample):
+    collections = []
+    try:
+        collections = [str(item) for item in sample.collections.all()]
+    except Exception:
+        collections = []
+
+    biobank = ""
+    try:
+        biobank = str(sample.biobank) if sample.biobank else ""
+    except Exception:
+        biobank = ""
+
+    owner = ""
+    try:
+        owner = str(sample.owner) if sample.owner else ""
+    except Exception:
+        owner = ""
+
+    snapshot = {
+        "id": sample.id,
+        "sample_id": _safe_str(getattr(sample, "sample_id", "")),
+        "display_name": _sample_display_name(sample),
+        "sample_type": _safe_str(getattr(sample, "sample_type", "")),
+        "organism_name": _safe_str(getattr(sample, "organism_name", "")),
+        "status": _safe_str(getattr(sample, "status", "")),
+        "biobank": biobank,
+        "owner": owner,
+        "collections": collections,
+        "scientific_notes": _safe_str(getattr(sample, "scientific_notes", "")),
+        "notes": _safe_str(getattr(sample, "notes", "")),
+    }
+
+    for field_name in [
+        "strain",
+        "genotype",
+        "phenotype",
+        "source",
+        "storage_location",
+        "risk_class",
+        "biosafety_level",
+    ]:
+        if hasattr(sample, field_name):
+            snapshot[field_name] = _safe_str(getattr(sample, field_name, ""))
+
+    return snapshot
+
+
+def _get_entry_for_user(entry_id, user):
+    return get_object_or_404(
+        NotebookEntry.objects.prefetch_related("sample_links", "blocks", "attachments"),
+        id=entry_id,
+        author=user,
+    )
+
 
 @login_required
 def notebook_index(request):
     entries = NotebookEntry.objects.filter(author=request.user)
-    active_entry_id = request.GET.get('entry_id')
+    active_entry_id = request.GET.get("entry_id")
+
     active_entry = None
+    linked_sample_links = []
+    blocks = []
+    attachments = []
+
     if active_entry_id:
-        active_entry = get_object_or_404(NotebookEntry, id=active_entry_id, author=request.user)
+        active_entry = _get_entry_for_user(active_entry_id, request.user)
     elif entries.exists():
         active_entry = entries.first()
-    return render(request, 'internal/lab_tools/notebook.html', {
-        'entries': entries,
-        'active_entry': active_entry
-    })
+
+    if active_entry:
+        linked_sample_links = active_entry.sample_links.select_related("sample").order_by("-linked_at")
+        blocks = active_entry.blocks.all()
+        attachments = active_entry.attachments.all()
+
+    linked_samples_json = json.dumps(
+        [link.snapshot_json for link in linked_sample_links],
+        ensure_ascii=False,
+    )
+
+    return render(
+        request,
+        "internal/lab_tools/notebook.html",
+        {
+            "entries": entries,
+            "active_entry": active_entry,
+            "linked_sample_links": linked_sample_links,
+            "linked_samples_json": linked_samples_json,
+            "blocks": blocks,
+            "attachments": attachments,
+        },
+    )
+
 
 @login_required
 def notebook_create(request):
     new_entry = NotebookEntry.objects.create(
-        title="Novo Experimento",
+        title="New experiment",
         author=request.user,
-        content=""
+        content="",
     )
-    return redirect(f'/internal/lab-tools/notebook/?entry_id={new_entry.id}')
+    return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")
+
 
 @login_required
 def notebook_save_api(request, entry_id):
-    if request.method == "POST":
-        entry = get_object_or_404(NotebookEntry, id=entry_id, author=request.user)
-        try:
-            data = json.loads(request.body)
-            entry.title = data.get('title', entry.title)
-            entry.content = data.get('content', '')
-            entry.save()
-            return JsonResponse({'status': 'success'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error'}, status=405)
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    try:
+        data = json.loads(request.body)
+        entry.title = data.get("title", entry.title)
+        entry.content = data.get("content", "")
+        entry.save()
+        return JsonResponse({"status": "success"})
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+
 
 @login_required
 def search_samples_api(request):
-    query = request.GET.get('q', '')
+    query = (request.GET.get("q") or "").strip()
+
     if len(query) < 2:
         return JsonResponse([], safe=False)
-    samples = Sample.objects.filter(
-        Q(sample_id__icontains=query) | Q(name__icontains=query)
-    )[:10]
-    results = [{'id': s.id, 'value': f"{s.sample_id} - {s.name}" if s.name else s.sample_id} for s in samples]
+
+    searchable_fields = [
+        field.name
+        for field in Sample._meta.fields
+        if isinstance(field, (models.CharField, models.TextField))
+    ]
+
+    q_object = Q()
+    for field_name in searchable_fields:
+        q_object |= Q(**{f"{field_name}__icontains": query})
+
+    samples = Sample.objects.filter(q_object).distinct()[:15]
+
+    results = [
+        {
+            "id": sample.id,
+            "value": _sample_display_name(sample),
+            "sample_id": getattr(sample, "sample_id", ""),
+            "sample_type": getattr(sample, "sample_type", ""),
+            "organism_name": getattr(sample, "organism_name", ""),
+        }
+        for sample in samples
+    ]
+
     return JsonResponse(results, safe=False)
+
+
+@login_required
+def notebook_link_sample_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    try:
+        data = json.loads(request.body)
+        sample = get_object_or_404(Sample, id=data.get("sample_id"))
+        snapshot = build_sample_snapshot(sample)
+
+        link, _created = NotebookSampleLink.objects.get_or_create(
+            entry=entry,
+            sample=sample,
+            defaults={
+                "snapshot_json": snapshot,
+                "linked_by": request.user,
+            },
+        )
+
+        if not link.snapshot_json:
+            link.snapshot_json = snapshot
+            link.linked_by = request.user
+            link.save()
+
+        entry.mentions.add(sample)
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "sample": snapshot,
+                "link_id": link.id,
+            }
+        )
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+
+
+@login_required
+def notebook_unlink_sample_api(request, entry_id, link_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+    link = get_object_or_404(NotebookSampleLink, id=link_id, entry=entry)
+
+    sample = link.sample
+    link.delete()
+
+    if not NotebookSampleLink.objects.filter(entry=entry, sample=sample).exists():
+        entry.mentions.remove(sample)
+
+    return JsonResponse({"status": "success"})
+
+
+@login_required
+def notebook_create_block_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    try:
+        data = json.loads(request.body)
+        block_type = data.get("block_type", "text")
+
+        valid_types = {choice[0] for choice in NotebookBlock.BLOCK_TYPE_CHOICES}
+        if block_type not in valid_types:
+            return JsonResponse({"status": "error", "message": "Invalid block type"}, status=400)
+
+        default_content = {
+            "text": {"html": ""},
+            "image": {"url": "", "caption": ""},
+            "table": {"raw": "", "content": []},
+            "code": {
+                "code": "# table_1, table_2, ... are available as pandas DataFrames when table blocks exist.\n# Example:\n# fig = px.bar(table_1, x='condition', y='value')\n",
+                "last_result": "",
+            },
+            "sequence": {"name": "", "sequence_type": "dna", "topology": "linear", "sequence": ""},
+            "plasmid": {"name": "", "topology": "circular", "sequence": "", "features": []},
+            "slurm_job": {
+                "job_name": "",
+                "partition": "",
+                "cpus": 1,
+                "memory": "",
+                "time_limit": "",
+                "command": "",
+                "status": "draft",
+            },
+            "attachment": {},
+        }
+
+        next_order = (entry.blocks.aggregate(models.Max("order")).get("order__max") or 0) + 10
+
+        block = NotebookBlock.objects.create(
+            entry=entry,
+            block_type=block_type,
+            title=data.get("title", block_type.replace("_", " ").title()),
+            order=next_order,
+            content_data=data.get("content_data") or default_content.get(block_type, {}),
+            created_by=request.user,
+        )
+
+        return JsonResponse({"status": "success", "block_id": block.id})
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+
+
+@login_required
+def notebook_update_block_api(request, block_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    block = get_object_or_404(NotebookBlock, id=block_id, entry__author=request.user)
+
+    try:
+        data = json.loads(request.body)
+        block.title = data.get("title", block.title)
+        block.content_data = data.get("content_data", block.content_data)
+        block.order = data.get("order", block.order)
+        block.save()
+        return JsonResponse({"status": "success"})
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+
+
+@login_required
+def notebook_delete_block_api(request, block_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    block = get_object_or_404(NotebookBlock, id=block_id, entry__author=request.user)
+    block.delete()
+
+    return JsonResponse({"status": "success"})
+
+
+@login_required
+def notebook_upload_attachment_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return JsonResponse({"status": "error", "message": "No file uploaded"}, status=400)
+
+    block = None
+    block_id = request.POST.get("block_id")
+    if block_id:
+        block = get_object_or_404(NotebookBlock, id=block_id, entry=entry)
+
+    content_type = uploaded_file.content_type or ""
+    attachment_type = "image" if content_type.startswith("image/") else "other"
+
+    attachment = NotebookAttachment.objects.create(
+        entry=entry,
+        block=block,
+        file=uploaded_file,
+        attachment_type=attachment_type,
+        caption=request.POST.get("caption", ""),
+        uploaded_by=request.user,
+    )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "attachment_id": attachment.id,
+            "url": attachment.file.url,
+            "caption": attachment.caption,
+            "attachment_type": attachment.attachment_type,
+        }
+    )

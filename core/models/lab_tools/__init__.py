@@ -1,2 +1,8 @@
-from .notebook import NotebookEntry
-from .molecular import MolecularSequence
+from .notebook import (
+    MolecularSequence,
+    NotebookAttachment,
+    NotebookBlock,
+    NotebookEntry,
+    NotebookSampleLink,
+    NotebookSlurmJob,
+)

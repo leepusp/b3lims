@@ -86,3 +86,32 @@ db.sqlite3
 # Python cache
 __pycache__/
 *.pyc
+
+# Runtime databases and uploaded/generated data
+db.sqlite3
+db.sqlite3.bak*
+data/
+media/
+
+# Local cleanup/safety backups
+*_backups/
+_i18n_backups/
+_i18n_rollback_backups/
+_cleanup_backups/
+_migration_backups/
+_notebook_backups/
+*.bak
+*.bak.*
+*.sqlite3.bak*
+
+# Python/runtime cache
+__pycache__/
+*.pyc
+
+# Accidental shell-created empty files
+Documentos
+Documents
+Etiquetas
+Package
+Resumo
+Shipment

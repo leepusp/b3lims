@@ -1,0 +1,157 @@
+{% extends "internal/common/base.html" %}
+{% load biobank_extras %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ schema.title }}
+            </h2>
+            <div class="text-muted">
+                {{ shipment.shipment_code }} · {{ document.document_type }} · {{ form_data.get_form_status_display }}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'shipment_detail' shipment.id %}" class="btn btn-outline-secondary">
+                Back to shipment
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge {% if form_data.form_status == 'required' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                    1 Form
+                </span>
+                <span class="badge {% if has_generated_document %}bg-success{% else %}bg-secondary{% endif %}">
+                    2 Generated
+                </span>
+                <span class="badge {% if has_signed_file %}bg-success{% else %}bg-secondary{% endif %}">
+                    3 Signed upload
+                </span>
+                <span class="badge bg-secondary">
+                    4 Internal review
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <div class="col-xl-8">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-ui-checks me-2"></i>Formulário do documento
+                    </div>
+
+                    <div class="card-body">
+                        {% if schema.description %}
+                            <p class="text-muted">{{ schema.description }}</p>
+                        {% endif %}
+
+                        {% for section in schema.sections %}
+                            <h5 class="mt-3 mb-3">{{ section.title }}</h5>
+
+                            <div class="row g-3">
+                                {% for field in section.fields %}
+                                    {% with name=field.0 label=field.1 type=field.2 %}
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">{{ label }}</label>
+
+                                            {% if type == "textarea" %}
+                                                <textarea name="{{ name }}" class="form-control" rows="3">{{ form_values|get_item:name }}</textarea>
+                                            {% elif type == "checkbox" %}
+                                                <div class="form-check">
+                                                    <input type="checkbox" name="{{ name }}" class="form-check-input" {% if form_values|get_item:name %}checked{% endif %}>
+                                                    <label class="form-check-label">Confirmado</label>
+                                                </div>
+                                            {% elif type|slice:":6" == "select" %}
+                                                <select name="{{ name }}" class="form-select">
+                                                    {% for option in type|cut:"select:"|split:"|" %}
+                                                        <option value="{{ option }}" {% if form_values|get_item:name == option %}selected{% endif %}>{{ option }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% else %}
+                                                <input type="text" name="{{ name }}" value="{{ form_values|get_item:name }}" class="form-control">
+                                            {% endif %}
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                        <button type="submit" name="action" value="save_form" class="btn btn-outline-primary">
+                            Save form
+                        </button>
+                        <button type="submit" name="action" value="generate_document" class="btn btn-primary">
+                            Generate document
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white fw-bold">
+                    Generated document
+                </div>
+                <div class="card-body">
+                    {% if has_generated_document %}
+                        <a href="{% url 'shipment_generated_document' shipment.id document.id %}" target="_blank" class="btn btn-outline-primary w-100">
+                            Open generated document
+                        </a>
+                        <div class="form-text mt-2">
+                            Abra, imprima ou salve como PDF, assine fora da plataforma e depois envie o arquivo assinado.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            The document has not been generated yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    Upload do documento assinado
+                </div>
+                <div class="card-body">
+                    {% if has_signed_file %}
+                        <div class="alert alert-success">
+                            Documento assinado já enviado.
+                        </div>
+                        <a href="{{ form_data.signed_file.url }}" target="_blank" class="btn btn-outline-success w-100 mb-3">
+                            View signed file
+                        </a>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="upload_signed_file">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Arquivo assinado</label>
+                            <input type="file" name="signed_file" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Upload signed file
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

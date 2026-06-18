@@ -2,7 +2,7 @@ from .shipment import (
     Shipment,
     ShipmentItem,
     TransportClassification,
-    ShipmentDocument,
+    ShipmentDocument, ShipmentDocumentFormData,
     ShipmentChecklistItem,
     ShipmentReceipt,
     ShipmentDeclaration,

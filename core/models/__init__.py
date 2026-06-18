@@ -1,3 +1,4 @@
+from core.models.samples.storage import StorageLocation, SampleStorageAssignment
 from .biobanks.biobank import Biobank
 from .collections.collection import Collection
 from .tags.model import Tag
@@ -15,10 +16,11 @@ from .shipments import (
     Shipment,
     ShipmentItem,
     TransportClassification,
-    ShipmentDocument,
+    ShipmentDocument, ShipmentDocumentFormData,
     ShipmentChecklistItem,
     ShipmentReceipt,
     ShipmentDeclaration,
     ShipmentAccessToken,
     ShipmentEvent,
 )
+from core.models.lab_tools.notebook import MolecularSequence, NotebookAttachment, NotebookBlock, NotebookEntry, NotebookSampleLink, NotebookSlurmJob

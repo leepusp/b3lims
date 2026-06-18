@@ -113,4 +113,205 @@
         </div>
     </form>
 </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const riskSelect = document.querySelector(
+        'select[name="classification-risk_class"], select[name$="-risk_class"]'
+    );
+
+    const materialSelect = document.querySelector(
+        'select[name="classification-material_type"], select[name$="-material_type"]'
+    );
+
+    const nbSelectors = [
+        'select[name="classification-biosafety_level"]',
+        'select[name="classification-nb_level"]',
+        'select[name="classification-containment_level"]',
+        'input[name="classification-biosafety_level"]',
+        'input[name="classification-nb_level"]',
+        'input[name="classification-containment_level"]'
+    ];
+
+    const nbFields = nbSelectors
+        .map(selector => document.querySelector(selector))
+        .filter(Boolean);
+
+    const derivedFieldNames = [
+        "is_category_b_un3373",
+        "is_exempt_biological_material",
+        "requires_cibio_notification",
+        "requires_ctnbio_authorization",
+        "requires_mta_ttm",
+        "requires_sisgen",
+        "requires_triple_packaging",
+        "requires_biohazard_label",
+        "requires_un3373_label",
+        "requires_external_package_identification"
+    ];
+
+    const booleanInfo = {
+        "is_ogm": "Indicates whether the material contains a genetically modified organism. If Yes, CIBio authorization/approval and traceability are required.",
+        "is_genetic_heritage": "Indicates whether the shipment involves Brazilian genetic heritage or material subject to registration/control obligations.",
+        "is_international": "Indicates whether this is an international transfer and may require additional transfer terms."
+    };
+
+    const riskOptions = [
+        ["Risk Class 1", "Risk 1 - NB1"],
+        ["Risk Class 2", "Risk 2 - NB2"],
+        ["Risk Class 3", "Risk 3 - NB3"],
+        ["Risk Class 4", "Risk 4 - NB4"]
+    ];
+
+    const riskToNb = {
+        "Risk Class 1": "NB1",
+        "Risk Class 2": "NB2",
+        "Risk Class 3": "NB3",
+        "Risk Class 4": "NB4"
+    };
+
+    function closestFieldContainer(element) {
+        if (!element) return null;
+
+        return (
+            element.closest(".mb-3") ||
+            element.closest(".form-group") ||
+            element.closest("[class*='col-']") ||
+            element.parentElement
+        );
+    }
+
+    function hideFieldByName(fieldName) {
+        const selector = [
+            `[name="classification-${fieldName}"]`,
+            `[name$="-${fieldName}"]`,
+            `[name="${fieldName}"]`
+        ].join(",");
+
+        document.querySelectorAll(selector).forEach(function (field) {
+            const container = closestFieldContainer(field);
+            if (container) {
+                container.style.display = "none";
+            }
+        });
+    }
+
+    function setSelectBootstrap(select) {
+        if (!select) return;
+        select.classList.add("form-select");
+        select.style.width = "100%";
+        select.style.display = "block";
+    }
+
+    function normalizeRisk(value) {
+        const raw = String(value || "");
+
+        if (raw.includes("4")) return "Risk Class 4";
+        if (raw.includes("3")) return "Risk Class 3";
+        if (raw.includes("2")) return "Risk Class 2";
+        if (raw.includes("1")) return "Risk Class 1";
+
+        return "Risk Class 1";
+    }
+
+    function rebuildRiskOptions() {
+        if (!riskSelect) return;
+
+        const current = normalizeRisk(riskSelect.value || riskSelect.options[riskSelect.selectedIndex]?.text);
+
+        riskSelect.innerHTML = "";
+
+        riskOptions.forEach(function ([value, label]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            riskSelect.appendChild(option);
+        });
+
+        riskSelect.value = current;
+        setSelectBootstrap(riskSelect);
+    }
+
+    function setNbFromRisk() {
+        if (!riskSelect) return;
+
+        const risk = normalizeRisk(riskSelect.value);
+        const nb = riskToNb[risk] || "NB1";
+
+        nbFields.forEach(function (field) {
+            if (field.tagName === "SELECT") {
+                let matched = false;
+
+                for (const option of field.options) {
+                    if (option.value === nb || option.text === nb) {
+                        field.value = option.value;
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    const option = document.createElement("option");
+                    option.value = nb;
+                    option.textContent = nb;
+                    field.appendChild(option);
+                    field.value = nb;
+                }
+            } else {
+                field.value = nb;
+            }
+        });
+    }
+
+    function hideNbFields() {
+        nbFields.forEach(function (field) {
+            const container = closestFieldContainer(field);
+            if (container) {
+                container.style.display = "none";
+            }
+        });
+    }
+
+    function addBooleanHelp(fieldName, text) {
+        const selector = [
+            `select[name="classification-${fieldName}"]`,
+            `input[name="classification-${fieldName}"]`,
+            `select[name$="-${fieldName}"]`,
+            `input[name$="-${fieldName}"]`
+        ].join(",");
+
+        const field = document.querySelector(selector);
+        if (!field) return;
+
+        setSelectBootstrap(field);
+
+        const container = closestFieldContainer(field);
+        if (!container || container.querySelector(".classification-help-text")) return;
+
+        const help = document.createElement("div");
+        help.className = "form-text classification-help-text";
+        help.textContent = text;
+
+        container.appendChild(help);
+    }
+
+    setSelectBootstrap(materialSelect);
+    rebuildRiskOptions();
+    setNbFromRisk();
+    hideNbFields();
+
+    derivedFieldNames.forEach(hideFieldByName);
+
+    Object.entries(booleanInfo).forEach(function ([fieldName, text]) {
+        addBooleanHelp(fieldName, text);
+    });
+
+
+    if (riskSelect) {
+        riskSelect.addEventListener("change", setNbFromRisk);
+    }
+});
+</script>
+
 {% endblock %}

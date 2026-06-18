@@ -1,9 +1,11 @@
+from core.views.internal.shipments.views import shipment_generated_document_view
+from core.views.internal.shipments.views import shipment_document_workspace_view
 from core.views.internal.shipments.views import shipment_edit_view
 from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
 from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
@@ -57,6 +59,7 @@ from core.views.internal.keywords.views import keywords_view
 
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
+from core.views.internal.lab_tools import analysis as notebook_analysis_views
 from core.views.internal.lab_tools import molecular as molecular_views
 from core.views.internal.lab_tools import plasmid as plasmid_views
 
@@ -102,6 +105,8 @@ urlpatterns = [
     path("shipments/scan/<uuid:shipment_uuid>/", shipment_scan_view, name="shipment_scan"),
     path("shipments/<int:shipment_id>/approve-documents/", shipment_approve_documents_view, name="shipment_approve_documents"),
     path("shipments/<int:shipment_id>/package-labels/", shipment_package_labels_view, name="shipment_package_labels"),
+    path("shipments/<int:shipment_id>/documents/<int:document_id>/generated/", shipment_generated_document_view, name="shipment_generated_document"),
+    path("shipments/<int:shipment_id>/documents/<int:document_id>/", shipment_document_workspace_view, name="shipment_document_workspace"),
     path("shipments/<int:shipment_id>/documents-review/", shipment_documents_review_view, name="shipment_documents_review"),
     path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
     path("shipments/<int:shipment_id>/edit/", shipment_edit_view, name="shipment_edit"),
@@ -131,6 +136,13 @@ urlpatterns = [
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),
     path('internal/lab-tools/notebook/api/save/<int:entry_id>/', notebook_views.notebook_save_api, name='notebook_save_api'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
+    path('internal/lab-tools/notebook/api/link-sample/<int:entry_id>/', notebook_views.notebook_link_sample_api, name='notebook_link_sample_api'),
+    path('internal/lab-tools/notebook/api/unlink-sample/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_sample_api, name='notebook_unlink_sample_api'),
+    path('internal/lab-tools/notebook/api/block/create/<int:entry_id>/', notebook_views.notebook_create_block_api, name='notebook_create_block_api'),
+    path('internal/lab-tools/notebook/api/block/update/<int:block_id>/', notebook_views.notebook_update_block_api, name='notebook_update_block_api'),
+    path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
+    path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
+    path('internal/lab-tools/notebook/api/run-analysis/<int:entry_id>/', notebook_analysis_views.run_notebook_analysis, name='run_notebook_analysis'),
     path('internal/lab-tools/molecular/', molecular_views.molecular_viewer, name='molecular_index'),
     path('internal/lab-tools/plasmid/', plasmid_views.plasmid_editor, name='plasmid_editor'),
 

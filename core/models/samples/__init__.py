@@ -1,3 +1,4 @@
+from core.models.samples.storage import StorageLocation, SampleStorageAssignment
 from .sample import Sample
 from .sample_files import SampleFile
 from .subtypes import Bacteria, Phage, Plasmid, HostRange

@@ -126,7 +126,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 # =========================
 # INTERNACIONALIZAÇÃO
 # =========================
-LANGUAGE_CODE = "pt-br"
+LANGUAGE_CODE = "en"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
@@ -143,3 +143,20 @@ LOGOUT_REDIRECT_URL = "/biobank/login/"
 # DEFAULTS
 # =========================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ---------------------------------------------------------------------
+# Biobank persistent filesystem storage
+# ---------------------------------------------------------------------
+# Default mode for DaVinci testing stores notebook artifacts in:
+# /home/<username>/biobank_notebooks/
+#
+# Future shared deployment can set:
+# BIOBANK_NOTEBOOK_STORAGE_MODE=public
+# BIOBANK_NOTEBOOK_ROOT=/home/public/biobank/users
+BIOBANK_NOTEBOOK_STORAGE_MODE = os.environ.get("BIOBANK_NOTEBOOK_STORAGE_MODE", "home")
+BIOBANK_STORAGE_ROOT = Path(os.environ.get("BIOBANK_STORAGE_ROOT", "/home/public/biobank"))
+BIOBANK_NOTEBOOK_ROOT = Path(os.environ.get("BIOBANK_NOTEBOOK_ROOT", str(BIOBANK_STORAGE_ROOT / "users")))
+BIOBANK_GROUP_ROOT = Path(os.environ.get("BIOBANK_GROUP_ROOT", str(BIOBANK_STORAGE_ROOT / "groups")))
+BIOBANK_INVENTORY_ROOT = Path(os.environ.get("BIOBANK_INVENTORY_ROOT", str(BIOBANK_STORAGE_ROOT / "inventory")))
+

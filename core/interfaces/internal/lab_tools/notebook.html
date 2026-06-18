@@ -1,186 +1,671 @@
 {% extends 'internal/common/base.html' %}
 {% load static %}
 
-{% block title %}Caderno de Laboratório{% endblock %}
+{% block title %}ELN Notebook{% endblock %}
 
 {% block extra_css %}
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
-    /* Layout de altura total */
-    .notebook-wrapper {
-        display: flex;
-        height: calc(100vh - 120px); /* Desconta o cabeçalho */
-        background: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        overflow: hidden;
+    .notebook-shell {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr) 340px;
+        gap: 1rem;
+        height: calc(100vh - 130px);
     }
-    
-    /* Sidebar da lista de entradas */
-    .notebook-sidebar {
-        width: 280px;
-        background: #f8f9fa;
-        border-right: 1px solid #e0e0e0;
+
+    .notebook-panel {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: .75rem;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
     }
-    
-    .entry-list {
-        flex: 1;
+
+    .notebook-panel-header {
+        padding: .75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+        background: #f8f9fa;
+        font-weight: 700;
+    }
+
+    .notebook-panel-body {
+        padding: 1rem;
         overflow-y: auto;
     }
-    
+
     .entry-item {
         display: block;
-        padding: 15px;
+        padding: .75rem 1rem;
         border-bottom: 1px solid #eee;
-        color: #333;
+        color: #212529;
         text-decoration: none;
-        transition: background 0.2s;
     }
-    
-    .entry-item:hover { background: #e9ecef; }
-    .entry-item.active { background: #e3f2fd; border-left: 4px solid #0d6efd; }
-    
-    /* Área do Editor */
-    .notebook-editor-area {
-        flex: 1;
+
+    .entry-item:hover {
+        background: #f8f9fa;
+    }
+
+    .entry-item.active {
+        background: #e7f1ff;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .notebook-editor {
+        min-height: 260px;
+    }
+
+    .ql-toolbar {
+        border-left: 0 !important;
+        border-right: 0 !important;
+    }
+
+    .ql-container {
+        border-left: 0 !important;
+        border-right: 0 !important;
+        font-size: 15px;
+    }
+
+    .save-status {
+        font-size: .85rem;
+        color: #6c757d;
+    }
+
+    .sample-result {
+        cursor: pointer;
+    }
+
+    .linked-sample-card {
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        padding: .75rem;
+        margin-bottom: .75rem;
+        background: #fff;
+    }
+
+    .notebook-block {
+        border: 1px solid #dee2e6;
+        border-radius: .75rem;
+        background: #fff;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .notebook-block-header {
+        padding: .6rem .85rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
         display: flex;
-        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
     }
-    
-    /* Remove bordas padrão do Quill para parecer mais limpo */
-    .ql-toolbar { border: none !important; border-bottom: 1px solid #eee !important; }
-    .ql-container { border: none !important; font-size: 16px; }
-    
-    /* Botão Salvar Flutuante (feedback visual) */
-    .save-status { font-size: 0.85rem; color: #6c757d; margin-right: 15px; }
+
+    .notebook-block-body {
+        padding: .85rem;
+    }
+
+    .table-raw-input,
+    .code-input,
+    .sequence-input {
+        min-height: 150px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: .85rem;
+    }
+
+    .plot-output {
+        min-height: 220px;
+        border: 1px dashed #dee2e6;
+        border-radius: .5rem;
+        padding: .5rem;
+        background: #fcfcfc;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        max-height: 360px;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-3">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="m-0"><i class="bi bi-journal-bookmark me-2"></i>ELN Notebook</h4>
+        <div>
+            <h4 class="m-0"><i class="bi bi-journal-bookmark me-2"></i>ELN Notebook</h4>
+            <div class="text-muted small">Structured notes, linked samples, tables, images, code, sequences and future Slurm jobs.</div>
+        </div>
+
         <a href="{% url 'notebook_create' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg"></i> Nova Entrada
+            <i class="bi bi-plus-lg me-1"></i>New entry
         </a>
     </div>
 
-    <div class="notebook-wrapper shadow-sm">
-        
-        <div class="notebook-sidebar">
-            <div class="p-3 bg-light border-bottom">
-                <input type="text" class="form-control form-control-sm" placeholder="Buscar entrada...">
+    <div class="notebook-shell">
+
+        <aside class="notebook-panel">
+            <div class="notebook-panel-header">Entries</div>
+            <div class="p-3 border-bottom">
+                <input type="text" class="form-control form-control-sm" placeholder="Search entries..." oninput="filterEntries(this.value)">
             </div>
-            <div class="entry-list">
+
+            <div class="entry-list overflow-auto">
                 {% for entry in entries %}
-                <a href="?entry_id={{ entry.id }}" class="entry-item {% if active_entry.id == entry.id %}active{% endif %}">
-                    <div class="fw-bold text-truncate">{{ entry.title }}</div>
-                    <small class="text-muted">{{ entry.created_at|date:"d M Y, H:i" }}</small>
-                </a>
+                    <a href="?entry_id={{ entry.id }}"
+                       class="entry-item notebook-entry-link {% if active_entry.id == entry.id %}active{% endif %}">
+                        <div class="fw-bold text-truncate">{{ entry.title }}</div>
+                        <small class="text-muted">{{ entry.updated_at|date:"Y-m-d H:i" }}</small>
+                    </a>
                 {% empty %}
-                <div class="p-4 text-center text-muted small">
-                    Nenhuma entrada encontrada.<br>Crie a primeira!
-                </div>
+                    <div class="p-4 text-center text-muted small">
+                        No entries yet.<br>Create the first one.
+                    </div>
                 {% endfor %}
             </div>
-        </div>
+        </aside>
 
-        <div class="notebook-editor-area">
+        <main class="notebook-panel">
             {% if active_entry %}
-                <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
-                    <input type="text" id="entry-title" class="form-control border-0 fw-bold fs-5" 
-                           value="{{ active_entry.title }}" placeholder="Título do Experimento">
-                    
-                    <div class="d-flex align-items-center">
-                        <span id="save-status" class="save-status">Salvo</span>
+                <div class="p-3 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text"
+                               id="entry-title"
+                               class="form-control border-0 fw-bold fs-5"
+                               value="{{ active_entry.title }}"
+                               placeholder="Experiment title">
+
+                        <span id="save-status" class="save-status">Saved</span>
+
                         <button class="btn btn-success btn-sm" onclick="saveEntry()">
                             <i class="bi bi-save"></i>
                         </button>
                     </div>
                 </div>
 
-                <div id="editor-container">
-                    {{ active_entry.content|safe }}
+                <div class="notebook-panel-body">
+                    <div class="card mb-3">
+                        <div class="card-header bg-white fw-bold">
+                            <i class="bi bi-pencil-square me-2"></i>Main note
+                        </div>
+                        <div id="editor-container" class="notebook-editor">
+                            {{ active_entry.content|safe }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('text')">
+                            <i class="bi bi-text-paragraph me-1"></i>Text block
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('table')">
+                            <i class="bi bi-table me-1"></i>Table
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('code')">
+                            <i class="bi bi-code-square me-1"></i>Code / plot
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('image')">
+                            <i class="bi bi-image me-1"></i>Image
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('sequence')">
+                            <i class="bi bi-diagram-3 me-1"></i>Sequence
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('plasmid')">
+                            <i class="bi bi-record-circle me-1"></i>Plasmid
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="createBlock('slurm_job')">
+                            <i class="bi bi-cpu me-1"></i>Slurm job
+                        </button>
+                    </div>
+
+                    <div id="blocks-container">
+                        {% for block in blocks %}
+                            <div class="notebook-block" data-block-id="{{ block.id }}" data-block-type="{{ block.block_type }}">
+                                <div class="notebook-block-header">
+                                    <div>
+                                        <span class="badge bg-secondary me-2">{{ block.get_block_type_display }}</span>
+                                        <input type="text"
+                                               class="form-control form-control-sm d-inline-block block-title-input"
+                                               style="width: 260px;"
+                                               value="{{ block.title }}"
+                                               placeholder="Block title">
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-success" onclick="saveBlock({{ block.id }})">
+                                            Save
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBlock({{ block.id }})">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="notebook-block-body">
+                                    {% if block.block_type == "text" %}
+                                        <textarea class="form-control block-json-field" data-key="html" rows="5">{{ block.content_data.html }}</textarea>
+
+                                    {% elif block.block_type == "table" %}
+                                        <label class="form-label small text-muted">Paste CSV/TSV data. First row is treated as header.</label>
+                                        <textarea class="form-control table-raw-input block-json-field" data-key="raw">{{ block.content_data.raw }}</textarea>
+                                        <div class="form-text">This table will be available to code blocks as table_1, table_2, ...</div>
+
+                                    {% elif block.block_type == "code" %}
+                                        <label class="form-label small text-muted">Python code. Available objects: pd, np, px, table_1, table_2...</label>
+                                        <textarea class="form-control code-input block-json-field" data-key="code">{{ block.content_data.code }}</textarea>
+                                        <div class="mt-2 d-flex gap-2">
+                                            <button class="btn btn-sm btn-primary" onclick="runCodeBlock({{ block.id }})">
+                                                Run plot
+                                            </button>
+                                            <span class="small text-muted">Set <code>fig = px...</code> to render a Plotly chart.</span>
+                                        </div>
+                                        <div id="plot-output-{{ block.id }}" class="plot-output mt-3"></div>
+
+                                    {% elif block.block_type == "image" %}
+                                        {% if block.content_data.url %}
+                                            <img src="{{ block.content_data.url }}" class="image-preview mb-2">
+                                        {% endif %}
+                                        <input type="file" class="form-control form-control-sm" accept="image/*" onchange="uploadImageBlock({{ block.id }}, this)">
+                                        <input type="text" class="form-control form-control-sm mt-2 block-json-field" data-key="caption" value="{{ block.content_data.caption }}" placeholder="Image caption">
+
+                                    {% elif block.block_type == "sequence" %}
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-4">
+                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="name" value="{{ block.content_data.name }}" placeholder="Sequence name">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <select class="form-select form-select-sm block-json-field" data-key="sequence_type">
+                                                    <option value="dna">DNA</option>
+                                                    <option value="rna">RNA</option>
+                                                    <option value="protein">Protein</option>
+                                                    <option value="primer">Primer</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <select class="form-select form-select-sm block-json-field" data-key="topology">
+                                                    <option value="linear">Linear</option>
+                                                    <option value="circular">Circular</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <textarea class="form-control sequence-input block-json-field" data-key="sequence" placeholder="Paste FASTA or raw sequence">{{ block.content_data.sequence }}</textarea>
+
+                                    {% elif block.block_type == "plasmid" %}
+                                        <div class="alert alert-info small">
+                                            Plasmid map rendering will be added in the next phase. For now, store circular sequence and features here.
+                                        </div>
+                                        <input type="text" class="form-control form-control-sm mb-2 block-json-field" data-key="name" value="{{ block.content_data.name }}" placeholder="Plasmid name">
+                                        <textarea class="form-control sequence-input block-json-field" data-key="sequence" placeholder="Paste plasmid sequence">{{ block.content_data.sequence }}</textarea>
+
+                                    {% elif block.block_type == "slurm_job" %}
+                                        <div class="alert alert-warning small">
+                                            Slurm integration is staged here but submission is disabled until safe job templates and permissions are configured.
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-4">
+                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="job_name" value="{{ block.content_data.job_name }}" placeholder="Job name">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" class="form-control form-control-sm block-json-field" data-key="cpus" value="{{ block.content_data.cpus|default:'1' }}" placeholder="CPUs">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="memory" value="{{ block.content_data.memory }}" placeholder="Memory, e.g. 16G">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="partition" value="{{ block.content_data.partition }}" placeholder="Partition">
+                                            </div>
+                                        </div>
+                                        <textarea class="form-control code-input block-json-field" data-key="command" placeholder="Command/script to submit later through Slurm">{{ block.content_data.command }}</textarea>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted small border rounded p-3 bg-light">
+                                No structured blocks yet. Add a table, image, code block, sequence or Slurm job block.
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             {% else %}
                 <div class="d-flex h-100 align-items-center justify-content-center text-muted">
-                    Selecione uma entrada ao lado para editar.
+                    Select an entry or create a new one.
                 </div>
             {% endif %}
-        </div>
+        </main>
+
+        <aside class="notebook-panel">
+            <div class="notebook-panel-header">Linked samples</div>
+
+            {% if active_entry %}
+                <div class="notebook-panel-body">
+                    <label class="form-label small text-muted">Search sample</label>
+                    <input type="text" id="sample-search" class="form-control form-control-sm" placeholder="Sample ID, organism, type..." oninput="searchSamples(this.value)">
+                    <div id="sample-search-results" class="list-group list-group-flush mt-2"></div>
+
+                    <hr>
+
+                    <div id="linked-samples">
+                        {% for link in linked_sample_links %}
+                            <div class="linked-sample-card" data-link-id="{{ link.id }}">
+                                <div class="fw-bold">{{ link.snapshot_json.sample_id }}</div>
+                                <div class="small">{{ link.snapshot_json.organism_name }}</div>
+                                <div class="small text-muted">{{ link.snapshot_json.sample_type }}</div>
+
+                                <div class="d-flex gap-2 mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="insertSampleSnapshot({{ forloop.counter0 }})">
+                                        Insert snapshot
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="unlinkSample({{ link.id }})">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted small">No linked samples yet.</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr>
+
+                    <div class="small text-muted">
+                        Linked samples keep a live database reference and a frozen snapshot for the experiment record.
+                    </div>
+                </div>
+            {% endif %}
+        </aside>
     </div>
 </div>
+
+{% if active_entry %}
+<script id="linked-samples-json" type="application/json">{{ linked_samples_json|safe }}</script>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+{% if active_entry %}
 <script>
-    {% if active_entry %}
-    // 1. Inicializa o Editor
-    var quill = new Quill('#editor-container', {
-        theme: 'snow',
-        placeholder: 'Descreva os detalhes do experimento, reagentes e observações...',
+    const csrfToken = "{{ csrf_token }}";
+    const entryId = {{ active_entry.id }};
+    const linkedSamples = JSON.parse(document.getElementById("linked-samples-json").textContent || "[]");
+
+    const apiUrls = {
+        unlinkSampleTemplate: "{% url 'notebook_unlink_sample_api' active_entry.id 0 %}",
+        updateBlockTemplate: "{% url 'notebook_update_block_api' 0 %}",
+        deleteBlockTemplate: "{% url 'notebook_delete_block_api' 0 %}"
+    };
+
+    function urlWithId(template, id) {
+        return template.replace("/0/", "/" + id + "/");
+    }
+
+    const quill = new Quill("#editor-container", {
+        theme: "snow",
+        placeholder: "Describe experiment goals, protocol, reagents, observations and results...",
         modules: {
             toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['link', 'image', 'code-block'],
-                [{ 'color': [] }, { 'background': [] }],
-                ['clean']
+                [{ "header": [1, 2, 3, false] }],
+                ["bold", "italic", "underline", "strike"],
+                [{ "list": "ordered" }, { "list": "bullet" }],
+                ["link", "image", "code-block"],
+                [{ "color": [] }, { "background": [] }],
+                ["clean"]
             ]
         }
     });
 
-    // 2. Lógica de Salvamento Automático e Manual
-    const saveStatus = document.getElementById('save-status');
+    const saveStatus = document.getElementById("save-status");
     let timeoutId;
 
+    function postJson(url, payload) {
+        return fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify(payload)
+        }).then(response => response.json());
+    }
+
     function saveEntry() {
-        saveStatus.textContent = "Salvando...";
-        
+        saveStatus.textContent = "Saving...";
+
         const data = {
-            title: document.getElementById('entry-title').value,
-            content: quill.root.innerHTML // Pega o HTML gerado
+            title: document.getElementById("entry-title").value,
+            content: quill.root.innerHTML
         };
 
-        fetch("{% url 'notebook_save_api' active_entry.id %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === 'success') {
-                saveStatus.textContent = "Salvo às " + new Date().toLocaleTimeString();
-                saveStatus.classList.remove('text-danger');
+        postJson("{% url 'notebook_save_api' active_entry.id %}", data)
+            .then(data => {
+                if (data.status === "success") {
+                    saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString();
+                    saveStatus.classList.remove("text-danger");
+                } else {
+                    saveStatus.textContent = "Save error";
+                    saveStatus.classList.add("text-danger");
+                }
+            });
+    }
+
+    quill.on("text-change", function() {
+        saveStatus.textContent = "Unsaved...";
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 2000);
+    });
+
+    document.getElementById("entry-title").addEventListener("input", function() {
+        saveStatus.textContent = "Unsaved...";
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 2000);
+    });
+
+    function filterEntries(query) {
+        const q = query.toLowerCase();
+        document.querySelectorAll(".notebook-entry-link").forEach(link => {
+            link.style.display = link.innerText.toLowerCase().includes(q) ? "" : "none";
+        });
+    }
+
+    function searchSamples(query) {
+        const box = document.getElementById("sample-search-results");
+        box.innerHTML = "";
+
+        if (!query || query.length < 2) {
+            return;
+        }
+
+        fetch("{% url 'search_samples_api' %}?q=" + encodeURIComponent(query))
+            .then(response => response.json())
+            .then(results => {
+                box.innerHTML = "";
+
+                results.forEach(sample => {
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = "list-group-item list-group-item-action sample-result small";
+                    item.textContent = sample.value;
+                    item.onclick = function() {
+                        linkSample(sample.id);
+                    };
+                    box.appendChild(item);
+                });
+            });
+    }
+
+    function linkSample(sampleId) {
+        postJson("{% url 'notebook_link_sample_api' active_entry.id %}", { sample_id: sampleId })
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Could not link sample.");
+                }
+            });
+    }
+
+    function unlinkSample(linkId) {
+        postJson(urlWithId(apiUrls.unlinkSampleTemplate, linkId), {})
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Could not unlink sample.");
+                }
+            });
+    }
+
+    function insertSampleSnapshot(index) {
+        const sample = linkedSamples[index];
+        if (!sample) return;
+
+        const html = `
+            <h3>Linked sample snapshot</h3>
+            <ul>
+                <li><strong>Sample ID:</strong> ${sample.sample_id || ""}</li>
+                <li><strong>Type:</strong> ${sample.sample_type || ""}</li>
+                <li><strong>Organism:</strong> ${sample.organism_name || ""}</li>
+                <li><strong>Status:</strong> ${sample.status || ""}</li>
+                <li><strong>Biobank:</strong> ${sample.biobank || ""}</li>
+            </ul>
+        `;
+
+        quill.clipboard.dangerouslyPasteHTML(quill.getLength(), html);
+        saveEntry();
+    }
+
+    function createBlock(blockType) {
+        postJson("{% url 'notebook_create_block_api' active_entry.id %}", {
+            block_type: blockType
+        }).then(data => {
+            if (data.status === "success") {
+                window.location.reload();
             } else {
-                saveStatus.textContent = "Erro ao salvar!";
-                saveStatus.classList.add('text-danger');
+                alert(data.message || "Could not create block.");
             }
         });
     }
 
-    // Salvar automaticamente após parar de digitar por 2 segundos
-    quill.on('text-change', function() {
-        saveStatus.textContent = "Não salvo...";
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(saveEntry, 2000);
-    });
-    
-    document.getElementById('entry-title').addEventListener('input', function() {
-        saveStatus.textContent = "Não salvo...";
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(saveEntry, 2000);
-    });
+    function collectBlockData(blockId) {
+        const block = document.querySelector(`[data-block-id="${blockId}"]`);
+        const blockType = block.dataset.blockType;
+        const title = block.querySelector(".block-title-input")?.value || "";
+        const contentData = {};
 
-    {% endif %}
+        block.querySelectorAll(".block-json-field").forEach(field => {
+            const key = field.dataset.key;
+            let value = field.value;
+
+            if (field.type === "number") {
+                value = Number(value);
+            }
+
+            contentData[key] = value;
+        });
+
+        if (blockType === "table") {
+            const raw = contentData.raw || "";
+            const rows = raw
+                .split(/\r?\n/)
+                .map(row => row.trim())
+                .filter(Boolean)
+                .map(row => row.includes("\t") ? row.split("\t") : row.split(","))
+                .map(row => row.map(cell => cell.trim()));
+
+            contentData.content = rows;
+        }
+
+        return {
+            title: title,
+            content_data: contentData
+        };
+    }
+
+    function saveBlock(blockId) {
+        const payload = collectBlockData(blockId);
+
+        postJson(urlWithId(apiUrls.updateBlockTemplate, blockId), payload)
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Block saved.");
+                } else {
+                    alert(data.message || "Could not save block.");
+                }
+            });
+    }
+
+    function deleteBlock(blockId) {
+        if (!confirm("Delete this block?")) return;
+
+        postJson(urlWithId(apiUrls.deleteBlockTemplate, blockId), {})
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Could not delete block.");
+                }
+            });
+    }
+
+    function uploadImageBlock(blockId, input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("block_id", blockId);
+
+        fetch("{% url 'notebook_upload_attachment_api' active_entry.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== "success") {
+                alert(data.message || "Upload failed.");
+                return;
+            }
+
+            const block = document.querySelector(`[data-block-id="${blockId}"]`);
+            const title = block.querySelector(".block-title-input")?.value || "Image";
+            const caption = block.querySelector('[data-key="caption"]')?.value || "";
+
+            postJson(urlWithId(apiUrls.updateBlockTemplate, blockId), {
+                title: title,
+                content_data: {
+                    url: data.url,
+                    caption: caption,
+                    attachment_id: data.attachment_id
+                }
+            }).then(() => window.location.reload());
+        });
+    }
+
+    function runCodeBlock(blockId) {
+        saveBlock(blockId);
+
+        const block = document.querySelector(`[data-block-id="${blockId}"]`);
+        const code = block.querySelector('[data-key="code"]').value;
+        const output = document.getElementById(`plot-output-${blockId}`);
+
+        output.innerHTML = "<div class='text-muted small'>Running...</div>";
+
+        postJson("{% url 'run_notebook_analysis' active_entry.id %}", {
+            code: code
+        }).then(data => {
+            if (data.status !== "success") {
+                output.innerHTML = `<div class="alert alert-danger small">${data.message || "Analysis failed."}</div>`;
+                return;
+            }
+
+            Plotly.newPlot(output, data.graph_data.data, data.graph_data.layout, {responsive: true});
+        });
+    }
 </script>
+{% endif %}
 {% endblock %}
-

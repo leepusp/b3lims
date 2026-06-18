@@ -1,3 +1,14 @@
+from core.services.shipment_requirements_engine import evaluate_shipment_requirements
+from core.services.shipment_document_generator import get_initial_values_from_shipment, render_document_html
+from core.services.shipment_document_form_schemas import get_document_form_schema, extract_form_values
+from core.models import ShipmentDocument, ShipmentDocumentFormData
+from django.http import HttpResponse
+try:
+    from core.models import ShipmentDocument
+except ImportError:
+    from core.models.shipments.shipment import ShipmentDocument
+
+import hashlib
 from core.models import Shipment, TransportClassification, ShipmentEvent
 from core.shipment_forms import ShipmentSetupForm, ShipmentItemSetupForm, TransportClassificationSetupForm
 from django.utils import timezone
@@ -57,13 +68,63 @@ def shipments_list_view(request):
     return render(request, "internal/shipments/list.html", ctx)
 
 
-@login_required
-
-
 def _safe_label(value):
     if value is None:
         return ""
     return str(value).strip()
+
+
+
+
+SHIPMENT_DOCUMENT_LABELS = {
+    "content_declaration": "Content declaration",
+    "sender_declaration": "Sender declaration",
+    "external_package_identification": "External package identification",
+    "triple_packaging_checklist": "Triple packaging checklist",
+    "ogm_transport_notification": "OGM transport notification",
+    "mta_ttm": "MTA/TTM",
+    "shipment_invoice": "Shipment invoice",
+    "receipt_confirmation": "Receipt confirmation",
+}
+
+CHECKLIST_TYPE_LABELS = {
+    "data": "Required data",
+    "document": "Document",
+    "packaging": "Packaging",
+    "label": "Label",
+    "authorization": "Authorization",
+}
+
+
+def _choice_label(obj, field_name, fallback_map=None):
+    raw_value = getattr(obj, field_name, "")
+
+    if raw_value is None:
+        return ""
+
+    raw_text = str(raw_value).strip()
+
+    if fallback_map and raw_text in fallback_map:
+        return fallback_map[raw_text]
+
+    try:
+        field = obj._meta.get_field(field_name)
+        choices = dict(getattr(field, "flatchoices", None) or field.choices or [])
+        return str(choices.get(raw_value, choices.get(raw_text, raw_text)))
+    except Exception:
+        return raw_text
+
+
+def _shipment_document_label(document):
+    return _choice_label(
+        document,
+        "document_type",
+        fallback_map=SHIPMENT_DOCUMENT_LABELS,
+    )
+
+
+def _shipment_document_status_label(document):
+    return _choice_label(document, "status")
 
 
 def _build_shipment_review_actions(shipment, checklist_items, documents):
@@ -78,7 +139,7 @@ def _build_shipment_review_actions(shipment, checklist_items, documents):
     document_types = {}
 
     for document in documents:
-        label = _safe_label(document.get_document_type_display())
+        label = _shipment_document_label(document)
         document_labels[label.lower()] = document
         document_types[_safe_label(document.document_type).lower()] = document
 
@@ -113,15 +174,21 @@ def _build_shipment_review_actions(shipment, checklist_items, documents):
             document = document_labels.get(doc_label)
 
             if document is not None:
-                action_label = f"Open {document.get_document_type_display()}"
-                action_url = reverse("shipment_documents_review", kwargs={"shipment_id": shipment.id})
+                action_label = f"Open {_shipment_document_label(document)}"
+                action_url = reverse(
+                    "shipment_document_workspace",
+                    kwargs={
+                        "shipment_id": shipment.id,
+                        "document_id": document.id,
+                    },
+                )
                 action_kind = "warning"
 
         actions.append({
             "id": item.id,
             "label": label,
             "type": checklist_type,
-            "type_label": item.get_checklist_type_display(),
+            "type_label": _choice_label(item, "checklist_type", CHECKLIST_TYPE_LABELS),
             "is_completed": item.is_completed,
             "is_required": item.is_required,
             "action_label": action_label,
@@ -132,6 +199,7 @@ def _build_shipment_review_actions(shipment, checklist_items, documents):
     return actions
 
 
+@login_required
 def shipment_detail_view(request, shipment_id):
     shipment = get_object_or_404(
         Shipment.objects
@@ -186,6 +254,14 @@ def shipment_detail_view(request, shipment_id):
 
     items = list(shipment.items.all())
     documents = list(shipment.documents.all().order_by("document_type", "id"))
+    document_rows = [
+        {
+            "document": document,
+            "label": _shipment_document_label(document),
+            "status_label": _shipment_document_status_label(document),
+        }
+        for document in documents
+    ]
     checklist_items = list(shipment.checklist_items.all().order_by("is_completed", "checklist_type", "id"))
     events = list(shipment.events.all().order_by("-created_at", "-id"))
 
@@ -203,6 +279,7 @@ def shipment_detail_view(request, shipment_id):
         "shipment": shipment,
         "items": items,
         "documents": documents,
+        "document_rows": document_rows,
         "checklist_items": checklist_items,
         "review_actions": review_actions,
         "pending_actions": pending_actions,
@@ -213,6 +290,98 @@ def shipment_detail_view(request, shipment_id):
         "shipment_scan_url": build_internal_shipment_scan_url(request, shipment),
         "shipment_qr_data_uri": build_qr_data_uri(build_internal_shipment_scan_url(request, shipment)),
     })
+
+
+
+    # Rebuild document rows from the active requirements engine.
+    # This ensures the detail UI only shows documents required for the current
+    # shipment classification: Risk Class, NB level and OGM status.
+    requirement_snapshot = evaluate_shipment_requirements(shipment)
+    required_documents = list(requirement_snapshot.get("documents", []))
+
+    existing_documents = {
+        document.document_type: document
+        for document in shipment.documents.order_by("document_type", "id")
+    }
+
+    status_labels = {
+        "required": "Required",
+        "draft": "Required",
+        "form_saved": "Form saved",
+        "generated": "Generated",
+        "signed_uploaded": "Signed uploaded",
+        "uploaded": "Signed uploaded",
+        "under_review": "Under review",
+        "submitted": "Under review",
+        "approved": "Approved",
+        "correction_requested": "Correction requested",
+        "rejected": "Correction requested",
+    }
+
+    status_badges = {
+        "required": "bg-secondary",
+        "draft": "bg-secondary",
+        "form_saved": "bg-info text-dark",
+        "generated": "bg-primary",
+        "signed_uploaded": "bg-warning text-dark",
+        "uploaded": "bg-warning text-dark",
+        "under_review": "bg-info text-dark",
+        "submitted": "bg-info text-dark",
+        "approved": "bg-success",
+        "correction_requested": "bg-danger",
+        "rejected": "bg-danger",
+    }
+
+    rebuilt_document_rows = []
+
+    for requirement in required_documents:
+        document_type = getattr(requirement, "code", "")
+        document = existing_documents.get(document_type)
+
+        if document is None:
+            continue
+
+        label = (
+            getattr(requirement, "label", "")
+            or getattr(document, "title", "")
+            or getattr(document, "label", "")
+            or document.document_type.replace("_", " ").title()
+        )
+
+        requires_signature = bool(
+            getattr(requirement, "requires_signature", getattr(document, "requires_signature", False))
+        )
+
+        raw_status = "required"
+        form_status = ""
+        form_data = None
+
+        try:
+            form_data = document.form_data
+            form_status = getattr(form_data, "form_status", "") or ""
+        except Exception:
+            form_data = None
+
+        if form_status:
+            raw_status = form_status
+        else:
+            raw_status = getattr(document, "status", "") or "required"
+
+        if raw_status == "draft":
+            raw_status = "required"
+
+        rebuilt_document_rows.append({
+            "document": document,
+            "label": label,
+            "requires_signature": requires_signature,
+            "status": raw_status,
+            "status_label": status_labels.get(raw_status, raw_status.replace("_", " ").title()),
+            "status_badge_class": status_badges.get(raw_status, "bg-secondary"),
+            "form_status": form_status,
+            "form_data": form_data,
+        })
+
+    ctx["document_rows"] = rebuilt_document_rows
 
     return render(request, "internal/shipments/detail.html", ctx)
 
@@ -429,6 +598,31 @@ def _shipment_package_label_flags(classification):
 
 
 
+
+def _normalize_boolean_post_data_for_model(post_data, model, prefix=None):
+    """
+    Convert empty BooleanField POST values into False.
+
+    Supports both unprefixed names and prefixed ModelForm names:
+    is_ogm and classification-is_ogm.
+    """
+    data = post_data.copy()
+
+    for field in model._meta.fields:
+        if field.get_internal_type() != "BooleanField":
+            continue
+
+        names = [field.name]
+
+        if prefix:
+            names.insert(0, f"{prefix}-{field.name}")
+
+        for name in names:
+            if name not in data or data.get(name) in ["", None]:
+                data[name] = "false"
+
+    return data
+
 @login_required
 def shipment_edit_view(request, shipment_id):
     shipment = get_object_or_404(Shipment, id=shipment_id)
@@ -458,7 +652,11 @@ def shipment_edit_view(request, shipment_id):
             prefix="item",
         ) if item else None
         classification_form = TransportClassificationSetupForm(
-            request.POST,
+            _normalize_boolean_post_data_for_model(
+                request.POST,
+                classification.__class__,
+                prefix="classification",
+            ),
             instance=classification,
             prefix="classification",
         )
@@ -484,14 +682,23 @@ def shipment_edit_view(request, shipment_id):
                 notes="Shipment setup updated by internal user.",
             )
 
-            if "sync_requirements" in request.POST or "continue_review" in request.POST:
-                result = sync_shipment_requirements(shipment, actor=request.user)
+            result = sync_shipment_requirements(shipment, actor=request.user)
+
+            if "sync_requirements" in request.POST:
                 messages.success(
                     request,
                     result.get("message", "Shipment requirements synchronized."),
                 )
+            elif "continue_review" in request.POST:
+                messages.success(
+                    request,
+                    "Shipment saved and requirements synchronized.",
+                )
             else:
-                messages.success(request, "Shipment draft saved.")
+                messages.success(
+                    request,
+                    "Shipment draft saved and requirements synchronized.",
+                )
 
             if "continue_review" in request.POST:
                 return redirect("shipment_detail", shipment_id=shipment.id)
@@ -520,3 +727,274 @@ def shipment_edit_view(request, shipment_id):
             "classification_form": classification_form,
         },
     )
+
+
+@login_required
+
+
+def _complete_document_checklist_items(shipment, document):
+    """
+    Mark checklist items related to this document as completed after upload.
+
+    This does not mean final approval; it means the required document file
+    is now available for internal review.
+    """
+    document_label = _shipment_document_label(document).lower()
+    document_type = str(getattr(document, "document_type", "") or "").lower()
+    document_type_text = document_type.replace("_", " ")
+
+    updated = 0
+
+    for item in shipment.checklist_items.all():
+        label = str(getattr(item, "label", "") or "").lower()
+        checklist_type = str(getattr(item, "checklist_type", "") or "").lower()
+
+        if checklist_type not in ["document", "authorization"]:
+            continue
+
+        matches_label = document_label and document_label in label
+        matches_type = document_type and document_type in label
+        matches_type_text = document_type_text and document_type_text in label
+
+        if matches_label or matches_type or matches_type_text:
+            if hasattr(item, "is_completed"):
+                item.is_completed = True
+                update_fields = ["is_completed"]
+
+                if hasattr(item, "completed_at"):
+                    from django.utils import timezone
+                    item.completed_at = timezone.now()
+                    update_fields.append("completed_at")
+
+                item.save(update_fields=update_fields)
+                updated += 1
+
+    return updated
+
+
+def shipment_document_workspace_view(request, shipment_id, document_id):
+    shipment = get_object_or_404(Shipment, id=shipment_id)
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+
+    if request.method == "POST":
+        action = request.POST.get("action", "").strip()
+
+        if action == "upload_signed_file":
+            uploaded_file = request.FILES.get("signed_file")
+
+            if not uploaded_file:
+                messages.error(request, "Selecione um arquivo preenchido/assinado para envio.")
+                return redirect(
+                    "shipment_document_workspace",
+                    shipment_id=shipment.id,
+                    document_id=document.id,
+                )
+
+            try:
+                _save_document_upload(document, uploaded_file, actor=request.user)
+                completed_items = _complete_document_checklist_items(shipment, document)
+
+                ShipmentEvent.objects.create(
+                    shipment=shipment,
+                    event_type="updated",
+                    actor=request.user,
+                    notes=(
+                        f"Document uploaded internally: {_shipment_document_label(document)}. "
+                        f"Related checklist items completed: {completed_items}."
+                    ),
+                )
+
+                messages.success(request, "Documento enviado para revisão interna.")
+            except Exception as exc:
+                messages.error(request, f"Não foi possível salvar o documento: {exc}")
+
+            return redirect(
+                "shipment_document_workspace",
+                shipment_id=shipment.id,
+                document_id=document.id,
+            )
+
+        if action == "request_correction":
+            return redirect(
+                "shipment_request_document_correction",
+                shipment_id=shipment.id,
+                document_id=document.id,
+            )
+
+    generated_file = _document_file_info(
+        document,
+        ["generated_file", "template_file", "file"],
+    )
+    signed_file = _document_file_info(
+        document,
+        ["signed_file", "uploaded_file"],
+    )
+
+    related_checklist_items = shipment.checklist_items.filter(
+        label__icontains=_shipment_document_label(document).split(" ")[0]
+    ).order_by("id")
+
+    return render(
+        request,
+        "internal/shipments/document_workspace.html",
+        {
+            "shipment": shipment,
+            "document": document,
+            "document_label": _shipment_document_label(document),
+            "document_status_label": _shipment_document_status_label(document),
+            "generated_file": generated_file,
+            "signed_file": signed_file,
+            "related_checklist_items": related_checklist_items,
+            "classification": getattr(shipment, "classification", None),
+            "items": shipment.items.all(),
+        },
+    )
+
+
+
+@login_required
+def shipment_document_workspace_view(request, shipment_id, document_id):
+    shipment = get_object_or_404(Shipment, id=shipment_id)
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+
+    schema = get_document_form_schema(document.document_type)
+
+    form_data, _created = ShipmentDocumentFormData.objects.get_or_create(
+        shipment=shipment,
+        document=document,
+        defaults={
+            "document_type": document.document_type,
+            "form_status": "required",
+        },
+    )
+
+    initial_values = get_initial_values_from_shipment(shipment, document.document_type)
+    form_values = dict(initial_values)
+    form_values.update(form_data.data_json or {})
+
+    if request.method == "POST":
+        action = request.POST.get("action", "").strip()
+
+        if action in ["save_form", "generate_document"]:
+            submitted_values = extract_form_values(schema, request.POST)
+
+            form_data.data_json = submitted_values
+            form_data.updated_by = request.user
+            form_data.form_status = "form_saved"
+
+            if action == "generate_document":
+                generated_html = render_document_html(
+                    document=document,
+                    shipment=shipment,
+                    schema=schema,
+                    values=submitted_values,
+                )
+                form_data.generated_html = generated_html
+                form_data.form_status = "generated"
+                form_data.generated_at = timezone.now()
+
+            form_data.save()
+
+            if action == "generate_document":
+                messages.success(request, "Generated document. Abra a prévia para imprimir/salvar como PDF.")
+            else:
+                messages.success(request, "Form saved.")
+
+            return redirect(
+                "shipment_document_workspace",
+                shipment_id=shipment.id,
+                document_id=document.id,
+            )
+
+        if action == "upload_signed_file":
+            uploaded_file = request.FILES.get("signed_file")
+
+            if not uploaded_file:
+                messages.error(request, "Selecione um arquivo preenchido/assinado para envio.")
+                return redirect(
+                    "shipment_document_workspace",
+                    shipment_id=shipment.id,
+                    document_id=document.id,
+                )
+
+            form_data.signed_file.save(uploaded_file.name, uploaded_file, save=False)
+            form_data.form_status = "signed_uploaded"
+            form_data.uploaded_at = timezone.now()
+            form_data.updated_by = request.user
+            form_data.save()
+
+            if hasattr(document, "status"):
+                available_statuses = [
+                    value for value, _label in document._meta.get_field("status").choices
+                ]
+
+                for candidate in ["uploaded", "under_review", "submitted", "draft"]:
+                    if candidate in available_statuses:
+                        document.status = candidate
+                        document.save(update_fields=["status"])
+                        break
+
+            ShipmentEvent.objects.create(
+                shipment=shipment,
+                event_type="updated",
+                actor=request.user,
+                notes=f"Signed/completed document uploaded: {document.document_type}.",
+            )
+
+            messages.success(request, "Documento assinado/enviado para revisão interna.")
+
+            return redirect(
+                "shipment_document_workspace",
+                shipment_id=shipment.id,
+                document_id=document.id,
+            )
+
+    return render(
+        request,
+        "internal/shipments/document_workspace.html",
+        {
+            "shipment": shipment,
+            "document": document,
+            "form_data": form_data,
+            "schema": schema,
+            "form_values": form_values,
+            "items": shipment.items.all(),
+            "classification": getattr(shipment, "classification", None),
+            "has_generated_document": bool(form_data.generated_html),
+            "has_signed_file": bool(form_data.signed_file),
+        },
+    )
+
+
+@login_required
+def shipment_generated_document_view(request, shipment_id, document_id):
+    shipment = get_object_or_404(Shipment, id=shipment_id)
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+    form_data = get_object_or_404(
+        ShipmentDocumentFormData,
+        shipment=shipment,
+        document=document,
+    )
+
+    if not form_data.generated_html:
+        messages.error(request, "This document has not been generated yet.")
+        return redirect(
+            "shipment_document_workspace",
+            shipment_id=shipment.id,
+            document_id=document.id,
+        )
+
+    return HttpResponse(form_data.generated_html)
+

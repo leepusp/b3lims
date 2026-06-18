@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
-    <title>Etiquetas da Remessa {{ shipment.shipment_code }}</title>
+    <title>Shipment labels {{ shipment.shipment_code }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
@@ -219,17 +219,17 @@
 <body>
 
 <div class="print-actions">
-    <button onclick="window.print()">Imprimir etiquetas</button>
-    <a href="{% url 'shipment_detail' shipment.id %}">Voltar à remessa</a>
+    <button onclick="window.print()">Print labels</button>
+    <a href="{% url 'shipment_detail' shipment.id %}">Back to shipment</a>
 </div>
 
 <div class="page-header">
     <div>
-        <h1>Etiquetas e QR Final da Remessa</h1>
+        <h1>Final shipment labels and QR</h1>
         <p>{{ shipment.shipment_code }}</p>
     </div>
     <div class="small">
-        Gerado pelo Biobank CEPID B3<br>
+        Generated pelo Biobank CEPID B3<br>
         Status: {{ shipment.get_status_display }}
     </div>
 </div>
@@ -237,9 +237,9 @@
 <div class="label-grid">
 
     <div class="label-card">
-        <div class="label-title">Identificação Externa</div>
+        <div class="label-title">External identification</div>
 
-        <div class="field"><strong>Remessa:</strong> {{ shipment.shipment_code }}</div>
+        <div class="field"><strong>Shipment:</strong> {{ shipment.shipment_code }}</div>
         <div class="field"><strong>Origem:</strong> {{ shipment.sender_institution|default:"Não informado" }}</div>
         <div class="field"><strong>Destino:</strong> {{ shipment.recipient_institution|default:"BBAMS / Biobank" }}</div>
         <div class="field"><strong>Responsável:</strong> {{ shipment.sender_responsible_name|default:"Não informado" }}</div>
@@ -253,12 +253,12 @@
     </div>
 
     <div class="label-card qr">
-        <div class="label-title">QR Final da Embalagem</div>
+        <div class="label-title">QR Final da Package</div>
 
-        <img src="{{ package_qr_data_uri }}" alt="QR final da remessa">
+        <img src="{{ package_qr_data_uri }}" alt="Final shipment QR">
 
         <p class="small">
-            Escaneie para rastrear a remessa.
+            Scan to track the shipment.
         </p>
 
         {% if public_tracking_url %}
@@ -269,7 +269,7 @@
     </div>
 
     <div class="label-card">
-        <div class="label-title">Conteúdo Declarado</div>
+        <div class="label-title">Declared content</div>
 
         {% for item in items %}
             <div class="field"><strong>ID externo:</strong> {{ item.imported_sample_id }}</div>
@@ -285,23 +285,23 @@
     <div class="label-card">
         <div class="label-title">Condições de Manuseio</div>
 
-        <div class="field"><strong>Frágil:</strong> Sim</div>
+        <div class="field"><strong>Fragile:</strong> Sim</div>
 
         {% if label_flags.show_biohazard %}
-            <div class="field"><strong>Risco biológico:</strong> Sim</div>
+            <div class="field"><strong>Biohazard:</strong> Sim</div>
         {% else %}
-            <div class="field"><strong>Risco biológico:</strong> Não obrigatório pela classificação atual</div>
+            <div class="field"><strong>Biohazard:</strong> Not required by the current classification</div>
         {% endif %}
 
         {% if label_flags.show_un3373 %}
             <div class="field"><strong>UN 3373:</strong> Sim</div>
         {% else %}
-            <div class="field"><strong>UN 3373:</strong> Não obrigatório pela classificação atual</div>
+            <div class="field"><strong>UN 3373:</strong> Not required by the current classification</div>
         {% endif %}
 
         {% if label_flags.show_triple_packaging_notice %}
             <div class="notice-box">
-                Utilizar embalagem tripla e documentação de acompanhamento conforme a classificação da remessa.
+                Use triple packaging and accompanying documentation according to the shipment classification.
             </div>
         {% endif %}
     </div>
@@ -309,16 +309,16 @@
 </div>
 
 <div class="cut-section">
-    <div class="cut-title">Etiquetas para Embalagem Externa</div>
+    <div class="cut-title">Labels para Package Externa</div>
     <div class="cut-note">
-        Recortar pela linha pontilhada e fixar na embalagem externa do material transportado.
+        Recortar pela linha pontilhada e fixar na package externa do material transportado.
     </div>
 
     <div class="external-label-grid">
 
         {% if label_flags.show_fragile %}
             <div class="cut-label fragile-label">
-                <div>Cuidado<br>Frágil</div>
+                <div>Cuidado<br>Fragile</div>
                 <div class="fragile-icons">☂ ↑ ⚠</div>
             </div>
         {% endif %}
@@ -344,7 +344,7 @@
                 <div class="warning-title">CUIDADO:</div>
                 <div class="warning-text">
                     Abertura autorizada apenas no interior do laboratório por técnico especializado.<br>
-                    O acesso a este conteúdo é restrito à equipe técnica devidamente capacitada.
+                    Access to this content is restricted to duly trained technical staff.
                 </div>
             </div>
         {% endif %}

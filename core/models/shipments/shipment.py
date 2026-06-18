@@ -676,3 +676,65 @@ class ShipmentEvent(models.Model):
 
     def __str__(self):
         return f"{self.get_event_type_display()} - {self.shipment}"
+
+
+class ShipmentDocumentFormData(models.Model):
+    FORM_STATUS_CHOICES = [
+        ("required", "Required"),
+        ("form_saved", "Form saved"),
+        ("generated", "Generated"),
+        ("signed_uploaded", "Signed uploaded"),
+        ("under_review", "Under review"),
+        ("approved", "Approved"),
+        ("correction_requested", "Correction requested"),
+    ]
+
+    document = models.OneToOneField(
+        "ShipmentDocument",
+        on_delete=models.CASCADE,
+        related_name="form_data",
+    )
+    shipment = models.ForeignKey(
+        "Shipment",
+        on_delete=models.CASCADE,
+        related_name="document_form_data",
+    )
+    document_type = models.CharField(max_length=100)
+    data_json = models.JSONField(default=dict, blank=True)
+    form_status = models.CharField(
+        max_length=40,
+        choices=FORM_STATUS_CHOICES,
+        default="required",
+    )
+    generated_html = models.TextField(blank=True)
+    signed_file = models.FileField(
+        upload_to="shipments/documents/signed/",
+        blank=True,
+        null=True,
+    )
+    correction_note = models.TextField(blank=True)
+    updated_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_shipment_document_forms",
+    )
+    reviewed_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_shipment_document_forms",
+    )
+    generated_at = models.DateTimeField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["shipment_id", "document_type", "id"]
+
+    def __str__(self):
+        return f"{self.shipment} - {self.document_type} - {self.form_status}"
