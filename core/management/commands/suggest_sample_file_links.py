@@ -40,6 +40,18 @@ STOPWORDS = {
     "sender",
     "mta",
     "ttm",
+    "2024",
+    "2025",
+    "2026",
+    "2027",
+    "bac",
+    "pla",
+    "pha",
+    "virus",
+    "host",
+    "bacterium",
+    "plasmid",
+    "phage",
 }
 
 
@@ -55,6 +67,8 @@ def tokens(value):
         if len(token) < 3:
             continue
         if token in STOPWORDS:
+            continue
+        if token.isdigit() and 1900 <= int(token) <= 2100:
             continue
         result.add(token)
     return result
