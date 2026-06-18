@@ -178,9 +178,22 @@
 
                         <span id="save-status" class="save-status">Saved</span>
 
-                        <button class="btn btn-success btn-sm" onclick="saveEntry()">
+                        <button class="btn btn-success btn-sm" onclick="saveEntry()" title="Save entry">
                             <i class="bi bi-save"></i>
                         </button>
+
+                        <div class="btn-group">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                More
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" onclick="deleteEntry()">
+                                        <i class="bi bi-trash me-2"></i>Delete entry
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="row g-2">
@@ -477,7 +490,8 @@
     const apiUrls = {
         unlinkSampleTemplate: "{% url 'notebook_unlink_sample_api' active_entry.id 0 %}",
         updateBlockTemplate: "{% url 'notebook_update_block_api' 0 %}",
-        deleteBlockTemplate: "{% url 'notebook_delete_block_api' 0 %}"
+        deleteBlockTemplate: "{% url 'notebook_delete_block_api' 0 %}",
+        deleteEntry: "{% url 'notebook_delete_entry_api' active_entry.id %}"
     };
 
     function urlWithId(template, id) {
@@ -511,6 +525,37 @@
             },
             body: JSON.stringify(payload)
         }).then(response => response.json());
+    }
+
+    function deleteEntry() {
+        const titleInput = document.getElementById("entry-title");
+        const entryTitle = titleInput ? titleInput.value : "this entry";
+
+        const confirmed = window.confirm(
+            `Delete notebook entry "${entryTitle}"?\n\nThis will remove the entry, linked sample records and structured blocks from the database. Uploaded physical files are kept in storage.`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        saveStatus.textContent = "Deleting...";
+
+        postJson(apiUrls.deleteEntry, {})
+            .then(data => {
+                if (data.status === "success") {
+                    window.location.href = data.redirect_url || "{% url 'notebook_index' %}";
+                } else {
+                    saveStatus.textContent = "Delete error";
+                    saveStatus.classList.add("text-danger");
+                    alert(data.message || "Could not delete notebook entry.");
+                }
+            })
+            .catch(error => {
+                saveStatus.textContent = "Delete error";
+                saveStatus.classList.add("text-danger");
+                alert(error);
+            });
     }
 
     function saveEntry() {

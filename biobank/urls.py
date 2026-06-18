@@ -136,6 +136,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),
     path('internal/lab-tools/notebook/api/save/<int:entry_id>/', notebook_views.notebook_save_api, name='notebook_save_api'),
+    path('internal/lab-tools/notebook/api/delete/<int:entry_id>/', notebook_views.notebook_delete_entry_api, name='notebook_delete_entry_api'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/lab-tools/notebook/api/link-sample/<int:entry_id>/', notebook_views.notebook_link_sample_api, name='notebook_link_sample_api'),
     path('internal/lab-tools/notebook/api/unlink-sample/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_sample_api, name='notebook_unlink_sample_api'),

@@ -337,6 +337,27 @@ def notebook_unlink_sample_api(request, entry_id, link_id):
 
 
 @login_required
+def notebook_delete_entry_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+    deleted_title = entry.title
+
+    # Deleting the entry removes database links, blocks and attachment records by cascade.
+    # Physical uploaded files are not deleted automatically from storage by Django FileField.
+    entry.delete()
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "deleted_title": deleted_title,
+            "redirect_url": reverse("notebook_index"),
+        }
+    )
+
+
+@login_required
 def notebook_create_block_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
