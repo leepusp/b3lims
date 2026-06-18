@@ -204,6 +204,177 @@
         }).then(response => response.json());
     }
 
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function parseInitialFeatures() {
+        const dataElement = document.getElementById("features-json-data");
+        if (!dataElement) return [];
+
+        try {
+            const parsed = JSON.parse(dataElement.textContent || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (_error) {
+            return [];
+        }
+    }
+
+    let moleculeFeatures = parseInitialFeatures();
+
+    function normalizeFeature(feature) {
+        return {
+            name: feature.name || "",
+            type: feature.type || "",
+            start: feature.start || "",
+            end: feature.end || "",
+            strand: feature.strand || "+",
+            notes: feature.notes || feature.description || "",
+        };
+    }
+
+    function renderFeatureEditor() {
+        const tableBody = document.getElementById("feature-table-body");
+        if (!tableBody) return;
+
+        moleculeFeatures = moleculeFeatures.map(normalizeFeature);
+
+        if (!moleculeFeatures.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-muted small p-3">
+                        No features yet. Click <strong>Add feature</strong> to annotate this sequence.
+                    </td>
+                </tr>
+            `;
+            syncFeaturesRawJson();
+            return;
+        }
+
+        tableBody.innerHTML = moleculeFeatures.map((feature, index) => `
+            <tr>
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           value="${escapeHtml(feature.name)}"
+                           placeholder="AmpR, ori, CDS..."
+                           oninput="updateFeatureField(${index}, 'name', this.value)">
+                </td>
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           value="${escapeHtml(feature.type)}"
+                           placeholder="CDS, promoter..."
+                           oninput="updateFeatureField(${index}, 'type', this.value)">
+                </td>
+                <td>
+                    <input type="number"
+                           min="1"
+                           class="form-control form-control-sm"
+                           value="${escapeHtml(feature.start)}"
+                           oninput="updateFeatureField(${index}, 'start', this.value)">
+                </td>
+                <td>
+                    <input type="number"
+                           min="1"
+                           class="form-control form-control-sm"
+                           value="${escapeHtml(feature.end)}"
+                           oninput="updateFeatureField(${index}, 'end', this.value)">
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="updateFeatureField(${index}, 'strand', this.value)">
+                        <option value="+" ${feature.strand === "+" ? "selected" : ""}>+</option>
+                        <option value="-" ${feature.strand === "-" ? "selected" : ""}>-</option>
+                        <option value="." ${feature.strand === "." ? "selected" : ""}>.</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           value="${escapeHtml(feature.notes)}"
+                           placeholder="Optional notes"
+                           oninput="updateFeatureField(${index}, 'notes', this.value)">
+                </td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFeatureRow(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join("");
+
+        syncFeaturesRawJson();
+    }
+
+    function updateFeatureField(index, field, value) {
+        if (!moleculeFeatures[index]) return;
+
+        if (field === "start" || field === "end") {
+            const parsed = parseInt(value, 10);
+            moleculeFeatures[index][field] = Number.isFinite(parsed) ? parsed : "";
+        } else {
+            moleculeFeatures[index][field] = value;
+        }
+
+        syncFeaturesRawJson();
+        saveStatus.textContent = "Unsaved...";
+    }
+
+    function addFeatureRow() {
+        moleculeFeatures.push({
+            name: "",
+            type: "",
+            start: "",
+            end: "",
+            strand: "+",
+            notes: "",
+        });
+
+        renderFeatureEditor();
+        saveStatus.textContent = "Unsaved...";
+    }
+
+    function removeFeatureRow(index) {
+        moleculeFeatures.splice(index, 1);
+        renderFeatureEditor();
+        saveStatus.textContent = "Unsaved...";
+    }
+
+    function syncFeaturesRawJson() {
+        const rawInput = document.getElementById("molecule-features-json");
+        if (!rawInput) return;
+
+        rawInput.value = JSON.stringify(moleculeFeatures, null, 2);
+    }
+
+    function loadFeaturesFromRawJson() {
+        const rawInput = document.getElementById("molecule-features-json");
+        if (!rawInput) return;
+
+        try {
+            const parsed = JSON.parse(rawInput.value || "[]");
+            if (!Array.isArray(parsed)) {
+                alert("Features JSON must be a list.");
+                return;
+            }
+
+            moleculeFeatures = parsed.map(normalizeFeature);
+            renderFeatureEditor();
+            saveStatus.textContent = "Unsaved...";
+        } catch (error) {
+            alert("Invalid JSON: " + error);
+        }
+    }
+
+    function getMoleculeFeaturesPayload() {
+        return moleculeFeatures.map(normalizeFeature);
+    }
+
     function saveMolecule() {
         const payload = {
             name: document.getElementById("molecule-name").value,
@@ -211,7 +382,7 @@
             topology: document.getElementById("molecule-topology").value,
             description: document.getElementById("molecule-description").value,
             sequence: document.getElementById("molecule-sequence").value,
-            features_json: document.getElementById("molecule-features-json").value || "[]"
+            features_json: getMoleculeFeaturesPayload()
         };
 
         saveStatus.textContent = "Saving...";
@@ -261,6 +432,8 @@
                 alert(error);
             });
     }
+
+    renderFeatureEditor();
 
     ["molecule-name", "molecule-sequence-type", "molecule-topology", "molecule-description", "molecule-sequence", "molecule-features-json"].forEach(function(elementId) {
         const element = document.getElementById(elementId);

@@ -433,6 +433,7 @@ def molecular_sequence_detail(request, sequence_id):
             "molecule": molecule,
             "sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "topologies": MolecularSequence.TOPOLOGY_CHOICES,
+            "features_json": json.dumps(molecule.features_json or [], ensure_ascii=False),
         },
     )
 
