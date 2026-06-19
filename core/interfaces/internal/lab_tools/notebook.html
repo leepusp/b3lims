@@ -178,17 +178,17 @@
                                placeholder="Experiment title">
 
                         <span id="save-status" class="save-status">Saved</span>
-            <a href="{% url 'notebook_create' %}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>New notebook
-            </a>
-
-
-                        <button class="btn btn-success btn-sm" onclick="saveEntry()" title="Save entry">
+<button class="btn btn-success btn-sm" onclick="saveEntry()" title="Save entry">
                             <i class="bi bi-save"></i>
                         </button>
 
                         <div class="btn-group">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            
+<a href="{% url 'notebook_create' %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+    <i class="bi bi-plus-lg me-1"></i>New notebook
+</a>
+
+<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 More
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -764,7 +764,7 @@
                 </div>
             {% else %}
                 <div class="d-flex h-100 align-items-center justify-content-center text-muted">
-                    Select an entry or create a new one.
+                    Your notebook is ready. Use New notebook to start a first record.
                 </div>
             {% endif %}
         </main>
