@@ -216,9 +216,6 @@
                                placeholder="Experiment title">
 
                         <span id="save-status" class="save-status">Saved</span>
-<button class="btn btn-success btn-sm" onclick="saveEntry()" title="Save entry">
-                            <i class="bi bi-save"></i>
-                        </button>
 
                         <div class="btn-group">
                             
@@ -378,60 +375,7 @@
 
 
                             <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="()">
-                                            <i class="bi bi-text-left me-2"></i>
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertRichTable()">
-                                            <i class="bi bi-table me-2"></i>Table
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertBlock()">
-                                            <i class="bi bi-eye me-2"></i>
-                                        </button>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-primary w-100 text-start" onclick="insertProtocolStep()">
-                                            <i class="bi bi-list-check me-2"></i>Protocol step
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-primary w-100 text-start" onclick="focusSampleSearch()">
-                                            <i class="bi bi-box-seam me-2"></i>Sample reference
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-primary w-100 text-start" onclick="focusEntryAttachment()">
-                                            <i class="bi bi-paperclip me-2"></i>File attachment
-                                        </button>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-success w-100 text-start" onclick="prepareMolecularItem('dna', 'linear')">
-                                            <i class="bi bi-dna me-2"></i>DNA sequence
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-success w-100 text-start" onclick="prepareMolecularItem('plasmid', 'circular')">
-                                            <i class="bi bi-record-circle me-2"></i>Plasmid
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-success w-100 text-start" onclick="prepareMolecularItem('primer', 'linear')">
-                                            <i class="bi bi-arrow-right-short me-2"></i>Primer
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-success w-100 text-start" onclick="prepareMolecularItem('protein', 'linear')">
-                                            <i class="bi bi-diagram-3 me-2"></i>Protein
-                                        </button>
-                                    </div>
-                                </div>
+                                
                             </div>
                         </div>
 
@@ -1130,7 +1074,7 @@ function insertBlock() {
                 name: "New_DNA_sequence",
                 sequence_type: "dna",
                 topology: topology || "linear",
-                description: "Default linear DNA sequence with example promoter and CDS features.",
+                description: "Default linear molecular record with example promoter and CDS features.",
                 sequence: sequence,
                 features_json: [
                     {name: "promoter", type: "promoter", start: 80, end: 220, strand: "+", notes: ""},
