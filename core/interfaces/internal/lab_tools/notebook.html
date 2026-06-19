@@ -1522,6 +1522,135 @@ function insertBlock() {
         }
     });
 
+
+/* NOTEBOOK_RICH_TABLE_PATCH_START */
+(function ensureNotebookRichTableStyles() {
+    if (document.getElementById("notebook-rich-table-styles")) return;
+    const style = document.createElement("style");
+    style.id = "notebook-rich-table-styles";
+    style.textContent = `
+        .notebook-rich-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+        .notebook-rich-table th,
+        .notebook-rich-table td {
+            border: 1px solid #ced4da;
+            padding: 8px 10px;
+            min-width: 120px;
+            vertical-align: top;
+        }
+        .notebook-rich-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+function getMainNoteEditorElements() {
+    const editable = document.querySelector(".note-editor .note-editable");
+    const source =
+        document.querySelector("textarea[name='content']") ||
+        document.getElementById("id_content") ||
+        document.querySelector("textarea[data-notebook-main-note]");
+    return { editable, source };
+}
+
+function syncMainNoteFromEditor() {
+    const { editable, source } = getMainNoteEditorElements();
+    if (editable && source) {
+        source.value = editable.innerHTML;
+    }
+}
+
+function markNotebookUnsaved() {
+    const saveStatus =
+        document.getElementById("save-status") ||
+        document.querySelector("[data-save-status]");
+    if (saveStatus) {
+        saveStatus.textContent = "Unsaved...";
+    }
+}
+
+function insertHtmlIntoMainNote(html) {
+    const { editable, source } = getMainNoteEditorElements();
+
+    if (editable) {
+        editable.focus();
+
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && editable.contains(selection.anchorNode)) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const temp = document.createElement("div");
+            temp.innerHTML = html;
+
+            const fragment = document.createDocumentFragment();
+            let node;
+            let lastNode = null;
+
+            while ((node = temp.firstChild)) {
+                lastNode = fragment.appendChild(node);
+            }
+
+            range.insertNode(fragment);
+
+            if (lastNode) {
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        } else {
+            editable.insertAdjacentHTML("beforeend", html);
+        }
+
+        syncMainNoteFromEditor();
+        markNotebookUnsaved();
+        return;
+    }
+
+    if (source) {
+        source.value = (source.value || "") + html;
+        markNotebookUnsaved();
+    }
+}
+
+function buildNotebookRichTableHtml(rows, cols) {
+    rows = Math.max(1, parseInt(rows || 0, 10));
+    cols = Math.max(1, parseInt(cols || 0, 10));
+
+    let html = '<table class="notebook-rich-table"><thead><tr>';
+    for (let c = 1; c <= cols; c++) {
+        html += `<th>Column ${c}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    const bodyRows = Math.max(1, rows - 1);
+    for (let r = 1; r <= bodyRows; r++) {
+        html += '<tr>';
+        for (let c = 1; c <= cols; c++) {
+            html += '<td>&nbsp;</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</tbody></table><p><br></p>';
+    return html;
+}
+
+function insertRichTable(rows, cols) {
+    const html = buildNotebookRichTableHtml(rows, cols);
+    insertHtmlIntoMainNote(html);
+}
+
+window.insertHtmlIntoMainNote = insertHtmlIntoMainNote;
+window.insertRichTable = insertRichTable;
+/* NOTEBOOK_RICH_TABLE_PATCH_END */
+
 </script>
 {% endif %}
 {% endblock %}
