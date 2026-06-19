@@ -764,7 +764,64 @@
                 </div>
             {% else %}
                 <div class="d-flex h-100 align-items-center justify-content-center text-muted">
-                    Your notebook is ready. Use New notebook to start a first record.
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                            <div class="text-center" style="max-width: 760px;">
+                                <div class="mb-3">
+                                    <i class="bi bi-journal-text text-primary" style="font-size: 3rem;"></i>
+                                </div>
+
+                                <h3 class="fw-bold mb-2">Start your ELN Notebook</h3>
+
+                                <p class="text-muted mb-4">
+                                    Create a notebook entry to record experiments, protocols, observations, tables,
+                                    linked samples, files, analysis outputs and molecular biology records.
+                                </p>
+
+                                <div class="d-flex justify-content-center gap-2 mb-4">
+                                    <a href="{% url 'notebook_create' %}" class="btn btn-primary">
+                                        <i class="bi bi-plus-lg me-1"></i>Create first notebook
+                                    </a>
+                                    <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-box-seam me-1"></i>Browse samples
+                                    </a>
+                                </div>
+
+                                <div class="row g-3 text-start">
+                                    <div class="col-md-4">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="fw-bold mb-1">
+                                                <i class="bi bi-pencil-square me-1"></i>Write
+                                            </div>
+                                            <div class="small text-muted">
+                                                Notes, observations, protocol steps, tables and code blocks.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="fw-bold mb-1">
+                                                <i class="bi bi-link-45deg me-1"></i>Link
+                                            </div>
+                                            <div class="small text-muted">
+                                                Connect entries to samples, files and experimental context.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="fw-bold mb-1">
+                                                <i class="bi bi-dna me-1"></i>Build
+                                            </div>
+                                            <div class="small text-muted">
+                                                Create DNA, plasmid, primer and protein records from Insert.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                 </div>
             {% endif %}
         </main>
