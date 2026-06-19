@@ -20,7 +20,7 @@ class NotebookEntry(models.Model):
 
     The free-text content remains available for backward compatibility, while
     structured blocks provide tables, images, code, sequence/plasmid records,
-    Slurm job references, and sample-linked snapshots.
+    sample-linked snapshots, attachments, and molecular records.
     """
     ENTRY_TYPE_CHOICES = [
         ("experiment", "Experiment"),
@@ -134,13 +134,10 @@ class NotebookSampleLink(models.Model):
 
 class NotebookBlock(models.Model):
     BLOCK_TYPE_CHOICES = [
-        ("text", "Text"),
         ("image", "Image"),
         ("table", "Table"),
-        ("code", "Code / plot"),
         ("sequence", "Sequence"),
         ("plasmid", "Plasmid"),
-        ("slurm_job", "Slurm job"),
         ("attachment", "Attachment"),
     ]
 
@@ -233,67 +230,6 @@ class NotebookAttachment(models.Model):
 
     def __str__(self):
         return self.caption or Path(self.file.name).name
-
-
-class NotebookSlurmJob(models.Model):
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("submitted", "Submitted"),
-        ("pending", "Pending"),
-        ("running", "Running"),
-        ("completed", "Completed"),
-        ("failed", "Failed"),
-        ("cancelled", "Cancelled"),
-    ]
-
-    entry = models.ForeignKey(
-        NotebookEntry,
-        on_delete=models.CASCADE,
-        related_name="slurm_jobs",
-    )
-    block = models.ForeignKey(
-        NotebookBlock,
-        on_delete=models.SET_NULL,
-        related_name="slurm_jobs",
-        null=True,
-        blank=True,
-    )
-
-    job_name = models.CharField(max_length=255)
-    job_id = models.CharField(max_length=64, blank=True)
-    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default="draft")
-
-    partition = models.CharField(max_length=64, blank=True)
-    cpus = models.PositiveIntegerField(default=1)
-    memory = models.CharField(max_length=32, blank=True)
-    time_limit = models.CharField(max_length=32, blank=True)
-
-    command = models.TextField(blank=True)
-    workdir = models.CharField(max_length=1024, blank=True)
-    script_path = models.CharField(max_length=1024, blank=True)
-    stdout_path = models.CharField(max_length=1024, blank=True)
-    stderr_path = models.CharField(max_length=1024, blank=True)
-
-    submitted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notebook_slurm_jobs_submitted",
-    )
-
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
-    last_status_check_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["-id"]
-        verbose_name = "Notebook Slurm Job"
-        verbose_name_plural = "Notebook Slurm Jobs"
-
-    def __str__(self):
-        return f"{self.job_name} ({self.job_id or self.status})"
-
 
 class MolecularSequence(models.Model):
     """

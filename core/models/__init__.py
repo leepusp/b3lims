@@ -21,6 +21,5 @@ from .shipments import (
     ShipmentReceipt,
     ShipmentDeclaration,
     ShipmentAccessToken,
-    ShipmentEvent,
-)
-from core.models.lab_tools.notebook import MolecularSequence, NotebookAttachment, NotebookBlock, NotebookEntry, NotebookSampleLink, NotebookSlurmJob
+    ShipmentEvent)
+from core.models.lab_tools.notebook import MolecularSequence, NotebookAttachment, NotebookBlock, NotebookEntry, NotebookSampleLink

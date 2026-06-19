@@ -3,6 +3,4 @@ from .notebook import (
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
-    NotebookSampleLink,
-    NotebookSlurmJob,
-)
+    NotebookSampleLink)

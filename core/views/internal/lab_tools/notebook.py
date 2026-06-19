@@ -610,21 +610,8 @@ def notebook_create_block_api(request, entry_id):
             "text": {"html": ""},
             "image": {"url": "", "caption": ""},
             "table": {"raw": "", "content": []},
-            "code": {
-                "code": "# table_1, table_2, ... are available as pandas DataFrames when table blocks exist.\n# Example:\n# fig = px.bar(table_1, x='condition', y='value')\n",
-                "last_result": "",
-            },
             "sequence": {"name": "", "sequence_type": "dna", "topology": "linear", "sequence": ""},
             "plasmid": {"name": "", "topology": "circular", "sequence": "", "features": []},
-            "slurm_job": {
-                "job_name": "",
-                "partition": "",
-                "cpus": 1,
-                "memory": "",
-                "time_limit": "",
-                "command": "",
-                "status": "draft",
-            },
             "attachment": {},
         }
 

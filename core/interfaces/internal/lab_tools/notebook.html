@@ -130,12 +130,50 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    .table-picker-popover {
+        position: absolute;
+        z-index: 1050;
+        top: 42px;
+        left: 12px;
+        width: 248px;
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, .15);
+    }
+
+    .table-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 18px);
+        grid-template-rows: repeat(10, 18px);
+        gap: 4px;
+    }
+
+    .table-picker-cell {
+        width: 18px;
+        height: 18px;
+        border: 1px solid #adb5bd;
+        border-radius: 3px;
+        background: #fff;
+        cursor: pointer;
+        transition: background .08s ease, border-color .08s ease, transform .08s ease;
+    }
+
+    .table-picker-cell.active {
+        background: #cfe2ff;
+        border-color: #0d6efd;
+        transform: scale(1.05);
+    }
+</style>
+
 <div class="container-fluid py-3">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="m-0"><i class="bi bi-journal-bookmark me-2"></i>ELN Notebook</h4>
-            <div class="text-muted small">Structured notes, linked samples, tables, images, code, sequences and future Slurm jobs.</div>
+            <div class="text-muted small">Structured notes, linked samples, tables, images, sequences and molecular records.</div>
         </div>
 
     </div>
@@ -290,71 +328,60 @@
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
                                                 <div class="card border-primary-subtle bg-light mb-3">
-                                                    <div class="notebook-insert-toolbar border rounded bg-light p-2 mb-3">
-                            <div class="d-flex flex-wrap align-items-center gap-2">
-                                <span class="small text-muted fw-bold me-1">
-                                    <i class="bi bi-plus-square me-1"></i>Insert:
-                                </span>
+                                                                                                        <div class="notebook-insert-toolbar border rounded bg-light p-2 mb-3 position-relative">
+                                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                                            <span class="small text-muted fw-bold me-1">
+                                                                <i class="bi bi-plus-square me-1"></i>Insert:
+                                                            </span>
 
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertTextSection()">
-                                    <i class="bi bi-text-left me-1"></i>Text
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTablePicker(event)">
+                                                                <i class="bi bi-table me-1"></i>Table
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertRichTable()">
-                                    <i class="bi bi-table me-1"></i>Table
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertProtocolStep()">
+                                                                <i class="bi bi-list-check me-1"></i>Protocol step
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertCodeBlock()">
-                                    <i class="bi bi-code-square me-1"></i>Code / plot
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="focusSampleSearch()">
+                                                                <i class="bi bi-box-seam me-1"></i>Sample
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertObservationBlock()">
-                                    <i class="bi bi-eye me-1"></i>Observation
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="focusEntryAttachment()">
+                                                                <i class="bi bi-paperclip me-1"></i>File
+                                                            </button>
 
-                                <span class="vr mx-1"></span>
+                                                            <span class="vr mx-1"></span>
 
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertProtocolStep()">
-                                    <i class="bi bi-list-check me-1"></i>Protocol step
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('dna', 'linear')">
+                                                                <i class="bi bi-dna me-1"></i>DNA
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="focusSampleSearch()">
-                                    <i class="bi bi-box-seam me-1"></i>Sample
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('plasmid', 'circular')">
+                                                                <i class="bi bi-record-circle me-1"></i>Plasmid
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="focusEntryAttachment()">
-                                    <i class="bi bi-paperclip me-1"></i>File
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('primer', 'linear')">
+                                                                <i class="bi bi-arrow-right-short me-1"></i>Primer
+                                                            </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="createBlock('slurm_job')">
-                                    <i class="bi bi-cpu me-1"></i>Slurm
-                                </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('protein', 'linear')">
+                                                                <i class="bi bi-diagram-3 me-1"></i>Protein
+                                                            </button>
+                                                        </div>
 
-                                <span class="vr mx-1"></span>
+                                                        <div id="table-picker-popover" class="table-picker-popover d-none">
+                                                            <div class="small fw-bold mb-2">Insert table</div>
+                                                            <div id="table-picker-preview" class="small text-muted mb-2">Select size</div>
+                                                            <div id="table-picker-grid" class="table-picker-grid"></div>
+                                                        </div>
+                                                    </div>
 
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('dna', 'linear')">
-                                    <i class="bi bi-dna me-1"></i>DNA
-                                </button>
-
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('plasmid', 'circular')">
-                                    <i class="bi bi-record-circle me-1"></i>Plasmid
-                                </button>
-
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('primer', 'linear')">
-                                    <i class="bi bi-arrow-right-short me-1"></i>Primer
-                                </button>
-
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="prepareMolecularItem('protein', 'linear')">
-                                    <i class="bi bi-diagram-3 me-1"></i>Protein
-                                </button>
-                            </div>
-                        </div>
 
                             <div class="card-body">
                                 <div class="row g-2">
                                     <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertTextSection()">
-                                            <i class="bi bi-text-left me-2"></i>Text section
+                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="()">
+                                            <i class="bi bi-text-left me-2"></i>
                                         </button>
                                     </div>
                                     <div class="col-md-3">
@@ -363,13 +390,8 @@
                                         </button>
                                     </div>
                                     <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertCodeBlock()">
-                                            <i class="bi bi-code-square me-2"></i>Code / plot
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertObservationBlock()">
-                                            <i class="bi bi-eye me-2"></i>Observation
+                                        <button type="button" class="btn btn-outline-secondary w-100 text-start" onclick="insertBlock()">
+                                            <i class="bi bi-eye me-2"></i>
                                         </button>
                                     </div>
 
@@ -386,11 +408,6 @@
                                     <div class="col-md-3">
                                         <button type="button" class="btn btn-outline-primary w-100 text-start" onclick="focusEntryAttachment()">
                                             <i class="bi bi-paperclip me-2"></i>File attachment
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-primary w-100 text-start" onclick="createBlock('slurm_job')">
-                                            <i class="bi bi-cpu me-2"></i>Slurm job
                                         </button>
                                     </div>
 
@@ -452,17 +469,6 @@
                                         <textarea class="form-control table-raw-input block-json-field" data-key="raw">{{ block.content_data.raw }}</textarea>
                                         <div class="form-text">This table will be available to code blocks as table_1, table_2, ...</div>
 
-                                    {% elif block.block_type == "code" %}
-                                        <label class="form-label small text-muted">Python code. Available objects: pd, np, px, table_1, table_2...</label>
-                                        <textarea class="form-control code-input block-json-field" data-key="code">{{ block.content_data.code }}</textarea>
-                                        <div class="mt-2 d-flex gap-2">
-                                            <button class="btn btn-sm btn-primary" onclick="runCodeBlock({{ block.id }})">
-                                                Run plot
-                                            </button>
-                                            <span class="small text-muted">Set <code>fig = px...</code> to render a Plotly chart.</span>
-                                        </div>
-                                        <div id="plot-output-{{ block.id }}" class="plot-output mt-3"></div>
-
                                     {% elif block.block_type == "image" %}
                                         {% if block.content_data.url %}
                                             <img src="{{ block.content_data.url }}" class="image-preview mb-2">
@@ -498,32 +504,12 @@
                                         </div>
                                         <input type="text" class="form-control form-control-sm mb-2 block-json-field" data-key="name" value="{{ block.content_data.name }}" placeholder="Plasmid name">
                                         <textarea class="form-control sequence-input block-json-field" data-key="sequence" placeholder="Paste plasmid sequence">{{ block.content_data.sequence }}</textarea>
-
-                                    {% elif block.block_type == "slurm_job" %}
-                                        <div class="alert alert-warning small">
-                                            Slurm integration is staged here but submission is disabled until safe job templates and permissions are configured.
-                                        </div>
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-md-4">
-                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="job_name" value="{{ block.content_data.job_name }}" placeholder="Job name">
-                                            </div>
-                                            <div class="col-md-2">
-                                                <input type="number" class="form-control form-control-sm block-json-field" data-key="cpus" value="{{ block.content_data.cpus|default:'1' }}" placeholder="CPUs">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="memory" value="{{ block.content_data.memory }}" placeholder="Memory, e.g. 16G">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <input type="text" class="form-control form-control-sm block-json-field" data-key="partition" value="{{ block.content_data.partition }}" placeholder="Partition">
-                                            </div>
-                                        </div>
-                                        <textarea class="form-control code-input block-json-field" data-key="command" placeholder="Command/script to submit later through Slurm">{{ block.content_data.command }}</textarea>
                                     {% endif %}
                                 </div>
                             </div>
                         {% empty %}
                             <div class="text-muted small border rounded p-3 bg-light">
-                                No structured blocks yet. Computational jobs and generated outputs will appear here.
+                                No structured blocks yet. Inserted content and generated outputs will appear here.
                             </div>
                         {% endfor %}
                     </div>
@@ -992,13 +978,7 @@
         timeoutId = setTimeout(saveEntry, 800);
     }
 
-    function insertTextSection() {
-        insertHtmlIntoMainNote(
-            "<h3>Section title</h3><p>Write notes, rationale, observations or interpretation here.</p><p><br></p>"
-        );
-    }
-
-    function insertRichTable() {
+function insertRichTable() {
         const rows = Math.max(1, parseInt(window.prompt("Number of data rows", "4") || "4", 10));
         const cols = Math.max(1, parseInt(window.prompt("Number of columns", "4") || "4", 10));
 
@@ -1021,19 +1001,85 @@
         insertHtmlIntoMainNote(html);
     }
 
-    function insertCodeBlock() {
-        const code = window.prompt("Paste command or code block", "python script.py");
-        if (code === null) return;
-
+function insertBlock() {
         insertHtmlIntoMainNote(
-            `<pre style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:10px;"><code>${escapeHtmlForInsert(code)}</code></pre><p><br></p>`
+            "<h3></h3><p><strong>Context:</strong> </p><p><strong>:</strong> </p><p><strong>Interpretation:</strong> </p><p><br></p>"
         );
     }
 
-    function insertObservationBlock() {
-        insertHtmlIntoMainNote(
-            "<h3>Observation</h3><p><strong>Context:</strong> </p><p><strong>Observation:</strong> </p><p><strong>Interpretation:</strong> </p><p><br></p>"
-        );
+    function showTablePicker(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        renderTablePickerGrid();
+
+        const popover = document.getElementById("table-picker-popover");
+        if (!popover) return;
+
+        popover.classList.toggle("d-none");
+    }
+
+    function hideTablePicker() {
+        const popover = document.getElementById("table-picker-popover");
+        if (!popover) return;
+        popover.classList.add("d-none");
+    }
+
+    function renderTablePickerGrid() {
+        const grid = document.getElementById("table-picker-grid");
+        if (!grid || grid.dataset.ready === "1") return;
+
+        let html = "";
+        for (let row = 1; row <= 10; row++) {
+            for (let col = 1; col <= 10; col++) {
+                html += `<button type="button"
+                                class="table-picker-cell"
+                                data-row="${row}"
+                                data-col="${col}"
+                                onmouseenter="highlightTablePicker(${row}, ${col})"
+                                onclick="insertTableFromPicker(${row}, ${col})"></button>`;
+            }
+        }
+
+        grid.innerHTML = html;
+        grid.dataset.ready = "1";
+    }
+
+    function highlightTablePicker(rows, cols) {
+        const preview = document.getElementById("table-picker-preview");
+        if (preview) {
+            preview.textContent = `${rows} × ${cols} table`;
+        }
+
+        document.querySelectorAll(".table-picker-cell").forEach(cell => {
+            const row = parseInt(cell.dataset.row, 10);
+            const col = parseInt(cell.dataset.col, 10);
+            cell.classList.toggle("active", row <= rows && col <= cols);
+        });
+    }
+
+    function insertTableFromPicker(rows, cols) {
+        let html = '<table style="border-collapse:collapse;width:100%;margin:12px 0;">';
+        html += '<thead><tr>';
+
+        for (let col = 1; col <= cols; col++) {
+            html += `<th style="border:1px solid #dee2e6;padding:6px;background:#f8f9fa;">Column ${col}</th>`;
+        }
+
+        html += '</tr></thead><tbody>';
+
+        for (let row = 1; row <= rows; row++) {
+            html += '<tr>';
+            for (let col = 1; col <= cols; col++) {
+                html += '<td style="border:1px solid #dee2e6;padding:6px;">&nbsp;</td>';
+            }
+            html += '</tr>';
+        }
+
+        html += '</tbody></table><p><br></p>';
+
+        insertHtmlIntoMainNote(html);
+        hideTablePicker();
     }
 
     function insertProtocolStep() {
@@ -1522,26 +1568,16 @@
         });
     }
 
-    function runCodeBlock(blockId) {
-        saveBlock(blockId);
+    document.addEventListener("click", function(event) {
+        const popover = document.getElementById("table-picker-popover");
+        if (!popover || popover.classList.contains("d-none")) return;
 
-        const block = document.querySelector(`[data-block-id="${blockId}"]`);
-        const code = block.querySelector('[data-key="code"]').value;
-        const output = document.getElementById(`plot-output-${blockId}`);
+        const toolbar = event.target.closest(".notebook-insert-toolbar");
+        if (!toolbar) {
+            hideTablePicker();
+        }
+    });
 
-        output.innerHTML = "<div class='text-muted small'>Running...</div>";
-
-        postJson("{% url 'run_notebook_analysis' active_entry.id %}", {
-            code: code
-        }).then(data => {
-            if (data.status !== "success") {
-                output.innerHTML = `<div class="alert alert-danger small">${data.message || "Analysis failed."}</div>`;
-                return;
-            }
-
-            Plotly.newPlot(output, data.graph_data.data, data.graph_data.layout, {responsive: true});
-        });
-    }
 </script>
 {% endif %}
 {% endblock %}

@@ -76,10 +76,10 @@ def ensure_entry_workspace(entry):
         "",
         "attachments",
         "tables",
-        "code",
+        
         "sequences",
         "plasmids",
-        "slurm_jobs",
+        
         "results",
         "manifests",
     ]:
@@ -172,7 +172,7 @@ def write_sequence_block(block, workspace, subdir="sequences", default_type="seq
 def write_slurm_block(block, workspace):
     data = block.content_data or {}
 
-    workdir = workspace / "slurm_jobs" / f"block_{block.id}_{safe_name(block.title, 'slurm_job')}"
+    workdir = workspace / "s" / f"block_{block.id}_{safe_name(block.title, '')}"
     workdir.mkdir(parents=True, exist_ok=True)
 
     command_path = workdir / "command.txt"
@@ -188,7 +188,6 @@ def write_block_artifact(block, workspace):
     if block.block_type == "table":
         return write_table_block(block, workspace)
 
-    if block.block_type == "code":
         return write_code_block(block, workspace)
 
     if block.block_type == "sequence":
@@ -197,7 +196,6 @@ def write_block_artifact(block, workspace):
     if block.block_type == "plasmid":
         return write_sequence_block(block, workspace, "plasmids", "plasmid")
 
-    if block.block_type == "slurm_job":
         return write_slurm_block(block, workspace)
 
     return {}
