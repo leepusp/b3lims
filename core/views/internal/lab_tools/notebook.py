@@ -16,6 +16,7 @@ from core.models.lab_tools.notebook import (
     NotebookSampleLink,
 )
 from core.models.samples.sample import Sample
+from core.models.chemicals.chemical import Chemical
 from core.permissions.samples import can_view_sample
 
 
@@ -149,6 +150,7 @@ def notebook_index(request):
     linked_sample_links = []
     blocks = []
     attachments = []
+    protocol_chemicals = []
     molecular_sequences = []
 
     if active_entry_id:
@@ -165,12 +167,20 @@ def notebook_index(request):
         )
         blocks = active_entry.blocks.all()
         attachments = active_entry.attachments.all()
+
+        protocol_chemicals = Chemical.objects.all().order_by("name", "id")[:200]
         molecular_sequences = active_entry.molecular_sequences.all().order_by("-updated_at", "-id")
 
     linked_samples_json = json.dumps(
         [link.snapshot_json for link in linked_sample_links],
         ensure_ascii=False,
     )
+
+    entry_workspace_path = ""
+    if active_entry:
+        username = request.user.get_username()
+        if username:
+            entry_workspace_path = f"/home/{username}/biobank_notebooks/entry_{active_entry.id}"
 
     return render(
         request,
@@ -182,9 +192,11 @@ def notebook_index(request):
             "linked_samples_json": linked_samples_json,
             "blocks": blocks,
             "attachments": attachments,
+            "protocol_chemicals": protocol_chemicals,
             "molecular_sequences": molecular_sequences,
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
+            "entry_workspace_path": entry_workspace_path,
         },
     )
 

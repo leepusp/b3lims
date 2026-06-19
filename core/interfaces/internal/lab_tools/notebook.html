@@ -131,6 +131,77 @@
 
 {% block content %}
 <style>
+/* BIOBANK_DOCS_TABLE_STYLE_START */
+.biobank-table-picker-popover {
+    position: absolute;
+    z-index: 2000;
+    width: 260px;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .18);
+}
+
+.biobank-table-picker-title {
+    font-size: .875rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.biobank-table-picker-preview {
+    font-size: .8rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.biobank-table-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 18px);
+    grid-template-rows: repeat(10, 18px);
+    gap: 4px;
+}
+
+.biobank-table-picker-cell {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #adb5bd;
+    border-radius: 3px;
+    background: #ffffff;
+    cursor: pointer;
+    padding: 0;
+}
+
+.biobank-table-picker-cell.active {
+    border-color: #0d6efd;
+    background: #cfe2ff;
+}
+
+.ql-toolbar button.ql-biobank-table {
+    width: 28px;
+    height: 24px;
+}
+
+.notebook-main-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+}
+
+.notebook-main-table th,
+.notebook-main-table td {
+    border: 1px solid #ced4da;
+    padding: 6px 8px;
+    min-width: 100px;
+    vertical-align: top;
+}
+
+.notebook-main-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+/* BIOBANK_DOCS_TABLE_STYLE_END */
+
 </style>
 
 <div class="container-fluid py-3">
@@ -282,17 +353,6 @@
                         <div id="editor-container" class="notebook-editor">
                             {{ active_entry.content|safe }}
                         </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                                                <div class="card border-primary-subtle bg-light mb-3">
-                                                                                                        
-
-                            <div class="card-body">
-                                
-                            </div>
-                        </div>
-
                     </div>
 
                     <div id="blocks-container">
@@ -506,19 +566,89 @@
 
                         <div class="tab-pane fade" id="protocol-pane" role="tabpanel" aria-labelledby="protocol-tab">
                             <div class="card">
-                                <div class="card-header bg-white fw-bold">
-                                    <i class="bi bi-list-check me-2"></i>Protocol
+                                <div class="card-header bg-white">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-list-check me-2"></i>Protocol
+                                            </div>
+                                            <div class="small text-muted">
+                                                Structured protocol with purpose, timing, reagents, linked samples and checkpoints.
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertProtocolSkeleton()">
+                                                Insert template
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertProtocolStepBlock()">
+                                                Add step
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="card-body">
-                                    <label class="form-label small text-muted">
-                                        Protocol, ordered steps, reagent setup, expected outputs and acceptance criteria.
-                                    </label>
-                                    <textarea id="entry-protocol-content"
-                                              class="form-control"
-                                              rows="16"
-                                              placeholder="Describe the protocol steps, reagents, checkpoints and expected results...">{{ active_entry.protocol_content }}</textarea>
-                                    <div class="form-text">
-                                        This field is saved together with the entry. Later it can be converted into structured protocol steps.
+                                    <div class="row g-3">
+                                        <div class="col-lg-8">
+                                            <label class="form-label small fw-bold">Protocol text</label>
+                                            <textarea id="entry-protocol-content"
+                                                      class="form-control"
+                                                      rows="20"
+                                                      placeholder="Describe objective, materials, timing, steps, checkpoints and expected results...">{{ active_entry.protocol_content }}</textarea>
+                                            <div class="form-text">
+                                                This text is saved with the notebook entry. Use the helper panels to insert sections, samples and registered reagents.
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-4">
+                                            <div class="border rounded p-3 bg-light mb-3">
+                                                <div class="fw-bold mb-2">Protocol sections</div>
+                                                <div class="small text-muted mb-2">Insert structured headings:</div>
+
+                                                <div class="d-grid gap-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Objective')">Objective</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Scope')">Scope</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Materials and reagents')">Materials and reagents</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Equipment')">Equipment</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Timing')">Timing</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Procedure')">Procedure</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Acceptance criteria / QC')">Acceptance criteria / QC</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Troubleshooting / deviations')">Troubleshooting / deviations</button>
+                                                </div>
+                                            </div>
+
+                                            <div class="border rounded p-3 bg-light mb-3">
+                                                <div class="fw-bold mb-2">Linked samples</div>
+                                                <div class="small text-muted mb-2">Insert samples already linked to this ELN entry:</div>
+
+                                                {% for link in linked_sample_links %}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary text-start w-100 mb-2"
+                                                            onclick="appendProtocolMaterial('{{ link.sample.sample_id|escapejs }}', 'sample')">
+                                                        {{ link.sample.sample_id }}
+                                                        <span class="text-muted">· {{ link.sample.sample_type }}</span>
+                                                    </button>
+                                                {% empty %}
+                                                    <div class="small text-muted">No samples linked yet.</div>
+                                                {% endfor %}
+                                            </div>
+
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="fw-bold mb-2">Registered chemicals / reagents</div>
+                                                <div class="small text-muted mb-2">Insert reagents from the Chemical inventory:</div>
+
+                                                {% for chemical in protocol_chemicals %}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-success text-start w-100 mb-2"
+                                                            onclick="appendProtocolMaterial('{{ chemical.name|escapejs }}', 'reagent')">
+                                                        {{ chemical.name }}
+                                                    </button>
+                                                {% empty %}
+                                                    <div class="small text-muted">No registered chemicals found yet.</div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -882,12 +1012,12 @@
         placeholder: "Describe experiment goals, protocol, reagents, observations and results...",
         modules: {
             toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
-                ['para', ['ul', 'ol']],
-                ['insert', ['link', 'picture', 'table']],
-                ['color', ['forecolor', 'backcolor']],
-                ['misc', ['removeFormat']]
+                [{ "header": [1, 2, 3, false] }],
+                ["bold", "italic", "underline", "strike"],
+                [{ "list": "ordered" }, { "list": "bullet" }],
+                ["link", "image"],
+                [{ "color": [] }, { "background": [] }],
+                ["clean"]
             ]
         }
     });
@@ -935,29 +1065,6 @@
         saveStatus.textContent = "Unsaved...";
         clearTimeout(timeoutId);
         timeoutId = setTimeout(saveEntry, 800);
-    }
-
-function insertRichTable() {
-        const rows = Math.max(1, parseInt(window.prompt("Number of data rows", "4") || "4", 10));
-        const cols = Math.max(1, parseInt(window.prompt("Number of columns", "4") || "4", 10));
-
-        let html = '<table style="border-collapse:collapse;width:100%;margin:12px 0;">';
-        html += '<thead><tr>';
-        for (let col = 1; col <= cols; col++) {
-            html += `<th style="border:1px solid #dee2e6;padding:6px;background:#f8f9fa;">Column ${col}</th>`;
-        }
-        html += '</tr></thead><tbody>';
-
-        for (let row = 1; row <= rows; row++) {
-            html += '<tr>';
-            for (let col = 1; col <= cols; col++) {
-                html += '<td style="border:1px solid #dee2e6;padding:6px;">&nbsp;</td>';
-            }
-            html += '</tr>';
-        }
-
-        html += '</tbody></table><p><br></p>';
-        insertHtmlIntoMainNote(html);
     }
 
 function insertBlock() {
@@ -1450,133 +1557,6 @@ function insertProtocolStep() {
             }).then(() => window.location.reload());
         });
     }
-/* NOTEBOOK_RICH_TABLE_PATCH_START */
-(function ensureNotebookRichTableStyles() {
-    if (document.getElementById("notebook-rich-table-styles")) return;
-    const style = document.createElement("style");
-    style.id = "notebook-rich-table-styles";
-    style.textContent = `
-        .notebook-rich-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 12px 0;
-        }
-        .notebook-rich-table th,
-        .notebook-rich-table td {
-            border: 1px solid #ced4da;
-            padding: 8px 10px;
-            min-width: 120px;
-            vertical-align: top;
-        }
-        .notebook-rich-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-    `;
-    document.head.appendChild(style);
-})();
-
-function getMainNoteEditorElements() {
-    const editable = document.querySelector(".note-editor .note-editable");
-    const source =
-        document.querySelector("textarea[name='content']") ||
-        document.getElementById("id_content") ||
-        document.querySelector("textarea[data-notebook-main-note]");
-    return { editable, source };
-}
-
-function syncMainNoteFromEditor() {
-    const { editable, source } = getMainNoteEditorElements();
-    if (editable && source) {
-        source.value = editable.innerHTML;
-    }
-}
-
-function markNotebookUnsaved() {
-    const saveStatus =
-        document.getElementById("save-status") ||
-        document.querySelector("[data-save-status]");
-    if (saveStatus) {
-        saveStatus.textContent = "Unsaved...";
-    }
-}
-
-function insertHtmlIntoMainNote(html) {
-    const { editable, source } = getMainNoteEditorElements();
-
-    if (editable) {
-        editable.focus();
-
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0 && editable.contains(selection.anchorNode)) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-
-            const temp = document.createElement("div");
-            temp.innerHTML = html;
-
-            const fragment = document.createDocumentFragment();
-            let node;
-            let lastNode = null;
-
-            while ((node = temp.firstChild)) {
-                lastNode = fragment.appendChild(node);
-            }
-
-            range.insertNode(fragment);
-
-            if (lastNode) {
-                range.setStartAfter(lastNode);
-                range.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
-        } else {
-            editable.insertAdjacentHTML("beforeend", html);
-        }
-
-        syncMainNoteFromEditor();
-        markNotebookUnsaved();
-        return;
-    }
-
-    if (source) {
-        source.value = (source.value || "") + html;
-        markNotebookUnsaved();
-    }
-}
-
-function buildNotebookRichTableHtml(rows, cols) {
-    rows = Math.max(1, parseInt(rows || 0, 10));
-    cols = Math.max(1, parseInt(cols || 0, 10));
-
-    let html = '<table class="notebook-rich-table"><thead><tr>';
-    for (let c = 1; c <= cols; c++) {
-        html += `<th>Column ${c}</th>`;
-    }
-    html += '</tr></thead><tbody>';
-
-    const bodyRows = Math.max(1, rows - 1);
-    for (let r = 1; r <= bodyRows; r++) {
-        html += '<tr>';
-        for (let c = 1; c <= cols; c++) {
-            html += '<td>&nbsp;</td>';
-        }
-        html += '</tr>';
-    }
-
-    html += '</tbody></table><p><br></p>';
-    return html;
-}
-
-function insertRichTable(rows, cols) {
-    const html = buildNotebookRichTableHtml(rows, cols);
-    insertHtmlIntoMainNote(html);
-}
-
-window.insertHtmlIntoMainNote = insertHtmlIntoMainNote;
-window.insertRichTable = insertRichTable;
-/* NOTEBOOK_RICH_TABLE_PATCH_END */
 
 /* FRONT_RELEVANT_ITEMS_HELPERS_START */
 function activateNotebookTab(tabKey) {
@@ -1653,6 +1633,306 @@ function upsertFrontRelevantItem(item) {
     }
 }
 /* FRONT_RELEVANT_ITEMS_HELPERS_END */
+
+/* BIOBANK_DOCS_TABLE_PICKER_START */
+let biobankTablePickerButton = null;
+
+function buildNotebookMainTable(rows, cols) {
+    rows = Math.max(1, parseInt(rows || 0, 10));
+    cols = Math.max(1, parseInt(cols || 0, 10));
+
+    let html = '<table class="notebook-main-table"><tbody>';
+
+    for (let row = 1; row <= rows; row++) {
+        html += '<tr>';
+        for (let col = 1; col <= cols; col++) {
+            if (row === 1) {
+                html += `<th>Column ${col}</th>`;
+            } else {
+                html += '<td>&nbsp;</td>';
+            }
+        }
+        html += '</tr>';
+    }
+
+    html += '</tbody></table><p><br></p>';
+    return html;
+}
+
+function insertHtmlDirectlyIntoQuillRoot(html) {
+    const editor = quill.root;
+    editor.focus();
+
+    const selection = window.getSelection();
+    let inserted = false;
+
+    if (selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        const fragment = document.createDocumentFragment();
+        let lastNode = null;
+
+        while (temp.firstChild) {
+            lastNode = fragment.appendChild(temp.firstChild);
+        }
+
+        range.insertNode(fragment);
+
+        if (lastNode) {
+            range.setStartAfter(lastNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        inserted = true;
+    }
+
+    if (!inserted) {
+        editor.insertAdjacentHTML("beforeend", html);
+    }
+
+    quill.update("user");
+
+    saveStatus.textContent = "Unsaved...";
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(saveEntry, 800);
+}
+
+function ensureBiobankTablePicker() {
+    let popover = document.getElementById("biobank-table-picker-popover");
+    if (popover) return popover;
+
+    popover = document.createElement("div");
+    popover.id = "biobank-table-picker-popover";
+    popover.className = "biobank-table-picker-popover d-none";
+
+    popover.innerHTML = `
+        <div class="biobank-table-picker-title">Insert table</div>
+        <div id="biobank-table-picker-preview" class="biobank-table-picker-preview">Select size</div>
+        <div id="biobank-table-picker-grid" class="biobank-table-picker-grid"></div>
+    `;
+
+    document.body.appendChild(popover);
+
+    const grid = popover.querySelector("#biobank-table-picker-grid");
+    let cells = "";
+
+    for (let row = 1; row <= 10; row++) {
+        for (let col = 1; col <= 10; col++) {
+            cells += `<button type="button"
+                             class="biobank-table-picker-cell"
+                             data-row="${row}"
+                             data-col="${col}"
+                             aria-label="${row} by ${col} table"></button>`;
+        }
+    }
+
+    grid.innerHTML = cells;
+
+    grid.addEventListener("mouseover", function(event) {
+        const cell = event.target.closest(".biobank-table-picker-cell");
+        if (!cell) return;
+
+        highlightBiobankTablePicker(
+            parseInt(cell.dataset.row, 10),
+            parseInt(cell.dataset.col, 10)
+        );
+    });
+
+    grid.addEventListener("click", function(event) {
+        const cell = event.target.closest(".biobank-table-picker-cell");
+        if (!cell) return;
+
+        const rows = parseInt(cell.dataset.row, 10);
+        const cols = parseInt(cell.dataset.col, 10);
+
+        insertHtmlDirectlyIntoQuillRoot(buildNotebookMainTable(rows, cols));
+        hideBiobankTablePicker();
+    });
+
+    return popover;
+}
+
+function highlightBiobankTablePicker(rows, cols) {
+    const preview = document.getElementById("biobank-table-picker-preview");
+    if (preview) {
+        preview.textContent = `${rows} × ${cols} table`;
+    }
+
+    document.querySelectorAll(".biobank-table-picker-cell").forEach(function(cell) {
+        const row = parseInt(cell.dataset.row, 10);
+        const col = parseInt(cell.dataset.col, 10);
+        cell.classList.toggle("active", row <= rows && col <= cols);
+    });
+}
+
+function showBiobankTablePicker(button) {
+    biobankTablePickerButton = button;
+
+    const popover = ensureBiobankTablePicker();
+    const rect = button.getBoundingClientRect();
+
+    popover.style.left = `${window.scrollX + rect.left}px`;
+    popover.style.top = `${window.scrollY + rect.bottom + 8}px`;
+    popover.classList.remove("d-none");
+
+    highlightBiobankTablePicker(1, 1);
+}
+
+function hideBiobankTablePicker() {
+    const popover = document.getElementById("biobank-table-picker-popover");
+    if (popover) {
+        popover.classList.add("d-none");
+    }
+}
+
+function installQuillDocsLikeTableButton() {
+    const toolbar = document.querySelector(".ql-toolbar");
+    if (!toolbar) return;
+
+    toolbar.querySelectorAll("button").forEach(function(button) {
+        if (!button.className.includes("ql-" + "code-" + "block")) return;
+        button.remove();
+    });
+
+    if (toolbar.querySelector(".ql-biobank-table")) return;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ql-biobank-table";
+    button.title = "Insert table";
+    button.innerHTML = '<i class="bi bi-table"></i>';
+
+    button.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        showBiobankTablePicker(button);
+    });
+
+    const imageButton = toolbar.querySelector("button.ql-image");
+    if (imageButton) {
+        imageButton.insertAdjacentElement("afterend", button);
+    } else {
+        toolbar.appendChild(button);
+    }
+}
+
+document.addEventListener("click", function(event) {
+    const popover = document.getElementById("biobank-table-picker-popover");
+    if (!popover || popover.classList.contains("d-none")) return;
+
+    if (popover.contains(event.target)) return;
+    if (biobankTablePickerButton && biobankTablePickerButton.contains(event.target)) return;
+
+    hideBiobankTablePicker();
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(installQuillDocsLikeTableButton, 150);
+    setTimeout(installQuillDocsLikeTableButton, 600);
+});
+/* BIOBANK_DOCS_TABLE_PICKER_END */
+
+
+/* BIOBANK_PROTOCOL_BUILDER_START */
+function getProtocolTextarea() {
+    return document.getElementById("entry-protocol-content");
+}
+
+function markProtocolUnsaved() {
+    if (typeof saveStatus !== "undefined" && saveStatus) {
+        saveStatus.textContent = "Unsaved...";
+    }
+
+    if (typeof timeoutId !== "undefined") {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 800);
+    }
+}
+
+function appendToProtocol(textToAppend) {
+    const field = getProtocolTextarea();
+    if (!field) return;
+
+    const current = field.value || "";
+    const separator = current.trim() ? "\n\n" : "";
+    field.value = current + separator + textToAppend;
+
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    markProtocolUnsaved();
+}
+
+function insertProtocolSkeleton() {
+    const skeleton = [
+        "OBJECTIVE",
+        "Describe the scientific purpose, hypothesis or operational goal.",
+        "",
+        "SCOPE",
+        "Define sample types, organisms, strains, plasmids or conditions covered by this protocol.",
+        "",
+        "MATERIALS AND REAGENTS",
+        "- Linked samples:",
+        "- Registered reagents / chemicals:",
+        "- Buffers / solutions:",
+        "- Consumables:",
+        "",
+        "EQUIPMENT",
+        "- Instrument:",
+        "- Software / version:",
+        "- Calibration or setup requirements:",
+        "",
+        "TIMING",
+        "- Estimated total time:",
+        "- Hands-on time:",
+        "- Incubation / waiting time:",
+        "",
+        "PROCEDURE",
+        "Step 1 | Duration: __ min | Temperature/condition: __ | Input: __",
+        "Action:",
+        "Expected output:",
+        "Checkpoint / QC:",
+        "",
+        "ACCEPTANCE CRITERIA / QC",
+        "- What confirms that the protocol worked?",
+        "- What values, bands, reads, concentrations or observations are acceptable?",
+        "",
+        "TROUBLESHOOTING / DEVIATIONS",
+        "- Record deviations, failed steps and corrective actions."
+    ].join("\\n");
+
+    appendToProtocol(skeleton);
+}
+
+function insertProtocolStepBlock() {
+    const step = [
+        "STEP",
+        "Name:",
+        "Duration:",
+        "Temperature / conditions:",
+        "Input material:",
+        "Action:",
+        "Expected output:",
+        "Checkpoint / QC:",
+        "Notes:"
+    ].join("\\n");
+
+    appendToProtocol(step);
+}
+
+function appendProtocolSection(title) {
+    appendToProtocol(title.toUpperCase() + "\\n");
+}
+
+function appendProtocolMaterial(name, kind) {
+    const label = kind === "sample" ? "Sample" : "Reagent";
+    appendToProtocol(`- ${label}: ${name}`);
+}
+/* BIOBANK_PROTOCOL_BUILDER_END */
 
 </script>
 {% endif %}
