@@ -4,16 +4,19 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Q
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from core.models.lab_tools.notebook import (
     MolecularSequence,
+    MolecularFeature,
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
     NotebookSampleLink,
+    NotebookChemicalLink,
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
@@ -38,6 +41,44 @@ def _safe_str(value):
     if value is None:
         return ""
     return str(value)
+
+
+def _chemical_detail_url(chemical):
+    """
+    Best-effort URL for Chemical records. Falls back to the Chemical inventory
+    page if the project does not expose a dedicated detail route.
+    """
+    candidate_names = [
+        "chemical_detail",
+        "chemical_update",
+        "chemical_edit",
+        "chemical_inventory_detail",
+        "chemical_inventory_update",
+    ]
+
+    for name in candidate_names:
+        try:
+            return reverse(name, args=[chemical.id])
+        except Exception:
+            pass
+
+    return "/biobank/internal/chemicals/"
+
+
+def build_chemical_snapshot(chemical):
+    return {
+        "id": chemical.id,
+        "name": _safe_str(getattr(chemical, "name", "")),
+        "formula": _safe_str(getattr(chemical, "formula", "")),
+        "cas_number": _safe_str(getattr(chemical, "cas_number", "")),
+        "quantity": _safe_str(getattr(chemical, "quantity", "")),
+        "location": _safe_str(getattr(chemical, "location", "")),
+        "status": _safe_str(getattr(chemical, "status", "")),
+        "expiry_date": chemical.expiry_date.isoformat() if getattr(chemical, "expiry_date", None) else "",
+        "msds_link": _safe_str(getattr(chemical, "msds_link", "")),
+        "hazard_notes": _safe_str(getattr(chemical, "hazard_notes", "")),
+        "detail_url": _chemical_detail_url(chemical),
+    }
 
 
 def build_sample_snapshot(sample):
@@ -148,6 +189,7 @@ def notebook_index(request):
 
     active_entry = None
     linked_sample_links = []
+    linked_chemical_links = []
     blocks = []
     attachments = []
     protocol_chemicals = []
@@ -163,6 +205,11 @@ def notebook_index(request):
             active_entry.sample_links
             .select_related("sample")
             .prefetch_related("sample__files")
+            .order_by("-linked_at")
+        )
+        linked_chemical_links = (
+            active_entry.chemical_links
+            .select_related("chemical")
             .order_by("-linked_at")
         )
         blocks = active_entry.blocks.all()
@@ -189,6 +236,7 @@ def notebook_index(request):
             "entries": entries,
             "active_entry": active_entry,
             "linked_sample_links": linked_sample_links,
+            "linked_chemical_links": linked_chemical_links,
             "linked_samples_json": linked_samples_json,
             "blocks": blocks,
             "attachments": attachments,
@@ -413,6 +461,85 @@ def notebook_unlink_sample_api(request, entry_id, link_id):
     return JsonResponse({"status": "success"})
 
 
+
+@login_required
+def search_chemicals_api(request):
+    query = request.GET.get("q", "").strip()
+
+    if len(query) < 1:
+        return JsonResponse({"results": []})
+
+    chemicals = Chemical.objects.all().order_by("name", "id")
+
+    chemicals = chemicals.filter(
+        Q(name__icontains=query)
+        | Q(formula__icontains=query)
+        | Q(cas_number__icontains=query)
+        | Q(quantity__icontains=query)
+        | Q(location__icontains=query)
+        | Q(status__icontains=query)
+    )[:25]
+
+    results = []
+    for chemical in chemicals:
+        snapshot = build_chemical_snapshot(chemical)
+        results.append(snapshot)
+
+    return JsonResponse({"results": results})
+
+
+@login_required
+def notebook_link_chemical_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "POST required."}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON."}, status=400)
+
+    chemical_id = data.get("chemical_id")
+    chemical = get_object_or_404(Chemical, id=chemical_id)
+
+    link, created = NotebookChemicalLink.objects.get_or_create(
+        entry=entry,
+        chemical=chemical,
+        defaults={
+            "snapshot_json": build_chemical_snapshot(chemical),
+            "linked_by": request.user,
+        },
+    )
+
+    if not created and not link.snapshot_json:
+        link.snapshot_json = build_chemical_snapshot(chemical)
+        link.linked_by = request.user
+        link.save(update_fields=["snapshot_json", "linked_by"])
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "created": created,
+            "link": {
+                "id": link.id,
+                "chemical": build_chemical_snapshot(chemical),
+            },
+        }
+    )
+
+
+@login_required
+def notebook_unlink_chemical_api(request, entry_id, link_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "POST required."}, status=405)
+
+    entry = _get_entry_for_user(entry_id, request.user)
+    link = get_object_or_404(NotebookChemicalLink, id=link_id, entry=entry)
+    link.delete()
+
+    return JsonResponse({"status": "success"})
+
 @login_required
 def notebook_delete_entry_api(request, entry_id):
     if request.method != "POST":
@@ -434,6 +561,37 @@ def notebook_delete_entry_api(request, entry_id):
     )
 
 
+def _get_molecule_for_user(molecule_id, user):
+    qs = MolecularSequence.objects.all()
+
+    if user.is_superuser:
+        return get_object_or_404(qs, id=molecule_id)
+
+    return get_object_or_404(
+        qs.filter(
+            Q(owner=user)
+            | Q(source_entry__author=user)
+            | Q(linked_sample__created_by=user)
+        ).distinct(),
+        id=molecule_id,
+    )
+
+
+def serialize_molecular_feature(feature):
+    return {
+        "id": feature.id,
+        "name": feature.name,
+        "type": feature.feature_type,
+        "start": feature.start,
+        "end": feature.end,
+        "strand": feature.strand,
+        "color": feature.color,
+        "notes": feature.notes,
+        "qualifiers": feature.qualifiers_json or {},
+        "order": feature.order,
+    }
+
+
 @login_required
 def molecular_sequence_detail(request, sequence_id):
     molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
@@ -447,6 +605,78 @@ def molecular_sequence_detail(request, sequence_id):
             "topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "features_json": json.dumps(molecule.features_json or [], ensure_ascii=False),
         },
+    )
+
+
+@login_required
+def molecular_sequence_features_api(request, molecule_id):
+    molecule = _get_molecule_for_user(molecule_id, request.user)
+
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "status": "success",
+                "features": [
+                    serialize_molecular_feature(feature)
+                    for feature in molecule.features.all()
+                ],
+            }
+        )
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "GET or POST required."},
+            status=405,
+        )
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON."}, status=400)
+
+    features = data.get("features", [])
+    if not isinstance(features, list):
+        return JsonResponse({"status": "error", "message": "features must be a list."}, status=400)
+
+    sequence_length = max(molecule.length or len(molecule.sequence or ""), 1)
+
+    with transaction.atomic():
+        molecule.features.all().delete()
+
+        created = []
+        for order, item in enumerate(features):
+            try:
+                start = int(item.get("start") or 1)
+                end = int(item.get("end") or start)
+            except (TypeError, ValueError):
+                start = 1
+                end = 1
+
+            start = max(1, min(start, sequence_length))
+            end = max(1, min(end, sequence_length))
+
+            if start > end:
+                start, end = end, start
+
+            feature = MolecularFeature.objects.create(
+                molecule=molecule,
+                name=(item.get("name") or "feature")[:255],
+                feature_type=item.get("type") or item.get("feature_type") or "custom",
+                start=start,
+                end=end,
+                strand=item.get("strand") if item.get("strand") in ["+", "-", "."] else "+",
+                color=item.get("color") or "#868e96",
+                notes=item.get("notes") or "",
+                qualifiers_json=item.get("qualifiers") or item.get("qualifiers_json") or {},
+                order=order,
+            )
+            created.append(feature)
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "features": [serialize_molecular_feature(feature) for feature in created],
+        }
     )
 
 

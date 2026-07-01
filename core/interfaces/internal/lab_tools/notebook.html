@@ -126,11 +126,120 @@
         border: 1px solid #dee2e6;
         border-radius: .5rem;
     }
+
+/* BIOBANK_RUNTIME_PROTOCOL_BUTTONS_STYLE_START */
+.ql-toolbar button.ql-biobank-protocol-checklist {
+    width: 28px;
+    height: 24px;
+    padding: 3px 5px;
+}
+
+.ql-toolbar button.ql-biobank-protocol-checklist i {
+    pointer-events: none;
+    font-size: 13px;
+    line-height: 1;
+}
+/* BIOBANK_RUNTIME_PROTOCOL_BUTTONS_STYLE_END */
+
+/* BIOBANK_PROTOCOL_MINIMAL_CHECKLIST_STYLE_START */
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-duration,
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-condition,
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-source,
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-amount,
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-qc,
+#protocolToolModal[data-protocol-kind="checklist"] .protocol-field-notes {
+    display: none !important;
+}
+
+.notebook-main-protocol-block.checklist-minimal {
+    max-width: 420px !important;
+    width: auto !important;
+    padding: 8px 10px !important;
+    margin: 8px 0 !important;
+    background: #f8fafc !important;
+}
+
+.notebook-main-protocol-block.checklist-minimal .notebook-protocol-check-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin: 3px 0 !important;
+    line-height: 1.25 !important;
+    min-height: 0 !important;
+}
+
+.notebook-main-protocol-block.checklist-minimal .notebook-protocol-check-item span {
+    line-height: 1.25 !important;
+    min-height: 0 !important;
+}
+/* BIOBANK_PROTOCOL_MINIMAL_CHECKLIST_STYLE_END */
+
+/* BIOBANK_INLINE_CHECKLIST_ONLY_STYLE_START */
+.ql-toolbar button.ql-biobank-protocol-checklist {
+    width: 28px;
+    height: 24px;
+    padding: 3px 5px;
+}
+
+.ql-toolbar button.ql-biobank-protocol-checklist i {
+    pointer-events: none;
+    font-size: 13px;
+    line-height: 1;
+}
+
+#protocolToolModal.checklist-only .protocol-field-duration,
+#protocolToolModal.checklist-only .protocol-field-condition,
+#protocolToolModal.checklist-only .protocol-field-source,
+#protocolToolModal.checklist-only .protocol-field-amount,
+#protocolToolModal.checklist-only .protocol-field-qc,
+#protocolToolModal.checklist-only .protocol-field-notes {
+    display: none !important;
+}
+
+.notebook-inline-checklist {
+    display: block;
+    width: fit-content;
+    max-width: 520px;
+    margin: 4px 0;
+    padding: 0;
+}
+
+.notebook-inline-checklist-title {
+    margin: 0 0 2px 0;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.notebook-inline-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    line-height: 1.2;
+    min-height: 0;
+}
+
+.notebook-inline-checklist-item input {
+    margin: 0;
+}
+
+.notebook-inline-checklist-item span {
+    line-height: 1.2;
+}
+/* BIOBANK_INLINE_CHECKLIST_ONLY_STYLE_END */
+
 </style>
 {% endblock %}
 
 {% block content %}
 <style>
+/* BIOBANK_TABLE_DELETE_STYLE_START */
+.notebook-main-table.table-selected {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+/* BIOBANK_TABLE_DELETE_STYLE_END */
+
 /* BIOBANK_DOCS_TABLE_STYLE_START */
 .biobank-table-picker-popover {
     position: absolute;
@@ -262,6 +371,8 @@
 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 More
                             </button>
+                                
+
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
                                     <button class="dropdown-item text-danger" type="button" onclick="deleteEntry()">
@@ -326,11 +437,8 @@
                                 Notes
                             </button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="protocol-tab" data-bs-toggle="tab" data-bs-target="#protocol-pane" type="button" role="tab">
-                                Protocol
-                            </button>
-                        </li>
+                        
+
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items-pane" type="button" role="tab">
                                 Relevant items
@@ -350,10 +458,115 @@
                         <div class="card-header bg-white fw-bold">
                             <i class="bi bi-pencil-square me-2"></i>Main note
                         </div>
+                                
+<div id="notebook-block-workspace" class="mt-3">
+                                    {% if blocks %}
+                                        <div class="fw-bold small text-muted mb-2">Inserted blocks</div>
+
+                                        {% for block in blocks %}
+                                            {% if block.content_data.kind == "protocol_timer" %}
+                                                <div class="notebook-protocol-block border rounded p-3 mb-2 bg-light"
+                                                     data-block-id="{{ block.id }}"
+                                                     data-total-seconds="{{ block.content_data.total_seconds|default:0 }}"
+                                                     data-remaining-seconds="{{ block.content_data.total_seconds|default:0 }}">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <div>
+                                                            <div class="fw-bold">
+                                                                <i class="bi bi-stopwatch me-1"></i>{{ block.title }}
+                                                            </div>
+                                                            <div class="small text-muted">
+                                                                Timed step
+                                                                {% if block.content_data.duration_minutes %} · {{ block.content_data.duration_minutes }} min{% endif %}
+                                                                {% if block.content_data.condition %} · {{ block.content_data.condition }}{% endif %}
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteNotebookBlock({{ block.id }})">
+                                                            Remove
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="protocol-block-timer-display fw-bold mt-2" style="font-size:1.4rem;">
+                                                        {{ block.content_data.duration_label|default:"00:00" }}
+                                                    </div>
+
+                                                    <div class="d-flex gap-2 mt-2">
+                                                        <button type="button" class="btn btn-sm btn-success" onclick="startProtocolBlockTimer(this)">Start</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="pauseProtocolBlockTimer(this)">Pause</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetProtocolBlockTimer(this)">Reset</button>
+                                                    </div>
+
+                                                    <div class="small mt-2">
+                                                        {% if block.content_data.source %}<div><strong>Input:</strong> {{ block.content_data.source }}</div>{% endif %}
+                                                        {% if block.content_data.amount %}<div><strong>Amount:</strong> {{ block.content_data.amount }}</div>{% endif %}
+                                                        {% if block.content_data.qc %}<div><strong>QC:</strong> {{ block.content_data.qc }}</div>{% endif %}
+                                                        {% if block.content_data.notes %}<div><strong>Notes:</strong> {{ block.content_data.notes }}</div>{% endif %}
+                                                    </div>
+                                                </div>
+
+                                            {% elif block.content_data.kind == "protocol_checklist" %}
+                                                <div class="notebook-protocol-block border rounded p-3 mb-2 bg-light"
+                                                     data-block-id="{{ block.id }}">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <div>
+                                                            <div class="fw-bold">
+                                                                <i class="bi bi-list-check me-1"></i>{{ block.title }}
+                                                            </div>
+                                                            <div class="small text-muted">Checklist protocol step</div>
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteNotebookBlock({{ block.id }})">
+                                                            Remove
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="mt-2">
+                                                        {% for item in block.content_data.checklist %}
+                                                            <label class="d-block small">
+                                                                <input type="checkbox"> {{ item }}
+                                                            </label>
+                                                        {% endfor %}
+                                                    </div>
+
+                                                    <div class="small mt-2">
+                                                        {% if block.content_data.condition %}<div><strong>Condition:</strong> {{ block.content_data.condition }}</div>{% endif %}
+                                                        {% if block.content_data.source %}<div><strong>Input:</strong> {{ block.content_data.source }}</div>{% endif %}
+                                                        {% if block.content_data.qc %}<div><strong>QC:</strong> {{ block.content_data.qc }}</div>{% endif %}
+                                                        {% if block.content_data.notes %}<div><strong>Notes:</strong> {{ block.content_data.notes }}</div>{% endif %}
+                                                    </div>
+                                                </div>
+
+                                            {% elif block.content_data.kind == "protocol_note" or block.content_data.kind == "protocol_sample" or block.content_data.kind == "protocol_reagent" %}
+                                                <div class="notebook-protocol-block border rounded p-3 mb-2 bg-light"
+                                                     data-block-id="{{ block.id }}">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <div>
+                                                            <div class="fw-bold">
+                                                                <i class="bi bi-card-text me-1"></i>{{ block.title }}
+                                                            </div>
+                                                            <div class="small text-muted">{{ block.content_data.kind }}</div>
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteNotebookBlock({{ block.id }})">
+                                                            Remove
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="small mt-2">
+                                                        {% if block.content_data.source %}<div><strong>Source:</strong> {{ block.content_data.source }}</div>{% endif %}
+                                                        {% if block.content_data.amount %}<div><strong>Amount:</strong> {{ block.content_data.amount }}</div>{% endif %}
+                                                        {% if block.content_data.condition %}<div><strong>Condition:</strong> {{ block.content_data.condition }}</div>{% endif %}
+                                                        {% if block.content_data.qc %}<div><strong>QC:</strong> {{ block.content_data.qc }}</div>{% endif %}
+                                                        {% if block.content_data.notes %}<div><strong>Notes:</strong> {{ block.content_data.notes }}</div>{% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+
                         <div id="editor-container" class="notebook-editor">
                             {{ active_entry.content|safe }}
                         </div>
                     </div>
+                                
 
                     <div id="blocks-container">
                         {% for block in blocks %}
@@ -427,234 +640,23 @@
                             </div>
                         {% empty %}
                             
-                                <div id="entry-front-relevant-items" class="card border mb-3">
-                                                                        <div class="card-header bg-white py-2">
-                                        <div class="fw-bold">Relevant items in this entry</div>
-                                        <div class="small text-muted">
-                                            Items created in Relevant items will appear here as working blocks for this notebook.
-                                        </div>
-                                    </div>
+                                
 
-                                    <div class="card-body py-3">
-                                        <div id="front-relevant-items-list" class="row g-2">
-                                            {% for molecule in molecular_sequences %}
-                                                <div class="col-md-6 col-xl-4 front-relevant-item-card" data-item-id="{{ molecule.id }}">
-                                                    <div class="border rounded p-3 h-100 bg-light">
-                                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle text-uppercase">{{ molecule.get_sequence_type_display }}</span>
-                                                            <span class="small text-muted">{{ molecule.length }} bp/aa</span>
-                                                        </div>
-                                                        <div class="fw-semibold text-break">{{ molecule.name }}</div>
-                                                        {% if molecule.description %}
-                                                            <div class="small text-muted mt-1 text-break">{{ molecule.description }}</div>
-                                                        {% endif %}
-                                                        <div class="small text-muted mt-2">
-                                                            {% if molecule.topology %}{{ molecule.get_topology_display }}{% endif %}
-                                                            {% if molecule.gc_content is not None %} · GC {{ molecule.gc_content }}%{% endif %}
-                                                        </div>
-                                                        <div class="d-flex gap-2 mt-3">
-                                                            <a href="{% url 'molecular_sequence_detail' molecule.id %}" target="_blank" class="btn btn-sm btn-outline-success">
-                                                                Open
-                                                            </a>
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMoleculeReferenceIntoNote({{ molecule.id }}, '{{ molecule.name|escapejs }}', '{{ molecule.get_sequence_type_display|escapejs }}')">
-                                                                Insert note ref
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div id="front-relevant-items-empty" class="col-12">
-                                                    <div class="border rounded bg-light p-3 text-muted small">
-                                                        No relevant items yet. Create DNA, plasmid, primer or protein records in the <strong>Relevant items</strong> tab.
-                                                    </div>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="entry-front-protocol" class="card border mb-3">
-                                    <div class="card-header bg-white py-2">
-                                        <div class="fw-bold">Protocol in this entry</div>
-                                        <div class="small text-muted">
-                                            Protocol text saved in the Protocol tab is summarized here for the experiment record.
-                                        </div>
-                                    </div>
-                                    <div class="card-body py-3">
-                                        {% if active_entry.protocol_content %}
-                                            <div class="small border rounded bg-light p-3">
-                                                {{ active_entry.protocol_content|linebreaksbr }}
-                                            </div>
-                                        {% else %}
-                                            <div class="border rounded bg-light p-3 text-muted small">
-                                                No protocol content yet. Use the <strong>Protocol</strong> tab to describe the experimental steps.
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                                
 
-                                <div id="entry-front-files" class="card border mb-3">
-                                    <div class="card-header bg-white py-2">
-                                        <div class="fw-bold">Files in this entry</div>
-                                        <div class="small text-muted">
-                                            Files attached to this notebook entry will appear here as traceable records.
-                                        </div>
-                                    </div>
-                                    <div class="card-body py-3">
-                                        <div class="row g-2">
-                                            {% for attachment in active_entry.attachments.all %}
-                                                <div class="col-md-6 col-xl-4">
-                                                    <div class="border rounded bg-light p-3 h-100">
-                                                        <div class="fw-semibold text-break">{{ attachment }}</div>
-                                                        {% if attachment.file %}
-                                                            <div class="small text-muted text-break mt-1">{{ attachment.file.name }}</div>
-                                                            <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                                                                Open file
-                                                            </a>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div class="col-12">
-                                                    <div class="border rounded bg-light p-3 text-muted small">
-                                                        No files attached yet. Use the <strong>Files</strong> tab to upload supporting data.
-                                                    </div>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
+                                
 
-                                <div id="entry-front-metadata" class="card border mb-3">
-                                    <div class="card-header bg-white py-2">
-                                        <div class="fw-bold">Notebook tracking metadata</div>
-                                        <div class="small text-muted">
-                                            DaVinci filesystem location and internal identifiers for traceability.
-                                        </div>
-                                    </div>
-                                    <div class="card-body py-3">
-                                        <dl class="row small mb-0">
-                                            <dt class="col-sm-3">Entry ID</dt>
-                                            <dd class="col-sm-9">{{ active_entry.id }}</dd>
-
-                                            <dt class="col-sm-3">Title</dt>
-                                            <dd class="col-sm-9">{{ active_entry.title }}</dd>
-
-                                            <dt class="col-sm-3">Author</dt>
-                                            <dd class="col-sm-9">{{ active_entry.author }}</dd>
-
-                                            <dt class="col-sm-3">DaVinci path</dt>
-                                            <dd class="col-sm-9">
-                                                {% if entry_workspace_path %}
-                                                    <code>{{ entry_workspace_path }}</code>
-                                                {% else %}
-                                                    <span class="text-muted">Not available</span>
-                                                {% endif %}
-                                            </dd>
-
-                                            <dt class="col-sm-3">Created</dt>
-                                            <dd class="col-sm-9">{{ active_entry.created_at|date:"Y-m-d H:i" }}</dd>
-
-                                            <dt class="col-sm-3">Updated</dt>
-                                            <dd class="col-sm-9">{{ active_entry.updated_at|date:"Y-m-d H:i" }}</dd>
-                                        </dl>
-                                    </div>
-                                </div>
+                                
 
                         {% endfor %}
                     </div>
                         </div>
 
-                        <div class="tab-pane fade" id="protocol-pane" role="tabpanel" aria-labelledby="protocol-tab">
-                            <div class="card">
-                                <div class="card-header bg-white">
-                                    <div class="d-flex justify-content-between align-items-center gap-2">
-                                        <div>
-                                            <div class="fw-bold">
-                                                <i class="bi bi-list-check me-2"></i>Protocol
-                                            </div>
-                                            <div class="small text-muted">
-                                                Structured protocol with purpose, timing, reagents, linked samples and checkpoints.
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertProtocolSkeleton()">
-                                                Insert template
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertProtocolStepBlock()">
-                                                Add step
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-lg-8">
-                                            <label class="form-label small fw-bold">Protocol text</label>
-                                            <textarea id="entry-protocol-content"
-                                                      class="form-control"
-                                                      rows="20"
-                                                      placeholder="Describe objective, materials, timing, steps, checkpoints and expected results...">{{ active_entry.protocol_content }}</textarea>
-                                            <div class="form-text">
-                                                This text is saved with the notebook entry. Use the helper panels to insert sections, samples and registered reagents.
-                                            </div>
-                                        </div>
-
-                                        <div class="col-lg-4">
-                                            <div class="border rounded p-3 bg-light mb-3">
-                                                <div class="fw-bold mb-2">Protocol sections</div>
-                                                <div class="small text-muted mb-2">Insert structured headings:</div>
-
-                                                <div class="d-grid gap-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Objective')">Objective</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Scope')">Scope</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Materials and reagents')">Materials and reagents</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Equipment')">Equipment</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Timing')">Timing</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Procedure')">Procedure</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Acceptance criteria / QC')">Acceptance criteria / QC</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary text-start" onclick="appendProtocolSection('Troubleshooting / deviations')">Troubleshooting / deviations</button>
-                                                </div>
-                                            </div>
-
-                                            <div class="border rounded p-3 bg-light mb-3">
-                                                <div class="fw-bold mb-2">Linked samples</div>
-                                                <div class="small text-muted mb-2">Insert samples already linked to this ELN entry:</div>
-
-                                                {% for link in linked_sample_links %}
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-primary text-start w-100 mb-2"
-                                                            onclick="appendProtocolMaterial('{{ link.sample.sample_id|escapejs }}', 'sample')">
-                                                        {{ link.sample.sample_id }}
-                                                        <span class="text-muted">· {{ link.sample.sample_type }}</span>
-                                                    </button>
-                                                {% empty %}
-                                                    <div class="small text-muted">No samples linked yet.</div>
-                                                {% endfor %}
-                                            </div>
-
-                                            <div class="border rounded p-3 bg-light">
-                                                <div class="fw-bold mb-2">Registered chemicals / reagents</div>
-                                                <div class="small text-muted mb-2">Insert reagents from the Chemical inventory:</div>
-
-                                                {% for chemical in protocol_chemicals %}
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-success text-start w-100 mb-2"
-                                                            onclick="appendProtocolMaterial('{{ chemical.name|escapejs }}', 'reagent')">
-                                                        {{ chemical.name }}
-                                                    </button>
-                                                {% empty %}
-                                                    <div class="small text-muted">No registered chemicals found yet.</div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        
 
                         <div class="tab-pane fade" id="items-pane" role="tabpanel" aria-labelledby="items-tab">
+                            
+
                             <div class="card">
                                 <div class="card-header bg-white fw-bold">
                                     <i class="bi bi-diagram-3 me-2"></i>Relevant items
@@ -837,6 +839,13 @@
                         </div>
                     </div>
                 </div>
+            <div class="notebook-panel mt-3">
+                
+
+                
+
+            </div>
+
             {% else %}
                 <div class="d-flex h-100 align-items-center justify-content-center text-muted">
                     <div class="d-flex align-items-center justify-content-center h-100">
@@ -976,12 +985,163 @@
                         Linked samples keep a live database reference and a frozen snapshot for the experiment record.
                     </div>
                 </div>
+            <div class="notebook-panel mt-3">
+                <div class="notebook-panel-header">Linked reagents</div>
+                <div class="notebook-panel-body">
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">Search reagent</label>
+                        <input type="text"
+                               id="chemical-search"
+                               class="form-control form-control-sm"
+                               placeholder="Reagent, formula, CAS, location..."
+                               oninput="searchChemicals(this.value)">
+                        <div id="chemical-search-results" class="list-group list-group-flush mt-2"></div>
+                    </div>
+
+                    <hr>
+
+                    <div id="linked-chemicals">
+                        {% for link in linked_chemical_links %}
+                            <div class="border rounded p-3 mb-3 bg-white notebook-linked-reagent-card"
+                                 id="chemical-link-{{ link.id }}"
+                                 data-name="{{ link.chemical.name|escape }}"
+                                 data-formula="{{ link.chemical.formula|default:''|escape }}"
+                                 data-cas="{{ link.chemical.cas_number|default:''|escape }}"
+                                 data-quantity="{{ link.chemical.quantity|escape }}"
+                                 data-location="{{ link.chemical.location|default:''|escape }}"
+                                 data-status="{{ link.chemical.status|escape }}"
+                                 data-msds="{{ link.chemical.msds_link|default:''|escape }}"
+                                 data-hazard="{{ link.chemical.hazard_notes|default:''|escape }}">
+                                <div class="fw-bold">{{ link.chemical.name }}</div>
+
+                                <div class="small text-muted">
+                                    {% if link.chemical.formula %}{{ link.chemical.formula }}{% endif %}
+                                    {% if link.chemical.cas_number %} · CAS {{ link.chemical.cas_number }}{% endif %}
+                                </div>
+
+                                <div class="small mt-1">
+                                    {{ link.chemical.quantity }}
+                                    {% if link.chemical.location %} · {{ link.chemical.location }}{% endif %}
+                                </div>
+
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-success border">{{ link.chemical.status }}</span>
+                                </div>
+
+                                {% if link.chemical.hazard_notes %}
+                                    <div class="small text-muted mt-2">
+                                        {{ link.chemical.hazard_notes|truncatechars:80 }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="d-flex gap-2 mt-3">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            onclick="insertChemicalSnapshot({{ link.id }})">
+                                        Insert snapshot
+                                    </button>
+
+                                    <a class="btn btn-sm btn-outline-success"
+                                       href="/biobank/internal/chemicals/"
+                                       target="_blank">
+                                        Open reagent
+                                    </a>
+
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="unlinkChemical({{ link.id }})">
+                                        Unlink
+                                    </button>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted small">No linked reagents yet.</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr>
+
+                    <div class="small text-muted">
+                        Linked reagents keep a live Chemical inventory reference and a frozen snapshot for the experiment record.
+                    </div>
+                </div>
+            </div>
+
             {% endif %}
         </aside>
     </div>
 </div>
 
 {% if active_entry %}
+
+<div class="modal fade" id="protocolToolModal" tabindex="-1" aria-labelledby="protocolToolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="protocolToolModalLabel">Configure protocol block</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="protocol-tool-kind">
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold">Title</label>
+                        <input type="text" id="protocol-tool-title" class="form-control" placeholder="e.g., Incubation, Wash step, Reagent input">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Duration</label>
+                        <div class="input-group">
+                            <input type="number" id="protocol-tool-duration" class="form-control" min="0" value="10">
+                            <span class="input-group-text">min</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Condition / temperature</label>
+                        <input type="text" id="protocol-tool-condition" class="form-control" placeholder="e.g., room temp, 37 °C, ice">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Input / source</label>
+                        <input type="text" id="protocol-tool-source" class="form-control" placeholder="Sample, reagent, buffer, tube, plate...">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Volume / amount / concentration</label>
+                        <input type="text" id="protocol-tool-amount" class="form-control" placeholder="e.g., 10 µL, 1x, 50 ng, OD600 0.5">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Expected output / QC</label>
+                        <input type="text" id="protocol-tool-qc" class="form-control" placeholder="e.g., clear pellet, band size, concentration range">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Notes</label>
+                        <textarea id="protocol-tool-notes" class="form-control" rows="4" placeholder="Additional notes, deviations, acceptance criteria..."></textarea>
+                    </div>
+
+                    <div class="col-12" id="protocol-tool-checklist-area">
+                        <label class="form-label small fw-bold">Checklist items</label>
+                        <textarea id="protocol-tool-checklist" class="form-control" rows="3">Materials prepared
+Step completed
+QC checked</textarea>
+                        <div class="form-text">One item per line.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="insertConfiguredProtocolTool()">Insert into Main note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script id="linked-samples-json" type="application/json">{{ linked_samples_json|safe }}</script>
 {% endif %}
 {% endblock %}
@@ -1009,7 +1169,7 @@
 
     const quill = new Quill("#editor-container", {
         theme: "snow",
-        placeholder: "Describe experiment goals, protocol, reagents, observations and results...",
+        placeholder: "",
         modules: {
             toolbar: [
                 [{ "header": [1, 2, 3, false] }],
@@ -1215,7 +1375,102 @@ function insertProtocolStep() {
         }, 150);
     }
 
-    function createMolecularItem() {
+    
+
+/* BIOBANK_RELEVANT_ITEM_NOTE_INSERT_START */
+function escapeRelevantItemHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function relevantItemTypeLabel(value) {
+    const labels = {
+        dna: "DNA",
+        rna: "RNA",
+        protein: "Protein",
+        plasmid: "Plasmid",
+        primer: "Primer",
+        insert: "Insert",
+        other: "Other"
+    };
+    return labels[value] || value || "Molecular item";
+}
+
+function relevantTopologyLabel(value) {
+    const labels = {
+        linear: "Linear",
+        circular: "Circular"
+    };
+    return labels[value] || value || "";
+}
+
+function buildRelevantItemNoteHtml(item) {
+    const name = escapeRelevantItemHtml(item.name || "Molecular item");
+    const type = escapeRelevantItemHtml(relevantItemTypeLabel(item.sequence_type || item.type));
+    const topology = escapeRelevantItemHtml(relevantTopologyLabel(item.topology || ""));
+    const length = item.length || 0;
+    const detailUrl = item.detail_url || item.url || "";
+    const description = escapeRelevantItemHtml(item.description || "");
+
+    const meta = [type, topology, `${length} bp/aa`].filter(Boolean).join(" · ");
+
+    const openButton = detailUrl
+        ? `<a href="${escapeRelevantItemHtml(detailUrl)}"
+              target="_blank"
+              contenteditable="false"
+              style="border:1px solid #198754;color:#198754;border-radius:4px;padding:3px 10px;text-decoration:none;font-size:0.85rem;">
+                Open
+           </a>`
+        : "";
+
+    return `
+        <div class="notebook-molecular-reference-card"
+             data-notebook-widget="molecular-reference"
+             contenteditable="false"
+             style="border:1px solid #dee2e6;border-radius:6px;padding:10px 12px;margin:8px 0;background:#ffffff;max-width:720px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                <div style="min-width:0;">
+                    <div style="font-weight:700;word-break:break-word;">${name}</div>
+                    <div style="font-size:0.9rem;color:#495057;margin-top:3px;">${escapeRelevantItemHtml(meta)}</div>
+                    ${description ? `<div style="font-size:0.85rem;color:#6c757d;margin-top:3px;word-break:break-word;">${description}</div>` : ""}
+                </div>
+
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+                    <span style="font-size:0.78rem;font-weight:700;border:1px solid #badbcc;color:#146c43;background:#d1e7dd;border-radius:4px;padding:2px 8px;">
+                        Molecular item
+                    </span>
+                    ${openButton}
+                </div>
+            </div>
+        </div>
+        <p><br></p>
+    `;
+}
+
+function insertRelevantItemIntoMainNote(item) {
+    const html = buildRelevantItemNoteHtml(item);
+
+    if (typeof insertHtmlDirectlyIntoQuillRoot === "function") {
+        insertHtmlDirectlyIntoQuillRoot(html);
+    } else if (typeof insertHtmlIntoMainNote === "function") {
+        insertHtmlIntoMainNote(html);
+    } else {
+        console.warn("Main note insertion function is not available.");
+        return;
+    }
+
+    if (typeof saveEntry === "function") {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 300);
+    }
+}
+/* BIOBANK_RELEVANT_ITEM_NOTE_INSERT_END */
+
+function createMolecularItem() {
         const nameInput = document.getElementById("molecular-item-name");
         const typeInput = document.getElementById("molecular-item-type");
         const topologyInput = document.getElementById("molecular-item-topology");
@@ -1237,10 +1492,18 @@ function insertProtocolStep() {
 
         saveStatus.textContent = "Creating molecular item...";
 
-        postJson("{% url 'notebook_create_molecular_sequence_api' active_entry.id %}", payload)
+        postJson("/biobank/internal/lab-tools/notebook/api/molecular-sequence/create/{{ active_entry.id }}/", payload)
             .then(data => {
                 if (data.status === "success") {
-                    window.location.reload();
+                    saveStatus.textContent = "Relevant item created.";
+                    saveStatus.classList.remove("text-danger");
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("entry_id", "{{ active_entry.id }}");
+                    url.searchParams.set("tab", "items");
+                    url.hash = "items-pane";
+
+                    window.location.href = url.toString();
                 } else {
                     saveStatus.textContent = "Molecular item error";
                     saveStatus.classList.add("text-danger");
@@ -1641,15 +1904,15 @@ function buildNotebookMainTable(rows, cols) {
     rows = Math.max(1, parseInt(rows || 0, 10));
     cols = Math.max(1, parseInt(cols || 0, 10));
 
-    let html = '<table class="notebook-main-table"><tbody>';
+    let html = '<table class="notebook-main-table" data-notebook-widget="table" tabindex="0"><tbody>';
 
     for (let row = 1; row <= rows; row++) {
         html += '<tr>';
         for (let col = 1; col <= cols; col++) {
             if (row === 1) {
-                html += `<th>Column ${col}</th>`;
+                html += `<th contenteditable="true">Column ${col}</th>`;
             } else {
-                html += '<td>&nbsp;</td>';
+                html += '<td contenteditable="true">&nbsp;</td>';
             }
         }
         html += '</tr>';
@@ -1838,7 +2101,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 /* BIOBANK_DOCS_TABLE_PICKER_END */
 
-
 /* BIOBANK_PROTOCOL_BUILDER_START */
 function getProtocolTextarea() {
     return document.getElementById("entry-protocol-content");
@@ -1933,6 +2195,528 @@ function appendProtocolMaterial(name, kind) {
     appendToProtocol(`- ${label}: ${name}`);
 }
 /* BIOBANK_PROTOCOL_BUILDER_END */
+
+/* BIOBANK_TABLE_DELETE_TOOLS_START */
+function clearNotebookTableSelection() {
+    document.querySelectorAll(".notebook-main-table.table-selected").forEach(function(table) {
+        table.classList.remove("table-selected");
+    });
+}
+
+function selectNotebookTable(table) {
+    clearNotebookTableSelection();
+    table.classList.add("table-selected");
+    table.focus();
+}
+
+document.addEventListener("click", function(event) {
+    const table = event.target.closest(".notebook-main-table");
+    if (!table) {
+        if (!event.target.closest(".notebook-main-table-remove")) {
+            clearNotebookTableSelection();
+        }
+        return;
+    }
+
+    selectNotebookTable(table);
+});
+
+document.addEventListener("keydown", function(event) {
+    if (!["Delete", "Backspace"].includes(event.key)) return;
+
+    const selected = document.querySelector(".notebook-main-table.table-selected");
+    if (!selected) return;
+
+    const activeCell = document.activeElement && document.activeElement.closest
+        ? document.activeElement.closest(".notebook-main-table td, .notebook-main-table th")
+        : null;
+
+    if (activeCell && activeCell.textContent.trim()) {
+        return;
+    }
+
+    event.preventDefault();
+    selected.remove();
+
+    saveStatus.textContent = "Unsaved...";
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(saveEntry, 800);
+});
+/* BIOBANK_TABLE_DELETE_TOOLS_END */
+
+/* BIOBANK_PROTOCOL_INLINE_BUTTON_BINDINGS_START */
+document.addEventListener("click", function(event) {
+    const timerButton = event.target.closest(".ql-biobank-protocol-timer");
+    const checklistButton = event.target.closest(".ql-biobank-protocol-checklist");
+
+    if (!timerButton && !checklistButton) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (timerButton) {
+        openMainNoteProtocolTool("timer");
+        return false;
+    }
+
+    if (checklistButton) {
+        openMainNoteProtocolTool("checklist");
+        return false;
+    }
+});
+/* BIOBANK_PROTOCOL_INLINE_BUTTON_BINDINGS_END */
+
+/* BIOBANK_RUNTIME_PROTOCOL_BUTTONS_NEXT_TO_TABLE_START */
+function makeBiobankChecklistToolbarButton() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ql-biobank-protocol-checklist";
+    button.title = "Insert checklist";
+    button.setAttribute("aria-label", "Insert checklist");
+    button.innerHTML = '<i class="bi bi-list-check"></i>';
+
+    button.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (typeof openMainNoteProtocolTool !== "function") {
+            alert("Checklist tool function is not available yet.");
+            return false;
+        }
+
+        openMainNoteProtocolTool("checklist");
+        return false;
+    });
+
+    return button;
+}
+
+function installBiobankProtocolButtonsNextToTable() {
+    const toolbar = document.querySelector(".ql-toolbar");
+    if (!toolbar) return false;
+
+    if (typeof installQuillDocsLikeTableButton === "function") {
+        installQuillDocsLikeTableButton();
+    }
+
+    const tableButton = toolbar.querySelector("button.ql-biobank-table");
+    if (!tableButton) return false;
+
+    toolbar.querySelectorAll("button.ql-biobank-protocol-timer, button.ql-biobank-protocol-checklist").forEach(function(button) {
+        button.remove();
+    });
+
+    const checklistButton = makeBiobankChecklistToolbarButton();
+    tableButton.insertAdjacentElement("afterend", checklistButton);
+
+    return true;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    [100, 300, 700, 1200, 2000].forEach(function(delay) {
+        setTimeout(installBiobankProtocolButtonsNextToTable, delay);
+    });
+});
+
+setTimeout(installBiobankProtocolButtonsNextToTable, 0);
+setTimeout(installBiobankProtocolButtonsNextToTable, 500);
+/* BIOBANK_RUNTIME_PROTOCOL_BUTTONS_NEXT_TO_TABLE_END */
+
+/* BIOBANK_INLINE_CHECKLIST_ONLY_FINAL_START */
+function biobankEscapeChecklistHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function markChecklistModalFields() {
+    const mapping = {
+        "protocol-tool-title": "protocol-field-title",
+        "protocol-tool-duration": "protocol-field-duration",
+        "protocol-tool-condition": "protocol-field-condition",
+        "protocol-tool-source": "protocol-field-source",
+        "protocol-tool-amount": "protocol-field-amount",
+        "protocol-tool-qc": "protocol-field-qc",
+        "protocol-tool-notes": "protocol-field-notes",
+        "protocol-tool-checklist": "protocol-field-checklist"
+    };
+
+    Object.entries(mapping).forEach(function([fieldId, className]) {
+        const field = document.getElementById(fieldId);
+        if (!field) return;
+
+        const group = field.closest(".col-md-3, .col-md-4, .col-md-6, .col-12, .mb-3");
+        if (group) {
+            group.classList.add(className);
+        }
+    });
+
+    const checklistArea = document.getElementById("protocol-tool-checklist-area");
+    if (checklistArea) {
+        checklistArea.classList.add("protocol-field-checklist");
+    }
+}
+
+function openMainNoteProtocolTool(kind) {
+    const modalElement = document.getElementById("protocolToolModal");
+    if (!modalElement) {
+        alert("Checklist configuration modal was not found.");
+        return;
+    }
+
+    markChecklistModalFields();
+    modalElement.classList.add("checklist-only");
+
+    const kindInput = document.getElementById("protocol-tool-kind");
+    const titleInput = document.getElementById("protocol-tool-title");
+    const checklistInput = document.getElementById("protocol-tool-checklist");
+
+    if (!kindInput || !titleInput || !checklistInput) {
+        alert("Checklist modal fields are missing.");
+        return;
+    }
+
+    kindInput.value = "checklist";
+    titleInput.value = "Checklist step";
+    checklistInput.value = "Materials prepared\nStep completed\nQC checked";
+
+    ["protocol-tool-duration", "protocol-tool-condition", "protocol-tool-source", "protocol-tool-amount", "protocol-tool-qc", "protocol-tool-notes"].forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) field.value = "";
+    });
+
+    const modalLabel = document.getElementById("protocolToolModalLabel");
+    if (modalLabel) {
+        modalLabel.textContent = "Insert checklist";
+    }
+
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+}
+
+function openProtocolToolModal(kind, name = "", detail = "") {
+    openMainNoteProtocolTool("checklist");
+
+    const titleInput = document.getElementById("protocol-tool-title");
+    if (titleInput && name) {
+        titleInput.value = name;
+    }
+}
+
+function buildInlineChecklistHtml() {
+    const titleInput = document.getElementById("protocol-tool-title");
+    const checklistInput = document.getElementById("protocol-tool-checklist");
+
+    const title = biobankEscapeChecklistHtml(titleInput ? titleInput.value || "Checklist step" : "Checklist step");
+
+    const items = (checklistInput ? checklistInput.value : "")
+        .split(/\n+/)
+        .map(item => item.trim())
+        .filter(Boolean);
+
+    const itemHtml = items.length
+        ? items.map(function(item) {
+            return `
+                <label class="notebook-inline-checklist-item" contenteditable="false">
+                    <input type="checkbox" class="notebook-protocol-checkbox">
+                    <span>${biobankEscapeChecklistHtml(item)}</span>
+                </label>
+            `;
+        }).join("")
+        : `
+            <label class="notebook-inline-checklist-item" contenteditable="false">
+                <input type="checkbox" class="notebook-protocol-checkbox">
+                <span>Checklist item</span>
+            </label>
+        `;
+
+    return `
+        <div class="notebook-inline-checklist" data-notebook-widget="inline-checklist" contenteditable="true">
+            <div class="notebook-inline-checklist-title" contenteditable="true">☑ ${title}</div>
+            ${itemHtml}
+        </div>
+        <p><br></p>
+    `;
+}
+
+function closeChecklistModalHard() {
+    const modalElement = document.getElementById("protocolToolModal");
+    if (!modalElement) return;
+
+    try {
+        const instance = bootstrap.Modal.getInstance(modalElement) || bootstrap.Modal.getOrCreateInstance(modalElement);
+        instance.hide();
+    } catch (error) {
+        console.warn("Bootstrap modal hide failed", error);
+    }
+
+    modalElement.classList.remove("show");
+    modalElement.style.display = "none";
+    modalElement.setAttribute("aria-hidden", "true");
+    modalElement.removeAttribute("aria-modal");
+    modalElement.removeAttribute("role");
+
+    document.querySelectorAll(".modal-backdrop").forEach(function(backdrop) {
+        backdrop.remove();
+    });
+
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
+}
+
+function insertConfiguredProtocolTool() {
+    const html = buildInlineChecklistHtml();
+
+    if (typeof insertHtmlDirectlyIntoQuillRoot === "function") {
+        insertHtmlDirectlyIntoQuillRoot(html);
+    } else if (typeof insertHtmlIntoMainNote === "function") {
+        insertHtmlIntoMainNote(html);
+    } else {
+        alert("Main note insertion function is not available.");
+        return;
+    }
+
+    closeChecklistModalHard();
+}
+
+document.addEventListener("click", function(event) {
+    const checkbox = event.target.closest(".notebook-protocol-checkbox");
+    if (!checkbox) return;
+
+    event.stopPropagation();
+
+    if (checkbox.checked) {
+        checkbox.setAttribute("checked", "checked");
+    } else {
+        checkbox.removeAttribute("checked");
+    }
+
+    if (typeof saveStatus !== "undefined" && saveStatus) {
+        saveStatus.textContent = "Unsaved...";
+    }
+
+    if (typeof timeoutId !== "undefined" && typeof saveEntry === "function") {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 800);
+    }
+});
+
+window.openMainNoteProtocolTool = openMainNoteProtocolTool;
+window.openProtocolToolModal = openProtocolToolModal;
+window.insertConfiguredProtocolTool = insertConfiguredProtocolTool;
+/* BIOBANK_INLINE_CHECKLIST_ONLY_FINAL_END */
+
+/* BIOBANK_OPEN_TAB_FROM_URL_START */
+document.addEventListener("DOMContentLoaded", function() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+
+    if (tab === "items") {
+        const itemsTab = document.getElementById("items-tab");
+        if (itemsTab && window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(itemsTab).show();
+        } else if (itemsTab) {
+            itemsTab.click();
+        }
+    }
+
+    if (tab === "notes") {
+        const notesTab = document.getElementById("notes-tab");
+        if (notesTab && window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(notesTab).show();
+        } else if (notesTab) {
+            notesTab.click();
+        }
+    }
+});
+/* BIOBANK_OPEN_TAB_FROM_URL_END */
+
+/* BIOBANK_LINKED_CHEMICALS_START */
+function escapeChemicalHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function chemicalStatusBadge(status) {
+    const safe = escapeChemicalHtml(status || "");
+    return safe ? `<span class="badge bg-light text-success border">${safe}</span>` : "";
+}
+
+function chemicalResultLabel(chemical) {
+    const parts = [];
+    if (chemical.quantity) parts.push(chemical.quantity);
+    if (chemical.location) parts.push(chemical.location);
+    if (chemical.cas_number) parts.push("CAS " + chemical.cas_number);
+    return parts.join(" · ");
+}
+
+function searchChemicals(query) {
+    const box = document.getElementById("chemical-search-results");
+    if (!box) return;
+
+    const trimmed = (query || "").trim();
+    if (trimmed.length < 1) {
+        box.innerHTML = "";
+        return;
+    }
+
+    fetch(`/biobank/internal/api/search-chemicals/?q=${encodeURIComponent(trimmed)}`)
+        .then(response => response.json())
+        .then(data => {
+            const results = data.results || [];
+
+            if (!results.length) {
+                box.innerHTML = '<div class="list-group-item small text-muted">No reagents found.</div>';
+                return;
+            }
+
+            box.innerHTML = results.map(chemical => {
+                const label = chemicalResultLabel(chemical);
+                return `
+                    <button type="button"
+                            class="list-group-item list-group-item-action"
+                            onclick="linkChemical(${chemical.id})">
+                        <div class="fw-semibold small">${escapeChemicalHtml(chemical.name)}</div>
+                        <div class="small text-muted">${escapeChemicalHtml(label)}</div>
+                        <div class="small">${chemicalStatusBadge(chemical.status)}</div>
+                    </button>
+                `;
+            }).join("");
+        })
+        .catch(error => {
+            box.innerHTML = `<div class="list-group-item small text-danger">${escapeChemicalHtml(error)}</div>`;
+        });
+}
+
+function linkChemical(chemicalId) {
+    saveStatus.textContent = "Linking reagent...";
+
+    postJson(`/biobank/internal/lab-tools/notebook/api/link-chemical/{{ active_entry.id }}/`, {
+        chemical_id: chemicalId
+    })
+        .then(data => {
+            if (data.status === "success") {
+                const url = new URL(window.location.href);
+                url.searchParams.set("entry_id", "{{ active_entry.id }}");
+                window.location.href = url.toString();
+            } else {
+                saveStatus.textContent = "Reagent link error";
+                saveStatus.classList.add("text-danger");
+                alert(data.message || "Could not link reagent.");
+            }
+        })
+        .catch(error => {
+            saveStatus.textContent = "Reagent link error";
+            saveStatus.classList.add("text-danger");
+            alert(error);
+        });
+}
+
+function unlinkChemical(linkId) {
+    saveStatus.textContent = "Unlinking reagent...";
+
+    postJson(`/biobank/internal/lab-tools/notebook/api/unlink-chemical/{{ active_entry.id }}/${linkId}/`, {})
+        .then(data => {
+            if (data.status === "success") {
+                const card = document.getElementById(`chemical-link-${linkId}`);
+                if (card) card.remove();
+
+                saveStatus.textContent = "Reagent unlinked.";
+                saveStatus.classList.remove("text-danger");
+            } else {
+                saveStatus.textContent = "Reagent unlink error";
+                saveStatus.classList.add("text-danger");
+                alert(data.message || "Could not unlink reagent.");
+            }
+        })
+        .catch(error => {
+            saveStatus.textContent = "Reagent unlink error";
+            saveStatus.classList.add("text-danger");
+            alert(error);
+        });
+}
+
+function buildChemicalSnapshotHtml(data) {
+    const title = escapeChemicalHtml(data.name || "Linked reagent");
+    const formula = escapeChemicalHtml(data.formula || "");
+    const cas = escapeChemicalHtml(data.cas || "");
+    const quantity = escapeChemicalHtml(data.quantity || "");
+    const location = escapeChemicalHtml(data.location || "");
+    const status = escapeChemicalHtml(data.status || "");
+    const hazard = escapeChemicalHtml(data.hazard || "");
+
+    return `
+        <div class="notebook-linked-reagent-snapshot"
+             data-notebook-widget="linked-reagent-snapshot"
+             contenteditable="true"
+             style="border:1px solid #dee2e6;border-left:4px solid #198754;border-radius:6px;padding:10px 12px;margin:8px 0;background:#ffffff;max-width:720px;">
+            <div style="font-weight:700;">Linked reagent snapshot</div>
+            <ul style="margin:4px 0 0 18px;">
+                <li><strong>Name:</strong> ${title}</li>
+                ${formula ? `<li><strong>Formula:</strong> ${formula}</li>` : ""}
+                ${cas ? `<li><strong>CAS:</strong> ${cas}</li>` : ""}
+                ${quantity ? `<li><strong>Quantity:</strong> ${quantity}</li>` : ""}
+                ${location ? `<li><strong>Location:</strong> ${location}</li>` : ""}
+                ${status ? `<li><strong>Status:</strong> ${status}</li>` : ""}
+                ${hazard ? `<li><strong>Hazards:</strong> ${hazard}</li>` : ""}
+            </ul>
+        </div>
+        <p><br></p>
+    `;
+}
+
+function insertChemicalSnapshot(linkId) {
+    const card = document.getElementById(`chemical-link-${linkId}`);
+    if (!card) return;
+
+    const data = {
+        name: card.dataset.name || "",
+        formula: card.dataset.formula || "",
+        cas: card.dataset.cas || "",
+        quantity: card.dataset.quantity || "",
+        location: card.dataset.location || "",
+        status: card.dataset.status || "",
+        hazard: card.dataset.hazard || ""
+    };
+
+    const html = buildChemicalSnapshotHtml(data);
+
+    if (typeof insertHtmlDirectlyIntoQuillRoot === "function") {
+        insertHtmlDirectlyIntoQuillRoot(html);
+    } else if (typeof insertHtmlIntoMainNote === "function") {
+        insertHtmlIntoMainNote(html);
+    } else {
+        alert("Main note insertion function is not available.");
+        return;
+    }
+
+    saveStatus.textContent = "Reagent snapshot inserted.";
+    saveStatus.classList.remove("text-danger");
+
+    if (typeof activateEntryTab === "function") {
+        activateEntryTab("notes-tab");
+    }
+
+    if (typeof saveEntry === "function") {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(saveEntry, 300);
+    }
+}
+
+window.searchChemicals = searchChemicals;
+window.linkChemical = linkChemical;
+window.unlinkChemical = unlinkChemical;
+window.insertChemicalSnapshot = insertChemicalSnapshot;
+/* BIOBANK_LINKED_CHEMICALS_END */
 
 </script>
 {% endif %}

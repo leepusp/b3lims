@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db import models
 
 from core.models.samples.sample import Sample
+from core.models.chemicals.chemical import Chemical
 
 
 def notebook_attachment_upload_to(instance, filename):
@@ -132,8 +133,98 @@ class NotebookSampleLink(models.Model):
         return f"{self.entry_id} -> {self.sample_id}"
 
 
+class NotebookChemicalLink(models.Model):
+    """
+    Explicit link between a notebook entry and a Chemical inventory record.
+
+    snapshot_json preserves the reagent state at the time it was linked, while
+    the chemical foreign key keeps a live reference to the current inventory record.
+    """
+    entry = models.ForeignKey(
+        NotebookEntry,
+        on_delete=models.CASCADE,
+        related_name="chemical_links",
+    )
+    chemical = models.ForeignKey(
+        Chemical,
+        on_delete=models.CASCADE,
+        related_name="notebook_chemical_links",
+    )
+    snapshot_json = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True)
+    linked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_chemical_links_created",
+    )
+    linked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-linked_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entry", "chemical"],
+                name="unique_notebook_entry_chemical_link",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.entry_id} -> chemical:{self.chemical_id}"
+
+
+class MolecularFeature(models.Model):
+    """
+    Editable sequence feature linked to a MolecularSequence.
+
+    This is the persistent source of truth for SeqViz annotations,
+    feature colors, coordinates, strand and notes.
+    """
+    FEATURE_TYPES = [
+        ("promoter", "Promoter"),
+        ("rbs", "RBS"),
+        ("cds", "CDS / ORF / Insert"),
+        ("terminator", "Terminator"),
+        ("ori", "Origin"),
+        ("antibiotic", "Antibiotic marker"),
+        ("primer", "Primer binding site"),
+        ("domain", "Protein domain"),
+        ("utr", "UTR"),
+        ("custom", "Custom"),
+    ]
+
+    STRANDS = [
+        ("+", "Forward"),
+        ("-", "Reverse"),
+        (".", "Not applicable"),
+    ]
+
+    molecule = models.ForeignKey(
+        "MolecularSequence",
+        on_delete=models.CASCADE,
+        related_name="features",
+    )
+    name = models.CharField(max_length=255)
+    feature_type = models.CharField(max_length=32, choices=FEATURE_TYPES, default="custom")
+    start = models.PositiveIntegerField(default=1)
+    end = models.PositiveIntegerField(default=1)
+    strand = models.CharField(max_length=1, choices=STRANDS, default="+")
+    color = models.CharField(max_length=16, default="#868e96")
+    notes = models.TextField(blank=True)
+    qualifiers_json = models.JSONField(default=dict, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "start", "id"]
+
+    def __str__(self):
+        return f"{self.molecule_id}:{self.name} {self.start}-{self.end}"
+
+
 class NotebookBlock(models.Model):
     BLOCK_TYPE_CHOICES = [
+        ("protocol", "Protocol"),
         ("image", "Image"),
         ("table", "Table"),
         ("sequence", "Sequence"),

@@ -1,1267 +1,2409 @@
 {% extends 'internal/common/base.html' %}
-
-{% block title %}Molecular Item - {{ molecule.name }}{% endblock %}
-
 {% block content %}
+
+{% csrf_token %}
+
 <style>
-    .molecular-shell {
-        height: calc(100vh - 110px);
-        min-height: 720px;
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: .75rem;
-        overflow: hidden;
+/* BIOBANK_MOLECULAR_WORKSPACE_V2_STYLE_START */
+.mol-page {
+    padding: 0.75rem 1rem 1.5rem 1rem;
+}
+
+.mol-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.mol-title {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+.mol-breadcrumb {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.mol-breadcrumb a {
+    text-decoration: none;
+}
+
+.mol-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+}
+
+.mol-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.16rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid #d0d7de;
+    background: #f8fafc;
+}
+
+.mol-badge.type-dna,
+.mol-badge.type-plasmid,
+.mol-badge.type-insert {
+    color: #0f5132;
+    background: #d1e7dd;
+    border-color: #badbcc;
+}
+
+.mol-badge.type-rna {
+    color: #055160;
+    background: #cff4fc;
+    border-color: #b6effb;
+}
+
+.mol-badge.type-protein {
+    color: #664d03;
+    background: #fff3cd;
+    border-color: #ffecb5;
+}
+
+.mol-badge.type-primer {
+    color: #052c65;
+    background: #cfe2ff;
+    border-color: #b6d4fe;
+}
+
+.mol-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mol-layout {
+    display: grid;
+    grid-template-columns: minmax(420px, 0.95fr) minmax(560px, 1.2fr);
+    gap: 1rem;
+}
+
+.mol-panel {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.mol-panel-header {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 800;
+}
+
+.mol-panel-body {
+    padding: 0.85rem;
+}
+
+.mol-label {
+    font-size: 0.72rem;
+    color: #6c757d;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+}
+
+.mol-sequence-map {
+    min-height: 360px;
+    max-height: 520px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    background: #ffffff;
+}
+
+.mol-seq-line {
+    display: grid;
+    grid-template-columns: 4rem 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.mol-seq-pos {
+    color: #6c757d;
+    text-align: right;
+    user-select: none;
+}
+
+.mol-seq-text {
+    word-break: break-all;
+}
+
+.mol-feature-token {
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+.ft-promoter { background: #cfe2ff; color: #052c65; }
+.ft-rbs { background: #e2e3e5; color: #41464b; }
+.ft-cds { background: #d1e7dd; color: #0f5132; }
+.ft-terminator { background: #f8d7da; color: #842029; }
+.ft-ori { background: #e7d9ff; color: #3d0a91; }
+.ft-antibiotic { background: #fff3cd; color: #664d03; }
+.ft-primer { background: #cff4fc; color: #055160; }
+.ft-domain { background: #ffe5d0; color: #7a3500; }
+.ft-custom { background: #f1f3f5; color: #343a40; }
+
+.mol-map-card {
+    min-height: 360px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mol-svg text {
+    font-family: inherit;
+}
+
+.mol-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}
+
+.mol-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+}
+
+.mol-legend-color {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.mol-tabs {
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.55rem 0.65rem 0 0.65rem;
+}
+
+.mol-tab {
+    border: 0;
+    background: transparent;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #495057;
+    border-bottom: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.mol-tab.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+}
+
+.mol-tab-pane {
+    display: none;
+    padding: 0.85rem;
+}
+
+.mol-tab-pane.active {
+    display: block;
+}
+
+.mol-feature-row {
+    display: grid;
+    grid-template-columns: 1.2fr 0.85fr 0.55fr 0.55fr 0.55fr auto;
+    gap: 0.35rem;
+    align-items: end;
+    margin-bottom: 0.45rem;
+}
+
+.mol-feature-row.header {
+    font-size: 0.72rem;
+    color: #6c757d;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.mol-sequence-editor {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.84rem;
+    min-height: 220px;
+}
+
+.mol-qc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.8rem;
+}
+
+.mol-type-card {
+    border: 1px solid #dee2e6;
+    border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    padding: 0.8rem;
+    background: #f8fafc;
+    margin-bottom: 0.75rem;
+}
+
+.mol-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.mol-stat {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.55rem;
+}
+
+.mol-stat .value {
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.mol-stat .label {
+    color: #6c757d;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+@media (max-width: 1150px) {
+    .mol-layout {
+        grid-template-columns: 1fr;
     }
 
-    .molecular-tabs {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        border-bottom: 1px solid #dee2e6;
-        background: #f6f7f9;
-        padding: 0 6px;
-        overflow-x: auto;
-        white-space: nowrap;
-        min-height: 42px;
+    .mol-feature-row {
+        grid-template-columns: 1fr 1fr;
     }
 
-    .molecular-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 9px 14px;
-        border-right: 1px solid #dee2e6;
-        cursor: default;
-        color: #6c757d;
-        font-size: 13px;
+    .mol-stat-grid,
+    .mol-qc-grid {
+        grid-template-columns: 1fr;
     }
+}
+/* BIOBANK_MOLECULAR_WORKSPACE_V2_STYLE_END */
 
-    .molecular-tab.active {
-        background: #fff;
-        color: #212529;
-        border-top: 2px solid #0d6efd;
-        margin-bottom: -1px;
-        font-weight: 600;
-    }
+/* BIOBANK_MOLECULAR_DYNAMIC_FEATURES_STYLE_START */
+.mol-feature-row.dynamic {
+    grid-template-columns: 1.05fr 0.8fr 0.5fr 0.5fr 0.45fr 0.5fr auto;
+}
 
-    .molecular-main {
-        display: flex;
-        flex: 1 1 auto;
-        min-height: 0;
-    }
+.mol-feature-hotspot {
+    cursor: pointer;
+    transition: opacity 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+}
 
-    .molecular-pane {
-        display: flex;
-        flex-direction: column;
-        min-width: 260px;
-        overflow: hidden;
-    }
+.mol-feature-hotspot:hover,
+.mol-feature-hotspot.mol-hovered {
+    opacity: 0.82;
+    filter: brightness(1.08);
+}
 
-    .molecular-pane.left {
-        flex: 0 0 48%;
-    }
+.mol-feature-hotspot.mol-selected {
+    stroke: #111827 !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 4px rgba(13, 110, 253, 0.45));
+}
 
-    .molecular-pane.right {
-        flex: 1 1 auto;
-        border-left: 1px solid #dee2e6;
-    }
+.mol-seq-feature-token {
+    cursor: pointer;
+    border-radius: 3px;
+}
 
-    .molecular-splitter {
-        flex: 0 0 6px;
-        cursor: col-resize;
-        position: relative;
-        background: transparent;
-    }
+.mol-seq-feature-token.mol-hovered,
+.mol-seq-feature-token.mol-selected {
+    outline: 1px solid #111827;
+    outline-offset: 1px;
+    filter: brightness(1.08);
+}
 
-    .molecular-splitter::after {
-        content: "";
-        position: absolute;
-        inset: 0 2px;
-        background: #dee2e6;
-    }
+.mol-legend-item {
+    cursor: pointer;
+}
 
-    .molecular-splitter:hover::after {
-        background: #0d6efd;
-    }
+.mol-legend-item.mol-selected {
+    border-color: #111827;
+    background: #f1f3f5;
+}
 
-    .molecular-pane-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 6px 10px;
-        border-bottom: 1px solid #dee2e6;
-        background: #fff;
-        min-height: 42px;
-    }
+.mol-feature-inspector {
+    border: 1px solid #dee2e6;
+    border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #f8fafc;
+    margin-bottom: 0.85rem;
+}
 
-    .pane-tabs {
-        display: flex;
-        gap: 2px;
-        flex-wrap: wrap;
-    }
+.mol-feature-inspector .feature-title {
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
 
-    .pane-tab {
-        padding: 6px 10px;
-        font-size: 12px;
-        letter-spacing: .04em;
-        color: #6c757d;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        text-transform: uppercase;
-        background: transparent;
-        border-top: 0;
-        border-left: 0;
-        border-right: 0;
-    }
+.mol-feature-inspector .feature-meta {
+    font-size: 0.82rem;
+    color: #6c757d;
+}
 
-    .pane-tab.active {
-        color: #0d6efd;
-        border-bottom-color: #0d6efd;
-        font-weight: 600;
-    }
+.mol-color-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.15);
+}
+/* BIOBANK_MOLECULAR_DYNAMIC_FEATURES_STYLE_END */
 
-    .molecular-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
+/* BIOBANK_SEQUENCE_MAP_READABLE_STYLE_START */
+.mol-sequence-map {
+    padding: 0.55rem 0.65rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    background: #ffffff;
+}
 
-    .molecular-pane-body {
-        flex: 1 1 auto;
-        overflow: auto;
-        padding: 14px;
-        background: #fff;
-    }
+.mol-seq-line {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: start;
+    margin-bottom: 0.35rem;
+}
 
-    .sequence-map {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 13px;
-        line-height: 1.35;
-    }
+.mol-seq-pos {
+    color: #6c757d;
+    text-align: right;
+    user-select: none;
+    font-size: 0.72rem;
+    padding-top: 0.12rem;
+}
 
-    .sequence-row {
-        margin: 0 0 18px 0;
-        position: relative;
-    }
+.mol-seq-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    letter-spacing: 0.02em;
+}
 
-    .row-grid {
-        position: relative;
-        margin-left: 54px;
-    }
+.mol-seq-segment {
+    border-radius: 3px;
+    padding: 1px 2px;
+    margin: 0 1px 1px 0;
+    display: inline;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
 
-    .gutter {
-        position: absolute;
-        left: 0;
-        width: 46px;
-        text-align: right;
-        color: #6c757d;
-        font-size: 11px;
-    }
+.mol-seq-segment.feature {
+    cursor: pointer;
+}
 
-    .ruler {
-        position: relative;
-        height: 14px;
-        color: #6c757d;
-        font-size: 10px;
-    }
+.mol-seq-segment.neutral {
+    color: #334155;
+    background: transparent;
+}
 
-    .ruler .tick {
-        position: absolute;
-        transform: translateX(-50%);
-    }
+.mol-seq-segment.mol-hovered,
+.mol-seq-segment.mol-selected {
+    outline: 1px solid #111827;
+    outline-offset: 1px;
+    filter: saturate(1.25) brightness(1.02);
+}
 
-    .ruler .tickmark {
-        position: absolute;
-        top: 12px;
-        width: 1px;
-        height: 4px;
-        background: #ced4da;
-        transform: translateX(-50%);
-    }
+.mol-seq-feature-token {
+    letter-spacing: inherit !important;
+}
 
-    .bases,
-    .comp {
-        white-space: pre;
-        letter-spacing: 0;
-    }
+.mol-seq-line:hover .mol-seq-pos {
+    color: #0d6efd;
+    font-weight: 700;
+}
 
-    .comp {
-        color: #adb5bd;
-    }
+.mol-sequence-overview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.55rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid #e9ecef;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
-    .track {
-        position: relative;
-        height: 18px;
-        margin-top: 3px;
-    }
+.mol-sequence-overview .overview-pill {
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+    font-size: 0.74rem;
+    background: #f8f9fa;
+    color: #495057;
+}
 
-    .feat-bar {
-        position: absolute;
-        top: 1px;
-        height: 15px;
-        border-radius: 3px;
-        display: flex;
-        align-items: center;
-        padding: 0 4px;
-        color: #0009;
-        font-size: 10px;
-        overflow: hidden;
-        white-space: nowrap;
-        border: 1px solid #00000018;
-        cursor: pointer;
-    }
+.mol-sequence-overview .overview-pill strong {
+    color: #212529;
+}
+/* BIOBANK_SEQUENCE_MAP_READABLE_STYLE_END */
 
-    .feat-bar.dim {
-        opacity: .25;
-    }
+/* BIOBANK_SEQVIZ_EXPERIMENT_STYLE_START */
+.seqviz-shell {
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    background: #ffffff;
+    margin: 0.75rem 0 1rem 0;
+    overflow: hidden;
+}
 
-    .aa-box {
-        position: absolute;
-        top: 0;
-        height: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-        font-weight: 600;
-        color: #1a1a1a;
-        border-right: 1px solid #ffffffaa;
-    }
+.seqviz-header {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
 
-    .molecule-map-wrap {
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px;
-        overflow: auto;
-        background: #fff;
-    }
+.seqviz-title {
+    font-weight: 800;
+}
 
-    svg.molecule-map {
-        width: 100%;
-        min-width: 560px;
-        height: auto;
-        display: block;
-    }
+.seqviz-subtitle {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
 
-    .map-pos-label {
-        font: 11px ui-monospace, Menlo, monospace;
-        fill: #8a8f98;
-    }
+.seqviz-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
 
-    .map-feat-label {
-        font: 12px system-ui, sans-serif;
-    }
+.seqviz-body {
+    height: 680px;
+    width: 100%;
+    background: #ffffff;
+}
 
-    .map-center-name {
-        font: 600 18px system-ui, sans-serif;
-        fill: #212529;
-    }
+.seqviz-loading {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem;
+}
 
-    .map-center-len {
-        font: 13px ui-monospace, Menlo, monospace;
-        fill: #6c757d;
-    }
+.seqviz-selection-box {
+    border-top: 1px solid #dee2e6;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+    color: #495057;
+    background: #f8f9fa;
+}
 
-    .leader {
-        stroke: #c3c8cf;
-        stroke-width: 1;
-        fill: none;
-    }
+.seqviz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    padding: 0.6rem 0.9rem;
+    border-top: 1px solid #dee2e6;
+    font-size: 0.8rem;
+}
 
-    .feat-shape {
-        cursor: pointer;
-        transition: opacity .12s ease;
-    }
+.seqviz-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
 
-    .feat-shape.dim {
-        opacity: .25;
-    }
+.seqviz-legend-dot {
+    width: 0.72rem;
+    height: 0.72rem;
+    display: inline-block;
+    border-radius: 2px;
+}
+/* BIOBANK_SEQVIZ_EXPERIMENT_STYLE_END */
 
-    .feature-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: .35rem;
-        border: 1px solid #dee2e6;
-        border-radius: 999px;
-        padding: .2rem .6rem;
-        background: #f8f9fa;
-        font-size: .8rem;
-        margin: .15rem;
-        cursor: default;
-    }
+/* BIOBANK_SEQVIZ_NON_REACT_FIX_STYLE_START */
+.seqviz-body {
+    min-height: 680px;
+    height: 680px;
+    width: 100%;
+    position: relative;
+}
 
-    .feature-chip.active {
-        background: #eef4ff;
-        border-color: #0d6efd55;
-    }
+.seqviz-body > div:not(.seqviz-loading) {
+    height: 100%;
+    width: 100%;
+}
 
-    .feature-color-dot {
-        width: .75rem;
-        height: .75rem;
-        border-radius: 50%;
-        display: inline-block;
-    }
+#seqviz-viewer-root {
+    height: 100%;
+    width: 100%;
+}
+/* BIOBANK_SEQVIZ_NON_REACT_FIX_STYLE_END */
 
-    .feature-row.active td {
-        background: #eef4ff;
-    }
+/* BIOBANK_SEQVIZ_PRIMARY_WORKSPACE_STYLE_START */
+.seqviz-shell {
+    margin-bottom: 1rem;
+}
 
-    .features-table input,
-    .features-table select {
-        min-width: 84px;
-    }
+.seqviz-body {
+    min-height: 760px;
+    height: 760px;
+}
 
-    .molecular-statusbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 30px;
-        border-top: 1px solid #dee2e6;
-        background: #f6f7f9;
-        padding: 0 12px;
-        font-size: 12px;
-        color: #6c757d;
-    }
+.seqviz-primary-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(540px, 1.2fr) minmax(420px, 0.8fr);
+    gap: 1rem;
+}
 
-    .sequence-textarea {
-        min-height: 300px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        font-size: .85rem;
-    }
+.seqviz-primary-card {
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+}
 
-    .description-panel,
-    .metadata-panel {
-        max-width: 820px;
+.seqviz-primary-card-header {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 800;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.seqviz-primary-card-body {
+    padding: 0.85rem;
+}
+
+.seqviz-primary-stat {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.45rem 0.6rem;
+    background: #f8f9fa;
+    font-weight: 800;
+}
+
+.mol-sequence-editor {
+    min-height: 180px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.84rem;
+}
+
+@media (max-width: 1200px) {
+    .seqviz-primary-editor-grid {
+        grid-template-columns: 1fr;
     }
+}
+/* BIOBANK_SEQVIZ_PRIMARY_WORKSPACE_STYLE_END */
+
 </style>
 
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-start mb-3">
+<div class="mol-page" id="molecular-workspace-v2">
+    <div class="mol-topbar">
         <div>
-            <div class="text-muted small">
-                <a href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}" class="text-decoration-none">
-                    ELN Notebook
-                </a>
-                <span class="mx-1">/</span>
-                Molecular workspace
+            <div class="mol-breadcrumb">
+                <a href="/biobank/internal/lab-tools/notebook/">ELN Notebook</a>
+                <span class="text-muted"> / Molecular workspace</span>
             </div>
 
-            <h3 class="mb-1">
-                <i class="bi bi-dna me-2 text-success"></i><span id="mol-title">{{ molecule.name }}</span>
-            </h3>
+            <h1 class="mol-title" id="mol-title-display">{{ molecule.name }}</h1>
 
-            <div class="d-flex flex-wrap gap-2">
-                <span class="badge bg-success-subtle text-success border border-success-subtle">{{ molecule.get_sequence_type_display }}</span>
-                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" id="molecule-topology-badge">{{ molecule.get_topology_display }}</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="molecule-length-badge">{{ molecule.length }} bp/aa</span>
-                {% if molecule.gc_content is not None %}
-                    <span class="badge bg-info-subtle text-info border border-info-subtle" id="molecule-gc-badge">GC {{ molecule.gc_content }}%</span>
-                {% else %}
-                    <span class="badge bg-info-subtle text-info border border-info-subtle" id="molecule-gc-badge">GC -</span>
-                {% endif %}
+            <div class="mol-badges">
+                <span class="mol-badge type-{{ molecule.sequence_type }}">{{ molecule.sequence_type|upper }}</span>
+                <span class="mol-badge">{{ molecule.topology|title }}</span>
+                <span class="mol-badge" id="mol-length-badge">{{ molecule.length }} bp/aa</span>
+                <span class="mol-badge" id="mol-gc-badge">GC {{ molecule.gc_content|default:"-" }}%</span>
             </div>
+
+            <div class="small text-muted mt-2" id="mol-save-status">Saved</div>
         </div>
 
-        <div class="d-flex gap-2">
-            <button class="btn btn-success btn-sm" onclick="saveMolecule()">
-                <i class="bi bi-save me-1"></i>Save
-            </button>
-            <button class="btn btn-outline-danger btn-sm" onclick="deleteMolecule()">
-                <i class="bi bi-trash me-1"></i>Delete
-            </button>
-        </div>
-    </div>
-
-    <div id="save-status" class="small text-muted mb-2">Saved</div>
-
-    <div class="molecular-shell">
-        <div class="molecular-tabs">
-            <div class="molecular-tab active">
-                <span class="text-success">⌬</span>
-                <span id="top-tab-name">{{ molecule.name }}</span>
-            </div>
+        <div class="mol-actions">
             {% if molecule.source_entry %}
-                <div class="molecular-tab">
-                    <span>▣</span>
-                    <span>{{ molecule.source_entry.title|truncatechars:32 }}</span>
-                </div>
+                <a href="/biobank/internal/lab-tools/notebook/?entry_id={{ molecule.source_entry.id }}&tab=items"
+                   class="btn btn-sm btn-outline-secondary">
+                    Back to notebook
+                </a>
+            {% else %}
+                <a href="/biobank/internal/lab-tools/notebook/"
+                   class="btn btn-sm btn-outline-secondary">
+                    Back to notebook
+                </a>
             {% endif %}
+            <button type="button" class="btn btn-sm btn-success" onclick="saveMolecularWorkspace()">Save</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMolecularWorkspace()">Delete</button>
         </div>
+    </div>
 
-        <div class="molecular-main">
-            <div class="molecular-pane left" id="pane-left">
-                <div class="molecular-pane-head">
-                    <div class="pane-tabs">
-                        <button class="pane-tab active" type="button">Sequence map</button>
-                    </div>
-                    <div class="molecular-toolbar">
-                        <div class="d-flex align-items-center gap-1 small text-muted">
-                            −
-                            <input type="range" min="40" max="120" value="70" id="sequence-zoom" style="width: 90px;">
-                            +
-                        </div>
-                    </div>
-                </div>
-                <div class="molecular-pane-body">
-                    <div id="sequence-map" class="sequence-map"></div>
-                </div>
-            </div>
-
-            <div class="molecular-splitter" id="molecular-splitter"></div>
-
-            <div class="molecular-pane right" id="pane-right">
-                <div class="molecular-pane-head">
-                    <div class="pane-tabs" id="right-tabs">
-                        <button class="pane-tab active" type="button" data-view="plasmid">Plasmid</button>
-                        <button class="pane-tab" type="button" data-view="linear">Linear map</button>
-                        <button class="pane-tab" type="button" data-view="features">Features</button>
-                        <button class="pane-tab" type="button" data-view="sequence">Sequence</button>
-                        <button class="pane-tab" type="button" data-view="description">Description</button>
-                        <button class="pane-tab" type="button" data-view="metadata">Metadata</button>
-                        <button class="pane-tab" type="button" data-view="linked">Linked items</button>
-                    </div>
-                </div>
-                <div class="molecular-pane-body" id="right-body"></div>
+    
+<!-- BIOBANK_SEQVIZ_EXPERIMENT_START -->
+<div class="seqviz-shell">
+    <div class="seqviz-header">
+        <div>
+            <div class="seqviz-title">Molecular sequence viewer</div>
+            <div class="seqviz-subtitle">
+                SeqViz-based circular/linear viewer with persistent features, colors, enzyme cuts and selections.
             </div>
         </div>
 
-        <div class="molecular-statusbar">
-            <div>BASES <span id="status-bases">{{ molecule.length }}</span></div>
-            <div class="d-flex gap-4">
-                <span id="status-topology">{{ molecule.topology|upper }}</span>
-                <span id="status-features">{{ molecule.features_json|length }} FEATURES</span>
-                <span>SPLIT WORKSPACE</span>
+        <div class="seqviz-toolbar">
+            <label class="small">
+                <input type="checkbox" id="seqviz-show-enzymes" checked onchange="renderSeqVizViewer()">
+                Show enzyme cuts
+            </label>
+
+            <select id="seqviz-viewer-mode" class="form-select form-select-sm" style="width:auto;" onchange="renderSeqVizViewer()">
+                <option value="both">Circular + linear</option>
+                <option value="circular">Circular</option>
+                <option value="linear">Linear</option>
+                
+            </select>
+
+            <input id="seqviz-search-query"
+                   class="form-control form-control-sm"
+                   style="width:160px;"
+                   placeholder="Search sequence"
+                   oninput="renderSeqVizViewer()">
+        </div>
+    </div>
+
+    <div id="seqviz-viewer" class="seqviz-body">
+        <div class="seqviz-loading">Loading SeqViz from CDN...</div>
+    </div>
+
+    <div id="seqviz-selection" class="seqviz-selection-box">
+        Selection: none
+    </div>
+
+    <div id="seqviz-legend" class="seqviz-legend"></div>
+</div>
+<!-- BIOBANK_SEQVIZ_EXPERIMENT_END -->
+
+<!-- BIOBANK_SEQVIZ_PRIMARY_EDITOR_START -->
+<div class="seqviz-primary-editor-grid mt-3">
+
+    <div class="seqviz-primary-card">
+        <div class="seqviz-primary-card-header">
+            <span>Feature editor</span>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('promoter')">+ Promoter</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('rbs')">+ RBS</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('cds')">+ CDS / Insert</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('terminator')">+ Terminator</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('ori')">+ Ori</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('antibiotic')">+ Antibiotic</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('primer')">+ Primer</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMolFeature('domain')">+ Domain</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMolFeature('custom')">+ Custom</button>
+            </div>
+        </div>
+
+        <div class="seqviz-primary-card-body">
+            <div id="mol-feature-editor"></div>
+        </div>
+    </div>
+
+    <div class="seqviz-primary-card">
+        <div class="seqviz-primary-card-header">
+            <span>Sequence and construction metadata</span>
+            <button type="button" class="btn btn-sm btn-success" onclick="saveMolecularWorkspace()">Save sequence and features</button>
+        </div>
+
+        <div class="seqviz-primary-card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="mol-label">Name</div>
+                    <input class="form-control form-control-sm" id="mol-name" value="{{ molecule.name }}" oninput="syncMolHeader()">
+                </div>
+
+                <div class="col-md-4">
+                    <div class="mol-label">Type</div>
+                    <select class="form-select form-select-sm" id="mol-sequence-type" onchange="syncMolHeader()">
+                        <option value="dna" {% if molecule.sequence_type == "dna" %}selected{% endif %}>DNA</option>
+                        <option value="rna" {% if molecule.sequence_type == "rna" %}selected{% endif %}>RNA</option>
+                        <option value="protein" {% if molecule.sequence_type == "protein" %}selected{% endif %}>Protein</option>
+                        <option value="plasmid" {% if molecule.sequence_type == "plasmid" %}selected{% endif %}>Plasmid</option>
+                        <option value="primer" {% if molecule.sequence_type == "primer" %}selected{% endif %}>Primer</option>
+                        <option value="insert" {% if molecule.sequence_type == "insert" %}selected{% endif %}>Insert</option>
+                        <option value="other" {% if molecule.sequence_type == "other" %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="mol-label">Topology</div>
+                    <select class="form-select form-select-sm" id="mol-topology" onchange="syncMolHeader()">
+                        <option value="linear" {% if molecule.topology == "linear" %}selected{% endif %}>Linear</option>
+                        <option value="circular" {% if molecule.topology == "circular" %}selected{% endif %}>Circular</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mol-label">Length</div>
+                    <div class="seqviz-primary-stat" id="mol-stat-length">{{ molecule.length }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mol-label">GC</div>
+                    <div class="seqviz-primary-stat" id="mol-stat-gc">{{ molecule.gc_content|default:"-" }}%</div>
+                </div>
+
+                <div class="col-12">
+                    <div class="mol-label">Description / purpose</div>
+                    <textarea class="form-control form-control-sm" rows="3" id="mol-description" placeholder="Construction purpose, cloning strategy, expression target, validation plan...">{{ molecule.description }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <div class="mol-label">Sequence / raw content</div>
+                    <textarea class="form-control mol-sequence-editor" id="mol-sequence" oninput="syncMolHeader()">{{ molecule.sequence }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cleanMolSequence()">Clean sequence</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="uppercaseMolSequence()">Uppercase</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyMolSequence()">Copy</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="renderSeqVizViewer()">Refresh SeqViz</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <div class="seqviz-primary-card">
+        <div class="seqviz-primary-card-header">
+            <span>Linked context</span>
+        </div>
+
+        <div class="seqviz-primary-card-body">
+            <div class="mb-2">
+                <div class="mol-label">Notebook entry</div>
+                <div class="small">
+                    {% if molecule.source_entry %}
+                        {{ molecule.source_entry.title }}
+                    {% else %}
+                        No source notebook entry.
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <div class="mol-label">Linked sample</div>
+                <div class="small">{{ molecule.linked_sample|default:"No linked sample" }}</div>
+            </div>
+
+            <div class="mb-2">
+                <div class="mol-label">Record ID</div>
+                <div class="small">{{ molecule.id }}</div>
+            </div>
+
+            <div>
+                <div class="mol-label">Last update</div>
+                <div class="small">{{ molecule.updated_at|date:"Y-m-d H:i" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="seqviz-primary-card">
+        <div class="seqviz-primary-card-header">
+            <span>QC / validation checklist</span>
+        </div>
+
+        <div class="seqviz-primary-card-body">
+            <label class="d-block small mb-1"><input type="checkbox"> Sequence length confirmed</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Topology confirmed</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Features annotated</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Reading frame checked</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Restriction sites reviewed</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Primer binding sites checked</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Sample/reagent context reviewed</label>
+            <label class="d-block small mb-1"><input type="checkbox"> Ready for validation</label>
+        </div>
+    </div>
+
+</div>
+<!-- BIOBANK_SEQVIZ_PRIMARY_EDITOR_END -->
+
 </div>
 
-{{ molecule.features_json|json_script:"features-json-data" }}
-
 <script>
-    const csrfToken = "{{ csrf_token }}";
-    const updateUrl = "{% url 'molecular_sequence_update_api' molecule.id %}";
-    const deleteUrl = "{% url 'molecular_sequence_delete_api' molecule.id %}";
-    const notebookUrl = "{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}";
+/* BIOBANK_MOLECULAR_WORKSPACE_V2_JS_START */
+const MOLECULE = {
+    id: {{ molecule.id }},
+    name: "{{ molecule.name|escapejs }}",
+    type: "{{ molecule.sequence_type|escapejs }}",
+    topology: "{{ molecule.topology|escapejs }}",
+    sequence: "{{ molecule.sequence|escapejs }}",
+    description: "{{ molecule.description|default:''|escapejs }}"
+};
 
-    const saveStatus = document.getElementById("save-status");
-    const SVGNS = "http://www.w3.org/2000/svg";
+const FEATURE_COLORS = {
+    promoter: "#5b8def",
+    rbs: "#adb5bd",
+    cds: "#2fb344",
+    terminator: "#e03131",
+    ori: "#7950f2",
+    antibiotic: "#f08c00",
+    primer: "#15aabf",
+    domain: "#fd7e14",
+    custom: "#868e96"
+};
 
-    const FEATURE_TYPE_COLORS = {
-        CDS: "#8ecae6",
-        gene: "#bde0fe",
-        promoter: "#90be6d",
-        terminator: "#f28482",
-        RBS: "#f6bd60",
-        sig_peptide: "#f5cac3",
-        signal_peptide: "#f5cac3",
-        rep_origin: "#cdb4db",
-        origin: "#cdb4db",
-        primer_bind: "#adb5bd",
-        primer: "#adb5bd",
-        resistance: "#ffb703",
-        misc_feature: "#dee2e6",
-        regulatory: "#84a59d",
-        oriT: "#cdb4db"
-    };
+function getCsrfToken() {
+    const input = document.querySelector("input[name='csrfmiddlewaretoken']");
+    if (input) return input.value;
 
-    const FALLBACK_COLORS = [
-        "#8ecae6", "#ffb703", "#90be6d", "#f28482", "#cdb4db",
-        "#bde0fe", "#f6bd60", "#84a59d", "#f5cac3", "#a3cef1"
+    const match = document.cookie.match(/csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+}
+
+function normalizedSequence() {
+    const textarea = document.getElementById("mol-sequence");
+    return String(textarea ? textarea.value : "").replace(/\s+/g, "");
+}
+
+function currentMolType() {
+    return document.getElementById("mol-sequence-type").value || "dna";
+}
+
+function currentMolTopology() {
+    return document.getElementById("mol-topology").value || "linear";
+}
+
+function estimateGc(sequence) {
+    const seq = sequence.toUpperCase().replace(/[^ACGTU]/g, "");
+    if (!seq.length) return "-";
+    const gc = (seq.match(/[GC]/g) || []).length;
+    return ((gc / seq.length) * 100).toFixed(2);
+}
+
+function syncMolHeader() {
+    const name = document.getElementById("mol-name").value || "Untitled";
+    const seq = normalizedSequence();
+    const type = currentMolType();
+    const topology = currentMolTopology();
+    const gc = estimateGc(seq);
+
+    document.getElementById("mol-title-display").textContent = name;
+    document.getElementById("mol-length-badge").textContent = `${seq.length} bp/aa`;
+    document.getElementById("mol-gc-badge").textContent = `GC ${gc}%`;
+    document.getElementById("mol-stat-length").textContent = seq.length;
+    document.getElementById("mol-stat-gc").textContent = `${gc}%`;
+
+    document.querySelectorAll(".mol-badge").forEach(b => {
+        if (b.className.includes("type-")) {
+            b.className = `mol-badge type-${type}`;
+            b.textContent = type.toUpperCase();
+        }
+    });
+
+    renderAllMolecularViews();
+}
+
+function buildDemoFeatures(sequence, type, topology) {
+    const len = Math.max(sequence.length, 1);
+
+    if (type === "protein") {
+        return [
+            {name: "Signal peptide", type: "domain", start: 1, end: Math.min(25, len), strand: "+"},
+            {name: "Core domain", type: "cds", start: Math.min(26, len), end: Math.max(Math.floor(len * 0.72), 26), strand: "+"},
+            {name: "C-terminal tail", type: "custom", start: Math.max(Math.floor(len * 0.72) + 1, 1), end: len, strand: "+"},
+        ];
+    }
+
+    if (type === "primer") {
+        return [
+            {name: "Primer binding region", type: "primer", start: 1, end: len, strand: "+"},
+        ];
+    }
+
+    if (type === "rna") {
+        return [
+            {name: "5' UTR", type: "promoter", start: 1, end: Math.max(1, Math.floor(len * 0.12)), strand: "+"},
+            {name: "Transcript body", type: "cds", start: Math.max(2, Math.floor(len * 0.12) + 1), end: Math.max(2, Math.floor(len * 0.88)), strand: "+"},
+            {name: "3' UTR", type: "terminator", start: Math.max(3, Math.floor(len * 0.88) + 1), end: len, strand: "+"},
+        ];
+    }
+
+    if (type === "plasmid" || topology === "circular") {
+        return [
+            {name: "ori", type: "ori", start: 1, end: Math.max(80, Math.floor(len * 0.12)), strand: "+"},
+            {name: "antibiotic", type: "antibiotic", start: Math.max(90, Math.floor(len * 0.18)), end: Math.max(160, Math.floor(len * 0.34)), strand: "+"},
+            {name: "promoter", type: "promoter", start: Math.max(170, Math.floor(len * 0.38)), end: Math.max(220, Math.floor(len * 0.44)), strand: "+"},
+            {name: "CDS / insert", type: "cds", start: Math.max(230, Math.floor(len * 0.46)), end: Math.max(300, Math.floor(len * 0.75)), strand: "+"},
+            {name: "terminator", type: "terminator", start: Math.max(310, Math.floor(len * 0.78)), end: Math.max(330, Math.floor(len * 0.84)), strand: "+"},
+        ];
+    }
+
+    return [
+        {name: "promoter", type: "promoter", start: 1, end: Math.max(20, Math.floor(len * 0.10)), strand: "+"},
+        {name: "RBS", type: "rbs", start: Math.max(21, Math.floor(len * 0.12)), end: Math.max(35, Math.floor(len * 0.16)), strand: "+"},
+        {name: "CDS / insert", type: "cds", start: Math.max(36, Math.floor(len * 0.18)), end: Math.max(80, Math.floor(len * 0.82)), strand: "+"},
+        {name: "terminator", type: "terminator", start: Math.max(81, Math.floor(len * 0.84)), end: len, strand: "+"},
     ];
+}
 
-    const COMP = {A: "T", T: "A", U: "A", G: "C", C: "G", N: "N"};
-    const GENETIC_CODE = {
-        TTT:"F",TTC:"F",TTA:"L",TTG:"L",CTT:"L",CTC:"L",CTA:"L",CTG:"L",
-        ATT:"I",ATC:"I",ATA:"I",ATG:"M",GTT:"V",GTC:"V",GTA:"V",GTG:"V",
-        TCT:"S",TCC:"S",TCA:"S",TCG:"S",CCT:"P",CCC:"P",CCA:"P",CCG:"P",
-        ACT:"T",ACC:"T",ACA:"T",ACG:"T",GCT:"A",GCC:"A",GCA:"A",GCG:"A",
-        TAT:"Y",TAC:"Y",TAA:"*",TAG:"*",CAT:"H",CAC:"H",CAA:"Q",CAG:"Q",
-        AAT:"N",AAC:"N",AAA:"K",AAG:"K",GAT:"D",GAC:"D",GAA:"E",GAG:"E",
-        TGT:"C",TGC:"C",TGA:"*",TGG:"W",CGT:"R",CGC:"R",CGA:"R",CGG:"R",
-        AGT:"S",AGC:"S",AGA:"R",AGG:"R",GGT:"G",GGC:"G",GGA:"G",GGG:"G"
+function featureClass(type) {
+    return `ft-${type in FEATURE_COLORS ? type : "custom"}`;
+}
+
+function renderSequenceMap() {
+    const box = document.getElementById("mol-sequence-map");
+    if (!box) return;
+
+    const sequence = normalizedSequence();
+    const type = currentMolType();
+    const topology = currentMolTopology();
+    const features = buildDemoFeatures(sequence, type, topology);
+    const zoom = Number(document.getElementById("mol-zoom").value || 90);
+    const charsPerLine = Math.max(40, Math.floor(120 - zoom * 0.45));
+
+    let html = "";
+    for (let i = 0; i < sequence.length; i += charsPerLine) {
+        const chunk = sequence.slice(i, i + charsPerLine);
+        let seqHtml = "";
+
+        for (let j = 0; j < chunk.length; j++) {
+            const pos = i + j + 1;
+            const feature = features.find(f => pos >= f.start && pos <= f.end);
+            const char = chunk[j] || "";
+            if (feature) {
+                seqHtml += `<span class="mol-feature-token ${featureClass(feature.type)}" title="${feature.name}">${char}</span>`;
+            } else {
+                seqHtml += char;
+            }
+        }
+
+        html += `
+            <div class="mol-seq-line">
+                <div class="mol-seq-pos">${i + 1}</div>
+                <div class="mol-seq-text">${seqHtml}</div>
+            </div>
+        `;
+    }
+
+    if (!sequence.length) {
+        html = '<div class="text-muted small">No sequence available.</div>';
+    }
+
+    box.innerHTML = html;
+    renderLegend(features);
+}
+
+function renderLegend(features) {
+    const legend = document.getElementById("mol-feature-legend");
+    if (!legend) return;
+
+    const seen = new Set();
+    legend.innerHTML = features
+        .filter(f => {
+            const key = f.type + f.name;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .map(f => {
+            const color = FEATURE_COLORS[f.type] || FEATURE_COLORS.custom;
+            return `
+                <span class="mol-legend-item">
+                    <span class="mol-legend-color" style="background:${color};"></span>
+                    ${f.name}
+                </span>
+            `;
+        })
+        .join("");
+}
+
+function polarToCartesian(cx, cy, r, angleDeg) {
+    const angleRad = (angleDeg - 90) * Math.PI / 180.0;
+    return {
+        x: cx + (r * Math.cos(angleRad)),
+        y: cy + (r * Math.sin(angleRad))
     };
-    const AA_COLORS = {
-        A:"#c7d9ff",V:"#c7d9ff",L:"#c7d9ff",I:"#c7d9ff",M:"#c7d9ff",
-        F:"#bcc6e6",W:"#bcc6e6",P:"#e8d6c7",S:"#bfe3c0",T:"#bfe3c0",
-        N:"#bfe3c0",Q:"#bfe3c0",Y:"#d8e8bf",C:"#fff0b3",G:"#e3e3e3",
-        D:"#f6c0c0",E:"#f6c0c0",K:"#c0d9f6",R:"#c0d9f6",H:"#c9d0f0","*":"#888"
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCartesian(cx, cy, r, endAngle);
+    const end = polarToCartesian(cx, cy, r, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    return [
+        "M", start.x, start.y,
+        "A", r, r, 0, largeArcFlag, 0, end.x, end.y
+    ].join(" ");
+}
+
+function renderCircularMap(features, len) {
+    const cx = 250;
+    const cy = 210;
+    const r = 125;
+
+    const arcs = features.map(f => {
+        const startAngle = (f.start / len) * 360;
+        const endAngle = (f.end / len) * 360;
+        const color = FEATURE_COLORS[f.type] || FEATURE_COLORS.custom;
+        return `<path d="${describeArc(cx, cy, r, startAngle, endAngle)}" stroke="${color}" stroke-width="13" fill="none" stroke-linecap="round">
+                    <title>${f.name}: ${f.start}-${f.end}</title>
+                </path>`;
+    }).join("");
+
+    return `
+        <svg class="mol-svg" viewBox="0 0 500 430" width="100%" height="360">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#adb5bd" stroke-width="2"></circle>
+            ${arcs}
+            <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="16" font-weight="700">${document.getElementById("mol-name").value || "Molecule"}</text>
+            <text x="${cx}" y="${cy + 17}" text-anchor="middle" font-size="12" fill="#6c757d">${len} bp</text>
+        </svg>
+    `;
+}
+
+function renderLinearMap(features, len, type) {
+    const width = 720;
+    const y = type === "protein" ? 120 : 150;
+    const x0 = 35;
+    const x1 = width - 35;
+    const usable = x1 - x0;
+
+    const blocks = features.map(f => {
+        const x = x0 + ((f.start - 1) / len) * usable;
+        const w = Math.max(10, ((f.end - f.start + 1) / len) * usable);
+        const color = FEATURE_COLORS[f.type] || FEATURE_COLORS.custom;
+        return `
+            <rect x="${x}" y="${y - 18}" width="${w}" height="36" rx="6" fill="${color}" opacity="0.88">
+                <title>${f.name}: ${f.start}-${f.end}</title>
+            </rect>
+            <text x="${x + w / 2}" y="${y + 4}" text-anchor="middle" font-size="11" fill="#111">${f.name}</text>
+        `;
+    }).join("");
+
+    return `
+        <svg class="mol-svg" viewBox="0 0 ${width} 260" width="100%" height="320">
+            <line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#adb5bd" stroke-width="5" stroke-linecap="round"></line>
+            ${blocks}
+            <text x="${x0}" y="${y + 45}" text-anchor="middle" font-size="11" fill="#6c757d">1</text>
+            <text x="${x1}" y="${y + 45}" text-anchor="middle" font-size="11" fill="#6c757d">${len}</text>
+            <text x="${width / 2}" y="42" text-anchor="middle" font-size="16" font-weight="700">${document.getElementById("mol-name").value || "Molecule"}</text>
+            <text x="${width / 2}" y="62" text-anchor="middle" font-size="12" fill="#6c757d">${type.toUpperCase()} · ${len} bp/aa</text>
+        </svg>
+    `;
+}
+
+function renderPrimerPreview(sequence) {
+    const len = sequence.length;
+    const gc = estimateGc(sequence);
+    const tm = len ? (2 * ((sequence.match(/[ATU]/gi) || []).length) + 4 * ((sequence.match(/[GC]/gi) || []).length)) : 0;
+
+    return `
+        <div class="mol-type-card">
+            <div class="fw-bold mb-2">Primer model</div>
+            <div class="mol-stat-grid">
+                <div class="mol-stat"><div class="value">${len}</div><div class="label">Length</div></div>
+                <div class="mol-stat"><div class="value">${gc}%</div><div class="label">GC</div></div>
+                <div class="mol-stat"><div class="value">${tm} °C</div><div class="label">Wallace Tm</div></div>
+                <div class="mol-stat"><div class="value">${sequence.slice(-5) || "-"}</div><div class="label">3' end</div></div>
+            </div>
+            <div class="mt-3">
+                <div class="mol-label">Primer sequence</div>
+                <code>${sequence || "No primer sequence"}</code>
+            </div>
+        </div>
+    `;
+}
+
+function renderTypePreview() {
+    const box = document.getElementById("mol-type-preview");
+    const sequence = normalizedSequence();
+    const type = currentMolType();
+    const topology = currentMolTopology();
+    const features = buildDemoFeatures(sequence, type, topology);
+
+    if (!box) return;
+
+    if (type === "primer") {
+        box.innerHTML = renderPrimerPreview(sequence);
+        return;
+    }
+
+    if (type === "protein") {
+        box.innerHTML = `
+            <div class="mol-type-card">
+                <div class="fw-bold mb-2">Protein/domain model</div>
+                ${renderLinearMap(features, Math.max(sequence.length, 1), "protein")}
+            </div>
+        `;
+        return;
+    }
+
+    if (type === "plasmid" || topology === "circular") {
+        box.innerHTML = `
+            <div class="mol-type-card">
+                <div class="fw-bold mb-2">Plasmid construction model</div>
+                <div class="small text-muted">Default visual model: ori, antibiotic marker, promoter, insert/CDS and terminator.</div>
+            </div>
+        `;
+        return;
+    }
+
+    box.innerHTML = `
+        <div class="mol-type-card">
+            <div class="fw-bold mb-2">${type.toUpperCase()} construction model</div>
+            <div class="small text-muted">Default linear visual model: promoter, RBS, CDS/insert and terminator.</div>
+        </div>
+    `;
+}
+
+function renderMapView() {
+    const box = document.getElementById("mol-map-view");
+    if (!box) return;
+
+    const sequence = normalizedSequence();
+    const type = currentMolType();
+    const topology = currentMolTopology();
+    const len = Math.max(sequence.length, 1);
+    const features = buildDemoFeatures(sequence, type, topology);
+
+    if (type === "plasmid" || topology === "circular") {
+        box.innerHTML = renderCircularMap(features, len);
+    } else {
+        box.innerHTML = renderLinearMap(features, len, type);
+    }
+}
+
+function renderFeatureEditor() {
+    const editor = document.getElementById("mol-feature-editor");
+    if (!editor) return;
+
+    const header = editor.querySelector(".mol-feature-row.header");
+    editor.innerHTML = "";
+    if (header) editor.appendChild(header);
+
+    const sequence = normalizedSequence();
+    const features = buildDemoFeatures(sequence, currentMolType(), currentMolTopology());
+    features.forEach(f => addMolFeature(f.type, f.name, f.start, f.end, f.strand));
+}
+
+function addMolFeature(type, name, start, end, strand) {
+    const editor = document.getElementById("mol-feature-editor");
+    if (!editor) return;
+
+    const defaults = {
+        promoter: "promoter",
+        rbs: "RBS",
+        cds: "CDS",
+        terminator: "terminator",
+        ori: "origin",
+        antibiotic: "antibiotic_marker",
+        primer: "primer_bind",
+        domain: "domain",
+        custom: "custom_feature"
     };
 
-    let rightView = document.getElementById("molecule-topology")?.value === "linear" ? "linear" : "plasmid";
-    let lineLength = 70;
-    let hoverIndex = -1;
-    let moleculeFeatures = parseInitialFeatures();
+    const row = document.createElement("div");
+    row.className = "mol-feature-row";
+    row.innerHTML = `
+        <input class="form-control form-control-sm" value="${name || defaults[type] || "feature"}">
+        <select class="form-select form-select-sm">
+            ${["promoter", "rbs", "cds", "terminator", "ori", "antibiotic", "primer", "domain", "custom"].map(option => {
+                return `<option value="${option}" ${option === type ? "selected" : ""}>${option}</option>`;
+            }).join("")}
+        </select>
+        <input class="form-control form-control-sm" type="number" value="${start || 1}">
+        <input class="form-control form-control-sm" type="number" value="${end || 100}">
+        <select class="form-select form-select-sm">
+            ${["+", "-", "."].map(option => `<option ${option === (strand || "+") ? "selected" : ""}>${option}</option>`).join("")}
+        </select>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.mol-feature-row').remove()">Remove</button>
+    `;
+    editor.appendChild(row);
+}
 
-    function postJson(url, payload) {
-        return fetch(url, {
-            method: "POST",
-            headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
-            body: JSON.stringify(payload)
-        }).then(response => response.json());
+function renderAllMolecularViews() {
+    renderSequenceMap();
+    renderMapView();
+    renderTypePreview();
+}
+
+function switchMolTab(tab) {
+    document.querySelectorAll(".mol-tab").forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === tab);
+    });
+
+    document.querySelectorAll(".mol-tab-pane").forEach(pane => {
+        pane.classList.toggle("active", pane.id === `mol-tab-${tab}`);
+    });
+
+    if (tab === "map") renderMapView();
+    if (tab === "features" && document.querySelectorAll("#mol-feature-editor .mol-feature-row:not(.header)").length === 0) {
+        renderFeatureEditor();
     }
+}
 
-    function el(tag, attrs = {}, children = []) {
-        const node = document.createElementNS(SVGNS, tag);
-        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
-        (Array.isArray(children) ? children : [children]).forEach(child => {
-            if (child === null || child === undefined) return;
-            node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+function cleanMolSequence() {
+    const textarea = document.getElementById("mol-sequence");
+    textarea.value = textarea.value.replace(/[^A-Za-z*.-]/g, "").toUpperCase();
+    syncMolHeader();
+}
+
+function uppercaseMolSequence() {
+    const textarea = document.getElementById("mol-sequence");
+    textarea.value = textarea.value.toUpperCase();
+    syncMolHeader();
+}
+
+function copyMolSequence() {
+    navigator.clipboard.writeText(document.getElementById("mol-sequence").value || "");
+}
+
+function saveMolecularWorkspace() {
+    const status = document.getElementById("mol-save-status");
+    status.textContent = "Saving...";
+
+    fetch(`/biobank/internal/lab-tools/notebook/api/molecular-sequence/update/${MOLECULE.id}/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken()
+        },
+        body: JSON.stringify({
+            name: document.getElementById("mol-name").value,
+            sequence_type: currentMolType(),
+            topology: currentMolTopology(),
+            description: document.getElementById("mol-description").value,
+            sequence: document.getElementById("mol-sequence").value
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                status.textContent = "Saved";
+                status.classList.remove("text-danger");
+                status.classList.add("text-success");
+            } else {
+                throw new Error(data.message || "Could not save molecular workspace.");
+            }
+        })
+        .catch(error => {
+            status.textContent = "Save error";
+            status.classList.add("text-danger");
+            alert(error.message || error);
         });
-        return node;
+}
+
+function deleteMolecularWorkspace() {
+    if (!confirm("Delete this molecular construction?")) return;
+
+    fetch(`/biobank/internal/lab-tools/notebook/api/molecular-sequence/delete/${MOLECULE.id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCsrfToken()
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                window.location.href = "/biobank/internal/lab-tools/notebook/";
+            } else {
+                throw new Error(data.message || "Could not delete molecular construction.");
+            }
+        })
+        .catch(error => alert(error.message || error));
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    renderAllMolecularViews();
+    renderFeatureEditor();
+});
+/* BIOBANK_MOLECULAR_WORKSPACE_V2_JS_END */
+
+/* BIOBANK_MOLECULAR_DYNAMIC_FEATURES_JS_START */
+let MOL_DYNAMIC_FEATURES = [];
+let MOL_SELECTED_FEATURE = null;
+
+const MOL_DYNAMIC_DEFAULT_COLORS = {
+    promoter: "#5b8def",
+    rbs: "#adb5bd",
+    cds: "#2fb344",
+    terminator: "#e03131",
+    ori: "#7950f2",
+    antibiotic: "#f08c00",
+    primer: "#15aabf",
+    domain: "#fd7e14",
+    custom: "#868e96"
+};
+
+function molFeatureStorageKey() {
+    return `biobank_molecular_features_${MOLECULE.id}`;
+}
+
+function molFeatureColor(type) {
+    return MOL_DYNAMIC_DEFAULT_COLORS[type] || MOL_DYNAMIC_DEFAULT_COLORS.custom;
+}
+
+function normalizeFeature(feature, index) {
+    const sequenceLength = Math.max(normalizedSequence().length, 1);
+
+    let start = parseInt(feature.start || 1, 10);
+    let end = parseInt(feature.end || sequenceLength, 10);
+
+    start = Math.max(1, Math.min(start, sequenceLength));
+    end = Math.max(1, Math.min(end, sequenceLength));
+
+    if (start > end) {
+        const tmp = start;
+        start = end;
+        end = tmp;
     }
 
-    function escapeHtml(value) {
-        return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
+    return {
+        id: feature.id || `feature-${Date.now()}-${index}`,
+        name: feature.name || "feature",
+        type: feature.type || "custom",
+        start,
+        end,
+        strand: feature.strand || "+",
+        color: feature.color || molFeatureColor(feature.type || "custom"),
+        notes: feature.notes || ""
+    };
+}
 
-    function parseInitialFeatures() {
-        const dataElement = document.getElementById("features-json-data");
-        if (!dataElement) return [];
+function loadMolDynamicFeatures() {
+    const stored = localStorage.getItem(molFeatureStorageKey());
 
+    if (stored) {
         try {
-            const parsed = JSON.parse(dataElement.textContent || "[]");
-            return Array.isArray(parsed) ? parsed.map(normalizeFeature) : [];
-        } catch (_error) {
-            return [];
-        }
-    }
-
-    function normalizeFeature(feature) {
-        return {
-            name: feature.name || "",
-            type: feature.type || "",
-            start: feature.start || "",
-            end: feature.end || "",
-            strand: feature.strand || "+",
-            color: feature.color || "",
-            notes: feature.notes || feature.description || "",
-            qualifiers: feature.qualifiers || {}
-        };
-    }
-
-    function getSequenceText() {
-        return (document.getElementById("molecule-sequence")?.value || "{{ molecule.sequence|escapejs }}").replace(/\s+/g, "").toUpperCase();
-    }
-
-    function getMoleculeName() {
-        return document.getElementById("molecule-name")?.value || "{{ molecule.name|escapejs }}";
-    }
-
-    function getSequenceLength() {
-        return Math.max(getSequenceText().length, 1);
-    }
-
-    function complementOf(sequence) {
-        return sequence.split("").map(base => COMP[base] || "N").join("");
-    }
-
-    function translateCodon(codon) {
-        return GENETIC_CODE[codon] || "";
-    }
-
-    function colorFor(feature, index) {
-        return feature.color || FEATURE_TYPE_COLORS[feature.type] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
-    }
-
-    function niceStep(length) {
-        const target = length / 8;
-        const pow = Math.pow(10, Math.floor(Math.log10(target || 1)));
-        return [1, 2, 5, 10].map(multiplier => multiplier * pow).find(candidate => candidate >= target) || 10 * pow;
-    }
-
-    function validFeature(feature, sequenceLength) {
-        const start = parseInt(feature.start, 10);
-        const end = parseInt(feature.end, 10);
-        return feature.name && Number.isFinite(start) && Number.isFinite(end) && start >= 1 && end >= start && end <= sequenceLength;
-    }
-
-    function assignLanes(features) {
-        const items = features
-            .map((feature, index) => ({
-                ...feature,
-                _idx: feature._idx ?? index,
-                _s: Math.min(parseInt(feature.start, 10), parseInt(feature.end, 10)),
-                _e: Math.max(parseInt(feature.start, 10), parseInt(feature.end, 10)),
-            }))
-            .sort((a, b) => a._s - b._s || b._e - a._e);
-
-        const laneEnds = [];
-
-        items.forEach(feature => {
-            let lane = laneEnds.findIndex(end => feature._s > end);
-            if (lane === -1) {
-                lane = laneEnds.length;
-                laneEnds.push(feature._e);
-            } else {
-                laneEnds[lane] = feature._e;
-            }
-            feature._lane = lane;
-        });
-
-        return items;
-    }
-
-    function renderSequenceMap() {
-        const host = document.getElementById("sequence-map");
-        if (!host) return;
-
-        const bases = getSequenceText();
-        const sequenceLength = bases.length || 1;
-        const comp = complementOf(bases);
-        const validFeatures = moleculeFeatures
-            .map((feature, index) => ({...normalizeFeature(feature), _idx: index}))
-            .filter(feature => validFeature(feature, sequenceLength));
-        const laidFeatures = assignLanes(validFeatures);
-        const cdsFeatures = validFeatures.filter(feature => feature.type === "CDS" && feature.strand === "+");
-
-        let html = "";
-
-        for (let rowStart = 1; rowStart <= sequenceLength; rowStart += lineLength) {
-            const rowEnd = Math.min(rowStart + lineLength - 1, sequenceLength);
-            const rowBases = bases.slice(rowStart - 1, rowEnd);
-            const rowComp = comp.slice(rowStart - 1, rowEnd);
-
-            let ruler = "";
-            for (let position = rowStart; position <= rowEnd; position++) {
-                if (position % 10 === 0) {
-                    const col = position - rowStart;
-                    ruler += `<span class="tickmark" style="left:${col}ch"></span><span class="tick" style="left:${col}ch">${position}</span>`;
-                }
-            }
-
-            let aaTrack = "";
-            cdsFeatures.forEach(feature => {
-                for (let codonStart = parseInt(feature.start, 10); codonStart + 2 <= parseInt(feature.end, 10); codonStart += 3) {
-                    if (codonStart >= rowStart && codonStart + 2 <= rowEnd) {
-                        const letter = translateCodon(bases.slice(codonStart - 1, codonStart + 2));
-                        const col = codonStart - rowStart;
-                        aaTrack += `<span class="aa-box" style="left:${col}ch;width:3ch;background:${AA_COLORS[letter] || "#eee"}">${letter}</span>`;
-                    }
-                }
-            });
-
-            let bars = "";
-            const rowFeatures = laidFeatures.filter(feature => feature._s <= rowEnd && feature._e >= rowStart);
-            const laneHeight = 18;
-
-            rowFeatures.forEach(feature => {
-                const start = Math.max(feature._s, rowStart);
-                const end = Math.min(feature._e, rowEnd);
-                const col = start - rowStart;
-                const width = end - start + 1;
-                const label = width >= 6 ? escapeHtml(feature.name) : "";
-                const color = colorFor(feature, feature._idx);
-
-                bars += `<div class="feat-bar ${hoverIndex !== -1 && hoverIndex !== feature._idx ? "dim" : ""}"
-                              style="left:${col}ch;width:${width}ch;top:${feature._lane * laneHeight + 1}px;background:${color}"
-                              onmouseenter="setHover(${feature._idx})"
-                              onmouseleave="setHover(-1)">${label}</div>`;
-            });
-
-            const tracksHeight = rowFeatures.length ? (Math.max(...rowFeatures.map(feature => feature._lane)) + 1) * laneHeight : 0;
-
-            html += `
-                <div class="sequence-row">
-                    <div class="gutter" style="top:14px">${rowStart}</div>
-                    <div class="row-grid">
-                        <div class="ruler">${ruler}</div>
-                        <div class="bases">${rowBases}</div>
-                        <div class="comp">${rowComp}</div>
-                        ${aaTrack ? `<div class="track" style="height:20px">${aaTrack}</div>` : ""}
-                        ${bars ? `<div class="track" style="height:${tracksHeight}px">${bars}</div>` : ""}
-                    </div>
-                </div>`;
-        }
-
-        host.innerHTML = html || `<div class="text-muted small">No sequence available yet.</div>`;
-    }
-
-    function polar(cx, cy, radius, degrees) {
-        const angle = degrees * Math.PI / 180;
-        return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
-    }
-
-    function sectorPath(cx, cy, innerRadius, outerRadius, startDegrees, endDegrees) {
-        const [x1o, y1o] = polar(cx, cy, outerRadius, startDegrees);
-        const [x2o, y2o] = polar(cx, cy, outerRadius, endDegrees);
-        const [x2i, y2i] = polar(cx, cy, innerRadius, endDegrees);
-        const [x1i, y1i] = polar(cx, cy, innerRadius, startDegrees);
-        const large = Math.abs(endDegrees - startDegrees) > 180 ? 1 : 0;
-
-        return `M ${x1o} ${y1o} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${innerRadius} ${innerRadius} 0 ${large} 0 ${x1i} ${y1i} Z`;
-    }
-
-    function renderCircularMap(svg, sequenceLength, features) {
-        const cx = 500;
-        const cy = 288;
-        const radius = 168;
-        const ringInner = 8;
-        const laneWidth = 22;
-        const arrowDegrees = 4;
-        const angleOf = position => -90 + (position / sequenceLength) * 360;
-
-        svg.setAttribute("viewBox", "0 0 1000 560");
-
-        svg.appendChild(el("rect", {x: 0, y: 0, width: 1000, height: 560, fill: "#ffffff"}));
-        svg.appendChild(el("circle", {cx, cy, r: radius, fill: "none", stroke: "#adb5bd", "stroke-width": 3}));
-
-        const step = niceStep(sequenceLength);
-        for (let position = 0; position < sequenceLength; position += step) {
-            const angle = angleOf(position === 0 ? 1 : position);
-            const [x1, y1] = polar(cx, cy, radius - 5, angle);
-            const [x2, y2] = polar(cx, cy, radius + 5, angle);
-            const [xl, yl] = polar(cx, cy, radius + 20, angle);
-            const anchor = Math.cos(angle * Math.PI / 180) > .15 ? "start" : Math.cos(angle * Math.PI / 180) < -.15 ? "end" : "middle";
-
-            svg.appendChild(el("line", {x1, y1, x2, y2, stroke: "#ced4da", "stroke-width": 1}));
-            svg.appendChild(el("text", {x: xl, y: yl + 4, "text-anchor": anchor, class: "map-pos-label"}, String(position === 0 ? 1 : position)));
-        }
-
-        svg.appendChild(el("text", {x: cx, y: cy - 4, "text-anchor": "middle", class: "map-center-name"}, getMoleculeName()));
-        svg.appendChild(el("text", {x: cx, y: cy + 18, "text-anchor": "middle", class: "map-center-len"}, sequenceLength + " bp"));
-
-        assignLanes(features).forEach(feature => {
-            const color = colorFor(feature, feature._idx);
-            const outerRadius = radius - ringInner - feature._lane * laneWidth;
-            const innerRadius = outerRadius - 14;
-            const group = el("g", {class: "feat-shape", "data-idx": feature._idx});
-            group.classList.toggle("dim", hoverIndex !== -1 && hoverIndex !== feature._idx);
-
-            if (feature._s === feature._e) {
-                const angle = angleOf(feature._s);
-                const [x1, y1] = polar(cx, cy, innerRadius, angle);
-                const [x2, y2] = polar(cx, cy, outerRadius, angle);
-                group.appendChild(el("line", {x1, y1, x2, y2, stroke: color, "stroke-width": 3}));
-            } else {
-                const startAngle = angleOf(feature._s);
-                const endAngle = angleOf(feature._e);
-                const forward = feature.strand !== "-";
-                let bodyStart = startAngle;
-                let bodyEnd = endAngle;
-
-                if (feature.strand === "+") bodyEnd = Math.max(startAngle, endAngle - arrowDegrees);
-                if (feature.strand === "-") bodyStart = Math.min(endAngle, startAngle + arrowDegrees);
-
-                group.appendChild(el("path", {d: sectorPath(cx, cy, innerRadius, outerRadius, bodyStart, bodyEnd), fill: color, stroke: "#00000022"}));
-
-                if (feature.strand === "+" || feature.strand === "-") {
-                    const tipAngle = forward ? endAngle : startAngle;
-                    const baseAngle = forward ? endAngle - arrowDegrees : startAngle + arrowDegrees;
-                    const [tx, ty] = polar(cx, cy, (innerRadius + outerRadius) / 2, tipAngle);
-                    const [box, boy] = polar(cx, cy, outerRadius, baseAngle);
-                    const [bix, biy] = polar(cx, cy, innerRadius, baseAngle);
-
-                    group.appendChild(el("path", {d: `M ${box} ${boy} L ${tx} ${ty} L ${bix} ${biy} Z`, fill: color, stroke: "#00000022"}));
-                }
-            }
-
-            const midAngle = angleOf((feature._s + feature._e) / 2);
-            const right = Math.cos(midAngle * Math.PI / 180) >= 0;
-            const [lineX, lineY] = polar(cx, cy, outerRadius + 2, midAngle);
-            const labelX = right ? cx + radius + 58 : cx - radius - 58;
-            const labelY = cy + (radius + 46 + (feature._idx % 2) * 18) * Math.sin(midAngle * Math.PI / 180);
-
-            group.appendChild(el("path", {d: `M ${lineX} ${lineY} L ${labelX + (right ? -6 : 6)} ${labelY}`, class: "leader"}));
-            group.appendChild(el("text", {x: labelX, y: labelY + 4, "text-anchor": right ? "start" : "end", class: "map-feat-label", fill: "#343a40"}, feature.name || "(no name)"));
-
-            wireFeatureHover(group, feature._idx);
-            svg.appendChild(group);
-        });
-    }
-
-    function renderLinearMap(svg, sequenceLength, features) {
-        const width = 1000;
-        const left = 60;
-        const right = 60;
-        const baseY = 120;
-        const laneHeight = 26;
-        const featureHeight = 16;
-        const xOf = position => left + (position / sequenceLength) * (width - left - right);
-
-        svg.setAttribute("viewBox", "0 0 1000 420");
-
-        svg.appendChild(el("rect", {x: 0, y: 0, width: 1000, height: 420, fill: "#ffffff"}));
-        svg.appendChild(el("line", {x1: left, y1: baseY, x2: width - right, y2: baseY, stroke: "#adb5bd", "stroke-width": 3}));
-        svg.appendChild(el("text", {x: width / 2, y: 40, "text-anchor": "middle", class: "map-center-name"}, getMoleculeName() + " (" + sequenceLength + " bp)"));
-
-        const step = niceStep(sequenceLength);
-        for (let position = 0; position <= sequenceLength; position += step) {
-            const x = xOf(position === 0 ? 1 : position);
-            svg.appendChild(el("line", {x1: x, y1: baseY - 6, x2: x, y2: baseY + 6, stroke: "#ced4da"}));
-            svg.appendChild(el("text", {x, y: baseY - 12, "text-anchor": "middle", class: "map-pos-label"}, String(position === 0 ? 1 : position)));
-        }
-
-        assignLanes(features).forEach(feature => {
-            const color = colorFor(feature, feature._idx);
-            const y = baseY + 24 + feature._lane * laneHeight;
-            const x1 = xOf(feature._s);
-            const x2 = xOf(feature._e);
-            const width = Math.max(2, x2 - x1);
-            const group = el("g", {class: "feat-shape", "data-idx": feature._idx});
-            group.classList.toggle("dim", hoverIndex !== -1 && hoverIndex !== feature._idx);
-
-            if (feature._s === feature._e) {
-                group.appendChild(el("line", {x1, y1: baseY + 4, x2: x1, y2: y + featureHeight, stroke: color, "stroke-width": 3}));
-                group.appendChild(el("circle", {cx: x1, cy: y + featureHeight / 2, r: 4, fill: color}));
-            } else {
-                const head = Math.min(10, width * .4);
-                let path;
-
-                if (feature.strand === "-") {
-                    path = `M ${x1 + head} ${y} L ${x2} ${y} L ${x2} ${y + featureHeight} L ${x1 + head} ${y + featureHeight} L ${x1} ${y + featureHeight / 2} Z`;
-                } else if (feature.strand === "+") {
-                    path = `M ${x1} ${y} L ${x2 - head} ${y} L ${x2} ${y + featureHeight / 2} L ${x2 - head} ${y + featureHeight} L ${x1} ${y + featureHeight} Z`;
-                } else {
-                    path = `M ${x1} ${y} L ${x2} ${y} L ${x2} ${y + featureHeight} L ${x1} ${y + featureHeight} Z`;
-                }
-
-                group.appendChild(el("path", {d: path, fill: color, stroke: "#00000022"}));
-            }
-
-            group.appendChild(el("text", {x: (x1 + x2) / 2, y: y + featureHeight + 13, "text-anchor": "middle", class: "map-feat-label", fill: "#343a40"}, feature.name || "(no name)"));
-
-            wireFeatureHover(group, feature._idx);
-            svg.appendChild(group);
-        });
-    }
-
-    function renderRightPane() {
-        const body = document.getElementById("right-body");
-        if (!body) return;
-
-        document.querySelectorAll("#right-tabs .pane-tab").forEach(tab => {
-            tab.classList.toggle("active", tab.dataset.view === rightView);
-        });
-
-        if (rightView === "plasmid" || rightView === "linear") {
-            body.innerHTML = `
-                <div class="molecule-map-wrap mb-3">
-                    <svg class="molecule-map" id="molecule-map-svg" viewBox="0 0 1000 560"></svg>
-                </div>
-                <div class="small fw-bold text-muted mb-1">Features</div>
-                <div id="feature-legend" class="d-flex flex-wrap"></div>
-            `;
-
-            const svg = document.getElementById("molecule-map-svg");
-            const length = getSequenceLength();
-            const valid = moleculeFeatures
-                .map((feature, index) => ({...normalizeFeature(feature), _idx: index}))
-                .filter(feature => validFeature(feature, length));
-
-            if (rightView === "plasmid") {
-                renderCircularMap(svg, length, valid);
-            } else {
-                renderLinearMap(svg, length, valid);
-            }
-
-            renderLegend(valid);
-            return;
-        }
-
-        if (rightView === "features") {
-            body.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="fw-bold"><i class="bi bi-list-ul me-2"></i>Feature editor</div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addFeatureRow()">
-                        <i class="bi bi-plus-lg me-1"></i>Add feature
-                    </button>
-                </div>
-                <div class="table-responsive border rounded">
-                    <table class="table table-sm align-middle mb-0 features-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Start</th>
-                                <th>End</th>
-                                <th>Strand</th>
-                                <th>Color</th>
-                                <th style="width: 60px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="feature-table-body"></tbody>
-                    </table>
-                </div>
-                <details class="mt-3">
-                    <summary class="small text-muted">Advanced: raw features JSON</summary>
-                    <textarea id="molecule-features-json" class="form-control font-monospace mt-2" rows="10" spellcheck="false"></textarea>
-                    <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadFeaturesFromRawJson()">Load JSON into editor</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="syncFeaturesRawJson()">Refresh JSON from editor</button>
-                    </div>
-                </details>
-            `;
-            renderFeatureEditor();
-            return;
-        }
-
-        if (rightView === "sequence") {
-            body.innerHTML = `
-                <div class="description-panel">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-5">
-                            <label class="form-label small text-muted">Name</label>
-                            <input type="text" id="molecule-name" class="form-control form-control-sm" value="${escapeHtml(getMoleculeName())}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Type</label>
-                            <select id="molecule-sequence-type" class="form-select form-select-sm">
-                                {% for value, label in sequence_types %}
-                                    <option value="{{ value }}" {% if molecule.sequence_type == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted">Topology</label>
-                            <select id="molecule-topology" class="form-select form-select-sm">
-                                {% for value, label in topologies %}
-                                    <option value="{{ value }}" {% if molecule.topology == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <label class="form-label small text-muted">Sequence</label>
-                    <textarea id="molecule-sequence" class="form-control sequence-textarea" spellcheck="false">${getSequenceText()}</textarea>
-                </div>
-            `;
-            wireDynamicInputs();
-            return;
-        }
-
-        if (rightView === "description") {
-            body.innerHTML = `
-                <div class="description-panel">
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Name</label>
-                        <input type="text" id="molecule-name" class="form-control" value="${escapeHtml(getMoleculeName())}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Description</label>
-                        <textarea id="molecule-description" class="form-control" rows="7">{{ molecule.description|escapejs }}</textarea>
-                    </div>
-                </div>
-            `;
-            wireDynamicInputs();
-            return;
-        }
-
-        if (rightView === "metadata") {
-            body.innerHTML = `
-                <div class="metadata-panel">
-                    <dl class="row small mb-0">
-                        <dt class="col-sm-3">Length</dt>
-                        <dd class="col-sm-9" id="molecule-length">{{ molecule.length }} bp/aa</dd>
-
-                        <dt class="col-sm-3">GC content</dt>
-                        <dd class="col-sm-9" id="molecule-gc-content">{{ molecule.gc_content|default:"-" }}</dd>
-
-                        <dt class="col-sm-3">SHA256</dt>
-                        <dd class="col-sm-9 font-monospace text-break" id="molecule-checksum">{{ molecule.checksum_sha256|default:"-" }}</dd>
-
-                        <dt class="col-sm-3">Owner</dt>
-                        <dd class="col-sm-9">{{ molecule.owner|default:"-" }}</dd>
-
-                        <dt class="col-sm-3">Created</dt>
-                        <dd class="col-sm-9">{{ molecule.created_at|date:"Y-m-d H:i" }}</dd>
-
-                        <dt class="col-sm-3">Updated</dt>
-                        <dd class="col-sm-9">{{ molecule.updated_at|date:"Y-m-d H:i" }}</dd>
-                    </dl>
-                </div>
-            `;
-            return;
-        }
-
-        if (rightView === "linked") {
-            body.innerHTML = `
-                {% if molecule.source_entry %}
-                    <div class="border rounded p-3 mb-2 bg-light">
-                        <div class="small text-muted">Source ELN entry</div>
-                        <a href="{% url 'notebook_index' %}?entry_id={{ molecule.source_entry.id }}" class="fw-bold text-decoration-none">
-                            {{ molecule.source_entry.title }}
-                        </a>
-                    </div>
-                {% endif %}
-
-                {% if molecule.linked_sample %}
-                    <div class="border rounded p-3 mb-2 bg-light">
-                        <div class="small text-muted">Linked sample</div>
-                        <a href="{% url 'sample_edit' molecule.linked_sample.id %}" class="fw-bold text-decoration-none" target="_blank">
-                            {{ molecule.linked_sample.sample_id }}
-                        </a>
-                        <div class="small">{{ molecule.linked_sample.organism_name }}</div>
-                        <div class="small text-muted">{{ molecule.linked_sample.sample_type }}</div>
-                    </div>
-                {% else %}
-                    <div class="text-muted small border rounded p-3 bg-light">
-                        No linked sample yet. Linking controls will be added in the next phase.
-                    </div>
-                {% endif %}
-            `;
-        }
-    }
-
-    function renderLegend(validFeatures) {
-        const legend = document.getElementById("feature-legend");
-        if (!legend) return;
-
-        if (!validFeatures.length) {
-            legend.innerHTML = '<span class="text-muted small">No valid features to render yet.</span>';
-            return;
-        }
-
-        legend.innerHTML = validFeatures.map(feature => `
-            <span class="feature-chip ${hoverIndex === feature._idx ? "active" : ""}"
-                  data-idx="${feature._idx}"
-                  onmouseenter="setHover(${feature._idx})"
-                  onmouseleave="setHover(-1)">
-                <span class="feature-color-dot" style="background:${colorFor(feature, feature._idx)}"></span>
-                ${escapeHtml(feature.name)} <span class="text-muted">${escapeHtml(feature.type || "feature")}</span>
-            </span>
-        `).join("");
-    }
-
-    function renderFeatureEditor() {
-        const tableBody = document.getElementById("feature-table-body");
-        if (!tableBody) return;
-
-        moleculeFeatures = moleculeFeatures.map(normalizeFeature);
-
-        if (!moleculeFeatures.length) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-muted small p-3">
-                        No features yet. Click <strong>Add feature</strong> to annotate this sequence.
-                    </td>
-                </tr>
-            `;
-            syncFeaturesRawJson();
-            return;
-        }
-
-        tableBody.innerHTML = moleculeFeatures.map((feature, index) => `
-            <tr class="feature-row ${hoverIndex === index ? "active" : ""}" onmouseenter="setHover(${index})" onmouseleave="setHover(-1)">
-                <td><input class="form-control form-control-sm" value="${escapeHtml(feature.name)}" oninput="updateFeatureField(${index}, 'name', this.value)"></td>
-                <td><input class="form-control form-control-sm" value="${escapeHtml(feature.type)}" oninput="updateFeatureField(${index}, 'type', this.value)"></td>
-                <td><input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.start)}" oninput="updateFeatureField(${index}, 'start', this.value)"></td>
-                <td><input type="number" min="1" class="form-control form-control-sm" value="${escapeHtml(feature.end)}" oninput="updateFeatureField(${index}, 'end', this.value)"></td>
-                <td>
-                    <select class="form-select form-select-sm" onchange="updateFeatureField(${index}, 'strand', this.value)">
-                        <option value="+" ${feature.strand === "+" ? "selected" : ""}>+</option>
-                        <option value="-" ${feature.strand === "-" ? "selected" : ""}>−</option>
-                        <option value="." ${feature.strand === "." ? "selected" : ""}>·</option>
-                    </select>
-                </td>
-                <td><input type="color" class="form-control form-control-color form-control-sm" value="${escapeHtml(feature.color || colorFor(feature, index))}" oninput="updateFeatureField(${index}, 'color', this.value)"></td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-danger" onclick="removeFeatureRow(${index})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join("");
-
-        syncFeaturesRawJson();
-    }
-
-    function updateFeatureField(index, field, value) {
-        if (!moleculeFeatures[index]) return;
-
-        if (field === "start" || field === "end") {
-            const parsed = parseInt(value, 10);
-            moleculeFeatures[index][field] = Number.isFinite(parsed) ? parsed : "";
-        } else {
-            moleculeFeatures[index][field] = value;
-        }
-
-        syncFeaturesRawJson();
-        renderAll();
-        saveStatus.textContent = "Unsaved...";
-    }
-
-    function addFeatureRow() {
-        moleculeFeatures.push({name: "", type: "misc_feature", start: "", end: "", strand: "+", color: "", notes: "", qualifiers: {}});
-        renderAll();
-        saveStatus.textContent = "Unsaved...";
-    }
-
-    function removeFeatureRow(index) {
-        moleculeFeatures.splice(index, 1);
-        renderAll();
-        saveStatus.textContent = "Unsaved...";
-    }
-
-    function syncFeaturesRawJson() {
-        const rawInput = document.getElementById("molecule-features-json");
-        if (!rawInput) return;
-        rawInput.value = JSON.stringify(moleculeFeatures, null, 2);
-    }
-
-    function loadFeaturesFromRawJson() {
-        const rawInput = document.getElementById("molecule-features-json");
-        if (!rawInput) return;
-
-        try {
-            const parsed = JSON.parse(rawInput.value || "[]");
-            if (!Array.isArray(parsed)) {
-                alert("Features JSON must be a list.");
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length) {
+                MOL_DYNAMIC_FEATURES = parsed.map(normalizeFeature);
                 return;
             }
-
-            moleculeFeatures = parsed.map(normalizeFeature);
-            renderAll();
-            saveStatus.textContent = "Unsaved...";
         } catch (error) {
-            alert("Invalid JSON: " + error);
+            console.warn("Could not parse stored molecular features", error);
         }
     }
 
-    function getMoleculeFeaturesPayload() {
-        return moleculeFeatures.map(normalizeFeature);
+    const defaults = buildDemoFeatures(
+        normalizedSequence(),
+        currentMolType(),
+        currentMolTopology()
+    );
+
+    MOL_DYNAMIC_FEATURES = defaults.map((feature, index) => {
+        return normalizeFeature({
+            ...feature,
+            color: molFeatureColor(feature.type)
+        }, index);
+    });
+
+    saveMolDynamicFeaturesLocal();
+}
+
+function saveMolDynamicFeaturesLocal() {
+    localStorage.setItem(molFeatureStorageKey(), JSON.stringify(MOL_DYNAMIC_FEATURES));
+}
+
+function clampMolFeaturesToSequence() {
+    MOL_DYNAMIC_FEATURES = MOL_DYNAMIC_FEATURES.map(normalizeFeature);
+    saveMolDynamicFeaturesLocal();
+}
+
+function getMolFeature(index) {
+    return MOL_DYNAMIC_FEATURES[index] || null;
+}
+
+function updateMolFeature(index, field, value) {
+    const feature = getMolFeature(index);
+    if (!feature) return;
+
+    if (field === "start" || field === "end") {
+        feature[field] = parseInt(value || 1, 10);
+    } else {
+        feature[field] = value;
     }
 
-    function wireFeatureHover(group, index) {
-        group.addEventListener("mouseenter", () => setHover(index));
-        group.addEventListener("mouseleave", () => setHover(-1));
+    const normalized = normalizeFeature(feature, index);
+    MOL_DYNAMIC_FEATURES[index] = normalized;
+
+    saveMolDynamicFeaturesLocal();
+    renderMolDynamicVisualsOnly();
+    renderMolFeatureInspector();
+}
+
+function removeMolFeature(index) {
+    MOL_DYNAMIC_FEATURES.splice(index, 1);
+
+    if (MOL_SELECTED_FEATURE === index) {
+        MOL_SELECTED_FEATURE = null;
+    } else if (MOL_SELECTED_FEATURE !== null && MOL_SELECTED_FEATURE > index) {
+        MOL_SELECTED_FEATURE -= 1;
     }
 
-    function setHover(index) {
-        hoverIndex = index;
-        renderAll();
+    saveMolDynamicFeaturesLocal();
+    renderFeatureEditor();
+    renderMolDynamicVisualsOnly();
+    renderMolFeatureInspector();
+}
+
+function addMolFeature(type, name, start, end, strand) {
+    const sequenceLength = Math.max(normalizedSequence().length, 1);
+    const defaultLength = Math.max(20, Math.floor(sequenceLength * 0.12));
+    const defaultStart = start || 1;
+    const defaultEnd = end || Math.min(sequenceLength, defaultStart + defaultLength);
+
+    const defaults = {
+        promoter: "promoter",
+        rbs: "RBS",
+        cds: "CDS / insert",
+        terminator: "terminator",
+        ori: "ori",
+        antibiotic: "antibiotic",
+        primer: "primer binding region",
+        domain: "domain",
+        custom: "custom feature"
+    };
+
+    MOL_DYNAMIC_FEATURES.push(normalizeFeature({
+        name: name || defaults[type] || "feature",
+        type: type || "custom",
+        start: defaultStart,
+        end: defaultEnd,
+        strand: strand || "+",
+        color: molFeatureColor(type || "custom"),
+        notes: ""
+    }, MOL_DYNAMIC_FEATURES.length));
+
+    MOL_SELECTED_FEATURE = MOL_DYNAMIC_FEATURES.length - 1;
+
+    saveMolDynamicFeaturesLocal();
+    renderFeatureEditor();
+    renderMolDynamicVisualsOnly();
+    renderMolFeatureInspector();
+    applyMolFeatureSelection();
+}
+
+function selectMolFeature(index) {
+    MOL_SELECTED_FEATURE = Number(index);
+    applyMolFeatureSelection();
+    renderMolFeatureInspector();
+
+    const featuresTab = document.querySelector('.mol-tab[data-tab="features"]');
+    if (featuresTab && !document.getElementById("mol-tab-features").classList.contains("active")) {
+        // Keep current tab, but selected state is still visible in map/sequence.
+    }
+}
+
+function hoverMolFeature(index, enabled) {
+    document.querySelectorAll(`[data-feature-index="${index}"]`).forEach(element => {
+        element.classList.toggle("mol-hovered", enabled);
+    });
+}
+
+function applyMolFeatureSelection() {
+    document.querySelectorAll("[data-feature-index]").forEach(element => {
+        element.classList.remove("mol-selected");
+    });
+
+    document.querySelectorAll(".mol-legend-item").forEach(element => {
+        element.classList.remove("mol-selected");
+    });
+
+    if (MOL_SELECTED_FEATURE === null || MOL_SELECTED_FEATURE === undefined) return;
+
+    document.querySelectorAll(`[data-feature-index="${MOL_SELECTED_FEATURE}"]`).forEach(element => {
+        element.classList.add("mol-selected");
+    });
+}
+
+function renderMolFeatureInspector() {
+    let inspector = document.getElementById("mol-feature-inspector");
+
+    const featureEditor = document.getElementById("mol-feature-editor");
+    if (!featureEditor) return;
+
+    if (!inspector) {
+        inspector = document.createElement("div");
+        inspector.id = "mol-feature-inspector";
+        inspector.className = "mol-feature-inspector";
+        featureEditor.parentElement.insertBefore(inspector, featureEditor);
     }
 
-    function wireDynamicInputs() {
-        ["molecule-name", "molecule-sequence-type", "molecule-topology", "molecule-description", "molecule-sequence"].forEach(elementId => {
-            const element = document.getElementById(elementId);
-            if (!element) return;
+    const feature = getMolFeature(MOL_SELECTED_FEATURE);
 
-            const eventName = element.tagName === "SELECT" ? "change" : "input";
-            element.addEventListener(eventName, () => {
-                if (elementId === "molecule-topology") {
-                    rightView = element.value === "circular" ? "plasmid" : "linear";
-                }
-                saveStatus.textContent = "Unsaved...";
-                renderAll();
-            });
+    if (!feature) {
+        inspector.innerHTML = `
+            <div class="feature-title">No feature selected</div>
+            <div class="feature-meta">Click a feature in the map, sequence, legend or feature table to inspect it.</div>
+        `;
+        return;
+    }
+
+    inspector.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+                <div class="feature-title">
+                    <span class="mol-color-dot" style="background:${feature.color};"></span>
+                    ${feature.name}
+                </div>
+                <div class="feature-meta">
+                    ${feature.type} · ${feature.start}-${feature.end} · strand ${feature.strand}
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="switchMolTab('features')">
+                Edit
+            </button>
+        </div>
+    `;
+}
+
+function renderFeatureEditor() {
+    const editor = document.getElementById("mol-feature-editor");
+    if (!editor) return;
+
+    editor.innerHTML = `
+        <div class="mol-feature-row dynamic header">
+            <div>Name</div>
+            <div>Type</div>
+            <div>Start</div>
+            <div>End</div>
+            <div>Strand</div>
+            <div>Color</div>
+            <div></div>
+        </div>
+    `;
+
+    MOL_DYNAMIC_FEATURES.forEach((feature, index) => {
+        const row = document.createElement("div");
+        row.className = "mol-feature-row dynamic";
+        row.dataset.featureIndex = index;
+
+        row.innerHTML = `
+            <input class="form-control form-control-sm"
+                   value="${feature.name}"
+                   onfocus="selectMolFeature(${index})"
+                   oninput="updateMolFeature(${index}, 'name', this.value)">
+            <select class="form-select form-select-sm"
+                    onfocus="selectMolFeature(${index})"
+                    onchange="updateMolFeature(${index}, 'type', this.value)">
+                ${["promoter", "rbs", "cds", "terminator", "ori", "antibiotic", "primer", "domain", "custom"].map(option => {
+                    return `<option value="${option}" ${option === feature.type ? "selected" : ""}>${option}</option>`;
+                }).join("")}
+            </select>
+            <input class="form-control form-control-sm"
+                   type="number"
+                   value="${feature.start}"
+                   onfocus="selectMolFeature(${index})"
+                   oninput="updateMolFeature(${index}, 'start', this.value)">
+            <input class="form-control form-control-sm"
+                   type="number"
+                   value="${feature.end}"
+                   onfocus="selectMolFeature(${index})"
+                   oninput="updateMolFeature(${index}, 'end', this.value)">
+            <select class="form-select form-select-sm"
+                    onfocus="selectMolFeature(${index})"
+                    onchange="updateMolFeature(${index}, 'strand', this.value)">
+                ${["+", "-", "."].map(option => `<option ${option === feature.strand ? "selected" : ""}>${option}</option>`).join("")}
+            </select>
+            <input class="form-control form-control-color form-control-sm"
+                   type="color"
+                   value="${feature.color}"
+                   title="Feature color"
+                   onfocus="selectMolFeature(${index})"
+                   oninput="updateMolFeature(${index}, 'color', this.value)">
+            <div class="d-flex gap-1">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectMolFeature(${index})">Select</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMolFeature(${index})">Remove</button>
+            </div>
+        `;
+
+        editor.appendChild(row);
+    });
+
+    renderMolFeatureInspector();
+    applyMolFeatureSelection();
+}
+
+function findFeatureAtPosition(pos) {
+    return MOL_DYNAMIC_FEATURES.findIndex(feature => pos >= feature.start && pos <= feature.end);
+}
+
+function renderSequenceMap() {
+    const box = document.getElementById("mol-sequence-map");
+    if (!box) return;
+
+    clampMolFeaturesToSequence();
+
+    const sequence = normalizedSequence();
+    const zoom = Number(document.getElementById("mol-zoom").value || 90);
+    const charsPerLine = Math.max(40, Math.floor(120 - zoom * 0.45));
+
+    let html = "";
+
+    for (let i = 0; i < sequence.length; i += charsPerLine) {
+        const chunk = sequence.slice(i, i + charsPerLine);
+        let seqHtml = "";
+
+        for (let j = 0; j < chunk.length; j++) {
+            const pos = i + j + 1;
+            const featureIndex = findFeatureAtPosition(pos);
+            const char = chunk[j] || "";
+
+            if (featureIndex >= 0) {
+                const feature = getMolFeature(featureIndex);
+                seqHtml += `
+                    <span class="mol-seq-feature-token"
+                          data-feature-index="${featureIndex}"
+                          style="background:${feature.color};color:#111;"
+                          title="${feature.name}: ${feature.start}-${feature.end}"
+                          onmouseenter="hoverMolFeature(${featureIndex}, true)"
+                          onmouseleave="hoverMolFeature(${featureIndex}, false)"
+                          onclick="selectMolFeature(${featureIndex})">${char}</span>`;
+            } else {
+                seqHtml += char;
+            }
+        }
+
+        html += `
+            <div class="mol-seq-line">
+                <div class="mol-seq-pos">${i + 1}</div>
+                <div class="mol-seq-text">${seqHtml}</div>
+            </div>
+        `;
+    }
+
+    if (!sequence.length) {
+        html = '<div class="text-muted small">No sequence available.</div>';
+    }
+
+    box.innerHTML = html;
+    renderLegend(MOL_DYNAMIC_FEATURES);
+    applyMolFeatureSelection();
+}
+
+function renderLegend(features) {
+    const legend = document.getElementById("mol-feature-legend");
+    if (!legend) return;
+
+    legend.innerHTML = features.map((feature, index) => {
+        return `
+            <span class="mol-legend-item"
+                  data-feature-index="${index}"
+                  onmouseenter="hoverMolFeature(${index}, true)"
+                  onmouseleave="hoverMolFeature(${index}, false)"
+                  onclick="selectMolFeature(${index})">
+                <span class="mol-legend-color" style="background:${feature.color};"></span>
+                ${feature.name}
+            </span>
+        `;
+    }).join("");
+
+    applyMolFeatureSelection();
+}
+
+function renderDynamicCircularMap(features, len) {
+    const cx = 250;
+    const cy = 210;
+    const r = 125;
+
+    const arcs = features.map((feature, index) => {
+        const startAngle = (feature.start / len) * 360;
+        const endAngle = (feature.end / len) * 360;
+        return `
+            <path class="mol-feature-hotspot"
+                  data-feature-index="${index}"
+                  d="${describeArc(cx, cy, r, startAngle, endAngle)}"
+                  stroke="${feature.color}"
+                  stroke-width="13"
+                  fill="none"
+                  stroke-linecap="round"
+                  onmouseenter="hoverMolFeature(${index}, true)"
+                  onmouseleave="hoverMolFeature(${index}, false)"
+                  onclick="selectMolFeature(${index})">
+                <title>${feature.name}: ${feature.start}-${feature.end}</title>
+            </path>`;
+    }).join("");
+
+    return `
+        <svg class="mol-svg" viewBox="0 0 500 430" width="100%" height="360">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#adb5bd" stroke-width="2"></circle>
+            ${arcs}
+            <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="16" font-weight="700">${document.getElementById("mol-name").value || "Molecule"}</text>
+            <text x="${cx}" y="${cy + 17}" text-anchor="middle" font-size="12" fill="#6c757d">${len} bp</text>
+        </svg>
+    `;
+}
+
+function renderDynamicLinearMap(features, len, type) {
+    const width = 720;
+    const y = type === "protein" ? 120 : 150;
+    const x0 = 35;
+    const x1 = width - 35;
+    const usable = x1 - x0;
+
+    const blocks = features.map((feature, index) => {
+        const x = x0 + ((feature.start - 1) / len) * usable;
+        const w = Math.max(10, ((feature.end - feature.start + 1) / len) * usable);
+
+        return `
+            <rect class="mol-feature-hotspot"
+                  data-feature-index="${index}"
+                  x="${x}"
+                  y="${y - 18}"
+                  width="${w}"
+                  height="36"
+                  rx="6"
+                  fill="${feature.color}"
+                  opacity="0.88"
+                  onmouseenter="hoverMolFeature(${index}, true)"
+                  onmouseleave="hoverMolFeature(${index}, false)"
+                  onclick="selectMolFeature(${index})">
+                <title>${feature.name}: ${feature.start}-${feature.end}</title>
+            </rect>
+            <text x="${x + w / 2}" y="${y + 4}" text-anchor="middle" font-size="11" fill="#111" pointer-events="none">${feature.name}</text>
+        `;
+    }).join("");
+
+    return `
+        <svg class="mol-svg" viewBox="0 0 ${width} 260" width="100%" height="320">
+            <line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#adb5bd" stroke-width="5" stroke-linecap="round"></line>
+            ${blocks}
+            <text x="${x0}" y="${y + 45}" text-anchor="middle" font-size="11" fill="#6c757d">1</text>
+            <text x="${x1}" y="${y + 45}" text-anchor="middle" font-size="11" fill="#6c757d">${len}</text>
+            <text x="${width / 2}" y="42" text-anchor="middle" font-size="16" font-weight="700">${document.getElementById("mol-name").value || "Molecule"}</text>
+            <text x="${width / 2}" y="62" text-anchor="middle" font-size="12" fill="#6c757d">${type.toUpperCase()} · ${len} bp/aa</text>
+        </svg>
+    `;
+}
+
+function renderMapView() {
+    const box = document.getElementById("mol-map-view");
+    if (!box) return;
+
+    clampMolFeaturesToSequence();
+
+    const sequence = normalizedSequence();
+    const type = currentMolType();
+    const topology = currentMolTopology();
+    const len = Math.max(sequence.length, 1);
+
+    if (type === "plasmid" || topology === "circular") {
+        box.innerHTML = renderDynamicCircularMap(MOL_DYNAMIC_FEATURES, len);
+    } else {
+        box.innerHTML = renderDynamicLinearMap(MOL_DYNAMIC_FEATURES, len, type);
+    }
+
+    applyMolFeatureSelection();
+}
+
+function renderMolDynamicVisualsOnly() {
+    renderSequenceMap();
+    renderMapView();
+    renderTypePreview();
+    applyMolFeatureSelection();
+}
+
+function renderAllMolecularViews() {
+    loadMolDynamicFeatures();
+    renderSequenceMap();
+    renderMapView();
+    renderTypePreview();
+    renderFeatureEditor();
+    applyMolFeatureSelection();
+}
+
+const originalSaveMolecularWorkspace = window.saveMolecularWorkspace;
+
+function saveMolecularWorkspace() {
+    saveMolDynamicFeaturesLocal();
+
+    if (typeof originalSaveMolecularWorkspace === "function") {
+        originalSaveMolecularWorkspace();
+        const status = document.getElementById("mol-save-status");
+        if (status) status.textContent = "Saved sequence and local feature layout";
+        return;
+    }
+
+    const status = document.getElementById("mol-save-status");
+    if (status) status.textContent = "Saved local feature layout";
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadMolDynamicFeatures();
+    renderAllMolecularViews();
+});
+/* BIOBANK_MOLECULAR_DYNAMIC_FEATURES_JS_END */
+
+/* BIOBANK_SEQUENCE_MAP_READABLE_JS_START */
+function hexToRgba(hex, alpha) {
+    const clean = String(hex || "#868e96").replace("#", "");
+    const bigint = parseInt(clean.length === 3
+        ? clean.split("").map(c => c + c).join("")
+        : clean, 16);
+
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getFeatureIndexAtPosition(pos) {
+    for (let i = 0; i < MOL_DYNAMIC_FEATURES.length; i++) {
+        const feature = MOL_DYNAMIC_FEATURES[i];
+        if (pos >= feature.start && pos <= feature.end) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function chunkSequenceByFeature(sequence, startPosition) {
+    const chunks = [];
+    let current = null;
+
+    for (let i = 0; i < sequence.length; i++) {
+        const pos = startPosition + i;
+        const featureIndex = getFeatureIndexAtPosition(pos);
+        const key = featureIndex >= 0 ? `feature-${featureIndex}` : "neutral";
+
+        if (!current || current.key !== key) {
+            current = {
+                key,
+                featureIndex,
+                text: ""
+            };
+            chunks.push(current);
+        }
+
+        current.text += sequence[i];
+    }
+
+    return chunks;
+}
+
+function renderReadableSequenceOverview(sequence, features) {
+    const type = currentMolType().toUpperCase();
+    const topology = currentMolTopology();
+    const gc = estimateGc(sequence);
+
+    const featureCount = features.length;
+
+    return `
+        <div class="mol-sequence-overview">
+            <span class="overview-pill"><strong>${type}</strong></span>
+            <span class="overview-pill">${topology}</span>
+            <span class="overview-pill"><strong>${sequence.length}</strong> bp/aa</span>
+            <span class="overview-pill">GC ${gc}%</span>
+            <span class="overview-pill">${featureCount} features</span>
+        </div>
+    `;
+}
+
+function renderSequenceMap() {
+    const box = document.getElementById("mol-sequence-map");
+    if (!box) return;
+
+    clampMolFeaturesToSequence();
+
+    const sequence = normalizedSequence();
+    const zoom = Number(document.getElementById("mol-zoom").value || 90);
+
+    /*
+     * Higher zoom means fewer bases per line. This keeps the text readable
+     * and avoids the previous per-base spacing problem.
+     */
+    const charsPerLine = Math.max(50, Math.floor(150 - zoom * 0.65));
+
+    if (!sequence.length) {
+        box.innerHTML = '<div class="text-muted small">No sequence available.</div>';
+        renderLegend(MOL_DYNAMIC_FEATURES);
+        return;
+    }
+
+    let html = renderReadableSequenceOverview(sequence, MOL_DYNAMIC_FEATURES);
+
+    for (let i = 0; i < sequence.length; i += charsPerLine) {
+        const lineStart = i + 1;
+        const chunk = sequence.slice(i, i + charsPerLine);
+        const segments = chunkSequenceByFeature(chunk, lineStart);
+
+        const lineHtml = segments.map(segment => {
+            if (segment.featureIndex >= 0) {
+                const feature = getMolFeature(segment.featureIndex);
+                const bg = hexToRgba(feature.color, 0.22);
+                const border = hexToRgba(feature.color, 0.55);
+
+                return `
+                    <span class="mol-seq-segment feature"
+                          data-feature-index="${segment.featureIndex}"
+                          style="background:${bg};border-bottom:2px solid ${border};"
+                          title="${feature.name}: ${feature.start}-${feature.end}"
+                          onmouseenter="hoverMolFeature(${segment.featureIndex}, true)"
+                          onmouseleave="hoverMolFeature(${segment.featureIndex}, false)"
+                          onclick="selectMolFeature(${segment.featureIndex})">${segment.text}</span>
+                `;
+            }
+
+            return `<span class="mol-seq-segment neutral">${segment.text}</span>`;
+        }).join("");
+
+        html += `
+            <div class="mol-seq-line">
+                <div class="mol-seq-pos">${lineStart}</div>
+                <div class="mol-seq-text">${lineHtml}</div>
+            </div>
+        `;
+    }
+
+    box.innerHTML = html;
+    renderLegend(MOL_DYNAMIC_FEATURES);
+    applyMolFeatureSelection();
+}
+/* BIOBANK_SEQUENCE_MAP_READABLE_JS_END */
+
+/* BIOBANK_SEQVIZ_EXPERIMENT_JS_START */
+let BIOBANK_SEQVIZ_SCRIPT_PROMISE = null;
+let BIOBANK_SEQVIZ_VIEWER_INSTANCE = null;
+
+function seqvizSafeSequence() {
+    const raw = String(
+        typeof normalizedSequence === "function"
+            ? normalizedSequence()
+            : (MOLECULE.sequence || "")
+    );
+
+    return raw.replace(/\s+/g, "").toUpperCase();
+}
+
+function seqvizFeatureDirection(strand) {
+    return strand === "-" ? -1 : 1;
+}
+
+function seqvizBuildAnnotations() {
+    if (Array.isArray(MOL_DYNAMIC_FEATURES) && MOL_DYNAMIC_FEATURES.length) {
+        return MOL_DYNAMIC_FEATURES.map(feature => {
+            return {
+                name: feature.name || "feature",
+                start: Math.max(0, Number(feature.start || 1) - 1),
+                end: Math.max(1, Number(feature.end || 1)),
+                direction: seqvizFeatureDirection(feature.strand),
+                color: feature.color || "#868e96"
+            };
         });
     }
 
-    function saveMolecule() {
-        const payload = {
-            name: getMoleculeName(),
-            sequence_type: document.getElementById("molecule-sequence-type")?.value || "{{ molecule.sequence_type }}",
-            topology: document.getElementById("molecule-topology")?.value || "{{ molecule.topology }}",
-            description: document.getElementById("molecule-description")?.value || "{{ molecule.description|escapejs }}",
-            sequence: getSequenceText(),
-            features_json: getMoleculeFeaturesPayload()
+    const seq = seqvizSafeSequence();
+    return buildDemoFeatures(seq, currentMolType(), currentMolTopology()).map(feature => {
+        return {
+            name: feature.name || "feature",
+            start: Math.max(0, Number(feature.start || 1) - 1),
+            end: Math.max(1, Number(feature.end || 1)),
+            direction: seqvizFeatureDirection(feature.strand),
+            color: FEATURE_COLORS[feature.type] || "#868e96"
+        };
+    });
+}
+
+function seqvizBuildTranslations(annotations) {
+    const type = currentMolType();
+
+    if (!["dna", "plasmid", "insert"].includes(type)) {
+        return [];
+    }
+
+    return annotations
+        .filter(annotation => /cds|insert|orf|gene/i.test(annotation.name || ""))
+        .map(annotation => {
+            return {
+                start: annotation.start,
+                end: annotation.end,
+                direction: annotation.direction || 1,
+                name: annotation.name,
+                color: annotation.color
+            };
+        });
+}
+
+function seqvizBuildPrimers(annotations) {
+    const type = currentMolType();
+
+    if (type === "primer") {
+        const seq = seqvizSafeSequence();
+        return [
+            {
+                name: document.getElementById("mol-name")?.value || "Primer",
+                start: 0,
+                end: seq.length,
+                direction: 1,
+                color: "#15aabf"
+            }
+        ];
+    }
+
+    return annotations
+        .filter(annotation => /primer/i.test(annotation.name || ""))
+        .map(annotation => ({
+            ...annotation,
+            color: annotation.color || "#15aabf"
+        }));
+}
+
+function seqvizEnzymes() {
+    const checkbox = document.getElementById("seqviz-show-enzymes");
+
+    if (!checkbox || !checkbox.checked) {
+        return [];
+    }
+
+    return [
+        "EcoRI",
+        "BamHI",
+        "HindIII",
+        "PstI",
+        "SalI",
+        "XhoI",
+        "NcoI",
+        "NotI",
+        "NdeI",
+        "XbaI",
+        "SpeI",
+        "SacI"
+    ];
+}
+
+function renderSeqVizLegend(annotations) {
+    const legend = document.getElementById("seqviz-legend");
+    if (!legend) return;
+
+    legend.innerHTML = annotations.map(annotation => {
+        return `
+            <span class="seqviz-legend-item">
+                <span class="seqviz-legend-dot" style="background:${annotation.color || "#868e96"};"></span>
+                ${annotation.name}
+            </span>
+        `;
+    }).join("");
+}
+
+function seqvizSelectionLabel(selection) {
+    if (!selection) return "Selection: none";
+
+    const parts = [];
+
+    if (selection.name) parts.push(selection.name);
+    if (selection.type) parts.push(selection.type);
+    if (selection.start !== undefined && selection.end !== undefined) {
+        parts.push(`${selection.start + 1}-${selection.end}`);
+    }
+    if (selection.length !== undefined) {
+        parts.push(`${selection.length} bp/aa`);
+    }
+
+    return "Selection: " + (parts.length ? parts.join(" · ") : JSON.stringify(selection));
+}
+
+function showSeqVizMessage(message) {
+    const root = document.getElementById("seqviz-viewer");
+    if (!root) return;
+
+    root.innerHTML = `
+        <div class="seqviz-loading">
+            ${message}
+        </div>
+    `;
+}
+
+function loadSeqVizScript() {
+    if (window.seqviz && window.seqviz.Viewer) {
+        return Promise.resolve(window.seqviz);
+    }
+
+    if (BIOBANK_SEQVIZ_SCRIPT_PROMISE) {
+        return BIOBANK_SEQVIZ_SCRIPT_PROMISE;
+    }
+
+    BIOBANK_SEQVIZ_SCRIPT_PROMISE = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/seqviz";
+        script.async = true;
+
+        script.onload = () => {
+            if (window.seqviz && window.seqviz.Viewer) {
+                resolve(window.seqviz);
+            } else {
+                reject(new Error("SeqViz loaded, but window.seqviz.Viewer is unavailable."));
+            }
         };
 
-        saveStatus.textContent = "Saving...";
+        script.onerror = () => {
+            reject(new Error("Could not load https://unpkg.com/seqviz"));
+        };
 
-        postJson(updateUrl, payload)
-            .then(data => {
-                if (data.status === "success") {
-                    saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString();
-
-                    document.getElementById("mol-title").textContent = data.name;
-                    document.getElementById("top-tab-name").textContent = data.name;
-                    document.getElementById("molecule-length-badge").textContent = data.length + " bp/aa";
-                    document.getElementById("molecule-gc-badge").textContent = data.gc_content === null ? "GC -" : "GC " + data.gc_content + "%";
-
-                    renderAll();
-                } else {
-                    saveStatus.textContent = "Save error";
-                    saveStatus.classList.add("text-danger");
-                    alert(data.message || "Could not save molecular item.");
-                }
-            })
-            .catch(error => {
-                saveStatus.textContent = "Save error";
-                saveStatus.classList.add("text-danger");
-                alert(error);
-            });
-    }
-
-    function deleteMolecule() {
-        const moleculeName = getMoleculeName() || "this molecular item";
-        if (!window.confirm(`Delete molecular item "${moleculeName}"?`)) return;
-
-        saveStatus.textContent = "Deleting...";
-
-        postJson(deleteUrl, {})
-            .then(data => {
-                if (data.status === "success") {
-                    window.location.href = data.redirect_url || notebookUrl;
-                } else {
-                    saveStatus.textContent = "Delete error";
-                    saveStatus.classList.add("text-danger");
-                    alert(data.message || "Could not delete molecular item.");
-                }
-            })
-            .catch(error => {
-                saveStatus.textContent = "Delete error";
-                saveStatus.classList.add("text-danger");
-                alert(error);
-            });
-    }
-
-    function renderAll() {
-        renderSequenceMap();
-        renderRightPane();
-
-        document.getElementById("status-bases").textContent = getSequenceLength();
-        document.getElementById("status-features").textContent = moleculeFeatures.length + " FEATURES";
-        document.getElementById("status-topology").textContent = (document.getElementById("molecule-topology")?.value || "{{ molecule.topology }}").toUpperCase();
-    }
-
-    document.getElementById("right-tabs").addEventListener("click", event => {
-        const tab = event.target.closest(".pane-tab");
-        if (!tab) return;
-        rightView = tab.dataset.view;
-        renderAll();
+        document.head.appendChild(script);
     });
 
-    document.getElementById("sequence-zoom").addEventListener("input", event => {
-        lineLength = parseInt(event.target.value, 10);
-        renderSequenceMap();
+    return BIOBANK_SEQVIZ_SCRIPT_PROMISE;
+}
+
+function seqvizViewerMode() {
+    return document.getElementById("seqviz-viewer-mode")?.value || "both";
+}
+
+function renderSeqVizViewer() {
+    const root = document.getElementById("seqviz-viewer");
+    if (!root) return;
+
+    root.innerHTML = '<div class="seqviz-loading">Loading SeqViz...</div>';
+
+    const seq = seqvizSafeSequence();
+
+    if (!seq.length) {
+        showSeqVizMessage("No sequence available for SeqViz.");
+        return;
+    }
+
+    const annotations = seqvizBuildAnnotations();
+    const translations = seqvizBuildTranslations(annotations);
+    const primers = seqvizBuildPrimers(annotations);
+    const searchQuery = document.getElementById("seqviz-search-query")?.value || "";
+
+    renderSeqVizLegend(annotations);
+
+    loadSeqVizScript()
+        .then(seqviz => {
+            root.innerHTML = '<div id="seqviz-viewer-root"></div>';
+
+            const props = {
+                name: document.getElementById("mol-name")?.value || MOLECULE.name || "Molecule",
+                seq,
+                viewer: seqvizViewerMode(),
+                annotations,
+                translations,
+                primers,
+                enzymes: seqvizEnzymes(),
+                search: searchQuery ? { query: searchQuery, mismatch: 0 } : undefined,
+                showComplement: currentMolType() !== "protein",
+                showIndex: true,
+                rotateOnScroll: true,
+                disableExternalFonts: true,
+                style: {
+                    height: "680px",
+                    width: "100%"
+                },
+                onSelection: function(selection) {
+                    const box = document.getElementById("seqviz-selection");
+                    if (box) box.textContent = seqvizSelectionLabel(selection);
+
+                    if (selection && selection.name && Array.isArray(MOL_DYNAMIC_FEATURES)) {
+                        const idx = MOL_DYNAMIC_FEATURES.findIndex(feature => feature.name === selection.name);
+                        if (idx >= 0 && typeof selectMolFeature === "function") {
+                            selectMolFeature(idx);
+                        }
+                    }
+                }
+            };
+
+            try {
+                if (BIOBANK_SEQVIZ_VIEWER_INSTANCE && typeof BIOBANK_SEQVIZ_VIEWER_INSTANCE.destroy === "function") {
+                    BIOBANK_SEQVIZ_VIEWER_INSTANCE.destroy();
+                }
+            } catch (error) {
+                console.warn("Previous SeqViz destroy failed", error);
+            }
+
+            BIOBANK_SEQVIZ_VIEWER_INSTANCE = seqviz.Viewer("seqviz-viewer-root", props);
+            BIOBANK_SEQVIZ_VIEWER_INSTANCE.render();
+        })
+        .catch(error => {
+            console.error(error);
+            showSeqVizMessage(
+                "Could not load SeqViz from CDN.<br>" +
+                String(error.message || error) +
+                "<br><br>Fallback visualizations below remain available."
+            );
+        });
+}
+
+const originalRenderAllMolecularViewsForSeqViz = window.renderAllMolecularViews;
+
+window.renderAllMolecularViews = function() {
+    if (typeof originalRenderAllMolecularViewsForSeqViz === "function") {
+        originalRenderAllMolecularViewsForSeqViz();
+    }
+    renderSeqVizViewer();
+};
+
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(renderSeqVizViewer, 400);
+});
+
+window.renderSeqVizViewer = renderSeqVizViewer;
+/* BIOBANK_SEQVIZ_EXPERIMENT_JS_END */
+
+/* BIOBANK_MOLECULAR_BACKEND_FEATURES_START */
+let BIOBANK_FEATURES_LOADED_FROM_BACKEND = false;
+
+function featureApiUrl() {
+    return `/biobank/internal/lab-tools/notebook/api/molecular-sequence/features/${MOLECULE.id}/`;
+}
+
+function normalizeBackendFeature(feature, index) {
+    return normalizeFeature({
+        id: feature.id || feature.local_id || `backend-feature-${index}`,
+        name: feature.name || "feature",
+        type: feature.type || feature.feature_type || "custom",
+        start: feature.start || 1,
+        end: feature.end || 1,
+        strand: feature.strand || "+",
+        color: feature.color || molFeatureColor(feature.type || feature.feature_type || "custom"),
+        notes: feature.notes || "",
+        qualifiers: feature.qualifiers || {}
+    }, index);
+}
+
+function fetchMolecularFeaturesFromBackend() {
+    return fetch(featureApiUrl(), {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== "success") {
+                throw new Error(data.message || "Could not load molecular features.");
+            }
+
+            const features = data.features || [];
+
+            if (features.length) {
+                MOL_DYNAMIC_FEATURES = features.map(normalizeBackendFeature);
+                BIOBANK_FEATURES_LOADED_FROM_BACKEND = true;
+                saveMolDynamicFeaturesLocal();
+                renderFeatureEditor();
+                renderMolDynamicVisualsOnly();
+                renderSeqVizViewer();
+            }
+
+            return features;
+        });
+}
+
+function postMolecularFeaturesToBackend() {
+    const features = MOL_DYNAMIC_FEATURES.map((feature, order) => {
+        return {
+            name: feature.name,
+            type: feature.type,
+            start: feature.start,
+            end: feature.end,
+            strand: feature.strand,
+            color: feature.color,
+            notes: feature.notes || "",
+            qualifiers: feature.qualifiers || {},
+            order
+        };
     });
 
-    (function setupSplitter() {
-        const splitter = document.getElementById("molecular-splitter");
-        const left = document.getElementById("pane-left");
-        const workspace = splitter.parentElement;
-        let dragging = false;
+    return fetch(featureApiUrl(), {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken()
+        },
+        body: JSON.stringify({features})
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== "success") {
+                throw new Error(data.message || "Could not save molecular features.");
+            }
 
-        splitter.addEventListener("mousedown", () => {
-            dragging = true;
-            document.body.style.userSelect = "none";
+            MOL_DYNAMIC_FEATURES = (data.features || []).map(normalizeBackendFeature);
+            BIOBANK_FEATURES_LOADED_FROM_BACKEND = true;
+            saveMolDynamicFeaturesLocal();
+            renderFeatureEditor();
+            renderMolDynamicVisualsOnly();
+            renderSeqVizViewer();
+
+            return data.features || [];
         });
+}
 
-        window.addEventListener("mouseup", () => {
-            dragging = false;
-            document.body.style.userSelect = "";
+const previousSaveMolecularWorkspaceBackend = window.saveMolecularWorkspace;
+
+window.saveMolecularWorkspace = function() {
+    const status = document.getElementById("mol-save-status");
+    if (status) status.textContent = "Saving sequence and features...";
+
+    let sequenceSave = Promise.resolve();
+
+    try {
+        if (typeof previousSaveMolecularWorkspaceBackend === "function") {
+            const result = previousSaveMolecularWorkspaceBackend();
+            if (result && typeof result.then === "function") {
+                sequenceSave = result;
+            }
+        }
+    } catch (error) {
+        console.warn("Sequence save wrapper failed", error);
+    }
+
+    sequenceSave
+        .then(() => postMolecularFeaturesToBackend())
+        .then(() => {
+            if (status) {
+                status.textContent = "Saved sequence and features";
+                status.classList.remove("text-danger");
+                status.classList.add("text-success");
+            }
+        })
+        .catch(error => {
+            if (status) {
+                status.textContent = "Feature save error";
+                status.classList.add("text-danger");
+            }
+            alert(error.message || error);
         });
+};
 
-        window.addEventListener("mousemove", event => {
-            if (!dragging) return;
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(function() {
+        fetchMolecularFeaturesFromBackend()
+            .catch(error => console.warn("Feature backend load failed; using local/default features.", error));
+    }, 500);
+});
+/* BIOBANK_MOLECULAR_BACKEND_FEATURES_END */
 
-            const rect = workspace.getBoundingClientRect();
-            let percentage = ((event.clientX - rect.left) / rect.width) * 100;
-            percentage = Math.max(24, Math.min(76, percentage));
-            left.style.flex = `0 0 ${percentage}%`;
-        });
-    })();
-
-    renderAll();
 </script>
+
 {% endblock %}
