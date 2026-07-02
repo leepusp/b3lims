@@ -5,54 +5,57 @@ from core.models.tags.model import Tag
 from core.models.keywords.model import KeywordValue
 from core.models.research_groups.model import ResearchGroup
 
+
 class Biobank(models.Model):
     """
-    Entidade máxima do sistema. Representa uma unidade física ou
-    consórcio de guarda de material biológico.
+    Top-level institutional entity.
+
+    Represents a physical biobank, collection hub, or consortium-level
+    structure responsible for biological material custody.
     """
 
     # =========================
-    # METADADOS BÁSICOS
+    # BASIC METADATA
     # =========================
     name = models.CharField(max_length=200)
 
     description = models.TextField(
         blank=True,
         null=True,
-        help_text="Descrição institucional do Biobanco"
+        help_text="Institutional description of the biobank.",
     )
 
     # =========================
-    # LOCALIZAÇÃO
+    # LOCATION
     # =========================
     location_label = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Endereço legível (Ex: Prédio da Manutenção - IQ-USP)"
+        help_text="Human-readable address or location label.",
     )
 
     latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
         null=True,
-        blank=True
+        blank=True,
     )
 
     longitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
         null=True,
-        blank=True
+        blank=True,
     )
 
     # =========================
-    # GOVERNANÇA / PERMISSÕES
+    # GOVERNANCE / ACCESS CONTROL
     # =========================
     owner = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
         related_name="owned_biobanks",
-        help_text="Gestor principal do Biobanco"
+        help_text="Primary biobank manager.",
     )
 
     research_group = models.ForeignKey(
@@ -61,25 +64,24 @@ class Biobank(models.Model):
         null=True,
         blank=True,
         related_name="biobanks",
-        help_text="Grupo de pesquisa responsável pelo Biobanco"
+        help_text="Research group responsible for this biobank.",
     )
 
-    # Novo formato simplificado
     is_public = models.BooleanField(
         default=False,
-        help_text="Marque para disponibilizar este biobanco publicamente"
+        help_text="Marks this biobank as visible in public or institutional catalogs.",
     )
 
     # =========================
-    # CICLO DE VIDA
+    # LIFECYCLE
     # =========================
     is_active = models.BooleanField(
         default=True,
-        help_text="Indica se o Biobanco está operacional"
+        help_text="Indicates whether this biobank is operational.",
     )
 
     # =========================
-    # CLASSIFICAÇÃO
+    # CLASSIFICATION
     # =========================
     tags = models.ManyToManyField(
         Tag,
@@ -93,8 +95,5 @@ class Biobank(models.Model):
         related_name="biobanks",
     )
 
-    # =========================
-    # REPRESENTAÇÃO
-    # =========================
     def __str__(self):
         return self.name

@@ -34,7 +34,7 @@ function initSmartLocation() {
         if (lngInput) lngInput.value = lng.toFixed(6);
 
         if (address) {
-            // Só atualiza o texto se o usuário NÃO estiver com o cursor na caixa de endereço
+            // Update the text only when the user is not focused on the address input.
             if (document.activeElement !== labelInput && labelInput) {
                 labelInput.value = address;
             }

@@ -4,20 +4,23 @@ from django.contrib.auth.models import User
 
 class BiobankUserRole(models.Model):
     """
-    Define papéis de usuário dentro de um Biobank.
-    ACL de governança no nível mais alto.
+    Defines user roles within a biobank.
+
+    This model provides object-level access control for biobank governance.
     """
 
     OWNER = "owner"
     MANAGER = "manager"
-    MEMBER = "member"
+    EDITOR = "editor"
     VIEWER = "viewer"
+    MEMBER = "member"  # Legacy alias kept for compatibility with older records.
 
     ROLE_CHOICES = [
         (OWNER, "Owner"),
         (MANAGER, "Manager"),
-        (MEMBER, "Member"),
+        (EDITOR, "Editor"),
         (VIEWER, "Viewer"),
+        (MEMBER, "Member / legacy"),
     ]
 
     user = models.ForeignKey(
@@ -42,8 +45,8 @@ class BiobankUserRole(models.Model):
     class Meta:
         unique_together = ("user", "biobank")
         ordering = ["role", "user__username"]
-        verbose_name = "Permissão do Biobank"
-        verbose_name_plural = "Permissões do Biobank"
+        verbose_name = "Biobank permission"
+        verbose_name_plural = "Biobank permissions"
 
     def __str__(self):
-        return f"{self.user.username} – {self.biobank.name} ({self.role})"
+        return f"{self.user.username} - {self.biobank.name} ({self.role})"

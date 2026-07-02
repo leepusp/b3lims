@@ -3,7 +3,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 
-from core.models import Biobank, BiobankUserRole
+from core.models.biobanks.biobank import Biobank
+from core.models.biobanks.biobank_user_role import BiobankUserRole
 from core.permissions.biobanks import can_manage_biobank_permissions
 
 
@@ -34,7 +35,7 @@ def biobank_members_view(request, biobank_id):
         uid = request.POST.get("user_id")
         role = request.POST.get("role")
 
-        # 🔒 Nunca permitir criar outro OWNER
+        # Do not allow creating another OWNER.
         if role == BiobankUserRole.OWNER:
             messages.error(
                 request,
@@ -63,7 +64,7 @@ def biobank_members_view(request, biobank_id):
 
         role_obj = get_object_or_404(BiobankUserRole, id=role_id)
 
-        # 🔒 Proteção extra
+        # Extra safety check.
         if role_obj.user == biobank.owner:
             messages.error(
                 request,

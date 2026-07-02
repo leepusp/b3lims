@@ -23,3 +23,7 @@ from .shipments import (
     ShipmentAccessToken,
     ShipmentEvent)
 from core.models.lab_tools.notebook import MolecularSequence, NotebookAttachment, NotebookBlock, NotebookEntry, NotebookSampleLink
+
+from core.models.biobanks.biobank import Biobank
+from core.models.biobanks.biobank_user_role import BiobankUserRole
+from core.models.research_groups.model import ResearchGroup
