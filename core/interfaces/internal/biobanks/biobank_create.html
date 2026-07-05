@@ -1,13 +1,10 @@
 {% extends "internal/common/base.html" %}
-{% load static %}
 
 {% block title %}Register Biobank · Biobank LIMS{% endblock %}
 {% block page_title %}Biobanks{% endblock %}
 {% block page_subtitle %}Management of institutional biobank repositories and access policies{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
+{% block content %}
 <style>
     /* === HARMONIZED STYLE === */
     .form-section-title {
@@ -89,132 +86,18 @@
 
 
 </style>
-{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-
+<div class="biobank-create-page p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="h4 mb-0 fw-bold text-dark">
-            <i class="bi bi-building me-2 text-primary"></i>Biobank Repositories
-        </h3>
-        <div class="d-flex gap-2">
-            <a href="{% url 'biobanks_dashboard' %}" class="btn btn-outline-primary shadow-sm">
-                <i class="bi bi-map me-2"></i>Dashboard map
-            </a>
-            {% if user.is_authenticated %}
-            <a href="#registerBiobankPanel" class="btn btn-primary shadow-sm">
-                <i class="bi bi-plus-lg me-2"></i>New Biobank
-            </a>
-            {% endif %}
-        </div>
+        <h1 class="h4 mb-0 fw-bold text-dark">
+            <i class="bi bi-plus-circle text-primary me-2"></i>Register New Biobank
+        </h1>
+        <a href="{% url 'biobanks_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Biobanks
+        </a>
     </div>
 
-<div class="card shadow-sm border-0">
-
-
-
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light text-secondary small text-uppercase">
-                    <tr>
-                        <th class="ps-4">Biobank Name</th>
-                        <th>Location</th>
-                        <th>Manager / Visibility</th>
-                        <th>Status</th>
-                        <th class="text-end pe-4">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for biobank in biobanks %}
-                    <tr>
-                        <td class="ps-4">
-                            <div class="d-flex align-items-center">
-                                <div class="biobank-logo-placeholder me-3"><i class="bi bi-building"></i></div>
-                                <div>
-                                    <span class="fw-bold text-dark">{{ biobank.name }}</span>
-                                    <small class="d-block text-muted">{{ biobank.description|truncatechars:40 }}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <i class="bi bi-geo-alt text-danger me-1"></i>
-                            {{ biobank.location_label|default:"Not specified" }}
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center mb-1">
-                                <div class="avatar-xs bg-light rounded-circle text-center me-2 small fw-bold" style="width:24px; height:24px; line-height:24px;">
-                                    {{ biobank.owner.username|first|upper }}
-                                </div>
-                                <span class="small">{{ biobank.owner.get_full_name|default:biobank.owner.username }}</span>
-                            </div>
-
-                            <div class="d-flex align-items-center gap-2 mt-1">
-                                <span class="badge bg-light text-dark border">
-                                    Group:
-                                    {% if biobank.research_group %}
-                                        {{ biobank.research_group.name }}
-                                    {% else %}
-                                        unassigned
-                                    {% endif %}
-                                </span>
-                            </div>
-                            {% if biobank.is_public %}
-                                <span class="badge bg-info-subtle text-info border border-info-subtle small"><i class="bi bi-globe me-1"></i>Public</span>
-                            {% else %}
-                                <span class="badge bg-light text-secondary border small">Restricted</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if biobank.is_active %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">Operational</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end pe-4">
-                            {% if biobank.can_manage_members %}
-                                <a href="{% url 'biobank_members' biobank.id %}" class="btn btn-sm btn-outline-primary me-1">
-                                    Members
-                                </a>
-                            {% endif %}
-
-                            {% if biobank.can_edit %}
-                            <form method="POST" action="{% url 'workspace' %}?page=biobanks" class="d-inline" onsubmit="return confirm('Are you sure you want to deactivate this biobank?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="deactivate_biobank">
-                                <input type="hidden" name="biobank_id" value="{{ biobank.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Deactivate">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">No biobanks registered yet.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-</div>
-
-{% if user.is_authenticated %}
-    <section id="registerBiobankPanel" class="card shadow-sm border-0 mb-5 mt-4">
-        <div class="card-header bg-white py-3 border-bottom-0">
-            <h5 class="card-title mb-0 text-primary fw-bold">
-
-<i class="bi bi-plus-circle me-2"></i>Register New Biobank
-            </h5>
-        </div>
-
-        <div class="card-body pt-0">
-            <form method="POST" action="{% url 'workspace' %}?page=biobanks" id="biobankForm">
+    <form method="POST" action="{% url 'biobank_create' %}" id="biobankForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_biobank">
 
@@ -324,16 +207,9 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </section>
-    {% endif %}
+</div>
 
-{% include "internal/tags/add_tag.html" %}
-{% include "internal/keywords/add_keyword.html" %}
-
-{% endblock %}
-
-{% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script src="{% static 'internal/biobanks/biobank.js' %}"></script>
 {% endblock %}
