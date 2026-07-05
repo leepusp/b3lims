@@ -32,7 +32,7 @@ from core.models.events.model import Event
 from core.models.samples.relationship import SampleRelationship
 
 from core.forms import SampleForm, get_form_class_for_sample
-from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample
+from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample, visible_samples_for_user
 from core.permissions.collections import can_edit_collection
 from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
@@ -46,7 +46,11 @@ from core.services.shipment_factory import create_shipment_from_sample
 def samples_list_view(request):
     user = request.user
 
-    qs = Sample.objects.filter(is_active=True).select_related('biobank', 'owner').prefetch_related('collections').order_by("-created_at")
+    qs = visible_samples_for_user(user).select_related(
+        'biobank',
+        'owner',
+        'research_group',
+    ).prefetch_related('collections').order_by("-created_at")
 
     query = request.GET.get('q')
     if query:
@@ -68,7 +72,7 @@ def samples_list_view(request):
     ctx.update({
         'samples': qs,
         'filter_collections': Collection.objects.all(),
-        'all_samples_for_modal': Sample.objects.filter(is_active=True).values('id', 'sample_id', 'sample_type', 'organism_name'),
+        'all_samples_for_modal': visible_samples_for_user(user).values('id', 'sample_id', 'sample_type', 'organism_name'),
     })
     return render(request, "internal/samples/list.html", ctx)
 
@@ -157,6 +161,7 @@ def sample_create_view(request):
                                 "organism_name": organism_name,
                                 "sample_type": sample_type,
                                 "biobank": biobank,
+                                "research_group": biobank.research_group,
                                 "scientific_notes": final_notes,
                                 "is_public": is_public,
                                 "owner": user,
@@ -810,7 +815,7 @@ def samples_network_view(request):
     edges = []
 
     # 1. Carrega todos os Samples ativos como NÓS
-    samples = Sample.objects.filter(is_active=True).select_related('owner')
+    samples = visible_samples_for_user(request.user).select_related('owner', 'biobank', 'research_group')
     for s in samples:
         # Define a cor/grupo com base no tipo
         group = "generic"

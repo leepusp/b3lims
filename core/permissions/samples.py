@@ -49,3 +49,31 @@ def can_delete_sample(user, sample):
             return True
             
     return False
+
+
+def visible_samples_for_user(user):
+    """
+    Return the active samples visible to a user.
+
+    Visibility is intentionally centralized here so list pages, modal selectors,
+    network views, and future dashboards do not expose samples outside the user's
+    permissions.
+    """
+    from core.models.samples.sample import Sample
+
+    qs = Sample.objects.filter(is_active=True).select_related(
+        "biobank",
+        "owner",
+        "research_group",
+    )
+
+    if getattr(user, "is_superuser", False):
+        return qs
+
+    visible_ids = [
+        sample.pk
+        for sample in qs
+        if can_view_sample(user, sample)
+    ]
+
+    return Sample.objects.filter(pk__in=visible_ids, is_active=True)
