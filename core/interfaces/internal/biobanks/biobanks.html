@@ -84,6 +84,8 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 1.2rem;
     }
+
+
 </style>
 {% endblock %}
 
@@ -103,7 +105,8 @@
     <section class="card shadow-sm border-0 mb-5">
         <div class="card-header bg-white py-3 border-bottom-0">
             <h5 class="card-title mb-0 text-primary fw-bold">
-                <i class="bi bi-plus-circle me-2"></i>Register New Biobank
+                
+<i class="bi bi-plus-circle me-2"></i>Register New Biobank
             </h5>
         </div>
         
@@ -223,8 +226,17 @@
     {% endif %}
 
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3 border-bottom-0">
-            <h5 class="card-title mb-0 text-dark fw-bold">Existing Biobanks</h5>
+        
+
+<div class="card-header bg-white py-3 border-bottom-0">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <h5 class="card-title mb-0 text-dark fw-bold">Existing Biobanks</h5>
+                <!-- BIOBANK_DASHBOARD_BUTTON_IN_LIST_START -->
+                <a href="{% url 'biobanks_dashboard' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-map me-1"></i>Dashboard map
+                </a>
+                <!-- BIOBANK_DASHBOARD_BUTTON_IN_LIST_END -->
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">

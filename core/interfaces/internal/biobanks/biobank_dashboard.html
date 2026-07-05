@@ -1,0 +1,563 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+.biobank-dashboard-page {
+    width: 100%;
+    padding: 24px 28px 28px 28px;
+}
+
+.biobank-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.biobank-dashboard-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.biobank-dashboard-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 4px 0 0;
+}
+
+.biobank-dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.biobank-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.biobank-dashboard-metric {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.biobank-dashboard-metric-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.biobank-dashboard-metric-value {
+    font-size: 26px;
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-top: 4px;
+}
+
+.biobank-dashboard-card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.biobank-dashboard-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.biobank-dashboard-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(380px, 520px);
+    gap: 16px;
+}
+
+#biobank-leaflet-map {
+    height: calc(100vh - 285px);
+    min-height: 560px;
+    border-radius: 14px;
+    border: 1px solid #e8edf3;
+    overflow: hidden;
+    background: #eef5f8;
+}
+
+.biobank-dashboard-list {
+    height: calc(100vh - 285px);
+    min-height: 560px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.biobank-dashboard-row {
+    cursor: pointer;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    transition: border-color .12s ease, background .12s ease;
+    text-align: left;
+}
+
+.biobank-dashboard-row:hover,
+.biobank-dashboard-row.is-selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.biobank-dashboard-row-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.biobank-dashboard-row-meta {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.biobank-dashboard-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.biobank-dashboard-badge-public {
+    color: #047857;
+    background: #d1fae5;
+    border-color: #a7f3d0;
+}
+
+.biobank-dashboard-badge-restricted {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fde68a;
+}
+
+.biobank-dashboard-badge-status {
+    color: #065f46;
+    background: #d1fae5;
+    border-color: #a7f3d0;
+}
+
+.biobank-marker {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .32);
+}
+
+.biobank-marker-public {
+    background: #059669;
+}
+
+.biobank-marker-restricted {
+    background: #d97706;
+}
+
+.biobank-popup-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.biobank-popup-meta {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.45;
+}
+
+@media (max-width: 1200px) {
+    .biobank-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+    }
+
+    .biobank-dashboard-shell {
+        grid-template-columns: 1fr;
+    }
+
+    #biobank-leaflet-map,
+    .biobank-dashboard-list {
+        height: 520px;
+        min-height: 520px;
+    }
+}
+</style>
+
+<div class="biobank-dashboard-page">
+    {{ biobank_map_data|json_script:"biobank-dashboard-data" }}
+
+    <div class="biobank-dashboard-header">
+        <div>
+            <h1 class="biobank-dashboard-title">Biobank Institutional Dashboard</h1>
+            <p class="biobank-dashboard-subtitle">
+                Institutional view of registered biobanks, geographic locations, research groups, and operational status.
+            </p>
+        </div>
+
+        <div class="biobank-dashboard-actions">
+            <a href="{% url 'biobanks_list' %}" class="btn btn-sm btn-outline-secondary">
+                &larr; Back to biobanks
+            </a>
+            <a href="{% url 'biobank_create' %}" class="btn btn-sm btn-primary">
+                Register New Biobank
+            </a>
+        </div>
+    </div>
+
+    <div class="biobank-dashboard-grid">
+        <div class="biobank-dashboard-metric">
+            <div class="biobank-dashboard-metric-label">Biobanks</div>
+            <div class="biobank-dashboard-metric-value">{{ biobank_dashboard_stats.total }}</div>
+        </div>
+        <div class="biobank-dashboard-metric">
+            <div class="biobank-dashboard-metric-label">Public catalog</div>
+            <div class="biobank-dashboard-metric-value text-success">{{ biobank_dashboard_stats.public }}</div>
+        </div>
+        <div class="biobank-dashboard-metric">
+            <div class="biobank-dashboard-metric-label">Restricted</div>
+            <div class="biobank-dashboard-metric-value text-warning">{{ biobank_dashboard_stats.restricted }}</div>
+        </div>
+        <div class="biobank-dashboard-metric">
+            <div class="biobank-dashboard-metric-label">Groups</div>
+            <div class="biobank-dashboard-metric-value">{{ biobank_dashboard_stats.groups }}</div>
+        </div>
+        <div class="biobank-dashboard-metric">
+            <div class="biobank-dashboard-metric-label">Mapped</div>
+            <div class="biobank-dashboard-metric-value">{{ biobank_dashboard_stats.with_coordinates }}</div>
+        </div>
+    </div>
+
+    <div class="biobank-dashboard-card">
+        <div class="biobank-dashboard-filterbar">
+            <input type="search" id="biobank-dashboard-search" class="form-control form-control-sm" style="max-width: 380px;" placeholder="Search biobank, group, manager, or location...">
+
+            <select id="biobank-dashboard-visibility" class="form-select form-select-sm" style="max-width: 180px;">
+                <option value="all">All visibility</option>
+                <option value="Public">Public catalog</option>
+                <option value="Restricted">Restricted</option>
+            </select>
+
+            <select id="biobank-dashboard-group" class="form-select form-select-sm" style="max-width: 260px;">
+                <option value="all">All groups</option>
+            </select>
+
+            <button type="button" id="biobank-dashboard-reset" class="btn btn-sm btn-outline-secondary">
+                Reset
+            </button>
+
+            <span class="text-muted small ms-auto" id="biobank-dashboard-count"></span>
+        </div>
+
+        <div class="biobank-dashboard-shell">
+            <div>
+                <div id="biobank-leaflet-map"></div>
+                <div class="d-flex flex-wrap align-items-center gap-3 small text-muted mt-2">
+                    <span><span class="biobank-dashboard-badge biobank-dashboard-badge-public">Public</span></span>
+                    <span><span class="biobank-dashboard-badge biobank-dashboard-badge-restricted">Restricted</span></span>
+                    <span>Markers use registered latitude and longitude.</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="fw-bold text-dark mb-2">Registered biobanks</div>
+                <div id="biobank-dashboard-list" class="biobank-dashboard-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dataNode = document.getElementById("biobank-dashboard-data");
+    const listNode = document.getElementById("biobank-dashboard-list");
+    const searchInput = document.getElementById("biobank-dashboard-search");
+    const visibilitySelect = document.getElementById("biobank-dashboard-visibility");
+    const groupSelect = document.getElementById("biobank-dashboard-group");
+    const resetButton = document.getElementById("biobank-dashboard-reset");
+    const countNode = document.getElementById("biobank-dashboard-count");
+
+    if (!dataNode || !listNode || typeof L === "undefined") {
+        return;
+    }
+
+    const biobanks = JSON.parse(dataNode.textContent || "[]");
+    const markers = {};
+    let selectedId = null;
+
+    const map = L.map("biobank-leaflet-map", {
+        scrollWheelZoom: true,
+        wheelDebounceTime: 30,
+        wheelPxPerZoomLevel: 80,
+    }).setView([-14.235, -51.9253], 4);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function hasCoordinates(biobank) {
+        return biobank.latitude !== null && biobank.longitude !== null;
+    }
+
+    function visibilityClass(value) {
+        return value === "Public"
+            ? "biobank-dashboard-badge-public"
+            : "biobank-dashboard-badge-restricted";
+    }
+
+    function markerClass(value) {
+        return value === "Public"
+            ? "biobank-marker-public"
+            : "biobank-marker-restricted";
+    }
+
+    function markerIcon(biobank) {
+        return L.divIcon({
+            className: "",
+            html: `<div class="biobank-marker ${markerClass(biobank.visibility)}"></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+            popupAnchor: [0, -12],
+        });
+    }
+
+    function popupHtml(biobank) {
+        const permissionNote = biobank.can_view
+            ? "Accessible according to your account permissions."
+            : "Institutional metadata only. Detailed access is restricted.";
+
+        return `
+            <div style="min-width: 260px;">
+                <div class="biobank-popup-title">${escapeHtml(biobank.name)}</div>
+                <div class="biobank-popup-meta">
+                    <strong>Location:</strong> ${escapeHtml(biobank.location || "No location label")}<br>
+                    <strong>Group:</strong> ${escapeHtml(biobank.group)}<br>
+                    <strong>Manager:</strong> ${escapeHtml(biobank.owner)}<br>
+                    <strong>Status:</strong> ${escapeHtml(biobank.status)}<br>
+                    <strong>Visibility:</strong> ${escapeHtml(biobank.visibility)}<br>
+                    <span class="text-muted">${escapeHtml(permissionNote)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function currentFilters() {
+        return {
+            query: (searchInput.value || "").trim().toLowerCase(),
+            visibility: visibilitySelect.value || "all",
+            group: groupSelect.value || "all",
+        };
+    }
+
+    function matchesFilters(biobank) {
+        const filters = currentFilters();
+
+        if (filters.visibility !== "all" && biobank.visibility !== filters.visibility) {
+            return false;
+        }
+
+        if (filters.group !== "all" && biobank.group !== filters.group) {
+            return false;
+        }
+
+        if (filters.query) {
+            const haystack = [
+                biobank.name,
+                biobank.description,
+                biobank.location,
+                biobank.owner,
+                biobank.group,
+                biobank.visibility,
+                biobank.status,
+            ].join(" ").toLowerCase();
+
+            if (!haystack.includes(filters.query)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function populateGroups() {
+        const groups = [...new Set(biobanks.map((b) => b.group).filter(Boolean))].sort();
+
+        groups.forEach((group) => {
+            const option = document.createElement("option");
+            option.value = group;
+            option.textContent = group;
+            groupSelect.appendChild(option);
+        });
+    }
+
+    function clearMarkers() {
+        Object.values(markers).forEach((marker) => {
+            map.removeLayer(marker);
+        });
+
+        Object.keys(markers).forEach((key) => delete markers[key]);
+    }
+
+    function renderMarkers(filtered) {
+        clearMarkers();
+
+        const mapped = filtered.filter(hasCoordinates);
+
+        mapped.forEach((biobank) => {
+            const marker = L.marker(
+                [biobank.latitude, biobank.longitude],
+                { icon: markerIcon(biobank) }
+            );
+
+            marker.bindPopup(popupHtml(biobank));
+
+            marker.on("click", function () {
+                selectedId = biobank.id;
+                renderListOnly(filtered);
+            });
+
+            marker.addTo(map);
+            markers[biobank.id] = marker;
+        });
+
+        if (mapped.length > 0) {
+            const bounds = L.latLngBounds(mapped.map((b) => [b.latitude, b.longitude]));
+
+            map.fitBounds(bounds, {
+                padding: [35, 35],
+                maxZoom: 8,
+            });
+        }
+    }
+
+    function renderListOnly(filtered) {
+        listNode.innerHTML = "";
+
+        filtered.forEach((biobank) => {
+            const row = document.createElement("button");
+            row.type = "button";
+            row.className = "biobank-dashboard-row w-100";
+
+            if (biobank.id === selectedId) {
+                row.classList.add("is-selected");
+            }
+
+            const coordinateLabel = hasCoordinates(biobank)
+                ? "Mapped"
+                : "No coordinates";
+
+            row.innerHTML = `
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div>
+                        <div class="biobank-dashboard-row-title">${escapeHtml(biobank.name)}</div>
+                        <div class="biobank-dashboard-row-meta">
+                            ${escapeHtml(biobank.location || "No location label")}
+                            · ${escapeHtml(biobank.group)}
+                            · ${escapeHtml(biobank.owner)}
+                        </div>
+                    </div>
+                    <span class="biobank-dashboard-badge ${visibilityClass(biobank.visibility)}">${escapeHtml(biobank.visibility)}</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <span class="biobank-dashboard-badge biobank-dashboard-badge-status">${escapeHtml(biobank.status)}</span>
+                    <span class="text-muted small">${coordinateLabel}</span>
+                    ${biobank.can_edit ? '<span class="text-primary small">Can edit</span>' : ""}
+                    ${biobank.can_manage ? '<span class="text-primary small">Can manage members</span>' : ""}
+                </div>
+            `;
+
+            row.addEventListener("click", function () {
+                selectedId = biobank.id;
+
+                if (hasCoordinates(biobank) && markers[biobank.id]) {
+                    map.setView([biobank.latitude, biobank.longitude], 13);
+                    markers[biobank.id].openPopup();
+                }
+
+                renderListOnly(filtered);
+            });
+
+            listNode.appendChild(row);
+        });
+
+        if (filtered.length === 0) {
+            listNode.innerHTML = `
+                <div class="text-muted small border rounded p-3 bg-light">
+                    No biobanks match the current filters.
+                </div>
+            `;
+        }
+
+        if (countNode) {
+            const mappedCount = filtered.filter(hasCoordinates).length;
+            countNode.textContent = `${filtered.length} visible · ${mappedCount} mapped`;
+        }
+    }
+
+    function render() {
+        const filtered = biobanks.filter(matchesFilters);
+        renderMarkers(filtered);
+        renderListOnly(filtered);
+    }
+
+    [searchInput, visibilitySelect, groupSelect].forEach((node) => {
+        node.addEventListener("input", render);
+        node.addEventListener("change", render);
+    });
+
+    resetButton.addEventListener("click", function () {
+        searchInput.value = "";
+        visibilitySelect.value = "all";
+        groupSelect.value = "all";
+        selectedId = null;
+        render();
+    });
+
+    populateGroups();
+    render();
+
+    setTimeout(function () {
+        map.invalidateSize();
+    }, 250);
+});
+</script>
+{% endblock %}
