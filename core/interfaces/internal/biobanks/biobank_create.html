@@ -6,6 +6,82 @@
 {% block page_subtitle %}Management of institutional biobank repositories and access policies{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+
+
+<style>
+.biobank-create-page #map {
+    width: 100% !important;
+    height: 430px !important;
+    min-height: 430px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    z-index: 1;
+}
+
+.biobank-create-page .leaflet-container {
+    width: 100% !important;
+    height: 430px !important;
+    min-height: 430px !important;
+    font: inherit;
+}
+
+.biobank-create-page .leaflet-tile,
+.biobank-create-page .leaflet-marker-icon,
+.biobank-create-page .leaflet-marker-shadow {
+    max-width: none !important;
+}
+</style>
+
+<style>
+/* Biobank create page map containment */
+.biobank-create-page #map,
+.biobank-create-page .leaflet-container,
+.biobank-create-page #biobank-map,
+.biobank-create-page #biobankMap,
+.biobank-create-page #biobank-leaflet-map,
+.biobank-create-page .biobank-map,
+.biobank-create-page .leaflet-map {
+    width: 100% !important;
+    height: 430px !important;
+    min-height: 430px !important;
+    max-height: 430px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    z-index: 1;
+}
+
+.biobank-create-page .leaflet-pane,
+.biobank-create-page .leaflet-map-pane,
+.biobank-create-page .leaflet-tile-pane,
+.biobank-create-page .leaflet-overlay-pane,
+.biobank-create-page .leaflet-marker-pane,
+.biobank-create-page .leaflet-shadow-pane,
+.biobank-create-page .leaflet-tooltip-pane,
+.biobank-create-page .leaflet-popup-pane {
+    position: absolute !important;
+}
+
+.biobank-create-page .leaflet-control-container {
+    position: relative;
+    z-index: 10;
+}
+
+.biobank-create-page .leaflet-tile {
+    max-width: none !important;
+}
+
+.biobank-create-page form {
+    position: relative;
+    z-index: 1;
+}
+</style>
+
 <style>
     /* === HARMONIZED STYLE === */
     .form-section-title {
@@ -34,7 +110,7 @@
     #map {
         cursor: crosshair;
         z-index: 1;
-        height: 320px;
+        height: 430px;
         border-radius: 8px;
         border: 1px solid #dee2e6;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -213,4 +289,24 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="{% static 'internal/biobanks/biobank.js' %}"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function refreshBiobankCreateMap() {
+        if (window.biobankMap && typeof window.biobankMap.invalidateSize === "function") {
+            window.biobankMap.invalidateSize(true);
+        }
+
+        if (window.map && typeof window.map.invalidateSize === "function") {
+            window.map.invalidateSize(true);
+        }
+    }
+
+    setTimeout(refreshBiobankCreateMap, 150);
+    setTimeout(refreshBiobankCreateMap, 600);
+    setTimeout(refreshBiobankCreateMap, 1200);
+    window.addEventListener("resize", refreshBiobankCreateMap);
+});
+</script>
+
 {% endblock %}

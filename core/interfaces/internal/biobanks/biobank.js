@@ -20,6 +20,7 @@ function initSmartLocation() {
 
     // Inicia no Centro do Brasil
     const map = L.map("map").setView([-15.78, -47.92], 4);
+window.biobankMap = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors"
