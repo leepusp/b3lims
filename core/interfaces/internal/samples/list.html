@@ -19,6 +19,9 @@
 {# --- 2. ACTION BUTTONS --- #}
 {% block manage_actions %}
 <div class="d-flex gap-2">
+    <a href="{% url 'samples_dashboard' %}" class="btn btn-outline-success fw-bold shadow-sm">
+        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+    </a>
     <a href="{% url 'samples_network' %}" class="btn btn-info text-white fw-bold shadow-sm">
         <i class="bi bi-diagram-3-fill me-2"></i>Network View
     </a>
