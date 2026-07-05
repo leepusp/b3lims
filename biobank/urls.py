@@ -34,7 +34,11 @@ from core.views.internal.profile.views import profile_view
 from core.views.internal.calendar.views import calendar_view
 
 # 4. BIOBANKS & COLLECTIONS (Gestão Interna)
-from core.views.internal.biobanks.views import biobanks_list_view, biobanks_dashboard_view
+from core.views.internal.biobanks.views import (
+    biobanks_list_view,
+    biobank_create_view,
+    biobanks_dashboard_view,
+)
 from core.views.internal.biobanks.members import biobank_members_view
 from core.views.internal.collections.views import collections_list_view, collections_dashboard_view
 
@@ -99,7 +103,7 @@ urlpatterns = [
 
     # ---------------- BIOBANKS & COLLECTIONS (GESTÃO) ----------------
     path("biobanks/", biobanks_list_view, name="biobanks_list"),
-    path("biobanks/add/", biobanks_list_view, name="biobank_create"),
+    path("biobanks/add/", biobank_create_view, name="biobank_create"),
     path("biobanks/dashboard/", biobanks_dashboard_view, name="biobanks_dashboard"),
     path("biobanks/<int:biobank_id>/members/", biobank_members_view, name="biobank_members"),
     path("collections/", collections_list_view, name="collections_list"),

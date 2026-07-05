@@ -97,7 +97,7 @@ def biobanks_dashboard_view(request):
 # BIOBANK_DASHBOARD_VIEW_END
 
 @login_required
-def biobanks_list_view(request): 
+def biobanks_list_view(request, template_name="internal/biobanks/biobanks.html"): 
     user = request.user
     action = request.POST.get("action")
 
@@ -224,4 +224,16 @@ def biobanks_list_view(request):
 
     ctx["biobanks"] = visible_biobanks
     
-    return render(request, "internal/biobanks/biobanks.html", ctx)
+    return render(request, template_name, ctx)
+
+
+@login_required
+def biobank_create_view(request):
+    """
+    Render the biobank registration interface separately from the repository list.
+    POST handling remains centralized in biobanks_list_view().
+    """
+    return biobanks_list_view(
+        request,
+        template_name="internal/biobanks/biobank_create.html",
+    )
