@@ -58,7 +58,7 @@ from core.views.internal.samples.views import (
 )
 
 # 6. CHEMICALS (REAGENTES)
-from core.views.internal.chemicals.views import chemicals_list_view, chemical_create_view, chemicals_dashboard_view
+from core.views.internal.chemicals.views import chemicals_list_view, chemical_create_view, chemicals_dashboard_view, chemicals_dashboard_view
 
 # 7. TAGS & KEYWORDS
 from core.views.internal.tags.views import tags_view, create_tag_ajax_view
