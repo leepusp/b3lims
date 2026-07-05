@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 
@@ -75,6 +75,60 @@ def samples_list_view(request):
         'all_samples_for_modal': visible_samples_for_user(user).values('id', 'sample_id', 'sample_type', 'organism_name'),
     })
     return render(request, "internal/samples/list.html", ctx)
+
+
+
+# =========================================================
+# 2. DASHBOARD SUMMARY
+# =========================================================
+@login_required
+def samples_dashboard_view(request):
+    """
+    Aggregated sample dashboard restricted by visible_samples_for_user().
+    """
+    user = request.user
+
+    qs = visible_samples_for_user(user).select_related(
+        "biobank",
+        "owner",
+        "research_group",
+    )
+
+    total = qs.count()
+
+    ctx = base_context(request)
+    ctx.update({
+        "sample_dashboard_stats": {
+            "total": total,
+            "public": qs.filter(is_public=True).count(),
+            "private": qs.filter(is_public=False).count(),
+            "biobanks": qs.exclude(biobank__isnull=True).values("biobank_id").distinct().count(),
+            "groups": qs.exclude(research_group__isnull=True).values("research_group_id").distinct().count(),
+        },
+        "sample_dashboard_by_type": list(
+            qs.values("sample_type")
+            .annotate(total=Count("id"))
+            .order_by("sample_type")
+        ),
+        "sample_dashboard_by_status": list(
+            qs.values("status")
+            .annotate(total=Count("id"))
+            .order_by("status")
+        ),
+        "sample_dashboard_by_biobank": list(
+            qs.values("biobank__name")
+            .annotate(total=Count("id"))
+            .order_by("biobank__name")
+        ),
+        "sample_dashboard_by_group": list(
+            qs.values("research_group__name")
+            .annotate(total=Count("id"))
+            .order_by("research_group__name")
+        ),
+        "recent_samples": qs.order_by("-created_at")[:10],
+    })
+
+    return render(request, "internal/samples/dashboard.html", ctx)
 
 
 # =========================================================

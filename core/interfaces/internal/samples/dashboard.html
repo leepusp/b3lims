@@ -1,0 +1,321 @@
+{% extends "internal/common/base.html" %}
+
+{% block content %}
+<style>
+.sample-dashboard-page {
+    padding: 24px 28px 28px 28px;
+}
+
+.sample-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.sample-dashboard-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.sample-dashboard-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 4px 0 0;
+}
+
+.sample-dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sample-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.sample-dashboard-metric,
+.sample-dashboard-card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.sample-dashboard-metric {
+    padding: 14px 16px;
+}
+
+.sample-dashboard-metric-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.sample-dashboard-metric-value {
+    font-size: 26px;
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-top: 4px;
+}
+
+.sample-dashboard-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+    gap: 16px;
+}
+
+.sample-dashboard-card {
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.sample-dashboard-card-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.sample-dashboard-bar-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 240px) minmax(0, 1fr) 52px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sample-dashboard-bar-label {
+    font-size: 12px;
+    color: #334155;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sample-dashboard-bar-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.sample-dashboard-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #2563eb;
+}
+
+.sample-dashboard-bar-value {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-align: right;
+}
+
+.sample-dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sample-dashboard-table th {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e8edf3;
+    padding: 8px;
+}
+
+.sample-dashboard-table td {
+    font-size: 12px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.sample-dashboard-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+}
+
+@media (max-width: 1200px) {
+    .sample-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+    }
+
+    .sample-dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="sample-dashboard-page">
+    <div class="sample-dashboard-header">
+        <div>
+            <h1 class="sample-dashboard-title">Samples Dashboard</h1>
+            <p class="sample-dashboard-subtitle">
+                Aggregated view of biological samples available to your account.
+            </p>
+        </div>
+
+        <div class="sample-dashboard-actions">
+            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary">
+                &larr; Back to samples
+            </a>
+            <a href="{% url 'samples_network' %}" class="btn btn-sm btn-info text-white">
+                Network View
+            </a>
+            <a href="{% url 'sample_add' %}" class="btn btn-sm btn-primary">
+                New Sample
+            </a>
+        </div>
+    </div>
+
+    <div class="sample-dashboard-grid">
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Samples</div>
+            <div class="sample-dashboard-metric-value">{{ sample_dashboard_stats.total }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Public</div>
+            <div class="sample-dashboard-metric-value text-success">{{ sample_dashboard_stats.public }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Restricted</div>
+            <div class="sample-dashboard-metric-value text-warning">{{ sample_dashboard_stats.private }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Biobanks</div>
+            <div class="sample-dashboard-metric-value">{{ sample_dashboard_stats.biobanks }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Groups</div>
+            <div class="sample-dashboard-metric-value">{{ sample_dashboard_stats.groups }}</div>
+        </div>
+    </div>
+
+    <div class="sample-dashboard-layout">
+        <div>
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Samples by type</div>
+                {% for row in sample_dashboard_by_type %}
+                    <div class="sample-dashboard-bar-row">
+                        <div class="sample-dashboard-bar-label">{{ row.sample_type|default:"Not defined" }}</div>
+                        <div class="sample-dashboard-bar-track">
+                            <div class="sample-dashboard-bar-fill" style="width: {% widthratio row.total sample_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="sample-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No sample type data available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Samples by status</div>
+                {% for row in sample_dashboard_by_status %}
+                    <div class="sample-dashboard-bar-row">
+                        <div class="sample-dashboard-bar-label">{{ row.status|default:"Not defined" }}</div>
+                        <div class="sample-dashboard-bar-track">
+                            <div class="sample-dashboard-bar-fill" style="width: {% widthratio row.total sample_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="sample-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No status data available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Samples by biobank</div>
+                {% for row in sample_dashboard_by_biobank %}
+                    <div class="sample-dashboard-bar-row">
+                        <div class="sample-dashboard-bar-label">{{ row.biobank__name|default:"No biobank" }}</div>
+                        <div class="sample-dashboard-bar-track">
+                            <div class="sample-dashboard-bar-fill" style="width: {% widthratio row.total sample_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="sample-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No biobank data available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Samples by research group</div>
+                {% for row in sample_dashboard_by_group %}
+                    <div class="sample-dashboard-bar-row">
+                        <div class="sample-dashboard-bar-label">{{ row.research_group__name|default:"No group" }}</div>
+                        <div class="sample-dashboard-bar-track">
+                            <div class="sample-dashboard-bar-fill" style="width: {% widthratio row.total sample_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="sample-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No research group data available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Recent samples</div>
+                <table class="sample-dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Sample</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sample in recent_samples %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'sample_edit' sample.id %}" class="fw-bold text-decoration-none">
+                                        {{ sample.sample_id }}
+                                    </a>
+                                    <div class="text-muted small">{{ sample.organism_name|default:"No organism" }}</div>
+                                </td>
+                                <td>{{ sample.sample_type|default:"Not defined" }}</td>
+                                <td><span class="sample-dashboard-badge">{{ sample.get_status_display }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted">No samples available.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sample-dashboard-card">
+                <div class="sample-dashboard-card-title">Governance note</div>
+                <p class="text-muted small mb-0">
+                    This dashboard is restricted by centralized sample visibility rules.
+                    Users only see aggregates from samples they are allowed to access.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
