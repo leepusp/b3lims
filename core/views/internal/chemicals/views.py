@@ -65,8 +65,8 @@ def chemical_create_view(request):
         except Exception as e:
             messages.error(request, f"Error creating chemical: {e}")
     
-    # Se for GET, renderiza o form (poderia ser uma página separada, mas vamos fazer modal no list.html para agilidade)
-    return redirect("chemicals_list")
+    ctx = base_context(request)
+    return render(request, "internal/chemicals/create.html", ctx)
 
 
 @login_required

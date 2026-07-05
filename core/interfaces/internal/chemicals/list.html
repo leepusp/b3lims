@@ -32,9 +32,9 @@
             <a href="{% url 'chemicals_dashboard' %}" class="btn btn-outline-success shadow-sm">
                 <i class="bi bi-speedometer2 me-2"></i>Dashboard
             </a>
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addChemicalModal">
+            <a href="{% url 'chemical_add' %}" class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-lg me-2"></i>New Reagent
-            </button>
+            </a>
         </div>
     </div>
 
@@ -132,62 +132,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="addChemicalModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Register New Chemical</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'chemical_add' %}">
-                {% csrf_token %}
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Common Name *</label>
-                            <input type="text" name="name" class="form-control" placeholder="Ex: Ethanol 99%" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Formula</label>
-                            <input type="text" name="formula" class="form-control" placeholder="C2H5OH">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-uppercase text-muted">CAS Number</label>
-                            <input type="text" name="cas_number" class="form-control" placeholder="64-17-5">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Quantity *</label>
-                            <input type="text" name="quantity" class="form-control" placeholder="Ex: 500mL" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Storage Location</label>
-                            <input type="text" name="location" class="form-control" placeholder="Ex: Flammables Cabinet">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Expiry Date</label>
-                            <input type="date" name="expiry_date" class="form-control">
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Hazard Notes / Warnings</label>
-                            <textarea name="hazard_notes" class="form-control" rows="2" placeholder="Ex: Flammable, Toxic if swallowed..."></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link (URL)</label>
-                            <input type="url" name="msds_link" class="form-control" placeholder="https://...">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light border-top-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4">Register Reagent</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>

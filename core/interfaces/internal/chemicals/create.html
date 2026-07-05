@@ -1,0 +1,140 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Create Reagent · Biobank LIMS{% endblock %}
+{% block page_title %}Chemicals{% endblock %}
+{% block page_subtitle %}Management of reagent inventory, stock locations and safety metadata{% endblock %}
+
+{% block content %}
+<style>
+.chem-create-page {
+    padding: 24px 28px 28px 28px;
+}
+
+.chem-create-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.chem-create-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.chem-form-card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    padding: 24px;
+}
+
+.chem-section-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 14px;
+}
+
+.chem-help {
+    font-size: 12px;
+    color: #64748b;
+}
+</style>
+
+<div class="chem-create-page">
+    <div class="chem-create-header">
+        <h1 class="chem-create-title">
+            <i class="bi bi-plus-circle text-primary"></i>
+            Register New Reagent
+        </h1>
+
+        <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Chemicals
+        </a>
+    </div>
+
+    <div class="chem-form-card">
+        <form method="post" action="{% url 'chemical_add' %}" id="createChemicalForm">
+            {% csrf_token %}
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="chem-section-title">1. Identification</div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Common Name *</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ex: Ethanol 99%" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Formula</label>
+                        <input type="text" name="formula" class="form-control" placeholder="C2H5OH">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">CAS Number</label>
+                        <input type="text" name="cas_number" class="form-control" placeholder="64-17-5">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link</label>
+                        <input type="url" name="msds_link" class="form-control" placeholder="https://...">
+                        <div class="chem-help mt-1">Use a public or institutional safety data sheet URL when available.</div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="chem-section-title">2. Inventory and safety</div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Quantity *</label>
+                        <input type="text" name="quantity" class="form-control" placeholder="Ex: 500mL" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Storage Location</label>
+                        <input type="text" name="location" class="form-control" placeholder="Ex: Flammables Cabinet">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Expiry Date</label>
+                        <input type="date" name="expiry_date" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Hazard Notes / Warnings</label>
+                        <textarea name="hazard_notes" class="form-control" rows="3" placeholder="Ex: Flammable, toxic if swallowed..."></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="is_public" id="id_is_public">
+                        <label class="form-check-label" for="id_is_public">
+                            Public catalog visibility
+                        </label>
+                        <div class="chem-help">
+                            If enabled, basic reagent metadata may be visible according to the public catalog rules.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-4 pt-3 border-top">
+                <a href="{% url 'chemicals_list' %}" class="btn btn-light me-2">Cancel</a>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-check-lg me-2"></i>Register Reagent
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
