@@ -1,0 +1,313 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Create Collection · Biobank LIMS{% endblock %}
+{% block page_title %}Collections{% endblock %}
+{% block page_subtitle %}Management of sample groups and research projects{% endblock %}
+
+{% block content %}
+<style>
+    /* === HARMONIZED VISUAL PATTERN (Original preserved) === */
+    .form-section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 0.5rem;
+    }
+
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .chip-box {
+        background: #fff;
+        border: 1px dashed #dee2e6;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 60px;
+        transition: border-color 0.2s;
+    }
+    .chip-box:hover { border-color: #0d6efd; }
+
+    /* Interactive Tags & Biobank Chips */
+    .selectable-tag, .bio-chip {
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .selectable-tag.selected, .bio-chip {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+    }
+
+    /* Search Results Dropdown */
+    #biobankSearchResults {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* Mini Buttons (Manage) - Original preserved */
+    .btn-manage-mini {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+        text-decoration: none;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .btn-manage-mini:hover {
+        background: #e9ecef;
+        color: #000;
+        border-color: #ced4da;
+    }
+</style>
+
+<div class="collection-create-page p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h4 mb-0 fw-bold text-dark">
+            <i class="bi bi-folder-plus text-primary me-2"></i>New Collection
+        </h1>
+        <a href="{% url 'collections_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Collections
+        </a>
+    </div>
+
+    <form method="post" action="{% url 'collection_create' %}" id="createCollectionForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_collection">
+
+                <div class="mb-4">
+                    <h5 class="form-section-title">1. Collection Details</h5>
+                    <div class="row g-4">
+                        <div class="col-md-5">
+                            <label class="section-label">Collection Name <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white text-muted"><i class="bi bi-tag"></i></span>
+                                <input name="name" class="form-control fw-bold" placeholder="Ex: Zika Virus Study 2026" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="section-label">Linked Biobanks <span class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-muted"><i class="bi bi-building"></i></span>
+                                    <input type="text" id="biobankSearch" class="form-control" placeholder="Type to find biobanks...">
+                                </div>
+                                <div id="biobankSearchResults" class="list-group d-none">
+                                    {% for b in biobanks %}
+                                        <button type="button" class="list-group-item list-group-item-action bb-item"
+                                                data-id="{{ b.id }}" data-name="{{ b.name }}">
+                                            {{ b.name }}
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div id="selectedBiobanks" class="d-flex flex-wrap gap-2 mt-2">
+                                </div>
+                            <input type="hidden" name="biobanks_ids" id="biobanksIdsInput" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="form-check form-switch p-0">
+                                <label class="section-label mb-1">Public Availability</label>
+                                <div class="d-flex align-items-center mt-2">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="is_public" id="id_is_public">
+                                    <label class="form-check-label small text-muted" for="id_is_public">Public</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="section-label">Description</label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Describe the scientific purpose of this collection..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="form-section-title">2. Classification and Metadata</h5>
+                    <div class="row g-4">
+
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="section-label mb-0"><i class="bi bi-tags me-1"></i>Tags</label>
+                                <div class="d-flex gap-2">
+                                    <a href="/?page=tags" target="_blank" class="btn-manage-mini" title="Manage all tags">
+                                        <i class="bi bi-gear-fill me-1"></i> Manage
+                                    </a>
+                                    <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                                        + New Tag
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="tagChipContainer" class="chip-box">
+                                {% for tag in all_tags %}
+                                    <span class="badge rounded-pill border text-secondary bg-light selectable-tag m-1 p-2"
+                                          data-tag-id="{{ tag.id }}">
+                                        {{ tag.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                            <div id="tagHiddenInputs" style="display:none;"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="section-label mb-0"><i class="bi bi-list-columns-reverse me-1"></i>Parameters (Keywords)</label>
+                                <div class="d-flex gap-2">
+                                    <a href="/?page=keywords" target="_blank" class="btn-manage-mini" title="Manage all keywords">
+                                        <i class="bi bi-gear-fill me-1"></i> Manage
+                                    </a>
+                                    <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+                                        + Add Parameter
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="keywordChipContainer" class="chip-box d-flex flex-wrap gap-2">
+                                <small class="text-muted w-100 text-center mt-2 fst-italic default-msg">No extra parameters.</small>
+                            </div>
+                            <div id="keywordHiddenInputs" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4 pt-3 border-top">
+                    <button class="btn btn-primary px-5 fw-bold shadow-sm">
+                        <i class="bi bi-check-lg me-2"></i>Create Collection
+                    </button>
+                </div>
+            </form>
+</div>
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    // =========================================================
+    // 1. BIOBANK SEARCH & CHIPS (NEW)
+    // =========================================================
+    const bbSearch = document.getElementById("biobankSearch");
+    const bbResults = document.getElementById("biobankSearchResults");
+    const bbContainer = document.getElementById("selectedBiobanks");
+    const bbHiddenInput = document.getElementById("biobanksIdsInput");
+    let selectedBB = new Set();
+
+    bbSearch.addEventListener("input", function() {
+        const val = this.value.toLowerCase();
+        if(!val) { bbResults.classList.add("d-none"); return; }
+        let found = 0;
+        document.querySelectorAll(".bb-item").forEach(item => {
+            if(item.dataset.name.toLowerCase().includes(val) && !selectedBB.has(item.dataset.id)) {
+                item.classList.remove("d-none"); found++;
+            } else { item.classList.add("d-none"); }
+        });
+        bbResults.classList.toggle("d-none", found === 0);
+    });
+
+    document.querySelectorAll(".bb-item").forEach(item => {
+        item.addEventListener("click", function() {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            selectedBB.add(id);
+            const chip = document.createElement("span");
+            chip.className = "badge bio-chip p-2 d-flex align-items-center";
+            chip.innerHTML = `${name} <i class="bi bi-x-circle ms-2" style="cursor:pointer"></i>`;
+            chip.querySelector("i").onclick = () => { chip.remove(); selectedBB.delete(id); updateBBInput(); };
+            bbContainer.appendChild(chip);
+            updateBBInput();
+            bbSearch.value = ""; bbResults.classList.add("d-none");
+        });
+    });
+
+    function updateBBInput() { bbHiddenInput.value = Array.from(selectedBB).join(","); }
+
+    // =========================================================
+    // 2. TAG SYSTEM (Original preserved)
+    // =========================================================
+    const hiddenTagContainer = document.getElementById("tagHiddenInputs");
+    function updateTagInputs() {
+        hiddenTagContainer.innerHTML = "";
+        document.querySelectorAll(".selectable-tag.selected").forEach(chip => {
+            const input = document.createElement("input");
+            input.type = "hidden"; input.name = "tags"; input.value = chip.dataset.tagId;
+            hiddenTagContainer.appendChild(input);
+        });
+    }
+
+    function initTagClicks() {
+        document.querySelectorAll(".selectable-tag").forEach(chip => {
+            if(chip.dataset.bound === "true") return;
+            chip.dataset.bound = "true";
+            chip.addEventListener("click", function() {
+                this.classList.toggle("selected");
+                this.classList.toggle("bg-light");
+                this.classList.toggle("text-secondary");
+                updateTagInputs();
+            });
+        });
+    }
+    initTagClicks();
+
+    // =========================================================
+    // 3. KEYWORD SYSTEM (Original preserved)
+    // =========================================================
+    const addKeywordForm = document.getElementById("addKeywordForm");
+    if(addKeywordForm) {
+        const btnSaveKw = document.getElementById("btnSaveKeywordAJAX");
+        if(btnSaveKw) {
+            btnSaveKw.onclick = function(e) {
+                e.preventDefault();
+                const k = document.getElementById("keywordKey").value.trim();
+                const v = document.getElementById("keywordValue").value.trim();
+                if(!k || !v) { alert("Fill key and value"); return; }
+
+                const container = document.getElementById("keywordChipContainer");
+                const defaultMsg = container.querySelector(".default-msg");
+                if(defaultMsg) defaultMsg.style.display = "none";
+
+                const chip = document.createElement("span");
+                chip.className = "badge bg-light text-dark border p-2 d-flex align-items-center";
+                chip.innerHTML = `<span class="fw-bold me-1">${k}:</span> ${v} <i class="bi bi-x-circle-fill ms-2 text-danger" style="cursor:pointer"></i>`;
+
+                const hiddenContainer = document.getElementById("keywordHiddenInputs");
+                const input = document.createElement("input");
+                input.type = "hidden"; input.name = "keyword_pairs"; input.value = `${k}:::${v}`;
+
+                chip.querySelector("i").addEventListener("click", () => {
+                    chip.remove(); input.remove();
+                    if(container.children.length === 1 && defaultMsg) defaultMsg.style.display = "block";
+                });
+
+                container.appendChild(chip);
+                hiddenContainer.appendChild(input);
+                document.getElementById("keywordKey").value = "";
+                document.getElementById("keywordValue").value = "";
+                bootstrap.Modal.getInstance(document.getElementById("addKeywordModal")).hide();
+            };
+        }
+    }
+});
+</script>
+{% endblock %}

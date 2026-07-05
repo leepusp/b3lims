@@ -63,7 +63,7 @@ def collections_dashboard_view(request):
 
 
 @login_required
-def collections_list_view(request):
+def collections_list_view(request, template_name="internal/collections/collections.html"):
     user = request.user
     action = request.POST.get("action") if request.method == "POST" else None
 
@@ -143,4 +143,16 @@ def collections_list_view(request):
 
     ctx["collections"] = visible_collections
 
-    return render(request, "internal/collections/collections.html", ctx)
+    return render(request, template_name, ctx)
+
+
+@login_required
+def collection_create_view(request):
+    """
+    Render the collection creation interface separately from the collection list.
+    POST handling remains centralized in collections_list_view().
+    """
+    return collections_list_view(
+        request,
+        template_name="internal/collections/collection_create.html",
+    )
