@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from core.context import base_context
 from core.models.chemicals.chemical import Chemical
+from core.permissions.chemicals import visible_chemicals_for_user, can_edit_chemical
 
 @login_required
 def chemicals_list_view(request):
@@ -11,7 +12,7 @@ def chemicals_list_view(request):
     Dashboard de Químicos: Listagem, Busca e Filtros.
     """
     user = request.user
-    qs = Chemical.objects.all().order_by('expiry_date', 'name')
+    qs = visible_chemicals_for_user(user).order_by('expiry_date', 'name')
 
     # Filtros
     query = request.GET.get('q')
@@ -52,7 +53,9 @@ def chemical_create_view(request):
                 expiry_date=request.POST.get("expiry_date") or None,
                 msds_link=request.POST.get("msds_link"),
                 hazard_notes=request.POST.get("hazard_notes"),
-                created_by=request.user
+                created_by=request.user,
+                research_group=request.user.research_groups.first(),
+                is_public=request.POST.get("is_public") in ["true", "on", "1"],
             )
             messages.success(request, "Reagent registered successfully!")
             return redirect("chemicals_list")

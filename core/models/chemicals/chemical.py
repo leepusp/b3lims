@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from core.models.research_groups.model import ResearchGroup
 
 class Chemical(models.Model):
     """
@@ -31,6 +32,16 @@ class Chemical(models.Model):
     # Sistema
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="chemicals")
+    research_group = models.ForeignKey(
+        ResearchGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chemicals",
+        help_text="Research group responsible for this reagent."
+    )
+    is_public = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
