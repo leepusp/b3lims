@@ -28,3 +28,29 @@ def can_delete_collection(user, collection):
 
 def can_manage_collection_permissions(user, collection):
     return can_edit_collection(user, collection)
+
+
+def visible_collections_for_user(user):
+    """
+    Return active collections visible to a user.
+
+    Visibility is centralized here so list pages, selectors, and future
+    dashboards do not expose collections outside the user's permissions.
+    """
+    from core.models import Collection
+
+    qs = Collection.objects.filter(is_active=True).select_related(
+        "owner",
+        "research_group",
+    )
+
+    if getattr(user, "is_superuser", False):
+        return qs
+
+    visible_ids = [
+        collection.pk
+        for collection in qs
+        if can_view_collection(user, collection)
+    ]
+
+    return Collection.objects.filter(pk__in=visible_ids, is_active=True)

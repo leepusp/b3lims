@@ -18,6 +18,7 @@ from core.models import (
 from core.permissions.collections import (
     can_view_collection,
     can_edit_collection,
+    visible_collections_for_user,
 )
 
 @login_required
@@ -35,6 +36,12 @@ def collections_list_view(request):
                     collection = form.save(commit=False)
                     collection.owner = user
                     collection.is_active = True
+
+                    if not collection.research_group_id:
+                        user_group = user.research_groups.first()
+                        if user_group:
+                            collection.research_group = user_group
+
                     collection.save()
 
                     # --- REMOVIDA A TENTATIVA DE SALVAR BIOBANKS DIRETAMENTE NA COLEÇÃO ---
@@ -86,14 +93,12 @@ def collections_list_view(request):
     ctx["all_tags"] = Tag.objects.all().order_by("name")
     ctx["collection_form"] = CollectionForm()
 
-    # Puxa todas as coleções (Removido o filtro quebra-banco de biobanks__id)
-    collections_qs = Collection.objects.filter(is_active=True).order_by("-created_at")
+    collections_qs = visible_collections_for_user(user).order_by("-created_at")
 
     visible_collections = []
     for c in collections_qs:
-        if can_view_collection(user, c):
-            c.can_edit = can_edit_collection(user, c)
-            visible_collections.append(c)
+        c.can_edit = can_edit_collection(user, c)
+        visible_collections.append(c)
 
     ctx["collections"] = visible_collections
 
