@@ -36,7 +36,7 @@ from core.views.internal.calendar.views import calendar_view
 # 4. BIOBANKS & COLLECTIONS (Gestão Interna)
 from core.views.internal.biobanks.views import biobanks_list_view, biobanks_dashboard_view
 from core.views.internal.biobanks.members import biobank_members_view
-from core.views.internal.collections.views import collections_list_view
+from core.views.internal.collections.views import collections_list_view, collections_dashboard_view
 
 # 5. SAMPLES (AMOSTRAS)
 from core.views.internal.samples.views import (
@@ -103,6 +103,7 @@ urlpatterns = [
     path("biobanks/dashboard/", biobanks_dashboard_view, name="biobanks_dashboard"),
     path("biobanks/<int:biobank_id>/members/", biobank_members_view, name="biobank_members"),
     path("collections/", collections_list_view, name="collections_list"),
+    path("collections/dashboard/", collections_dashboard_view, name="collections_dashboard"),
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
     path("shipments/", shipments_list_view, name="shipments"),

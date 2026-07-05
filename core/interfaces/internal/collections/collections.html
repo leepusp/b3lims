@@ -96,7 +96,7 @@
             </h5>
         </div>
         <div class="card-body pt-0">
-            <form method="post" action="{% url 'workspace' %}?page=collections" id="createCollectionForm">
+            <form method="post" action="{% url 'collections_list' %}" id="createCollectionForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_collection">
 
@@ -258,7 +258,7 @@
                                 {% endfor %}
                             </td>
                             <td class="text-end pe-4">
-                                <form method="post" action="{% url 'workspace' %}?page=collections" class="d-inline" onsubmit="return confirm('Are you sure you want to deactivate this collection?');">
+                                <form method="post" action="{% url 'collections_list' %}" class="d-inline" onsubmit="return confirm('Are you sure you want to deactivate this collection?');">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="deactivate_collection">
                                     <input type="hidden" name="collection_id" value="{{ col.id }}">

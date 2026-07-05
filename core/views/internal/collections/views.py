@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db import transaction
+from django.db.models import Count
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 
@@ -20,6 +21,46 @@ from core.permissions.collections import (
     can_edit_collection,
     visible_collections_for_user,
 )
+
+
+@login_required
+def collections_dashboard_view(request):
+    """
+    Aggregated dashboard for collections visible to the current user.
+    """
+    user = request.user
+
+    qs = visible_collections_for_user(user).select_related(
+        "owner",
+        "research_group",
+    )
+
+    total = qs.count()
+
+    ctx = base_context(request)
+    ctx.update({
+        "collection_dashboard_stats": {
+            "total": total,
+            "public": qs.filter(is_public=True).count(),
+            "restricted": qs.filter(is_public=False).count(),
+            "groups": qs.exclude(research_group__isnull=True).values("research_group_id").distinct().count(),
+            "owners": qs.exclude(owner__isnull=True).values("owner_id").distinct().count(),
+        },
+        "collection_dashboard_by_group": list(
+            qs.values("research_group__name")
+            .annotate(total=Count("id"))
+            .order_by("research_group__name")
+        ),
+        "collection_dashboard_by_owner": list(
+            qs.values("owner__username")
+            .annotate(total=Count("id"))
+            .order_by("owner__username")
+        ),
+        "recent_collections": qs.order_by("-created_at")[:10],
+    })
+
+    return render(request, "internal/collections/dashboard.html", ctx)
+
 
 @login_required
 def collections_list_view(request):

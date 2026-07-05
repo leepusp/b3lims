@@ -1,0 +1,289 @@
+{% extends "internal/common/base.html" %}
+
+{% block content %}
+<style>
+.collection-dashboard-page {
+    padding: 24px 28px 28px 28px;
+}
+
+.collection-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.collection-dashboard-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.collection-dashboard-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 4px 0 0;
+}
+
+.collection-dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collection-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.collection-dashboard-metric,
+.collection-dashboard-card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.collection-dashboard-metric {
+    padding: 14px 16px;
+}
+
+.collection-dashboard-metric-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.collection-dashboard-metric-value {
+    font-size: 26px;
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-top: 4px;
+}
+
+.collection-dashboard-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+    gap: 16px;
+}
+
+.collection-dashboard-card {
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.collection-dashboard-card-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.collection-dashboard-bar-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 240px) minmax(0, 1fr) 52px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.collection-dashboard-bar-label {
+    font-size: 12px;
+    color: #334155;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.collection-dashboard-bar-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.collection-dashboard-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #16a34a;
+}
+
+.collection-dashboard-bar-value {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    text-align: right;
+}
+
+.collection-dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.collection-dashboard-table th {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e8edf3;
+    padding: 8px;
+}
+
+.collection-dashboard-table td {
+    font-size: 12px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.collection-dashboard-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
+}
+
+@media (max-width: 1200px) {
+    .collection-dashboard-grid {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+    }
+
+    .collection-dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="collection-dashboard-page">
+    <div class="collection-dashboard-header">
+        <div>
+            <h1 class="collection-dashboard-title">Collections Dashboard</h1>
+            <p class="collection-dashboard-subtitle">
+                Aggregated view of research collections available to your account.
+            </p>
+        </div>
+
+        <div class="collection-dashboard-actions">
+            <a href="{% url 'collections_list' %}" class="btn btn-sm btn-outline-secondary">
+                &larr; Back to collections
+            </a>
+        </div>
+    </div>
+
+    <div class="collection-dashboard-grid">
+        <div class="collection-dashboard-metric">
+            <div class="collection-dashboard-metric-label">Collections</div>
+            <div class="collection-dashboard-metric-value">{{ collection_dashboard_stats.total }}</div>
+        </div>
+        <div class="collection-dashboard-metric">
+            <div class="collection-dashboard-metric-label">Public</div>
+            <div class="collection-dashboard-metric-value text-success">{{ collection_dashboard_stats.public }}</div>
+        </div>
+        <div class="collection-dashboard-metric">
+            <div class="collection-dashboard-metric-label">Restricted</div>
+            <div class="collection-dashboard-metric-value text-warning">{{ collection_dashboard_stats.restricted }}</div>
+        </div>
+        <div class="collection-dashboard-metric">
+            <div class="collection-dashboard-metric-label">Groups</div>
+            <div class="collection-dashboard-metric-value">{{ collection_dashboard_stats.groups }}</div>
+        </div>
+        <div class="collection-dashboard-metric">
+            <div class="collection-dashboard-metric-label">Owners</div>
+            <div class="collection-dashboard-metric-value">{{ collection_dashboard_stats.owners }}</div>
+        </div>
+    </div>
+
+    <div class="collection-dashboard-layout">
+        <div>
+            <div class="collection-dashboard-card">
+                <div class="collection-dashboard-card-title">Collections by research group</div>
+                {% for row in collection_dashboard_by_group %}
+                    <div class="collection-dashboard-bar-row">
+                        <div class="collection-dashboard-bar-label">{{ row.research_group__name|default:"No group" }}</div>
+                        <div class="collection-dashboard-bar-track">
+                            <div class="collection-dashboard-bar-fill" style="width: {% widthratio row.total collection_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="collection-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No research group data available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="collection-dashboard-card">
+                <div class="collection-dashboard-card-title">Collections by owner</div>
+                {% for row in collection_dashboard_by_owner %}
+                    <div class="collection-dashboard-bar-row">
+                        <div class="collection-dashboard-bar-label">{{ row.owner__username|default:"No owner" }}</div>
+                        <div class="collection-dashboard-bar-track">
+                            <div class="collection-dashboard-bar-fill" style="width: {% widthratio row.total collection_dashboard_stats.total 100 %}%"></div>
+                        </div>
+                        <div class="collection-dashboard-bar-value">{{ row.total }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No owner data available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <div class="collection-dashboard-card">
+                <div class="collection-dashboard-card-title">Recent collections</div>
+                <table class="collection-dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Collection</th>
+                            <th>Owner</th>
+                            <th>Visibility</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for collection in recent_collections %}
+                            <tr>
+                                <td>
+                                    <strong>{{ collection.name }}</strong>
+                                    <div class="text-muted small">{{ collection.description|default:"No description" }}</div>
+                                </td>
+                                <td>{{ collection.owner.username|default:"No owner" }}</td>
+                                <td>
+                                    {% if collection.is_public %}
+                                        <span class="collection-dashboard-badge text-success">Public</span>
+                                    {% else %}
+                                        <span class="collection-dashboard-badge text-warning">Restricted</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted">No collections available yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="collection-dashboard-card">
+                <div class="collection-dashboard-card-title">Governance note</div>
+                <p class="text-muted small mb-0">
+                    This dashboard is restricted by centralized collection visibility rules.
+                    Users only see aggregates from collections they are allowed to access.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
