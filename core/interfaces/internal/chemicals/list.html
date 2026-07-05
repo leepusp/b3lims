@@ -1,6 +1,8 @@
 {% extends "internal/common/base.html" %}
 
 {% block title %}Chemicals · Biobank LIMS{% endblock %}
+{% block page_title %}Chemicals{% endblock %}
+{% block page_subtitle %}Management of reagent inventory, stock locations and safety metadata{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -23,12 +25,9 @@
 <div class="container-fluid py-4">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="h4 mb-1 fw-bold text-dark">
-                <i class="bi bi-flask me-2 text-primary"></i>Chemicals
-            </h3>
-            <p class="text-muted small mb-0">Management of reagent inventory, stock locations and safety metadata</p>
-        </div>
+        <h3 class="h4 mb-0 fw-bold text-dark">
+            <i class="bi bi-flask me-2 text-primary"></i>Reagent Inventory
+        </h3>
         <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addChemicalModal">
             <i class="bi bi-plus-lg me-2"></i>New Reagent
         </button>

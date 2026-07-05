@@ -1,14 +1,15 @@
 {% extends "internal/common/base.html" %}
 
+{% block title %}Transport · Biobank LIMS{% endblock %}
+{% block page_title %}Transport{% endblock %}
+{% block page_subtitle %}Management of sample shipments, transfers and custody tracking{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h2 class="mb-1">
-                <i class="bi bi-truck me-2 text-primary"></i>Transport
-            </h2>
-            <p class="text-muted mb-0">Management of sample shipments, transfers and custody tracking</p>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="h4 mb-0 fw-bold text-dark">
+            <i class="bi bi-truck me-2 text-primary"></i>Sample Transport
+        </h3>
     </div>
 
     <div class="card border-0 shadow-sm mb-3">

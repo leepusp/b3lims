@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block title %}Biobanks · Biobank LIMS{% endblock %}
+{% block page_title %}Biobanks{% endblock %}
+{% block page_subtitle %}Management of institutional biobank repositories and access policies{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -19,63 +21,63 @@
         padding-bottom: 0.5rem;
     }
 
-    .section-label { 
-        font-size: 0.75rem; 
-        font-weight: 600; 
-        color: #495057; 
-        margin-bottom: 0.5rem; 
-        display: flex; 
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: flex;
         align-items: center;
     }
-    
+
     .section-label i { cursor: help; }
 
     /* Map */
-    #map { 
-        cursor: crosshair; 
-        z-index: 1; 
-        height: 320px; 
-        border-radius: 8px; 
-        border: 1px solid #dee2e6; 
+    #map {
+        cursor: crosshair;
+        z-index: 1;
+        height: 320px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
     /* Chips & Tags */
-    .chip-box { 
-        background: #fff; 
-        border: 1px dashed #dee2e6; 
-        border-radius: 6px; 
-        padding: 12px; 
+    .chip-box {
+        background: #fff;
+        border: 1px dashed #dee2e6;
+        border-radius: 6px;
+        padding: 12px;
         min-height: 60px;
         transition: border-color 0.2s;
     }
     .chip-box:hover { border-color: #0d6efd; }
 
-    .selectable-tag { 
+    .selectable-tag {
         font-size: 0.8rem;
         cursor: pointer;
         transition: all 0.2s;
     }
-    .selectable-tag.selected { 
-        background-color: #0d6efd !important; 
-        color: white !important; 
-        border-color: #0d6efd !important; 
+    .selectable-tag.selected {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
     }
 
     /* Mini Button */
-    .btn-manage-mini { 
-        font-size: 0.7rem; 
-        padding: 4px 10px; 
-        background: #f8f9fa; 
-        border: 1px solid #dee2e6; 
-        color: #6c757d; 
-        text-decoration: none; 
+    .btn-manage-mini {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+        text-decoration: none;
         border-radius: 12px;
-        display: inline-flex; 
+        display: inline-flex;
         align-items: center;
     }
     .btn-manage-mini:hover { background: #e9ecef; color: #000; }
-    
+
     .biobank-logo-placeholder {
         width: 40px; height: 40px;
         background-color: #f1f3f5;
@@ -93,149 +95,28 @@
 <div class="container-fluid py-4">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="h4 mb-1 fw-bold text-dark">
-                <i class="bi bi-building me-2 text-primary"></i>Biobanks
-            </h3>
-            <p class="text-muted small mb-0">Management of institutional biobank repositories and access policies</p>
+        <h3 class="h4 mb-0 fw-bold text-dark">
+            <i class="bi bi-building me-2 text-primary"></i>Biobank Repositories
+        </h3>
+        <div class="d-flex gap-2">
+            <a href="{% url 'biobanks_dashboard' %}" class="btn btn-outline-primary shadow-sm">
+                <i class="bi bi-map me-2"></i>Dashboard map
+            </a>
+            {% if user.is_authenticated %}
+            <a href="#registerBiobankPanel" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i>New Biobank
+            </a>
+            {% endif %}
         </div>
     </div>
 
-    {% if user.is_authenticated %}
-    <section class="card shadow-sm border-0 mb-5">
-        <div class="card-header bg-white py-3 border-bottom-0">
-            <h5 class="card-title mb-0 text-primary fw-bold">
-                
-<i class="bi bi-plus-circle me-2"></i>Register New Biobank
-            </h5>
-        </div>
-        
-        <div class="card-body pt-0">
-            <form method="POST" action="{% url 'workspace' %}?page=biobanks" id="biobankForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add_biobank">
+<div class="card shadow-sm border-0">
 
-                <div class="row g-5">
-                    
-                    <div class="col-lg-6">
-                        <h5 class="form-section-title">1. General Information</h5>
-                        
-                        <div class="mb-3">
-                            <label class="section-label">
-                                Official Name <span class="text-danger ms-1">*</span>
-                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="The registered name of the institution or specific freezer farm (e.g., 'ICB-USP Main Freezer')."></i>
-                            </label>
-                            <input type="text" name="name" class="form-control fw-bold" placeholder="Ex: Institute of Virology Biobank" required>
-                        </div>
-
-                        <div class="mb-4">
-                            <div class="form-check form-switch p-0 ms-0">
-                                <label class="section-label mb-1">
-                                    Public Availability
-                                    <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="If checked, basic metadata about this Biobank will be visible to external researchers looking for collaborations."></i>
-                                </label>
-                                <div class="d-flex align-items-center">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="is_public" id="id_is_public">
-                                    <label class="form-check-label small text-muted" for="id_is_public">
-                                        Check to make this biobank visible to external catalogs.
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="section-label">
-                                Scientific Description
-                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Briefly describe what kind of samples are stored here and the main research lines."></i>
-                            </label>
-                            <textarea name="description" class="form-control" rows="4" placeholder="Describe the main purpose and collection types..."></textarea>
-                        </div>
-
-                        <div class="mt-4">
-                            <h5 class="form-section-title">3. Metadata & Classification</h5>
-                            
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="section-label mb-0">
-                                        <i class="bi bi-tags me-1"></i>Tags
-                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Quick visual labels to classify the biobank (e.g., 'BSL-3', 'Cryogenic')."></i>
-                                    </label>
-                                    <div class="d-flex gap-2">
-                                        <a href="/?page=tags" target="_blank" class="btn-manage-mini">Manage</a>
-                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
-                                    </div>
-                                </div>
-                                <div id="tagChipContainer" class="chip-box">
-                                    {% for tag in all_tags %}
-                                        <span class="badge rounded-pill border text-secondary bg-light selectable-tag m-1 p-2"
-                                              data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div id="tagHiddenInputs" style="display:none;"></div>
-                            </div>
-
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="section-label mb-0">
-                                        <i class="bi bi-list-columns-reverse me-1"></i>Keywords
-                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Add specific key/value pairs for advanced filtering (e.g., 'Funding Agency: FAPESP')."></i>
-                                    </label>
-                                    <div class="d-flex gap-2">
-                                        <a href="/?page=keywords" target="_blank" class="btn-manage-mini">Manage</a>
-                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add</button>
-                                    </div>
-                                </div>
-                                <div id="keywordChipContainer" class="chip-box d-flex flex-wrap gap-2"></div>
-                                <div id="keywordHiddenInputs" style="display:none;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-6">
-                        <h5 class="form-section-title">2. Geographic Location</h5>
-                        
-                        <div class="mb-3">
-                            <label class="section-label">
-                                Address / Label
-                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Type the address to auto-center the map, or click anywhere on the map to auto-fill this field."></i>
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                                <input type="text" name="location_label" id="id_location_label" class="form-control" placeholder="Search address or click on map...">
-                            </div>
-                            <div class="form-text small text-end" id="searchStatus">Type to search or click map</div>
-                            <input type="hidden" name="latitude" id="id_latitude">
-                            <input type="hidden" name="longitude" id="id_longitude">
-                        </div>
-
-                        <div class="mb-3">
-                            <div id="map"></div>
-                            <small class="text-muted d-block mt-1 text-end fst-italic">Drag pin or click map to auto-fill address.</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-end mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
-                        <i class="bi bi-check-lg me-2"></i>Save Biobank
-                    </button>
-                </div>
-            </form>
-        </div>
-    </section>
-    {% endif %}
-
-    <div class="card shadow-sm border-0">
-        
 
 <div class="card-header bg-white py-3 border-bottom-0">
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <h5 class="card-title mb-0 text-dark fw-bold">Existing Biobanks</h5>
-                <!-- BIOBANK_DASHBOARD_BUTTON_IN_LIST_START -->
-                <a href="{% url 'biobanks_dashboard' %}" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-map me-1"></i>Dashboard map
-                </a>
-                <!-- BIOBANK_DASHBOARD_BUTTON_IN_LIST_END -->
+
             </div>
         </div>
         <div class="table-responsive">
@@ -326,6 +207,130 @@
     </div>
 
 </div>
+
+{% if user.is_authenticated %}
+    <section id="registerBiobankPanel" class="card shadow-sm border-0 mb-5 mt-4">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h5 class="card-title mb-0 text-primary fw-bold">
+
+<i class="bi bi-plus-circle me-2"></i>Register New Biobank
+            </h5>
+        </div>
+
+        <div class="card-body pt-0">
+            <form method="POST" action="{% url 'workspace' %}?page=biobanks" id="biobankForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_biobank">
+
+                <div class="row g-5">
+
+                    <div class="col-lg-6">
+                        <h5 class="form-section-title">1. General Information</h5>
+
+                        <div class="mb-3">
+                            <label class="section-label">
+                                Official Name <span class="text-danger ms-1">*</span>
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="The registered name of the institution or specific freezer farm (e.g., 'ICB-USP Main Freezer')."></i>
+                            </label>
+                            <input type="text" name="name" class="form-control fw-bold" placeholder="Ex: Institute of Virology Biobank" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch p-0 ms-0">
+                                <label class="section-label mb-1">
+                                    Public Availability
+                                    <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="If checked, basic metadata about this Biobank will be visible to external researchers looking for collaborations."></i>
+                                </label>
+                                <div class="d-flex align-items-center">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="is_public" id="id_is_public">
+                                    <label class="form-check-label small text-muted" for="id_is_public">
+                                        Check to make this biobank visible to external catalogs.
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="section-label">
+                                Scientific Description
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Briefly describe what kind of samples are stored here and the main research lines."></i>
+                            </label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Describe the main purpose and collection types..."></textarea>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5 class="form-section-title">3. Metadata & Classification</h5>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="section-label mb-0">
+                                        <i class="bi bi-tags me-1"></i>Tags
+                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Quick visual labels to classify the biobank (e.g., 'BSL-3', 'Cryogenic')."></i>
+                                    </label>
+                                    <div class="d-flex gap-2">
+                                        <a href="/?page=tags" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
+                                    </div>
+                                </div>
+                                <div id="tagChipContainer" class="chip-box">
+                                    {% for tag in all_tags %}
+                                        <span class="badge rounded-pill border text-secondary bg-light selectable-tag m-1 p-2"
+                                              data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div id="tagHiddenInputs" style="display:none;"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="section-label mb-0">
+                                        <i class="bi bi-list-columns-reverse me-1"></i>Keywords
+                                        <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Add specific key/value pairs for advanced filtering (e.g., 'Funding Agency: FAPESP')."></i>
+                                    </label>
+                                    <div class="d-flex gap-2">
+                                        <a href="/?page=keywords" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add</button>
+                                    </div>
+                                </div>
+                                <div id="keywordChipContainer" class="chip-box d-flex flex-wrap gap-2"></div>
+                                <div id="keywordHiddenInputs" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <h5 class="form-section-title">2. Geographic Location</h5>
+
+                        <div class="mb-3">
+                            <label class="section-label">
+                                Address / Label
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Type the address to auto-center the map, or click anywhere on the map to auto-fill this field."></i>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" name="location_label" id="id_location_label" class="form-control" placeholder="Search address or click on map...">
+                            </div>
+                            <div class="form-text small text-end" id="searchStatus">Type to search or click map</div>
+                            <input type="hidden" name="latitude" id="id_latitude">
+                            <input type="hidden" name="longitude" id="id_longitude">
+                        </div>
+
+                        <div class="mb-3">
+                            <div id="map"></div>
+                            <small class="text-muted d-block mt-1 text-end fst-italic">Drag pin or click map to auto-fill address.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                        <i class="bi bi-check-lg me-2"></i>Save Biobank
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+    {% endif %}
 
 {% include "internal/tags/add_tag.html" %}
 {% include "internal/keywords/add_keyword.html" %}

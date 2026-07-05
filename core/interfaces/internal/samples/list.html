@@ -1,6 +1,8 @@
 {% extends "internal/common/manage_base.html" %}
 
 {% block title %}Samples · Biobank LIMS{% endblock %}
+{% block page_title %}Samples{% endblock %}
+{% block page_subtitle %}Management of biological inventory and sample metadata{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -13,8 +15,9 @@
 {% endblock %}
 
 {# --- 1. TITLE AND SUBTITLE --- #}
-{% block manage_title %}Samples{% endblock %}
+{% block manage_title %}<i class="bi bi-droplet me-2 text-primary"></i>Sample Inventory{% endblock %}
 {% block manage_subtitle %}Management of biological inventory and sample metadata{% endblock %}
+{% block manage_subtitle_line %}{% endblock %}
 
 {# --- 2. ACTION BUTTONS --- #}
 {% block manage_actions %}
