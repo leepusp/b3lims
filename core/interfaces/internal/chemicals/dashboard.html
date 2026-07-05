@@ -1,0 +1,222 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Chemicals Dashboard · Biobank LIMS{% endblock %}
+{% block page_title %}Chemicals{% endblock %}
+{% block page_subtitle %}Inventory overview, safety status and reagent governance{% endblock %}
+
+{% block content %}
+<style>
+.chem-dashboard-page {
+    padding: 24px 28px 28px 28px;
+}
+
+.chem-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.chem-dashboard-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.chem-card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    padding: 18px;
+    height: 100%;
+}
+
+.chem-metric {
+    font-size: 28px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.chem-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.chem-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.chem-table th {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e8edf3;
+    padding: 10px 8px;
+    background: #f8fafc;
+}
+
+.chem-table td {
+    font-size: 13px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 10px 8px;
+}
+
+.chem-table tr:last-child td {
+    border-bottom: 0;
+}
+</style>
+
+<div class="chem-dashboard-page">
+    <div class="chem-dashboard-header">
+        <h1 class="chem-dashboard-title">
+            <i class="bi bi-speedometer2 text-success"></i>
+            Chemicals Dashboard
+        </h1>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Chemicals
+            </a>
+            <a href="{% url 'chemical_add' %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>New Reagent
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="chem-card">
+                <div class="chem-label">Total reagents</div>
+                <div class="chem-metric">{{ total_chemicals }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="chem-card">
+                <div class="chem-label">Available</div>
+                <div class="chem-metric">{{ status_counts.available }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="chem-card">
+                <div class="chem-label">Low stock</div>
+                <div class="chem-metric">{{ status_counts.low_stock }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="chem-card">
+                <div class="chem-label">Expired</div>
+                <div class="chem-metric">{{ status_counts.expired }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="chem-card">
+                <h2 class="h6 fw-bold mb-3">Visibility</h2>
+                <table class="chem-table">
+                    <tbody>
+                        <tr>
+                            <td>Public catalog</td>
+                            <td class="text-end fw-bold">{{ public_chemicals }}</td>
+                        </tr>
+                        <tr>
+                            <td>Restricted</td>
+                            <td class="text-end fw-bold">{{ restricted_chemicals }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="chem-card">
+                <h2 class="h6 fw-bold mb-3">By research group</h2>
+                <table class="chem-table">
+                    <thead>
+                        <tr>
+                            <th>Group</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in group_counts %}
+                            <tr>
+                                <td>{{ row.research_group__name|default:"Unassigned" }}</td>
+                                <td class="text-end fw-bold">{{ row.total }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="2" class="text-muted">No data available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="chem-card">
+                <h2 class="h6 fw-bold mb-3">Soon expiring, next 60 days</h2>
+                <table class="chem-table">
+                    <thead>
+                        <tr>
+                            <th>Reagent</th>
+                            <th>Location</th>
+                            <th class="text-end">Expiry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for chem in soon_expiring %}
+                            <tr>
+                                <td class="fw-bold">{{ chem.name }}</td>
+                                <td>{{ chem.location|default:"Unassigned" }}</td>
+                                <td class="text-end">{{ chem.expiry_date|date:"d/m/Y" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No reagents expiring in the next 60 days.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="chem-card">
+                <h2 class="h6 fw-bold mb-3">Top storage locations</h2>
+                <table class="chem-table">
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in location_counts %}
+                            <tr>
+                                <td>{{ row.location|default:"Unassigned" }}</td>
+                                <td class="text-end fw-bold">{{ row.total }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="2" class="text-muted">No location data available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -28,9 +28,14 @@
         <h3 class="h4 mb-0 fw-bold text-dark">
             <i class="bi bi-flask me-2 text-primary"></i>Reagent Inventory
         </h3>
-        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addChemicalModal">
-            <i class="bi bi-plus-lg me-2"></i>New Reagent
-        </button>
+        <div class="d-flex gap-2">
+            <a href="{% url 'chemicals_dashboard' %}" class="btn btn-outline-success shadow-sm">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addChemicalModal">
+                <i class="bi bi-plus-lg me-2"></i>New Reagent
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 mb-4">

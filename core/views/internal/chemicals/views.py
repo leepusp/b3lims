@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.utils import timezone
+from django.db.models import Q, Count
 from core.context import base_context
 from core.models.chemicals.chemical import Chemical
 from core.permissions.chemicals import visible_chemicals_for_user, can_edit_chemical
@@ -65,3 +66,43 @@ def chemical_create_view(request):
     
     # Se for GET, renderiza o form (poderia ser uma página separada, mas vamos fazer modal no list.html para agilidade)
     return redirect("chemicals_list")
+
+
+@login_required
+def chemicals_dashboard_view(request):
+    """
+    Aggregated dashboard for reagent inventory, stock locations and safety status.
+    """
+    qs = visible_chemicals_for_user(request.user)
+
+    today = timezone.localdate()
+    soon_limit = today + timezone.timedelta(days=60)
+
+    status_counts = {
+        "available": qs.filter(status="available").count(),
+        "low_stock": qs.filter(status="low_stock").count(),
+        "expired": qs.filter(status="expired").count(),
+    }
+
+    ctx = base_context(request)
+    ctx.update({
+        "total_chemicals": qs.count(),
+        "public_chemicals": qs.filter(is_public=True).count(),
+        "restricted_chemicals": qs.filter(is_public=False).count(),
+        "status_counts": status_counts,
+        "group_counts": qs.values("research_group__name")
+            .annotate(total=Count("id"))
+            .order_by("-total", "research_group__name")[:10],
+        "location_counts": qs.values("location")
+            .annotate(total=Count("id"))
+            .order_by("-total", "location")[:10],
+        "soon_expiring": qs.filter(
+            expiry_date__isnull=False,
+            expiry_date__gte=today,
+            expiry_date__lte=soon_limit,
+        ).order_by("expiry_date", "name")[:10],
+        "expired_chemicals": qs.filter(expiry_date__isnull=False, expiry_date__lt=today)
+            .order_by("expiry_date", "name")[:10],
+    })
+
+    return render(request, "internal/chemicals/dashboard.html", ctx)
