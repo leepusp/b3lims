@@ -86,6 +86,11 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="h4 mb-0 fw-bold text-dark"><i class="bi bi-collection me-2 text-primary"></i>Research Collections</h3>
+        <div class="d-flex gap-2">
+            <a href="{% url 'collections_dashboard' %}" class="btn btn-outline-success shadow-sm">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+        </div>
     </div>
 
     {% if user.is_authenticated %}
