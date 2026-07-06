@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.context import base_context
+from core.permissions.workspace import visible_workspace_samples_for_user, visible_workspace_collections_for_user, visible_workspace_events_for_user
 
 # Models
 from core.models.biobanks.biobank import Biobank
@@ -57,43 +58,44 @@ def home(request):
 
 def workspace_view(request):
     """
-    Dashboard logic: KPIs, charts, and recent activities.
+    Dashboard logic: KPIs, charts, and recent activities scoped to the current
+    user's operational visibility.
     """
     ctx = base_context(request)
-    
+
+    samples_qs = visible_workspace_samples_for_user(request.user)
+    collections_qs = visible_workspace_collections_for_user(request.user)
+    events_qs = visible_workspace_events_for_user(request.user)
+
     # --- 1. KPI COUNTERS ---
-    total_samples = Sample.objects.filter(is_active=True).count()
-    
-    # Samples in Quality Control or Pending
-    pending_qc = Sample.objects.filter(
-        is_active=True, 
-        status__in=['pending', 'qc']
+    total_samples = samples_qs.count()
+
+    pending_qc = samples_qs.filter(
+        status__in=["pending", "qc"]
     ).count()
-    
-   # New samples in the last 30 days
+
     last_30_days = timezone.now() - timedelta(days=30)
-    new_samples = Sample.objects.filter(
-        is_active=True, 
+    new_samples = samples_qs.filter(
         created_at__gte=last_30_days
     ).count()
 
-    total_collections = Collection.objects.filter(is_active=True).count()
+    total_collections = collections_qs.count()
 
     # --- 2. CHART DATA (Distribution by Sample Type) ---
     type_distribution = (
-        Sample.objects.filter(is_active=True)
-        .values('sample_type')
-        .annotate(total=Count('id'))
-        .order_by('-total')[:5]
+        samples_qs
+        .values("sample_type")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:5]
     )
-    
-    chart_labels = [item['sample_type'] or 'Other' for item in type_distribution]
-    chart_data = [item['total'] for item in type_distribution]
+
+    chart_labels = [item["sample_type"] or "Other" for item in type_distribution]
+    chart_data = [item["total"] for item in type_distribution]
 
     # --- 3. RECENT ACTIVITY (Audit Trail) ---
     recent_activity = (
-        Event.objects.all()
-        .select_related('performed_by', 'sample')
+        events_qs
+        .select_related("performed_by", "sample")
         .order_by("-timestamp")[:8]
     )
 

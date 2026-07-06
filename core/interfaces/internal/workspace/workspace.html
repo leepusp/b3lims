@@ -102,7 +102,7 @@
         {% if user.is_superuser %}
         <div class="d-flex gap-2">
             <a href="{% url 'workspace_backup' %}" class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
-                <i class="bi bi-hdd-network me-2"></i> System Backup
+                <i class="bi bi-download me-2"></i> Legacy Data Export
             </a>
             <a href="{% url 'admin:index' %}" target="_blank" class="btn btn-dark d-flex align-items-center shadow-sm">
                 <i class="bi bi-shield-lock-fill me-2"></i> Admin Panel
@@ -263,8 +263,8 @@
                         <span class="badge bg-success-subtle text-success">Online</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="small"><i class="bi bi-shield-check text-success me-2"></i>Backup</span>
-                        <span class="text-muted small">Active</span>
+                        <span class="small"><i class="bi bi-database-check text-muted me-2"></i>PostgreSQL backup</span>
+                        <span class="text-muted small">Not monitored here</span>
                     </div>
                 </div>
             </div>
