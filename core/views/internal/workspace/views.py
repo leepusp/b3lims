@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from core.context import base_context
 from core.permissions.workspace import visible_workspace_samples_for_user, visible_workspace_collections_for_user, visible_workspace_events_for_user
+from core.services.postgresql_backup_status import get_postgresql_backup_status
 
 # Models
 from core.models.biobanks.biobank import Biobank
@@ -109,5 +110,8 @@ def workspace_view(request):
         "chart_labels": chart_labels,
         "chart_data": chart_data,
     }
+
+    if request.user.is_superuser:
+        ctx["postgresql_backup_status"] = get_postgresql_backup_status()
 
     return render(request, "internal/workspace/workspace.html", ctx)
