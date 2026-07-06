@@ -51,6 +51,7 @@ from core.views.internal.samples.views import (
     sample_create_view,
     export_samples_csv,
     sample_edit_view,
+    sample_detail_view,
     sample_relate_view,
     samples_network_view,  # <-- FUNÇÃO DO GRAFO IMPORTADA AQUI
     sample_import_view,
@@ -131,6 +132,7 @@ urlpatterns = [
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),
+    path("samples/<int:sample_id>/", sample_detail_view, name="sample_detail"),
     path("samples/<int:sample_id>/notebook/create/", notebook_views.notebook_create_from_sample, name="notebook_create_from_sample"),
     path("samples/<int:sample_id>/relate/", sample_relate_view, name="sample_relate"),
     path("samples/export/", export_samples_csv, name="export_samples_csv"),

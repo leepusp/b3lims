@@ -91,7 +91,7 @@
     {% for sample in samples %}
     <tr>
         <td class="ps-4 fw-bold text-primary align-middle">
-            <a href="{% url 'sample_edit' sample.id %}" class="text-decoration-none">
+            <a href="{% url 'sample_detail' sample.id %}" class="text-decoration-none">
                 {{ sample.sample_id }}
             </a>
                             <form method="post" action="{% url 'sample_create_shipment' sample.id %}" class="d-inline">
@@ -149,6 +149,11 @@
                     Options
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                      <li>
+                          <a class="dropdown-item py-2" href="{% url 'sample_detail' sample.id %}">
+                              <i class="bi bi-eye text-success me-2" style="width: 15px; text-align: center;"></i>View Details
+                          </a>
+                      </li>
                     <li>
                         <a class="dropdown-item py-2" href="{% url 'sample_edit' sample.id %}">
                             <i class="fas fa-edit text-primary me-2" style="width: 15px; text-align: center;"></i>Edit Sample

@@ -784,6 +784,50 @@ def sample_edit_view(request, sample_id):
     return render(request, "internal/samples/edit.html", ctx)
 
 
+
+
+
+@login_required
+def sample_detail_view(request, sample_id):
+    """
+    Central detail page for a sample, gathering identity, storage,
+    governance, relationships, files and operational actions.
+    """
+    base_sample = get_object_or_404(
+        Sample.objects.select_related("biobank", "owner", "research_group").prefetch_related("collections"),
+        id=sample_id,
+    )
+
+    if not can_view_sample(request.user, base_sample) and not request.user.is_superuser:
+        raise PermissionDenied
+
+    if hasattr(base_sample, "bacteria"):
+        real_sample = base_sample.bacteria
+    elif hasattr(base_sample, "phage"):
+        real_sample = base_sample.phage
+    elif hasattr(base_sample, "plasmid"):
+        real_sample = base_sample.plasmid
+    else:
+        real_sample = base_sample
+
+    parents = base_sample.incoming_relationships.select_related("source_sample", "target_sample").all()
+    children = base_sample.outgoing_relationships.select_related("source_sample", "target_sample").all()
+    sample_files = SampleFile.objects.filter(sample=base_sample).order_by("-uploaded_at")
+    current_storage_paths = get_all_storage_paths(base_sample)
+
+    ctx = base_context(request)
+    ctx.update({
+        "sample": base_sample,
+        "real_sample": real_sample,
+        "parents": parents,
+        "children": children,
+        "sample_files": sample_files,
+        "current_storage_paths": current_storage_paths,
+        "can_edit_current_sample": can_edit_sample(request.user, real_sample) or request.user.is_superuser,
+    })
+
+    return render(request, "internal/samples/detail.html", ctx)
+
 # =========================================================
 # 5. RELATIONSHIPS
 # =========================================================
