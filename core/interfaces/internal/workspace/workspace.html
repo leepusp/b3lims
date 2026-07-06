@@ -262,10 +262,12 @@
                         <span class="small"><i class="bi bi-check-circle-fill text-success me-2"></i>Database</span>
                         <span class="badge bg-success-subtle text-success">Online</span>
                     </div>
+                    {% if user.is_superuser %}
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="small"><i class="bi bi-database-check text-muted me-2"></i>PostgreSQL backup</span>
                         <span class="text-muted small">Not monitored here</span>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
