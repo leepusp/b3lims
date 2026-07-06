@@ -85,6 +85,7 @@ def samples_list_view(request):
 def samples_dashboard_view(request):
     """
     Aggregated sample dashboard restricted by visible_samples_for_user().
+    Includes operational KPIs for storage assignment and sample status.
     """
     user = request.user
 
@@ -95,15 +96,25 @@ def samples_dashboard_view(request):
     )
 
     total = qs.count()
+    missing_storage_q = Q(storage_location__isnull=True) | Q(storage_location="")
 
     ctx = base_context(request)
     ctx.update({
         "sample_dashboard_stats": {
             "total": total,
+            "available": qs.filter(status="available").count(),
+            "pending": qs.filter(status="pending").count(),
+            "qc": qs.filter(status="qc").count(),
+            "depleted": qs.filter(status="depleted").count(),
+            "rejected": qs.filter(status="rejected").count(),
+            "active": qs.filter(is_active=True).count(),
+            "inactive": qs.filter(is_active=False).count(),
             "public": qs.filter(is_public=True).count(),
             "private": qs.filter(is_public=False).count(),
             "biobanks": qs.exclude(biobank__isnull=True).values("biobank_id").distinct().count(),
             "groups": qs.exclude(research_group__isnull=True).values("research_group_id").distinct().count(),
+            "missing_storage": qs.filter(missing_storage_q).count(),
+            "with_storage": qs.exclude(missing_storage_q).count(),
         },
         "sample_dashboard_by_type": list(
             qs.values("sample_type")
@@ -125,6 +136,12 @@ def samples_dashboard_view(request):
             .annotate(total=Count("id"))
             .order_by("research_group__name")
         ),
+        "sample_dashboard_by_storage": list(
+            qs.values("storage_location")
+            .annotate(total=Count("id"))
+            .order_by("-total", "storage_location")[:10]
+        ),
+        "storage_missing_samples": qs.filter(missing_storage_q).order_by("-created_at")[:10],
         "recent_samples": qs.order_by("-created_at")[:10],
     })
 
