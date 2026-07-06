@@ -7,49 +7,191 @@
 {% block content %}
 <style>
 .chem-dashboard-page {
-    padding: 24px 28px 28px 28px;
+    padding: 24px 28px 32px 28px;
+    background: #f8fafc;
+    min-height: calc(100vh - 90px);
 }
 
 .chem-dashboard-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: center;
     gap: 16px;
     margin-bottom: 18px;
 }
 
-.chem-dashboard-title {
+.chem-dashboard-title-wrap {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
+}
+
+.chem-dashboard-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #e0f2fe, #eef2ff);
+    color: #0ea5e9;
+    display: grid;
+    place-items: center;
+    border: 1px solid #dbeafe;
     font-size: 22px;
-    font-weight: 800;
+}
+
+.chem-dashboard-title {
+    font-size: 24px;
+    font-weight: 850;
     color: #0f172a;
     margin: 0;
+    letter-spacing: -0.03em;
 }
 
-.chem-card {
-    background: #fff;
-    border: 1px solid #e8edf3;
-    border-radius: 14px;
+.chem-dashboard-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.chem-dashboard-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chem-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.chem-kpi {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px 18px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
-    padding: 18px;
-    height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
-.chem-metric {
-    font-size: 28px;
+.chem-kpi::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 4px;
+    border-radius: 999px;
+    background: #0ea5e9;
+}
+
+.chem-kpi.available::before { background: #10b981; }
+.chem-kpi.low-stock::before { background: #f59e0b; }
+.chem-kpi.expired::before { background: #ef4444; }
+
+.chem-kpi-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.chem-kpi-value {
+    font-size: 32px;
     font-weight: 900;
     color: #0f172a;
     line-height: 1;
+    margin-top: 8px;
 }
 
-.chem-label {
-    color: #64748b;
+.chem-kpi-foot {
     font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .04em;
+    color: #94a3b8;
+    margin-top: 6px;
+}
+
+.chem-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.chem-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    overflow: hidden;
+}
+
+.chem-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.chem-panel-title {
+    font-size: 13px;
+    font-weight: 850;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chem-panel-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.chem-panel-body {
+    padding: 14px 16px 16px 16px;
+}
+
+.chem-storage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chem-storage-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 12px 13px;
+    background: #f8fafc;
+}
+
+.chem-storage-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.chem-storage-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+}
+
+.chem-storage-count {
+    font-size: 20px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.chem-storage-note {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
 }
 
 .chem-table {
@@ -65,28 +207,105 @@
     border-bottom: 1px solid #e8edf3;
     padding: 10px 8px;
     background: #f8fafc;
+    white-space: nowrap;
 }
 
 .chem-table td {
     font-size: 13px;
     color: #334155;
     border-bottom: 1px solid #f1f5f9;
-    padding: 10px 8px;
+    padding: 11px 8px;
+    vertical-align: middle;
 }
 
 .chem-table tr:last-child td {
     border-bottom: 0;
 }
+
+.chem-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.chem-two-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.chem-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid transparent;
+}
+
+.chem-badge-public {
+    background: #dcfce7;
+    color: #047857;
+    border-color: #bbf7d0;
+}
+
+.chem-badge-restricted {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.chem-badge-expired {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.chem-badge-warning {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.chem-empty {
+    padding: 20px;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+}
+
+@media (max-width: 1100px) {
+    .chem-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chem-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .chem-two-cols {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 
 <div class="chem-dashboard-page">
     <div class="chem-dashboard-header">
-        <h1 class="chem-dashboard-title">
-            <i class="bi bi-speedometer2 text-success"></i>
-            Chemicals Dashboard
-        </h1>
+        <div class="chem-dashboard-title-wrap">
+            <div class="chem-dashboard-icon">
+                <i class="bi bi-flask"></i>
+            </div>
+            <div>
+                <h1 class="chem-dashboard-title">Chemicals Dashboard</h1>
+                <div class="chem-dashboard-subtitle">
+                    Reagent inventory, storage locations, expiration monitoring and visibility governance.
+                </div>
+            </div>
+        </div>
 
-        <div class="d-flex gap-2">
+        <div class="chem-dashboard-actions">
             <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back to Chemicals
             </a>
@@ -96,132 +315,196 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-3">
-            <div class="chem-card">
-                <div class="chem-label">Total reagents</div>
-                <div class="chem-metric">{{ total_chemicals }}</div>
-            </div>
+    <div class="chem-kpi-grid">
+        <div class="chem-kpi">
+            <div class="chem-kpi-label">Total reagents</div>
+            <div class="chem-kpi-value">{{ total_chemicals }}</div>
+            <div class="chem-kpi-foot">Registered chemical inventory items</div>
         </div>
-        <div class="col-md-3">
-            <div class="chem-card">
-                <div class="chem-label">Available</div>
-                <div class="chem-metric">{{ status_counts.available }}</div>
-            </div>
+
+        <div class="chem-kpi available">
+            <div class="chem-kpi-label">Available</div>
+            <div class="chem-kpi-value">{{ status_counts.available }}</div>
+            <div class="chem-kpi-foot">Ready for laboratory use</div>
         </div>
-        <div class="col-md-3">
-            <div class="chem-card">
-                <div class="chem-label">LowAvailable</div>
-                <div class="chem-metric">{{ status_counts.available }}</div>
-            </div>
+
+        <div class="chem-kpi low-stock">
+            <div class="chem-kpi-label">Low stock</div>
+            <div class="chem-kpi-value">{{ status_counts.low_stock }}</div>
+            <div class="chem-kpi-foot">Require replenishment review</div>
         </div>
-        <div class="col-md-3">
-            < stock</div>
-                <div class="chem-metric">{{ status_counts.low_stock }}</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="chem-card">
-                <div class="chem-label">Expired</div>
-                <div class="chem-metric">{{ status_counts.expired }}</div>
-            </div>
+
+        <div class="chem-kpi expired">
+            <div class="chem-kpi-label">Expired</div>
+            <div class="chem-kpi-value">{{ status_counts.expired }}</div>
+            <div class="chem-kpi-foot">Require disposal or segregation</div>
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-6">
-            <div class="chem-card">
-                <h2 class="h6 fw-bold mb-3">Visibility</h2>
-                <table class="chem-table">
-                    <tbody>
-                        <tr>
-                            <td>Public catalog</td>
-                            <td class="text-end fw-bold">{{ public_chemicals }}</td>
-                        </tr>
-                        <tr>
-                            <td>Restricted</td>
-                            <td class="text-end fw-bold">{{ restricted_chemicals }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="chem-card">
-                <h2 class="h6 fw-bold mb-3">By research group</h2>
-                <table class="chem-table">
-                    <thead>
-                        <tr>
-                            <th>Group</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in group_counts %}
+    <div class="chem-layout">
+        <aside class="chem-side">
+            <div class="chem-panel mb-3">
+                <div class="chem-panel-header">
+                    <h2 class="chem-panel-title">
+                        <i class="bi bi-eye"></i>Visibility
+                    </h2>
+                    <span class="chem-panel-hint">catalog policy</span>
+                </div>
+                <div class="chem-panel-body">
+                    <table class="chem-table">
+                        <tbody>
                             <tr>
-                                <td>{{ row.research_group__name|default:"Unassigned" }}</td>
-                                <td class="text-end fw-bold">{{ row.total }}</td>
+                                <td><span class="chem-badge chem-badge-public">Public</span></td>
+                                <td class="text-end fw-bold">{{ public_chemicals }}</td>
                             </tr>
-                        {% empty %}
-                            <tr><td colspan="2" class="text-muted">No data available.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="chem-card">
-                <h2 class="h6 fw-bold mb-3">Soon expiring, next 60 days</h2>
-                <table class="chem-table">
-                    <thead>
-                        <tr>
-                            <th>Reagent</th>
-                            <th>Location</th>
-                            <th class="text-end">Expiry</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for chem in soon_expiring %}
                             <tr>
-                                <td class="fw-bold">{{ chem.name }}</td>
-                                <td>{{ chem.location|default:"Unassigned" }}</td>
-                                <td class="text-end">{{ chem.expiry_date|date:"d/m/Y" }}</td>
+                                <td><span class="chem-badge chem-badge-restricted">Restricted</span></td>
+                                <td class="text-end fw-bold">{{ restricted_chemicals }}</td>
                             </tr>
-                        {% empty %}
-                            <tr><td colspan="3" class="text-muted">No reagents expiring in the next 60 days.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <div class="col-md-6">
-            <div class="chem-card">
-                <h2 class="h6 fw-bold mb-3">Top storage locations</h2>
-                <table class="chem-table">
-                    <thead>
-                        <tr>
-                            <th>Location</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div class="chem-panel">
+                <div class="chem-panel-header">
+                    <h2 class="chem-panel-title">
+                        <i class="bi bi-geo-alt"></i>Top storage locations
+                    </h2>
+                    <span class="chem-panel-hint">items</span>
+                </div>
+                <div class="chem-panel-body">
+                    <div class="chem-storage-list">
                         {% for row in location_counts %}
-                            <tr>
-                                <td>{{ row.location|default:"Unassigned" }}</td>
-                                <td class="text-end fw-bold">{{ row.total }}</td>
-                            </tr>
+                            <div class="chem-storage-item">
+                                <div class="chem-storage-top">
+                                    <div class="chem-storage-name">
+                                        {{ row.location|default:"Unassigned" }}
+                                    </div>
+                                    <div class="chem-storage-count">{{ row.total }}</div>
+                                </div>
+                                <div class="chem-storage-note">registered reagent{{ row.total|pluralize }}</div>
+                            </div>
                         {% empty %}
-                            <tr><td colspan="2" class="text-muted">No location data available.</td></tr>
+                            <div class="chem-empty">No location data available.</div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
             </div>
-        </div>
+        </aside>
+
+        <main class="chem-main">
+            <div class="chem-panel">
+                <div class="chem-panel-header">
+                    <h2 class="chem-panel-title">
+                        <i class="bi bi-people"></i>By research group
+                    </h2>
+                    <span class="chem-panel-hint">governance</span>
+                </div>
+                <div class="chem-panel-body">
+                    <table class="chem-table">
+                        <thead>
+                            <tr>
+                                <th>Research group</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in group_counts %}
+                                <tr>
+                                    <td>{{ row.research_group__name|default:"Unassigned" }}</td>
+                                    <td class="text-end fw-bold">{{ row.total }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="2" class="chem-empty">No research group data available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="chem-two-cols">
+                <div class="chem-panel">
+                    <div class="chem-panel-header">
+                        <h2 class="chem-panel-title">
+                            <i class="bi bi-clock-history"></i>Soon expiring
+                        </h2>
+                        <span class="chem-panel-hint">next 60 days</span>
+                    </div>
+                    <div class="chem-panel-body">
+                        <table class="chem-table">
+                            <thead>
+                                <tr>
+                                    <th>Reagent</th>
+                                    <th>Location</th>
+                                    <th class="text-end">Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for chem in soon_expiring %}
+                                    <tr>
+                                        <td class="fw-bold">{{ chem.name }}</td>
+                                        <td>{{ chem.location|default:"Unassigned" }}</td>
+                                        <td class="text-end">
+                                            <span class="chem-badge chem-badge-warning">
+                                                {{ chem.expiry_date|date:"d/m/Y" }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="chem-empty">
+                                            No reagents expiring in the next 60 days.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="chem-panel">
+                    <div class="chem-panel-header">
+                        <h2 class="chem-panel-title">
+                            <i class="bi bi-exclamation-triangle"></i>Expired reagents
+                        </h2>
+                        <span class="chem-panel-hint">requires action</span>
+                    </div>
+                    <div class="chem-panel-body">
+                        <table class="chem-table">
+                            <thead>
+                                <tr>
+                                    <th>Reagent</th>
+                                    <th>Location</th>
+                                    <th class="text-end">Expired</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for chem in expired_chemicals %}
+                                    <tr>
+                                        <td class="fw-bold">{{ chem.name }}</td>
+                                        <td>{{ chem.location|default:"Unassigned" }}</td>
+                                        <td class="text-end">
+                                            <span class="chem-badge chem-badge-expired">
+                                                {{ chem.expiry_date|date:"d/m/Y" }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="chem-empty">
+                                            No expired reagents visible to this user.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 </div>
 {% endblock %}
