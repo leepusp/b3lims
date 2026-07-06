@@ -3,6 +3,7 @@ import qrcode
 import io
 import base64
 import csv
+import logging
 from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -38,6 +39,8 @@ from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
 from core.services.shipment_factory import create_shipment_from_sample
+
+logger = logging.getLogger(__name__)
 
 # =========================================================
 # 1. DASHBOARD (LISTING & FILTERS)
@@ -439,7 +442,7 @@ def sample_create_view(request):
             except ValueError as ve:
                 messages.error(request, str(ve))
             except Exception as e:
-                print(f"CRITICAL ERROR CREATE SAMPLE: {e}")
+                logger.exception("Critical error while creating sample.")
                 messages.error(request, f"Error processing sample: {str(e)}")
 
     user_biobanks = Biobank.objects.filter(
