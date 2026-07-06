@@ -20,9 +20,27 @@ class Chemical(models.Model):
     formula = models.CharField(max_length=100, blank=True, null=True, help_text="Molecular formula (e.g. C2H5OH)")
     cas_number = models.CharField(max_length=50, blank=True, null=True, help_text="CAS Registry Number")
     
-    # Estoque e Validade
+    # Inventory metadata
+    supplier = models.CharField(max_length=255, blank=True, null=True, help_text="Supplier or manufacturer")
+    catalog_number = models.CharField(max_length=100, blank=True, null=True, help_text="Supplier catalog number")
+    lot_number = models.CharField(max_length=100, blank=True, null=True, help_text="Batch or lot number")
+
+    # Structured stock information
+    quantity_value = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
+    quantity_unit = models.CharField(max_length=30, blank=True, null=True, help_text="mL, L, g, mg, units, kits, bottles, etc.")
+    minimum_quantity = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
+
+    # Legacy free-text quantity kept for backward compatibility
     quantity = models.CharField(max_length=50, help_text="Quantity with units (e.g. 500mL, 10g)")
+
     expiry_date = models.DateField(blank=True, null=True)
+
+    # Structured and legacy storage location
+    storage_temperature = models.CharField(max_length=50, blank=True, null=True, help_text="-80C, -20C, 4C, RT, LN2, etc.")
+    storage_location = models.CharField(max_length=255, blank=True, null=True, help_text="Room, cabinet, freezer, shelf or box")
+    barcode = models.CharField(max_length=100, blank=True, null=True, unique=True)
+
+    # Legacy free-text location kept for backward compatibility
     location = models.CharField(max_length=255, blank=True, null=True, help_text="Shelf, Cabinet, or Fridge location")
     
     # Segurança

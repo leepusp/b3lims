@@ -46,12 +46,33 @@ def chemical_create_view(request):
             if not name or not quantity:
                 raise ValueError("Name and Quantity are required.")
 
+            quantity_value = request.POST.get("quantity_value") or None
+            quantity_unit = request.POST.get("quantity_unit") or ""
+            minimum_quantity = request.POST.get("minimum_quantity") or None
+            storage_location = request.POST.get("storage_location") or ""
+            storage_temperature = request.POST.get("storage_temperature") or ""
+
+            legacy_quantity = quantity
+            if quantity_value and quantity_unit:
+                legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
+
+            legacy_location = storage_location or request.POST.get("location") or ""
+
             Chemical.objects.create(
                 name=name,
                 formula=request.POST.get("formula"),
                 cas_number=request.POST.get("cas_number"),
-                quantity=quantity,
-                location=request.POST.get("location"),
+                supplier=request.POST.get("supplier"),
+                catalog_number=request.POST.get("catalog_number"),
+                lot_number=request.POST.get("lot_number"),
+                quantity_value=quantity_value,
+                quantity_unit=quantity_unit,
+                minimum_quantity=minimum_quantity,
+                quantity=legacy_quantity,
+                storage_temperature=storage_temperature,
+                storage_location=storage_location,
+                barcode=request.POST.get("barcode") or None,
+                location=legacy_location,
                 expiry_date=request.POST.get("expiry_date") or None,
                 msds_link=request.POST.get("msds_link"),
                 hazard_notes=request.POST.get("hazard_notes"),
@@ -94,9 +115,9 @@ def chemicals_dashboard_view(request):
         "group_counts": qs.values("research_group__name")
             .annotate(total=Count("id"))
             .order_by("-total", "research_group__name")[:10],
-        "location_counts": qs.values("location")
+        "location_counts": qs.values("storage_location")
             .annotate(total=Count("id"))
-            .order_by("-total", "location")[:10],
+            .order_by("-total", "storage_location")[:10],
         "soon_expiring": qs.filter(
             expiry_date__isnull=False,
             expiry_date__gte=today,

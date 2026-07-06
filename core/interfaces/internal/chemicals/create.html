@@ -7,7 +7,7 @@
 {% block content %}
 <style>
 .chem-create-page {
-    padding: 24px 28px 28px 28px;
+    padding: 24px 28px 32px 28px;
 }
 
 .chem-create-header {
@@ -23,14 +23,14 @@
     align-items: center;
     gap: 10px;
     font-size: 22px;
-    font-weight: 800;
+    font-weight: 850;
     color: #0f172a;
     margin: 0;
 }
 
 .chem-form-card {
     background: #fff;
-    border: 1px solid #e8edf3;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
     padding: 24px;
@@ -38,16 +38,16 @@
 
 .chem-section-title {
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 850;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .05em;
     margin-bottom: 14px;
 }
 
 .chem-help {
-    font-size: 12px;
     color: #64748b;
+    font-size: 12px;
 }
 </style>
 
@@ -68,7 +68,7 @@
             {% csrf_token %}
 
             <div class="row g-4">
-                <div class="col-lg-6">
+                <div class="col-lg-4">
                     <div class="chem-section-title">1. Identification</div>
 
                     <div class="mb-3">
@@ -87,42 +87,104 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link</label>
-                        <input type="url" name="msds_link" class="form-control" placeholder="https://...">
-                        <div class="chem-help mt-1">Use a public or institutional safety data sheet URL when available.</div>
+                        <label class="form-label small fw-bold text-uppercase text-muted">Barcode / Internal Code</label>
+                        <input type="text" name="barcode" class="form-control" placeholder="Optional internal barcode">
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="chem-section-title">2. Inventory and safety</div>
+                <div class="col-lg-4">
+                    <div class="chem-section-title">2. Supplier and lot</div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Quantity *</label>
-                        <input type="text" name="quantity" class="form-control" placeholder="Ex: 500mL" required>
+                        <label class="form-label small fw-bold text-uppercase text-muted">Supplier</label>
+                        <input type="text" name="supplier" class="form-control" placeholder="Ex: Merck, Sigma, Thermo">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Catalog Number</label>
+                        <input type="text" name="catalog_number" class="form-control" placeholder="Supplier catalog number">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Lot Number</label>
+                        <input type="text" name="lot_number" class="form-control" placeholder="Batch or lot number">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link</label>
+                        <input type="url" name="msds_link" class="form-control" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="chem-section-title">3. Stock and storage</div>
+
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Quantity *</label>
+                            <input type="number" step="0.001" name="quantity_value" class="form-control" placeholder="500" required>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Unit</label>
+                            <select name="quantity_unit" class="form-select">
+                                <option value="">Unit</option>
+                                <option value="mL">mL</option>
+                                <option value="L">L</option>
+                                <option value="mg">mg</option>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                                <option value="µL">µL</option>
+                                <option value="units">units</option>
+                                <option value="kits">kits</option>
+                                <option value="bottles">bottles</option>
+                                <option value="vials">vials</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Minimum Quantity</label>
+                        <input type="number" step="0.001" name="minimum_quantity" class="form-control" placeholder="Alert threshold">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Storage Temperature</label>
+                        <select name="storage_temperature" class="form-select">
+                            <option value="">Not defined</option>
+                            <option value="LN2">LN2 / −196 °C</option>
+                            <option value="-80C">−80 °C</option>
+                            <option value="-20C">−20 °C</option>
+                            <option value="4C">4 °C</option>
+                            <option value="RT">Room temperature</option>
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Storage Location</label>
-                        <input type="text" name="location" class="form-control" placeholder="Ex: Flammables Cabinet">
+                        <input type="text" name="storage_location" class="form-control" placeholder="Room, cabinet, freezer, shelf, box">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Expiry Date</label>
                         <input type="date" name="expiry_date" class="form-control">
                     </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="chem-section-title">4. Safety and governance</div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Hazard Notes / Warnings</label>
-                        <textarea name="hazard_notes" class="form-control" rows="3" placeholder="Ex: Flammable, toxic if swallowed..."></textarea>
+                        <textarea name="hazard_notes" class="form-control" rows="3" placeholder="Ex: Flammable, corrosive, toxic if swallowed..."></textarea>
                     </div>
 
-                    <div class="form-check form-switch mt-3">
+                    <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="is_public" id="id_is_public">
                         <label class="form-check-label" for="id_is_public">
                             Public catalog visibility
                         </label>
                         <div class="chem-help">
-                            If enabled, basic reagent metadata may be visible according to the public catalog rules.
+                            If enabled, basic reagent metadata may be visible according to public catalog rules.
                         </div>
                     </div>
                 </div>
