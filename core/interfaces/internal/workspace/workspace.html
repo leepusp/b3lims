@@ -101,10 +101,7 @@
 
         {% if user.is_superuser %}
         <div class="d-flex gap-2">
-            <a href="{% url 'workspace_backup' %}" class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
-                <i class="bi bi-download me-2"></i> Legacy Data Export
-            </a>
-            <a href="{% url 'admin:index' %}" target="_blank" class="btn btn-dark d-flex align-items-center shadow-sm">
+<a href="{% url 'admin:index' %}" target="_blank" class="btn btn-dark d-flex align-items-center shadow-sm">
                 <i class="bi bi-shield-lock-fill me-2"></i> Admin Panel
             </a>
         </div>

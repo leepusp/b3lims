@@ -27,7 +27,6 @@ from core.views.auth import CoreLoginView, logout_user
 # 3. INTERNAL LIMS (CORE / WORKSPACE)
 from core.views.internal.health import healthz_view
 from core.views.internal.workspace.views import home
-from core.views.internal.backup import workspace_backup_view
 
 # --- NOVAS VIEWS: PROFILE & CALENDAR ---
 from core.views.internal.profile.views import profile_view
@@ -96,7 +95,6 @@ urlpatterns = [
     # ---------------- INTERNAL: DASHBOARD & SYSTEM ----------------
     path("healthz/", healthz_view, name="healthz"),
     path("", home, name="workspace"),
-    path("backup/", workspace_backup_view, name="workspace_backup"),
 
     # USER TOOLS
     path("profile/", profile_view, name="user_profile"),
