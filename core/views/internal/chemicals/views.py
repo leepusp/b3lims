@@ -100,38 +100,54 @@ def chemical_create_view(request):
 @login_required
 def chemicals_dashboard_view(request):
     """
-    Aggregated dashboard for reagent inventory, stock locations and safety status.
+    Dashboard with real reagent inventory KPIs, stock alerts and recent movements.
     """
     qs = visible_chemicals_for_user(request.user)
 
     today = timezone.localdate()
-    soon_limit = today + timezone.timedelta(days=60)
+    expiring_limit = today + timedelta(days=30)
 
-    status_counts = {
-        "available": qs.filter(status="available").count(),
-        "low_stock": qs.filter(status="low_stock").count(),
-        "expired": qs.filter(status="expired").count(),
-    }
+    total_reagents = qs.count()
+    available_count = qs.filter(status="available").count()
+    low_stock_count = qs.filter(status="low_stock").count()
+    depleted_count = qs.filter(status="depleted").count()
+    expired_count = qs.filter(expiry_date__lt=today).count()
+    expiring_soon_count = qs.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=expiring_limit,
+    ).count()
+
+    movement_qs = ChemicalStockMovement.objects.select_related(
+        "chemical",
+        "performed_by",
+    ).filter(
+        chemical__in=qs
+    ).order_by("-created_at", "-id")
 
     ctx = base_context(request)
     ctx.update({
-        "total_chemicals": qs.count(),
-        "public_chemicals": qs.filter(is_public=True).count(),
-        "restricted_chemicals": qs.filter(is_public=False).count(),
-        "status_counts": status_counts,
-        "group_counts": qs.values("research_group__name")
+        "total_reagents": total_reagents,
+        "available_count": available_count,
+        "low_stock_count": low_stock_count,
+        "depleted_count": depleted_count,
+        "expired_count": expired_count,
+        "expiring_soon_count": expiring_soon_count,
+        "status_counts": qs.values("status")
             .annotate(total=Count("id"))
-            .order_by("-total", "research_group__name")[:10],
+            .order_by("-total", "status"),
+        "temperature_counts": qs.values("storage_temperature")
+            .annotate(total=Count("id"))
+            .order_by("-total", "storage_temperature")[:10],
         "location_counts": qs.values("storage_location")
             .annotate(total=Count("id"))
             .order_by("-total", "storage_location")[:10],
-        "soon_expiring": qs.filter(
-            expiry_date__isnull=False,
+        "low_stock_reagents": qs.filter(status="low_stock").order_by("name")[:10],
+        "expired_reagents": qs.filter(expiry_date__lt=today).order_by("expiry_date", "name")[:10],
+        "expiring_soon_reagents": qs.filter(
             expiry_date__gte=today,
-            expiry_date__lte=soon_limit,
+            expiry_date__lte=expiring_limit,
         ).order_by("expiry_date", "name")[:10],
-        "expired_chemicals": qs.filter(expiry_date__isnull=False, expiry_date__lt=today)
-            .order_by("expiry_date", "name")[:10],
+        "recent_movements": movement_qs[:12],
     })
 
     return render(request, "internal/chemicals/dashboard.html", ctx)
