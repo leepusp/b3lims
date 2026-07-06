@@ -17,7 +17,7 @@ from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from core.context import base_context
 from core.models import Shipment
@@ -998,3 +998,63 @@ def shipment_generated_document_view(request, shipment_id, document_id):
 
     return HttpResponse(form_data.generated_html)
 
+
+
+@login_required
+def shipments_dashboard_view(request):
+    """
+    Aggregated dashboard for shipment, transport and custody tracking.
+    """
+    qs = (
+        Shipment.objects
+        .select_related("origin_biobank", "destination_biobank", "requested_by")
+        .prefetch_related("items", "documents", "checklist_items")
+        .order_by("-created_at")
+    )
+
+    total_shipments = qs.count()
+
+    status_summary = []
+    for value, label in Shipment.STATUS_CHOICES:
+        count = qs.filter(status=value).count()
+        if count:
+            status_summary.append({
+                "value": value,
+                "label": label,
+                "total": count,
+            })
+
+    flow_summary = []
+    for value, label in Shipment.FLOW_TYPES:
+        count = qs.filter(flow_type=value).count()
+        if count:
+            flow_summary.append({
+                "value": value,
+                "label": label,
+                "total": count,
+            })
+
+    ready_or_active = qs.exclude(status__in=["cancelled", "received", "completed"]).count()
+    received_or_completed = qs.filter(status__in=["received", "completed"]).count()
+    document_pending = qs.filter(documents__status__in=["pending", "required", "draft"]).distinct().count()
+    ready_for_dispatch = qs.filter(status="ready_for_dispatch").count()
+
+    ctx = base_context(request)
+    ctx.update({
+        "total_shipments": total_shipments,
+        "ready_or_active": ready_or_active,
+        "received_or_completed": received_or_completed,
+        "document_pending": document_pending,
+        "ready_for_dispatch": ready_for_dispatch,
+        "status_summary": status_summary,
+        "flow_summary": flow_summary,
+        "origin_counts": qs.values("origin_biobank__name")
+            .annotate(total=Count("id"))
+            .order_by("-total", "origin_biobank__name")[:8],
+        "destination_counts": qs.values("destination_biobank__name")
+            .annotate(total=Count("id"))
+            .order_by("-total", "destination_biobank__name")[:8],
+        "recent_shipments": qs[:10],
+    })
+
+    return render(request, "internal/shipments/dashboard.html", ctx)

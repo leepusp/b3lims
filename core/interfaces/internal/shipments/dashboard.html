@@ -1,0 +1,609 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Transport Dashboard · Biobank LIMS{% endblock %}
+{% block page_title %}Transport{% endblock %}
+{% block page_subtitle %}Management of sample shipments, transfers and custody tracking{% endblock %}
+
+{% block content %}
+<style>
+.ship-dashboard-page {
+    padding: 24px 28px 32px 28px;
+    background: #f8fafc;
+    min-height: calc(100vh - 90px);
+}
+
+.ship-dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.ship-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ship-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #e0f2fe, #eef2ff);
+    color: #2563eb;
+    display: grid;
+    place-items: center;
+    border: 1px solid #dbeafe;
+    font-size: 23px;
+}
+
+.ship-title {
+    font-size: 24px;
+    font-weight: 850;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.03em;
+}
+
+.ship-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.ship-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ship-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.ship-kpi {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    position: relative;
+    overflow: hidden;
+}
+
+.ship-kpi::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 4px;
+    border-radius: 999px;
+    background: #2563eb;
+}
+
+.ship-kpi.ready::before { background: #0ea5e9; }
+.ship-kpi.docs::before { background: #f59e0b; }
+.ship-kpi.done::before { background: #10b981; }
+.ship-kpi.active::before { background: #6366f1; }
+
+.ship-kpi-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.ship-kpi-value {
+    font-size: 31px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+    margin-top: 8px;
+}
+
+.ship-kpi-foot {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 6px;
+}
+
+.ship-layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.ship-side,
+.ship-main {
+    min-width: 0;
+}
+
+.ship-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ship-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    overflow: hidden;
+}
+
+.ship-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ship-panel-title {
+    font-size: 13px;
+    font-weight: 850;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ship-panel-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.ship-panel-body {
+    padding: 14px 16px 16px 16px;
+}
+
+.ship-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ship-status-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: #f8fafc;
+    padding: 12px 13px;
+}
+
+.ship-status-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.ship-status-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+}
+
+.ship-status-count {
+    font-size: 22px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.ship-status-note {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.ship-route-board {
+    padding: 16px;
+}
+
+.ship-route-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 15px 16px;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    margin-bottom: 12px;
+}
+
+.ship-route-card:last-child {
+    margin-bottom: 0;
+}
+
+.ship-route-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.ship-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    font-weight: 850;
+    color: #1d4ed8;
+}
+
+.ship-route-meta {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.ship-route-lane {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.ship-node {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 13px;
+    padding: 11px 12px;
+}
+
+.ship-node-label {
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 800;
+}
+
+.ship-node-name {
+    font-size: 13px;
+    color: #0f172a;
+    font-weight: 850;
+    margin-top: 2px;
+}
+
+.ship-lane-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+}
+
+.ship-lane-arrow span {
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #bfdbfe, #2563eb, #bfdbfe);
+    position: relative;
+}
+
+.ship-lane-arrow span::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #2563eb;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.ship-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ship-table th {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e8edf3;
+    padding: 10px 8px;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.ship-table td {
+    font-size: 13px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 11px 8px;
+    vertical-align: middle;
+}
+
+.ship-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.ship-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 800;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    white-space: nowrap;
+}
+
+.ship-badge-ready {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: #a5f3fc;
+}
+
+.ship-badge-draft {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.ship-badge-done {
+    background: #dcfce7;
+    color: #047857;
+    border-color: #bbf7d0;
+}
+
+.ship-empty {
+    padding: 20px;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+}
+
+.ship-two-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 1200px) {
+    .ship-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ship-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-two-cols {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="ship-dashboard-page">
+    <div class="ship-dashboard-header">
+        <div class="ship-title-wrap">
+            <div class="ship-icon">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div>
+                <h1 class="ship-title">Transport Dashboard</h1>
+                <div class="ship-subtitle">
+                    Shipment flow, custody status, transfer route and document readiness.
+                </div>
+            </div>
+        </div>
+
+        <div class="ship-actions">
+            <a href="{% url 'shipments' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Transport
+            </a>
+        </div>
+    </div>
+
+    <div class="ship-kpi-grid">
+        <div class="ship-kpi">
+            <div class="ship-kpi-label">Total shipments</div>
+            <div class="ship-kpi-value">{{ total_shipments }}</div>
+            <div class="ship-kpi-foot">Registered transport records</div>
+        </div>
+
+        <div class="ship-kpi active">
+            <div class="ship-kpi-label">Active / open</div>
+            <div class="ship-kpi-value">{{ ready_or_active }}</div>
+            <div class="ship-kpi-foot">Not marked as completed</div>
+        </div>
+
+        <div class="ship-kpi ready">
+            <div class="ship-kpi-label">Ready dispatch</div>
+            <div class="ship-kpi-value">{{ ready_for_dispatch }}</div>
+            <div class="ship-kpi-foot">Prepared for transport</div>
+        </div>
+
+        <div class="ship-kpi docs">
+            <div class="ship-kpi-label">Document pending</div>
+            <div class="ship-kpi-value">{{ document_pending }}</div>
+            <div class="ship-kpi-foot">Requires document action</div>
+        </div>
+
+        <div class="ship-kpi done">
+            <div class="ship-kpi-label">Received / done</div>
+            <div class="ship-kpi-value">{{ received_or_completed }}</div>
+            <div class="ship-kpi-foot">Closed custody flow</div>
+        </div>
+    </div>
+
+    <div class="ship-layout">
+        <aside class="ship-side">
+            <div class="ship-panel mb-3">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-activity"></i>Status distribution
+                    </h2>
+                    <span class="ship-panel-hint">records</span>
+                </div>
+                <div class="ship-panel-body">
+                    <div class="ship-status-list">
+                        {% for row in status_summary %}
+                            <div class="ship-status-card">
+                                <div class="ship-status-top">
+                                    <div class="ship-status-name">{{ row.label }}</div>
+                                    <div class="ship-status-count">{{ row.total }}</div>
+                                </div>
+                                <div class="ship-status-note">{{ row.value }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="ship-empty">No status data available.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="ship-panel">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-diagram-3"></i>Flow type
+                    </h2>
+                    <span class="ship-panel-hint">records</span>
+                </div>
+                <div class="ship-panel-body">
+                    <table class="ship-table">
+                        <tbody>
+                            {% for row in flow_summary %}
+                                <tr>
+                                    <td>{{ row.label }}</td>
+                                    <td class="text-end fw-bold">{{ row.total }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="2" class="ship-empty">No flow data available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </aside>
+
+        <main class="ship-main">
+            <div class="ship-panel">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-signpost-split"></i>Recent transport routes
+                    </h2>
+                    <span class="ship-panel-hint">latest records</span>
+                </div>
+
+                <div class="ship-route-board">
+                    {% for shipment in recent_shipments %}
+                        <div class="ship-route-card">
+                            <div class="ship-route-top">
+                                <div>
+                                    <a href="{% url 'shipment_detail' shipment.id %}" class="ship-code text-decoration-none">
+                                        {{ shipment.shipment_code }}
+                                    </a>
+                                    <div class="ship-route-meta">
+                                        {{ shipment.carrier_name|default:"Carrier not assigned" }}
+                                        {% if shipment.tracking_code %}
+                                            · {{ shipment.tracking_code }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <span class="ship-badge {% if shipment.status == 'draft' %}ship-badge-draft{% elif shipment.status == 'ready_for_dispatch' %}ship-badge-ready{% elif shipment.status == 'received' or shipment.status == 'completed' %}ship-badge-done{% endif %}">
+                                    {{ shipment.get_status_display|default:shipment.status }}
+                                </span>
+                            </div>
+
+                            <div class="ship-route-lane">
+                                <div class="ship-node">
+                                    <div class="ship-node-label">Origin</div>
+                                    <div class="ship-node-name">
+                                        {% if shipment.origin_biobank %}
+                                            {{ shipment.origin_biobank.name }}
+                                        {% else %}
+                                            {{ shipment.sender_institution|default:"Unassigned" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="ship-lane-arrow"><span></span></div>
+
+                                <div class="ship-node">
+                                    <div class="ship-node-label">Destination</div>
+                                    <div class="ship-node-name">
+                                        {% if shipment.destination_biobank %}
+                                            {{ shipment.destination_biobank.name }}
+                                        {% else %}
+                                            {{ shipment.recipient_institution|default:"Unassigned" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="ship-empty">No shipment records available.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="ship-two-cols">
+                <div class="ship-panel">
+                    <div class="ship-panel-header">
+                        <h2 class="ship-panel-title">
+                            <i class="bi bi-box-arrow-up-right"></i>Top origins
+                        </h2>
+                        <span class="ship-panel-hint">biobanks</span>
+                    </div>
+                    <div class="ship-panel-body">
+                        <table class="ship-table">
+                            <tbody>
+                                {% for row in origin_counts %}
+                                    <tr>
+                                        <td>{{ row.origin_biobank__name|default:"Unassigned" }}</td>
+                                        <td class="text-end fw-bold">{{ row.total }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="ship-empty">No origin data available.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="ship-panel">
+                    <div class="ship-panel-header">
+                        <h2 class="ship-panel-title">
+                            <i class="bi bi-box-arrow-in-down-left"></i>Top destinations
+                        </h2>
+                        <span class="ship-panel-hint">biobanks</span>
+                    </div>
+                    <div class="ship-panel-body">
+                        <table class="ship-table">
+                            <tbody>
+                                {% for row in destination_counts %}
+                                    <tr>
+                                        <td>{{ row.destination_biobank__name|default:"Unassigned" }}</td>
+                                        <td class="text-end fw-bold">{{ row.total }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="ship-empty">No destination data available.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

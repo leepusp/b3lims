@@ -2,7 +2,7 @@ from core.views.internal.shipments.views import shipment_generated_document_view
 from core.views.internal.shipments.views import shipment_document_workspace_view
 from core.views.internal.shipments.views import shipment_edit_view
 from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
-from core.views.internal.shipments.views import shipments_list_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
+from core.views.internal.shipments.views import shipments_list_view, shipments_dashboard_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
 from django.contrib import admin
 from django.urls import include, path
@@ -112,6 +112,7 @@ urlpatterns = [
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
     path("shipments/", shipments_list_view, name="shipments"),
+    path("shipments/dashboard/", shipments_dashboard_view, name="shipments_dashboard"),
     path("shipments/scan/<uuid:shipment_uuid>/", shipment_scan_view, name="shipment_scan"),
     path("shipments/<int:shipment_id>/approve-documents/", shipment_approve_documents_view, name="shipment_approve_documents"),
     path("shipments/<int:shipment_id>/package-labels/", shipment_package_labels_view, name="shipment_package_labels"),
