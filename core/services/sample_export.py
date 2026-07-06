@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 
 from core.models import Sample
+from core.permissions.samples import visible_samples_for_user
 
 
 STANDARD_COLUMNS = [
@@ -175,7 +176,7 @@ def _sample_to_row(sample, schema="standard"):
 
 
 def _get_queryset(request):
-    qs = Sample.objects.all()
+    qs = visible_samples_for_user(request.user)
 
     valid_fields = {field.name for field in Sample._meta.fields}
     select_fields = [
