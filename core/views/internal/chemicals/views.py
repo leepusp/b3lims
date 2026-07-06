@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -133,3 +134,120 @@ def chemicals_dashboard_view(request):
     })
 
     return render(request, "internal/chemicals/dashboard.html", ctx)
+
+
+def _chemical_access_queryset(user):
+    qs = Chemical.objects.select_related("created_by", "research_group").all()
+
+    if user.is_superuser or user.is_staff:
+        return qs
+
+    if hasattr(user, "research_groups"):
+        groups = user.research_groups.all()
+        return qs.filter(
+            Q(is_public=True) |
+            Q(created_by=user) |
+            Q(research_group__in=groups)
+        ).distinct()
+
+    return qs.filter(Q(is_public=True) | Q(created_by=user)).distinct()
+
+
+def _user_can_manage_chemical(user, chemical):
+    return (
+        user.is_superuser
+        or user.is_staff
+        or chemical.created_by_id == user.id
+    )
+
+
+@login_required
+def chemical_detail_view(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+
+    ctx = base_context(request)
+    ctx.update({
+        "chemical": chemical,
+        "can_manage_chemical": _user_can_manage_chemical(request.user, chemical),
+    })
+    return render(request, "internal/chemicals/detail.html", ctx)
+
+
+@login_required
+def chemical_edit_view(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+
+    if not _user_can_manage_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to edit this reagent.")
+
+    if request.method == "POST":
+        try:
+            name = (request.POST.get("name") or "").strip()
+            quantity_value = (request.POST.get("quantity_value") or "").strip()
+            quantity_unit = (request.POST.get("quantity_unit") or "").strip()
+            minimum_quantity = (request.POST.get("minimum_quantity") or "").strip() or None
+
+            legacy_quantity = (request.POST.get("quantity") or "").strip()
+            if quantity_value and quantity_unit:
+                legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
+            elif quantity_value:
+                legacy_quantity = quantity_value
+
+            storage_location = (request.POST.get("storage_location") or "").strip()
+            storage_temperature = (request.POST.get("storage_temperature") or "").strip()
+            legacy_location = storage_location or (request.POST.get("location") or "").strip()
+
+            if not name or not legacy_quantity:
+                raise ValueError("Name and quantity are required.")
+
+            chemical.name = name
+            chemical.formula = request.POST.get("formula") or None
+            chemical.cas_number = request.POST.get("cas_number") or None
+            chemical.supplier = request.POST.get("supplier") or None
+            chemical.catalog_number = request.POST.get("catalog_number") or None
+            chemical.lot_number = request.POST.get("lot_number") or None
+            chemical.quantity_value = quantity_value or None
+            chemical.quantity_unit = quantity_unit or None
+            chemical.minimum_quantity = minimum_quantity
+            chemical.quantity = legacy_quantity
+            chemical.storage_temperature = storage_temperature or None
+            chemical.storage_location = storage_location or None
+            chemical.barcode = request.POST.get("barcode") or None
+            chemical.location = legacy_location
+            chemical.expiry_date = request.POST.get("expiry_date") or None
+            chemical.msds_link = request.POST.get("msds_link") or None
+            chemical.hazard_notes = request.POST.get("hazard_notes") or None
+            chemical.status = request.POST.get("status") or chemical.status
+            chemical.is_public = request.POST.get("is_public") in ["true", "on", "1"]
+            chemical.save()
+
+            messages.success(request, f"Reagent {chemical.name} updated successfully.")
+            return redirect("chemical_detail", chemical_id=chemical.id)
+
+        except Exception as e:
+            messages.error(request, f"Error updating reagent: {e}")
+
+    ctx = base_context(request)
+    ctx.update({
+        "chemical": chemical,
+        "status_choices": Chemical.STATUS_CHOICES,
+    })
+    return render(request, "internal/chemicals/edit.html", ctx)
+
+
+@login_required
+def chemical_delete_view(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+
+    if not _user_can_manage_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to delete this reagent.")
+
+    if request.method == "POST":
+        name = chemical.name
+        chemical.delete()
+        messages.success(request, f"Reagent {name} deleted successfully.")
+        return redirect("chemicals_list")
+
+    ctx = base_context(request)
+    ctx.update({"chemical": chemical})
+    return render(request, "internal/chemicals/confirm_delete.html", ctx)

@@ -176,13 +176,14 @@
                         <th>Storage</th>
                         <th>Expiry</th>
                         <th>Status</th>
+                        <th class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for chem in chemicals %}
                         <tr>
                             <td>
-                                <div class="chem-name">{{ chem.name }}</div>
+                                <a href="{% url 'chemical_detail' chem.id %}" class="chem-name text-decoration-none">{{ chem.name }}</a>
                                 <div class="chem-sub">
                                     {% if chem.cas_number %}CAS {{ chem.cas_number }}{% endif %}
                                     {% if chem.formula %}{% if chem.cas_number %} · {% endif %}{{ chem.formula }}{% endif %}
@@ -227,10 +228,17 @@
                                     {{ chem.get_status_display }}
                                 </span>
                             </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'chemical_detail' chem.id %}" class="btn btn-outline-primary">View</a>
+                                    <a href="{% url 'chemical_edit' chem.id %}" class="btn btn-outline-secondary">Edit</a>
+                                    <a href="{% url 'chemical_delete' chem.id %}" class="btn btn-outline-danger">Delete</a>
+                                </div>
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 No chemicals registered yet.
                             </td>
                         </tr>

@@ -1,0 +1,61 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}{{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
+{% block page_title %}Chemicals{% endblock %}
+{% block page_subtitle %}Reagent details, stock metadata and safety information{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="h4 fw-bold mb-1">
+                <i class="bi bi-flask text-primary me-2"></i>{{ chemical.name }}
+            </h1>
+            <div class="text-muted">
+                {{ chemical.cas_number|default:"No CAS" }} · {{ chemical.formula|default:"No formula" }}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">Back</a>
+            {% if can_manage_chemical %}
+            <a href="{% url 'chemical_edit' chemical.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+            <a href="{% url 'chemical_delete' chemical.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Name</dt>
+                <dd class="col-sm-9">{{ chemical.name }}</dd>
+
+                <dt class="col-sm-3">CAS</dt>
+                <dd class="col-sm-9">{{ chemical.cas_number|default:"Not defined" }}</dd>
+
+                <dt class="col-sm-3">Supplier</dt>
+                <dd class="col-sm-9">{{ chemical.supplier|default:"Not defined" }}</dd>
+
+                <dt class="col-sm-3">Lot</dt>
+                <dd class="col-sm-9">{{ chemical.lot_number|default:"Not defined" }}</dd>
+
+                <dt class="col-sm-3">Quantity</dt>
+                <dd class="col-sm-9">{{ chemical.quantity }}</dd>
+
+                <dt class="col-sm-3">Storage</dt>
+                <dd class="col-sm-9">{{ chemical.storage_location|default:chemical.location|default:"Unassigned" }}</dd>
+
+                <dt class="col-sm-3">Temperature</dt>
+                <dd class="col-sm-9">{{ chemical.storage_temperature|default:"Not defined" }}</dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">{{ chemical.get_status_display }}</dd>
+
+                <dt class="col-sm-3">Hazard notes</dt>
+                <dd class="col-sm-9">{{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Delete {{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
+{% block page_title %}Chemicals{% endblock %}
+{% block page_subtitle %}Confirm reagent deletion{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-danger shadow-sm">
+        <div class="card-header bg-danger text-white fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Delete Reagent
+        </div>
+        <div class="card-body">
+            <p class="mb-2">You are about to delete this reagent:</p>
+
+            <h2 class="h5 fw-bold">{{ chemical.name }}</h2>
+
+            <div class="text-muted mb-4">
+                {{ chemical.quantity }} · {{ chemical.storage_location|default:chemical.location|default:"Unassigned" }}
+            </div>
+
+            <div class="alert alert-warning">
+                This action removes the reagent record from the inventory. Use this only for incorrect test records or invalid entries.
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'chemical_detail' chemical.id %}" class="btn btn-light">Cancel</a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete reagent
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

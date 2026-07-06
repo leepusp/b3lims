@@ -58,7 +58,7 @@ from core.views.internal.samples.views import (
 )
 
 # 6. CHEMICALS (REAGENTES)
-from core.views.internal.chemicals.views import chemicals_list_view, chemical_create_view, chemicals_dashboard_view, chemicals_dashboard_view
+from core.views.internal.chemicals.views import chemicals_list_view, chemical_create_view, chemicals_dashboard_view, chemicals_dashboard_view, chemical_detail_view, chemical_edit_view, chemical_delete_view
 
 # 7. TAGS & KEYWORDS
 from core.views.internal.tags.views import tags_view, create_tag_ajax_view
@@ -138,6 +138,9 @@ urlpatterns = [
     # ---------------- CHEMICALS (REAGENTES) ----------------
     path("chemicals/", chemicals_list_view, name="chemicals_list"),
     path("chemicals/dashboard/", chemicals_dashboard_view, name="chemicals_dashboard"),
+    path("chemicals/<int:chemical_id>/edit/", chemical_edit_view, name="chemical_edit"),
+    path("chemicals/<int:chemical_id>/delete/", chemical_delete_view, name="chemical_delete"),
+    path("chemicals/<int:chemical_id>/", chemical_detail_view, name="chemical_detail"),
     path("chemicals/add/", chemical_create_view, name="chemical_add"),
 
     # ---------------- INTERNAL: MANAGEMENT (TAGS) ----------------
