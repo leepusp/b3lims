@@ -1,311 +1,423 @@
 {% extends "internal/common/base.html" %}
-{% load static %}
 
 {% block title %}Workspace · Biobank LIMS{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* KPI Cards */
-    .kpi-card {
-        border: none;
-        border-radius: 12px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        overflow: hidden;
-        background: white;
-    }
-    .kpi-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
-    }
-    .kpi-icon {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        font-size: 1.5rem;
-    }
-
-    /* Action Buttons */
-    .action-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-        border: 1px solid #e9ecef;
-        border-radius: 12px;
-        background: white;
-        text-decoration: none;
-        transition: all 0.2s;
-        height: 100%;
-    }
-    .action-btn:hover {
-        background: #f8f9fa;
-        border-color: #dee2e6;
-        color: #0d6efd;
-        transform: translateY(-2px);
-    }
-    .action-btn i { font-size: 2rem; margin-bottom: 0.5rem; }
-
-    /* Calendar / Timeline Widget */
-    .calendar-widget {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .calendar-header {
-        background: #435ebe;
-        color: white;
-        padding: 1.5rem;
-        text-align: center;
-    }
-    .calendar-day { font-size: 3rem; font-weight: 700; line-height: 1; }
-    .calendar-month { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; }
-    .calendar-body { padding: 1.5rem; }
-
-    .agenda-item {
-        display: flex;
-        align-items: start;
-        padding-bottom: 1rem;
-        margin-bottom: 1rem;
-        border-bottom: 1px dashed #e9ecef;
-    }
-    .agenda-item:last-child { border-bottom: none; margin-bottom: 0; }
-    .agenda-time {
-        font-size: 0.75rem;
-        font-weight: bold;
-        color: #6c757d;
-        min-width: 60px;
-    }
-    .agenda-marker {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 15px;
-        margin-top: 5px;
-        flex-shrink: 0;
-    }
-</style>
-{% endblock %}
+{% block page_title %}Workspace{% endblock %}
+{% block page_subtitle %}Operational overview for inventory, transport and laboratory activities{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<style>
+.workspace-page {
+    padding: 24px 28px 32px 28px;
+}
 
-    <div class="d-flex justify-content-between align-items-end mb-5">
+.workspace-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #eef6ff 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+}
+
+.workspace-hero-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+}
+
+.workspace-hero-subtitle {
+    color: #64748b;
+    margin: 0;
+    max-width: 760px;
+}
+
+.workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.workspace-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.workspace-kpi,
+.workspace-card,
+.workspace-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.workspace-kpi {
+    padding: 16px;
+}
+
+.workspace-kpi-label {
+    font-size: 11px;
+    font-weight: 850;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.workspace-kpi-value {
+    font-size: 28px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-top: 6px;
+}
+
+.workspace-module-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.workspace-card {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.workspace-card:hover {
+    transform: translateY(-1px);
+    border-color: #bfdbfe;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
+}
+
+.workspace-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex: 0 0 auto;
+}
+
+.workspace-card-title {
+    font-size: 15px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 3px;
+}
+
+.workspace-card-text {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.workspace-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+    gap: 16px;
+}
+
+.workspace-panel {
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.workspace-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8edf3;
+    font-weight: 900;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.workspace-panel-body {
+    padding: 16px;
+}
+
+.workspace-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.workspace-row:last-child {
+    border-bottom: 0;
+}
+
+.workspace-muted {
+    color: #64748b;
+}
+
+.workspace-small {
+    font-size: 12px;
+}
+
+.workspace-status-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #334155;
+}
+
+@media (max-width: 1200px) {
+    .workspace-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .workspace-module-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .workspace-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .workspace-kpi-grid,
+    .workspace-module-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="workspace-page">
+    <section class="workspace-hero">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <h1 class="workspace-hero-title">
+                    Operational Workspace
+                </h1>
+                <p class="workspace-hero-subtitle">
+                    Welcome{% if request.user.first_name %}, {{ request.user.first_name }}{% else %}, {{ request.user.username }}{% endif %}.
+                    Use this hub to access inventory, transport, collections, reagents, calendar and laboratory notebook workflows.
+                </p>
+            </div>
+
+            <div class="workspace-actions">
+                <a href="{% url 'sample_add' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>New Sample
+                </a>
+                <a href="{% url 'samples_import' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-table me-1"></i>Import Samples
+                </a>
+                <a href="{% url 'chemical_add' %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-flask me-1"></i>New Reagent
+                </a>
+                <a href="{% url 'lab_calendar' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-calendar-week me-1"></i>Calendar
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="workspace-kpi-grid">
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">Samples</div>
+            <div class="workspace-kpi-value">{{ stats.total_samples }}</div>
+        </div>
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">Missing storage</div>
+            <div class="workspace-kpi-value text-danger">{{ stats.missing_storage_samples }}</div>
+        </div>
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">Chemicals</div>
+            <div class="workspace-kpi-value">{{ stats.total_chemicals }}</div>
+        </div>
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">Shipments</div>
+            <div class="workspace-kpi-value">{{ stats.total_shipments }}</div>
+        </div>
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">Biobanks</div>
+            <div class="workspace-kpi-value">{{ stats.total_biobanks }}</div>
+        </div>
+        <div class="workspace-kpi">
+            <div class="workspace-kpi-label">ELN entries</div>
+            <div class="workspace-kpi-value">{{ stats.notebook_entries }}</div>
+        </div>
+    </section>
+
+    <section class="workspace-module-grid">
+        <a href="{% url 'samples_dashboard' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-droplet"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">Samples</span>
+                <span class="workspace-card-text d-block">Review sample inventory, storage assignment, labels, imports and biological relationships.</span>
+            </span>
+        </a>
+
+        <a href="{% url 'chemicals_dashboard' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-flask"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">Chemicals</span>
+                <span class="workspace-card-text d-block">Manage reagents, stock movements, low-stock alerts and expiry monitoring.</span>
+            </span>
+        </a>
+
+        <a href="{% url 'shipments_dashboard' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-truck"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">Transport</span>
+                <span class="workspace-card-text d-block">Track shipments, documentation, package labels and transport readiness.</span>
+            </span>
+        </a>
+
+        <a href="{% url 'biobanks_dashboard' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-building"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">Biobanks</span>
+                <span class="workspace-card-text d-block">Access biobank registry, dashboards, locations and institutional collections.</span>
+            </span>
+        </a>
+
+        <a href="{% url 'collections_dashboard' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-collection"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">Collections</span>
+                <span class="workspace-card-text d-block">Review research collections and grouped sample availability.</span>
+            </span>
+        </a>
+
+        <a href="{% url 'notebook_index' %}" class="workspace-card">
+            <span class="workspace-card-icon"><i class="bi bi-journal-bookmark"></i></span>
+            <span>
+                <span class="workspace-card-title d-block">ELN Notebook</span>
+                <span class="workspace-card-text d-block">Create and review laboratory notes linked to samples and reagents.</span>
+            </span>
+        </a>
+    </section>
+
+    <section class="workspace-layout">
         <div>
-            <h2 class="h3 fw-bold text-dark mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h2>
-            <p class="text-muted mb-0">Laboratory Information Management System Dashboard.</p>
-        </div>
-
-        {% if user.is_superuser %}
-        <div class="d-flex gap-2">
-            <a href="{% url 'workspace_backup' %}" class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
-                <i class="bi bi-hdd-network me-2"></i> System Backup
-            </a>
-            <a href="{% url 'admin:index' %}" target="_blank" class="btn btn-dark d-flex align-items-center shadow-sm">
-                <i class="bi bi-shield-lock-fill me-2"></i> Admin Panel
-            </a>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="row g-4">
-
-        <div class="col-lg-8">
-
-            <div class="row g-4 mb-4">
-                <div class="col-md-3">
-                    <div class="card kpi-card h-100 shadow-sm">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="kpi-icon bg-primary-subtle text-primary me-3">
-                                <i class="bi bi-box-seam"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Samples</h6>
-                                <h3 class="mb-0 fw-bold text-dark">{{ stats.total_samples }}</h3>
-                            </div>
-                        </div>
-                    </div>
+            <div class="workspace-panel">
+                <div class="workspace-panel-header">
+                    <span><i class="bi bi-pie-chart me-2"></i>Sample type distribution</span>
+                    <a href="{% url 'samples_dashboard' %}" class="btn btn-sm btn-outline-secondary">Open dashboard</a>
                 </div>
-                <div class="col-md-3">
-                    <div class="card kpi-card h-100 shadow-sm border-start border-4 border-warning">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="kpi-icon bg-warning-subtle text-warning me-3">
-                                <i class="bi bi-hourglass-split"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Pending QC</h6>
-                                <h3 class="mb-0 fw-bold text-dark">{{ stats.pending_qc }}</h3>
-                            </div>
+                <div class="workspace-panel-body">
+                    {% for row in sample_type_distribution %}
+                    <div class="workspace-row">
+                        <div>
+                            <strong>{{ row.sample_type|default:"Not defined" }}</strong>
                         </div>
+                        <div class="fw-bold">{{ row.total }}</div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card kpi-card h-100 shadow-sm">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="kpi-icon bg-success-subtle text-success me-3">
-                                <i class="bi bi-graph-up-arrow"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted text-uppercase small fw-bold mb-1">New (30d)</h6>
-                                <h3 class="mb-0 fw-bold text-dark">+{{ stats.new_samples_30d }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card kpi-card h-100 shadow-sm">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="kpi-icon bg-info-subtle text-info me-3">
-                                <i class="bi bi-collection"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Collections</h6>
-                                <h3 class="mb-0 fw-bold text-dark">{{ stats.total_collections }}</h3>
-                            </div>
-                        </div>
-                    </div>
+                    {% empty %}
+                    <div class="workspace-muted">No sample type data available.</div>
+                    {% endfor %}
                 </div>
             </div>
 
-            <div class="mb-4">
-                <h5 class="fw-bold text-secondary mb-3 small text-uppercase ls-1">Quick Actions</h5>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <a href="{% url 'sample_add' %}" class="action-btn shadow-sm">
-                            <i class="bi bi-plus-circle-fill text-primary"></i>
-                            <span class="fw-bold">Register Sample</span>
-                            <small class="text-muted mt-1 text-center">Add new specimen</small>
-                        </a>
+            <div class="workspace-panel">
+                <div class="workspace-panel-header">
+                    <span><i class="bi bi-clock-history me-2"></i>Recent samples</span>
+                    <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary">View all</a>
+                </div>
+                <div class="workspace-panel-body">
+                    {% for sample in recent_samples %}
+                    <div class="workspace-row">
+                        <div>
+                            <a href="{% url 'sample_detail' sample.id %}" class="fw-bold text-decoration-none">
+                                {{ sample.sample_id }}
+                            </a>
+                            <div class="workspace-muted workspace-small">
+                                {{ sample.sample_type|default:"No type" }} · {{ sample.organism_name|default:"No organism" }}
+                            </div>
+                        </div>
+                        <span class="workspace-status-pill">{{ sample.get_status_display }}</span>
                     </div>
-                    
-                    <div class="col-md-4">
-                        <a href="{% url 'collections_list' %}" class="action-btn shadow-sm">
-                            <i class="bi bi-folder-plus text-success"></i>
-                            <span class="fw-bold">New Collection</span>
-                            <small class="text-muted mt-1 text-center">Create project</small>
-                        </a>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <a href="{% url 'notebook_index' %}" class="action-btn shadow-sm">
-                            <i class="bi bi-journal-text text-info"></i>
-                            <span class="fw-bold">Lab Notebook</span>
-                            <small class="text-muted mt-1 text-center">Open ELN</small>
-                        </a>
-                    </div>
+                    {% empty %}
+                    <div class="workspace-muted">No recent samples available.</div>
+                    {% endfor %}
                 </div>
             </div>
-
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold text-dark h6">Sample Types Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div style="height: 300px;">
-                        <canvas id="samplesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
-        <div class="col-lg-4">
-
-            <div class="calendar-widget shadow-sm mb-4">
-                <div class="calendar-header">
-                    <div class="calendar-day">{% now "d" %}</div>
-                    <div class="calendar-month">{% now "F Y" %}</div>
-                    <div class="small opacity-75 mt-1">{% now "l" %}</div>
+        <div>
+            <div class="workspace-panel">
+                <div class="workspace-panel-header">
+                    <span><i class="bi bi-truck me-2"></i>Recent shipments</span>
+                    <a href="{% url 'shipments' %}" class="btn btn-sm btn-outline-secondary">View all</a>
                 </div>
-                <div class="calendar-body">
-                    <h6 class="fw-bold text-secondary small text-uppercase mb-3">Today's Activity</h6>
-
-                    {% if stats.recent_activity %}
-                        <div class="agenda-list">
-                            {% for event in stats.recent_activity|slice:":5" %}
-                            <div class="agenda-item">
-                                <div class="agenda-time">{{ event.timestamp|date:"H:i" }}</div>
-                                <div class="agenda-marker
-                                    {% if event.event_type == 'entry' %}bg-success
-                                    {% elif event.event_type == 'qc_check' %}bg-warning
-                                    {% else %}bg-primary{% endif %}">
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small">{{ event.get_event_type_display }}</div>
-                                    <div class="text-muted small">Sample: {{ event.sample.sample_id }}</div>
-                                    <div class="text-muted small" style="font-size: 0.7rem;">
-                                        by {{ event.performed_by.username }}
-                                    </div>
-                                </div>
+                <div class="workspace-panel-body">
+                    {% for shipment in recent_shipments %}
+                    <div class="workspace-row">
+                        <div>
+                            <a href="{% url 'shipment_detail' shipment.id %}" class="fw-bold text-decoration-none">
+                                {{ shipment.shipment_code|default:shipment.id }}
+                            </a>
+                            <div class="workspace-muted workspace-small">
+                                {{ shipment.origin_biobank.name|default:"No origin" }} → {{ shipment.destination_biobank.name|default:"No destination" }}
                             </div>
-                            {% endfor %}
+                        </div>
+                        <span class="workspace-status-pill">{{ shipment.get_status_display }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="workspace-muted">No shipments available.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="workspace-panel">
+                <div class="workspace-panel-header">
+                    <span><i class="bi bi-exclamation-triangle me-2"></i>Reagent alerts</span>
+                    <a href="{% url 'chemicals_dashboard' %}" class="btn btn-sm btn-outline-secondary">Open chemicals</a>
+                </div>
+                <div class="workspace-panel-body">
+                    {% if stats.low_stock_chemicals or stats.depleted_chemicals %}
+                        <div class="workspace-row">
+                            <span>Low stock</span>
+                            <strong>{{ stats.low_stock_chemicals }}</strong>
+                        </div>
+                        <div class="workspace-row">
+                            <span>Depleted</span>
+                            <strong>{{ stats.depleted_chemicals }}</strong>
                         </div>
                     {% else %}
-                        <div class="text-center py-4 text-muted small">
-                            No activities recorded today.
-                        </div>
+                        <div class="workspace-muted">No reagent alerts at the moment.</div>
                     {% endif %}
-
-                    <div class="mt-3 pt-3 border-top text-center">
-                        <a href="{% url 'lab_calendar' %}" class="btn btn-sm btn-light w-100 text-primary fw-bold">View Full Calendar</a>
-                    </div>
                 </div>
             </div>
 
-           <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="fw-bold text-secondary small text-uppercase mb-3">System Status</h6>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small"><i class="bi bi-check-circle-fill text-success me-2"></i>Database</span>
-                        <span class="badge bg-success-subtle text-success">Online</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="small"><i class="bi bi-shield-check text-success me-2"></i>Backup</span>
-                        <span class="text-muted small">Active</span>
-                    </div>
+            <div class="workspace-panel">
+                <div class="workspace-panel-header">
+                    <span><i class="bi bi-lightning-charge me-2"></i>Quick actions</span>
+                </div>
+                <div class="workspace-panel-body d-grid gap-2">
+                    <a href="{% url 'sample_add' %}" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-plus-lg me-2"></i>Register sample
+                    </a>
+                    <a href="{% url 'samples_import' %}" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-table me-2"></i>Import sample table
+                    </a>
+                    <a href="{% url 'chemical_add' %}" class="btn btn-outline-success btn-sm text-start">
+                        <i class="bi bi-flask me-2"></i>Register reagent
+                    </a>
+                    <a href="{% url 'notebook_create' %}" class="btn btn-outline-secondary btn-sm text-start">
+                        <i class="bi bi-journal-plus me-2"></i>Create ELN entry
+                    </a>
                 </div>
             </div>
-
         </div>
-    </div>
+    </section>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('samplesChart');
-    if (ctx) {
-        const labels = {{ stats.chart_labels|safe }};
-        const data = {{ stats.chart_data|safe }};
-
-        if (labels.length > 0) {
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#6c757d'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-        } else {
-            ctx.parentElement.innerHTML = '<div class="text-center py-5 text-muted small">No data available for charts.</div>';
-        }
-    }
-});
-</script>
 {% endblock %}
