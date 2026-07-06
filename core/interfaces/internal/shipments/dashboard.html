@@ -60,7 +60,7 @@
 
 .ship-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 14px;
     margin-bottom: 16px;
 }
@@ -89,6 +89,9 @@
 .ship-kpi.ready::before { background: #0ea5e9; }
 .ship-kpi.docs::before { background: #f59e0b; }
 .ship-kpi.done::before { background: #10b981; }
+.ship-kpi.uploaded::before { background: #8b5cf6; }
+.ship-kpi.approved::before { background: #16a34a; }
+.ship-kpi.checklist::before { background: #ef4444; }
 .ship-kpi.active::before { background: #6366f1; }
 
 .ship-kpi-label {
@@ -436,6 +439,24 @@
             <div class="ship-kpi-value">{{ received_or_completed }}</div>
             <div class="ship-kpi-foot">Closed custody flow</div>
         </div>
+
+        <div class="ship-kpi uploaded">
+            <div class="ship-kpi-label">Uploaded docs</div>
+            <div class="ship-kpi-value">{{ document_uploaded }}</div>
+            <div class="ship-kpi-foot">Signed or submitted</div>
+        </div>
+
+        <div class="ship-kpi approved">
+            <div class="ship-kpi-label">Approved docs</div>
+            <div class="ship-kpi-value">{{ document_approved }}</div>
+            <div class="ship-kpi-foot">Released for operation</div>
+        </div>
+
+        <div class="ship-kpi checklist">
+            <div class="ship-kpi-label">Checklist pending</div>
+            <div class="ship-kpi-value">{{ checklist_pending }}</div>
+            <div class="ship-kpi-foot">Required open items</div>
+        </div>
     </div>
 
     <div class="ship-layout">
@@ -488,6 +509,41 @@
                     </table>
                 </div>
             </div>
+            <div class="ship-panel mt-3">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-file-earmark-check"></i>Document readiness
+                    </h2>
+                    <span class="ship-panel-hint">{{ document_total }} documents</span>
+                </div>
+                <div class="ship-panel-body">
+                    <table class="ship-table">
+                        <tbody>
+                            <tr>
+                                <td>Draft / generated</td>
+                                <td class="text-end fw-bold">{{ document_draft }}</td>
+                            </tr>
+                            <tr>
+                                <td>Uploaded / submitted</td>
+                                <td class="text-end fw-bold">{{ document_uploaded }}</td>
+                            </tr>
+                            <tr>
+                                <td>Approved</td>
+                                <td class="text-end fw-bold">{{ document_approved }}</td>
+                            </tr>
+                            <tr>
+                                <td>Checklist completed</td>
+                                <td class="text-end fw-bold">{{ checklist_completed }}</td>
+                            </tr>
+                            <tr>
+                                <td>Checklist pending</td>
+                                <td class="text-end fw-bold">{{ checklist_pending }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </aside>
 
         <main class="ship-main">
@@ -549,6 +605,50 @@
                     {% empty %}
                         <div class="ship-empty">No shipment records available.</div>
                     {% endfor %}
+                </div>
+            </div>
+
+            <div class="ship-panel">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-clock-history"></i>Recent shipment events
+                    </h2>
+                    <span class="ship-panel-hint">latest updates</span>
+                </div>
+                <div class="ship-panel-body">
+                    <table class="ship-table">
+                        <thead>
+                            <tr>
+                                <th>Shipment</th>
+                                <th>Event</th>
+                                <th>Actor</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in recent_events %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'shipment_detail' event.shipment.id %}" class="ship-code text-decoration-none">
+                                            {{ event.shipment.shipment_code }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ event.event_type }}</div>
+                                        {% if event.notes %}
+                                            <div class="text-muted small">{{ event.notes|truncatechars:80 }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ event.actor|default:"System" }}</td>
+                                    <td>{{ event.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="ship-empty">No shipment events available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

@@ -1,7 +1,7 @@
 from core.services.shipment_requirements_engine import evaluate_shipment_requirements
 from core.services.shipment_document_generator import get_initial_values_from_shipment, render_document_html
 from core.services.shipment_document_form_schemas import get_document_form_schema, extract_form_values
-from core.models import ShipmentDocument, ShipmentDocumentFormData
+from core.models import ShipmentDocument, ShipmentDocumentFormData, ShipmentChecklistItem
 from django.http import HttpResponse
 try:
     from core.models import ShipmentDocument
@@ -1003,7 +1003,8 @@ def shipment_generated_document_view(request, shipment_id, document_id):
 @login_required
 def shipments_dashboard_view(request):
     """
-    Aggregated dashboard for shipment, transport and custody tracking.
+    Aggregated dashboard for shipment, transport, custody, document readiness
+    and operational checklist tracking.
     """
     qs = (
         Shipment.objects
@@ -1013,6 +1014,15 @@ def shipments_dashboard_view(request):
     )
 
     total_shipments = qs.count()
+
+    documents_qs = ShipmentDocument.objects.filter(shipment__in=qs)
+    checklist_qs = ShipmentChecklistItem.objects.filter(shipment__in=qs)
+    events_qs = (
+        ShipmentEvent.objects
+        .select_related("shipment", "actor")
+        .filter(shipment__in=qs)
+        .order_by("-created_at", "-id")
+    )
 
     status_summary = []
     for value, label in Shipment.STATUS_CHOICES:
@@ -1034,10 +1044,31 @@ def shipments_dashboard_view(request):
                 "total": count,
             })
 
+    document_pending_statuses = [
+        "pending",
+        "required",
+        "draft",
+        "form_saved",
+        "generated",
+        "under_review",
+        "submitted",
+        "correction_requested",
+        "rejected",
+    ]
+
     ready_or_active = qs.exclude(status__in=["cancelled", "received", "completed"]).count()
     received_or_completed = qs.filter(status__in=["received", "completed"]).count()
-    document_pending = qs.filter(documents__status__in=["pending", "required", "draft"]).distinct().count()
+    document_pending = qs.filter(documents__status__in=document_pending_statuses).distinct().count()
     ready_for_dispatch = qs.filter(status="ready_for_dispatch").count()
+
+    document_total = documents_qs.count()
+    document_draft = documents_qs.filter(status__in=["pending", "required", "draft", "form_saved", "generated"]).count()
+    document_uploaded = documents_qs.filter(status__in=["uploaded", "signed_uploaded", "under_review", "submitted"]).count()
+    document_approved = documents_qs.filter(status="approved").count()
+
+    checklist_total = checklist_qs.count()
+    checklist_completed = checklist_qs.filter(is_completed=True).count()
+    checklist_pending = checklist_qs.filter(is_required=True, is_completed=False).count()
 
     ctx = base_context(request)
     ctx.update({
@@ -1046,8 +1077,25 @@ def shipments_dashboard_view(request):
         "received_or_completed": received_or_completed,
         "document_pending": document_pending,
         "ready_for_dispatch": ready_for_dispatch,
+        "document_total": document_total,
+        "document_draft": document_draft,
+        "document_uploaded": document_uploaded,
+        "document_approved": document_approved,
+        "checklist_total": checklist_total,
+        "checklist_completed": checklist_completed,
+        "checklist_pending": checklist_pending,
         "status_summary": status_summary,
         "flow_summary": flow_summary,
+        "document_status_summary": list(
+            documents_qs.values("status")
+            .annotate(total=Count("id"))
+            .order_by("status")
+        ),
+        "checklist_summary": list(
+            checklist_qs.values("checklist_type", "is_completed")
+            .annotate(total=Count("id"))
+            .order_by("checklist_type", "is_completed")
+        ),
         "origin_counts": qs.values("origin_biobank__name")
             .annotate(total=Count("id"))
             .order_by("-total", "origin_biobank__name")[:8],
@@ -1055,6 +1103,7 @@ def shipments_dashboard_view(request):
             .annotate(total=Count("id"))
             .order_by("-total", "destination_biobank__name")[:8],
         "recent_shipments": qs[:10],
+        "recent_events": events_qs[:10],
     })
 
     return render(request, "internal/shipments/dashboard.html", ctx)
