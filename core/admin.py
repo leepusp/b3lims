@@ -236,7 +236,7 @@ class ShipmentAccessTokenAdmin(admin.ModelAdmin):
         "updated_at",
     ]
 
-from core.models.chemicals.chemical import Chemical
+from core.models.chemicals.chemical import Chemical, ChemicalStockMovement
 
 
 @admin.register(Chemical)
@@ -279,3 +279,28 @@ class ChemicalAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("uuid", "created_at", "updated_at")
     ordering = ("name",)
+
+
+
+@admin.register(ChemicalStockMovement)
+class ChemicalStockMovementAdmin(admin.ModelAdmin):
+    list_display = (
+        "chemical",
+        "movement_type",
+        "amount_value",
+        "amount_unit",
+        "quantity_before",
+        "quantity_after",
+        "performed_by",
+        "created_at",
+    )
+    list_filter = ("movement_type", "created_at", "performed_by")
+    search_fields = (
+        "chemical__name",
+        "chemical__cas_number",
+        "chemical__supplier",
+        "chemical__lot_number",
+        "reason",
+    )
+    readonly_fields = ("created_at",)
+    ordering = ("-created_at", "-id")

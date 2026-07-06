@@ -2,7 +2,7 @@
 
 {% block title %}{{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
 {% block page_title %}Chemicals{% endblock %}
-{% block page_subtitle %}Reagent details, stock metadata and safety information{% endblock %}
+{% block page_subtitle %}Reagent details, stock metadata and movement history{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -17,44 +17,128 @@
         </div>
 
         <div class="d-flex gap-2">
-            <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">Back</a>
+            <a href="{% url 'chemicals_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </a>
+
             {% if can_manage_chemical %}
-            <a href="{% url 'chemical_edit' chemical.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-            <a href="{% url 'chemical_delete' chemical.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            <a href="{% url 'chemical_movement_add' chemical.id %}" class="btn btn-sm btn-success">
+                <i class="bi bi-arrow-left-right me-1"></i>Stock Movement
+            </a>
+            <a href="{% url 'chemical_edit' chemical.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a href="{% url 'chemical_delete' chemical.id %}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Delete
+            </a>
             {% endif %}
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Identification</div>
+                <div class="card-body">
+                    <p><strong>Name:</strong><br>{{ chemical.name }}</p>
+                    <p><strong>Formula:</strong><br>{{ chemical.formula|default:"Not defined" }}</p>
+                    <p><strong>CAS:</strong><br>{{ chemical.cas_number|default:"Not defined" }}</p>
+                    <p><strong>Barcode:</strong><br>{{ chemical.barcode|default:"Not defined" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Supplier and stock</div>
+                <div class="card-body">
+                    <p><strong>Supplier:</strong><br>{{ chemical.supplier|default:"Not defined" }}</p>
+                    <p><strong>Catalog:</strong><br>{{ chemical.catalog_number|default:"Not defined" }}</p>
+                    <p><strong>Lot:</strong><br>{{ chemical.lot_number|default:"Not defined" }}</p>
+                    <p><strong>Current quantity:</strong><br>{{ chemical.quantity }}</p>
+                    <p><strong>Minimum quantity:</strong><br>
+                        {% if chemical.minimum_quantity %}
+                            {{ chemical.minimum_quantity|floatformat:"-3" }} {{ chemical.quantity_unit|default:"" }}
+                        {% else %}
+                            Not defined
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Storage and safety</div>
+                <div class="card-body">
+                    <p><strong>Storage:</strong><br>{{ chemical.storage_location|default:chemical.location|default:"Unassigned" }}</p>
+                    <p><strong>Temperature:</strong><br>{{ chemical.storage_temperature|default:"Not defined" }}</p>
+                    <p><strong>Expiry:</strong><br>{{ chemical.expiry_date|date:"d/m/Y"|default:"Not defined" }}</p>
+                    <p><strong>Status:</strong><br>{{ chemical.get_status_display }}</p>
+                    <p><strong>MSDS:</strong><br>
+                        {% if chemical.msds_link %}
+                            <a href="{{ chemical.msds_link }}" target="_blank" rel="noopener">Open MSDS</a>
+                        {% else %}
+                            Not defined
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Hazard notes
+        </div>
         <div class="card-body">
-            <dl class="row mb-0">
-                <dt class="col-sm-3">Name</dt>
-                <dd class="col-sm-9">{{ chemical.name }}</dd>
+            {{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}
+        </div>
+    </div>
 
-                <dt class="col-sm-3">CAS</dt>
-                <dd class="col-sm-9">{{ chemical.cas_number|default:"Not defined" }}</dd>
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clock-history me-2"></i>Stock movement history</span>
+            {% if can_manage_chemical %}
+            <a href="{% url 'chemical_movement_add' chemical.id %}" class="btn btn-sm btn-outline-success">
+                Register movement
+            </a>
+            {% endif %}
+        </div>
 
-                <dt class="col-sm-3">Supplier</dt>
-                <dd class="col-sm-9">{{ chemical.supplier|default:"Not defined" }}</dd>
-
-                <dt class="col-sm-3">Lot</dt>
-                <dd class="col-sm-9">{{ chemical.lot_number|default:"Not defined" }}</dd>
-
-                <dt class="col-sm-3">Quantity</dt>
-                <dd class="col-sm-9">{{ chemical.quantity }}</dd>
-
-                <dt class="col-sm-3">Storage</dt>
-                <dd class="col-sm-9">{{ chemical.storage_location|default:chemical.location|default:"Unassigned" }}</dd>
-
-                <dt class="col-sm-3">Temperature</dt>
-                <dd class="col-sm-9">{{ chemical.storage_temperature|default:"Not defined" }}</dd>
-
-                <dt class="col-sm-3">Status</dt>
-                <dd class="col-sm-9">{{ chemical.get_status_display }}</dd>
-
-                <dt class="col-sm-3">Hazard notes</dt>
-                <dd class="col-sm-9">{{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}</dd>
-            </dl>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Before</th>
+                        <th>After</th>
+                        <th>Performed by</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in stock_movements %}
+                    <tr>
+                        <td>{{ movement.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ movement.get_movement_type_display }}</td>
+                        <td>{{ movement.amount_value|floatformat:"-3" }} {{ movement.amount_unit|default:"" }}</td>
+                        <td>{{ movement.quantity_before|floatformat:"-3" }} {{ movement.amount_unit|default:"" }}</td>
+                        <td>{{ movement.quantity_after|floatformat:"-3" }} {{ movement.amount_unit|default:"" }}</td>
+                        <td>{{ movement.performed_by.username|default:"System" }}</td>
+                        <td>{{ movement.reason|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No stock movements registered yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

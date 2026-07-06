@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from django.core.exceptions import PermissionDenied
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
@@ -6,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Q, Count, Count
 from core.context import base_context
-from core.models.chemicals.chemical import Chemical
+from core.models.chemicals.chemical import Chemical, ChemicalStockMovement
 from core.permissions.chemicals import visible_chemicals_for_user, can_edit_chemical
 
 @login_required
@@ -161,6 +162,66 @@ def _user_can_manage_chemical(user, chemical):
     )
 
 
+
+def _format_chemical_quantity(value, unit):
+    if value is None:
+        return ""
+    raw = f"{value:.3f}".rstrip("0").rstrip(".")
+    return f"{raw} {unit or ''}".strip()
+
+
+def _update_chemical_status_from_stock(chemical):
+    if chemical.quantity_value is None:
+        return
+
+    if chemical.quantity_value <= 0:
+        chemical.status = "depleted"
+    elif chemical.minimum_quantity is not None and chemical.quantity_value <= chemical.minimum_quantity:
+        chemical.status = "low_stock"
+    elif chemical.status in ["depleted", "low_stock"]:
+        chemical.status = "available"
+
+
+def _apply_chemical_stock_movement(*, chemical, movement_type, amount_value, amount_unit, reason, user):
+    if amount_value < 0:
+        raise ValueError("Amount must be zero or greater.")
+
+    current = chemical.quantity_value or Decimal("0")
+    before = current
+
+    if chemical.quantity_unit and amount_unit and chemical.quantity_unit != amount_unit:
+        raise ValueError(f"Unit mismatch: current stock uses {chemical.quantity_unit}, movement uses {amount_unit}.")
+
+    if not chemical.quantity_unit and amount_unit:
+        chemical.quantity_unit = amount_unit
+
+    if movement_type == "intake":
+        after = before + amount_value
+    elif movement_type in ["consumption", "disposal"]:
+        after = before - amount_value
+        if after < 0:
+            raise ValueError("Movement would make stock negative.")
+    elif movement_type == "adjustment":
+        after = amount_value
+    else:
+        raise ValueError("Invalid movement type.")
+
+    chemical.quantity_value = after
+    chemical.quantity = _format_chemical_quantity(after, chemical.quantity_unit or amount_unit)
+    _update_chemical_status_from_stock(chemical)
+    chemical.save()
+
+    return ChemicalStockMovement.objects.create(
+        chemical=chemical,
+        movement_type=movement_type,
+        amount_value=amount_value,
+        amount_unit=amount_unit or chemical.quantity_unit,
+        quantity_before=before,
+        quantity_after=after,
+        reason=reason,
+        performed_by=user,
+    )
+
 @login_required
 def chemical_detail_view(request, chemical_id):
     chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
@@ -169,6 +230,7 @@ def chemical_detail_view(request, chemical_id):
     ctx.update({
         "chemical": chemical,
         "can_manage_chemical": _user_can_manage_chemical(request.user, chemical),
+        "stock_movements": chemical.stock_movements.select_related("performed_by").all()[:20],
     })
     return render(request, "internal/chemicals/detail.html", ctx)
 
@@ -251,3 +313,49 @@ def chemical_delete_view(request, chemical_id):
     ctx = base_context(request)
     ctx.update({"chemical": chemical})
     return render(request, "internal/chemicals/confirm_delete.html", ctx)
+
+
+
+@login_required
+def chemical_movement_create_view(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+
+    if not _user_can_manage_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to modify this reagent stock.")
+
+    if request.method == "POST":
+        try:
+            movement_type = request.POST.get("movement_type")
+            amount_raw = (request.POST.get("amount_value") or "").strip()
+            amount_unit = (request.POST.get("amount_unit") or chemical.quantity_unit or "").strip()
+            reason = request.POST.get("reason") or ""
+
+            if not amount_raw:
+                raise ValueError("Amount is required.")
+
+            try:
+                amount_value = Decimal(amount_raw)
+            except InvalidOperation:
+                raise ValueError("Invalid amount.")
+
+            _apply_chemical_stock_movement(
+                chemical=chemical,
+                movement_type=movement_type,
+                amount_value=amount_value,
+                amount_unit=amount_unit,
+                reason=reason,
+                user=request.user,
+            )
+
+            messages.success(request, "Stock movement registered successfully.")
+            return redirect("chemical_detail", chemical_id=chemical.id)
+
+        except Exception as e:
+            messages.error(request, f"Error registering stock movement: {e}")
+
+    ctx = base_context(request)
+    ctx.update({
+        "chemical": chemical,
+        "movement_types": ChemicalStockMovement.MOVEMENT_TYPES,
+    })
+    return render(request, "internal/chemicals/movement_form.html", ctx)

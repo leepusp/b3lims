@@ -65,3 +65,49 @@ class Chemical(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.quantity})"
+
+
+
+class ChemicalStockMovement(models.Model):
+    """
+    Audit trail for reagent stock changes.
+
+    intake: stock added
+    consumption: stock consumed by routine use
+    adjustment: manual correction; amount_value becomes the new stock value
+    disposal: stock removed due to discard
+    """
+    MOVEMENT_TYPES = [
+        ("intake", "Intake"),
+        ("consumption", "Consumption"),
+        ("adjustment", "Adjustment"),
+        ("disposal", "Disposal"),
+    ]
+
+    chemical = models.ForeignKey(
+        Chemical,
+        on_delete=models.CASCADE,
+        related_name="stock_movements",
+    )
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
+    amount_value = models.DecimalField(max_digits=12, decimal_places=3)
+    amount_unit = models.CharField(max_length=30, blank=True, null=True)
+
+    quantity_before = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
+    quantity_after = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
+
+    reason = models.TextField(blank=True, null=True)
+    performed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chemical_stock_movements",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.chemical.name} · {self.get_movement_type_display()} · {self.amount_value} {self.amount_unit or ''}".strip()
