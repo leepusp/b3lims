@@ -235,3 +235,47 @@ class ShipmentAccessTokenAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     ]
+
+from core.models.chemicals.chemical import Chemical
+
+
+@admin.register(Chemical)
+class ChemicalAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "cas_number",
+        "supplier",
+        "catalog_number",
+        "lot_number",
+        "quantity",
+        "quantity_value",
+        "quantity_unit",
+        "storage_location",
+        "storage_temperature",
+        "expiry_date",
+        "status",
+        "research_group",
+        "created_by",
+        "created_at",
+    )
+    list_filter = (
+        "status",
+        "storage_temperature",
+        "research_group",
+        "is_public",
+        "created_at",
+        "expiry_date",
+    )
+    search_fields = (
+        "name",
+        "formula",
+        "cas_number",
+        "supplier",
+        "catalog_number",
+        "lot_number",
+        "barcode",
+        "location",
+        "storage_location",
+    )
+    readonly_fields = ("uuid", "created_at", "updated_at")
+    ordering = ("name",)

@@ -446,7 +446,7 @@
                                 {% for chem in soon_expiring %}
                                     <tr>
                                         <td class="fw-bold">{{ chem.name }}</td>
-                                        <td>{{ chem.location|default:"Unassigned" }}</td>
+                                        <td>{{ chem.storage_location|default:chem.location|default:"Unassigned" }}</td>
                                         <td class="text-end">
                                             <span class="chem-badge chem-badge-warning">
                                                 {{ chem.expiry_date|date:"d/m/Y" }}
@@ -485,7 +485,7 @@
                                 {% for chem in expired_chemicals %}
                                     <tr>
                                         <td class="fw-bold">{{ chem.name }}</td>
-                                        <td>{{ chem.location|default:"Unassigned" }}</td>
+                                        <td>{{ chem.storage_location|default:chem.location|default:"Unassigned" }}</td>
                                         <td class="text-end">
                                             <span class="chem-badge chem-badge-expired">
                                                 {{ chem.expiry_date|date:"d/m/Y" }}
