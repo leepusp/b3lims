@@ -35,7 +35,7 @@
 
 .sample-dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
     gap: 12px;
     margin-bottom: 16px;
 }
@@ -196,12 +196,20 @@
             <div class="sample-dashboard-metric-value">{{ sample_dashboard_stats.total }}</div>
         </div>
         <div class="sample-dashboard-metric">
-            <div class="sample-dashboard-metric-label">Public</div>
-            <div class="sample-dashboard-metric-value text-success">{{ sample_dashboard_stats.public }}</div>
+            <div class="sample-dashboard-metric-label">Available</div>
+            <div class="sample-dashboard-metric-value text-success">{{ sample_dashboard_stats.available }}</div>
         </div>
         <div class="sample-dashboard-metric">
-            <div class="sample-dashboard-metric-label">Restricted</div>
-            <div class="sample-dashboard-metric-value text-warning">{{ sample_dashboard_stats.private }}</div>
+            <div class="sample-dashboard-metric-label">Missing storage</div>
+            <div class="sample-dashboard-metric-value text-danger">{{ sample_dashboard_stats.missing_storage }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">With storage</div>
+            <div class="sample-dashboard-metric-value text-primary">{{ sample_dashboard_stats.with_storage }}</div>
+        </div>
+        <div class="sample-dashboard-metric">
+            <div class="sample-dashboard-metric-label">Public</div>
+            <div class="sample-dashboard-metric-value text-success">{{ sample_dashboard_stats.public }}</div>
         </div>
         <div class="sample-dashboard-metric">
             <div class="sample-dashboard-metric-label">Biobanks</div>
@@ -291,7 +299,7 @@
                         {% for sample in recent_samples %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'sample_edit' sample.id %}" class="fw-bold text-decoration-none">
+                                    <a href="{% url 'sample_detail' sample.id %}" class="fw-bold text-decoration-none">
                                         {{ sample.sample_id }}
                                     </a>
                                     <div class="text-muted small">{{ sample.organism_name|default:"No organism" }}</div>
@@ -308,7 +316,53 @@
                 </table>
             </div>
 
-            <div class="sample-dashboard-card">
+                          <div class="sample-dashboard-card">
+                  <div class="sample-dashboard-card-title">Storage assignment</div>
+
+                  <div class="sample-dashboard-bar-row">
+                      <div class="sample-dashboard-bar-label">Missing storage</div>
+                      <div class="sample-dashboard-bar-track">
+                          <div class="sample-dashboard-bar-fill" style="width: {% widthratio sample_dashboard_stats.missing_storage sample_dashboard_stats.total 100 %}%"></div>
+                      </div>
+                      <div class="sample-dashboard-bar-value">{{ sample_dashboard_stats.missing_storage }}</div>
+                  </div>
+
+                  <div class="sample-dashboard-bar-row">
+                      <div class="sample-dashboard-bar-label">With storage</div>
+                      <div class="sample-dashboard-bar-track">
+                          <div class="sample-dashboard-bar-fill" style="width: {% widthratio sample_dashboard_stats.with_storage sample_dashboard_stats.total 100 %}%"></div>
+                      </div>
+                      <div class="sample-dashboard-bar-value">{{ sample_dashboard_stats.with_storage }}</div>
+                  </div>
+
+                  <table class="sample-dashboard-table mt-3">
+                      <thead>
+                          <tr>
+                              <th>Sample</th>
+                              <th>Type</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for sample in storage_missing_samples %}
+                              <tr>
+                                  <td>
+                                      <a href="{% url 'sample_detail' sample.id %}" class="fw-bold text-decoration-none">
+                                          {{ sample.sample_id }}
+                                      </a>
+                                      <div class="text-muted small">{{ sample.organism_name|default:"No organism" }}</div>
+                                  </td>
+                                  <td>{{ sample.sample_type|default:"Not defined" }}</td>
+                              </tr>
+                          {% empty %}
+                              <tr>
+                                  <td colspan="2" class="text-muted">All visible samples have storage assigned.</td>
+                              </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+
+<div class="sample-dashboard-card">
                 <div class="sample-dashboard-card-title">Governance note</div>
                 <p class="text-muted small mb-0">
                     This dashboard is restricted by centralized sample visibility rules.
