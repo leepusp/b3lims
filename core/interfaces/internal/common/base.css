@@ -214,15 +214,9 @@ body.lims-layout {
         margin-left: 0;
     }
 }
-/* User menu avatar: white background and white outline */
-.lims-topbar .avatar-small {
-    background: #ffffff !important;
-    border: 1px solid #ffffff !important;
-    color: #0f172a !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
-}
-
+/* User menu button: white background only; keep avatar original colors */
 .lims-topbar .dropdown > .btn.btn-light {
     background: #ffffff !important;
     border-color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
 }
