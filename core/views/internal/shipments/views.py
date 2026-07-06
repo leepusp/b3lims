@@ -24,12 +24,13 @@ from core.models import Shipment
 from core.services.shipment_workflow import sync_shipment_requirements
 from core.services.shipment_qr import build_internal_shipment_scan_url, build_qr_data_uri
 from core.services.shipment_receipt import mark_shipment_received, create_intake_records_from_shipment
+from core.permissions.shipments import visible_shipments_for_user
 
 
 @login_required
 def shipments_list_view(request):
     shipments = (
-        Shipment.objects
+        visible_shipments_for_user(request.user)
         .select_related("origin_biobank", "destination_biobank", "requested_by")
         .prefetch_related("items", "documents", "checklist_items")
         .all()
@@ -202,7 +203,7 @@ def _build_shipment_review_actions(shipment, checklist_items, documents):
 @login_required
 def shipment_detail_view(request, shipment_id):
     shipment = get_object_or_404(
-        Shipment.objects
+        visible_shipments_for_user(request.user)
         .select_related(
             "origin_biobank",
             "destination_biobank",
@@ -388,7 +389,7 @@ def shipment_detail_view(request, shipment_id):
 
 @login_required
 def shipment_scan_view(request, shipment_uuid):
-    shipment = get_object_or_404(Shipment, uuid=shipment_uuid)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), uuid=shipment_uuid)
     messages.info(request, f"Shipment {shipment.shipment_code} loaded from QR code.")
     return redirect("shipment_detail", shipment_id=shipment.id)
 
@@ -401,7 +402,7 @@ from core.services.shipment_document_gate import (
 
 @login_required
 def shipment_approve_documents_view(request, shipment_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
 
     if request.method != "POST":
         return redirect("shipment_detail", shipment_id=shipment.id)
@@ -428,7 +429,7 @@ def shipment_approve_documents_view(request, shipment_id):
 
 @login_required
 def shipment_package_labels_view(request, shipment_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
 
     if not can_release_final_package_outputs(shipment):
         messages.error(
@@ -472,7 +473,7 @@ def shipment_package_labels_view(request, shipment_id):
 
 @login_required
 def shipment_documents_review_view(request, shipment_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
 
     pending_required_documents = get_pending_required_signed_documents(shipment)
     can_release_outputs = can_release_final_package_outputs(shipment)
@@ -491,7 +492,7 @@ def shipment_documents_review_view(request, shipment_id):
 
 @login_required
 def shipment_request_document_correction_view(request, shipment_id, document_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     document = get_object_or_404(
         ShipmentDocument,
         id=document_id,
@@ -625,7 +626,7 @@ def _normalize_boolean_post_data_for_model(post_data, model, prefix=None):
 
 @login_required
 def shipment_edit_view(request, shipment_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     item = shipment.items.order_by("id").first()
 
     classification, _ = TransportClassification.objects.get_or_create(
@@ -773,7 +774,7 @@ def _complete_document_checklist_items(shipment, document):
 
 
 def shipment_document_workspace_view(request, shipment_id, document_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     document = get_object_or_404(
         ShipmentDocument,
         id=document_id,
@@ -858,7 +859,7 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
 
 @login_required
 def shipment_document_workspace_view(request, shipment_id, document_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     document = get_object_or_404(
         ShipmentDocument,
         id=document_id,
@@ -976,7 +977,7 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
 
 @login_required
 def shipment_generated_document_view(request, shipment_id, document_id):
-    shipment = get_object_or_404(Shipment, id=shipment_id)
+    shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     document = get_object_or_404(
         ShipmentDocument,
         id=document_id,
@@ -1007,7 +1008,7 @@ def shipments_dashboard_view(request):
     and operational checklist tracking.
     """
     qs = (
-        Shipment.objects
+        visible_shipments_for_user(request.user)
         .select_related("origin_biobank", "destination_biobank", "requested_by")
         .prefetch_related("items", "documents", "checklist_items")
         .order_by("-created_at")
