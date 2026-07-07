@@ -1043,9 +1043,16 @@ def sample_import_batch_detail_view(request, batch_id):
 @login_required
 def sample_create_shipment_view(request, sample_id):
     sample = get_object_or_404(
-        Sample.objects.select_related("biobank", "owner"),
+        visible_samples_for_user(request.user).select_related("biobank", "owner"),
         id=sample_id,
     )
+
+    if request.method != "POST":
+        messages.warning(
+            request,
+            "Shipment creation requires confirmation."
+        )
+        return redirect("sample_detail", sample_id=sample.id)
 
     shipment = create_shipment_from_sample(
         sample=sample,
