@@ -823,7 +823,7 @@
                                                     {% endif %}
                                                 </div>
                                                 {% if attachment.file %}
-                                                    <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <a href="{% url 'notebook_attachment_download' attachment.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
                                                         Open
                                                     </a>
                                                 {% endif %}

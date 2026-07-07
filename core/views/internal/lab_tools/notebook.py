@@ -1,3 +1,4 @@
+from pathlib import Path
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -5,7 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Q
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -23,6 +24,7 @@ from core.models.chemicals.chemical import Chemical
 from core.permissions.samples import can_view_sample, visible_samples_for_user
 from core.permissions.notebook import (
     can_edit_notebook_entry,
+    can_view_notebook_entry,
     visible_notebook_entries_for_user,
 )
 
@@ -920,11 +922,34 @@ def notebook_delete_block_api(request, block_id):
 
 
 @login_required
+def notebook_attachment_download(request, attachment_id):
+    attachment = get_object_or_404(
+        NotebookAttachment.objects.select_related("entry", "entry__author"),
+        id=attachment_id,
+    )
+
+    if not can_view_notebook_entry(request.user, attachment.entry):
+        raise PermissionDenied
+
+    if not attachment.file:
+        raise Http404("Attachment file not found.")
+
+    try:
+        return FileResponse(
+            attachment.file.open("rb"),
+            as_attachment=True,
+            filename=Path(attachment.file.name).name,
+        )
+    except FileNotFoundError:
+        raise Http404("Attachment file not found.")
+
+
+@login_required
 def notebook_upload_attachment_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     uploaded_file = request.FILES.get("file")
     if not uploaded_file:
@@ -951,7 +976,7 @@ def notebook_upload_attachment_api(request, entry_id):
         {
             "status": "success",
             "attachment_id": attachment.id,
-            "url": attachment.file.url,
+            "url": reverse("notebook_attachment_download", args=[attachment.id]),
             "caption": attachment.caption,
             "attachment_type": attachment.attachment_type,
         }

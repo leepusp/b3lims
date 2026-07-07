@@ -169,6 +169,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/block/update/<int:block_id>/', notebook_views.notebook_update_block_api, name='notebook_update_block_api'),
     path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
     path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
+    path('internal/lab-tools/notebook/attachments/<int:attachment_id>/download/', notebook_views.notebook_attachment_download, name='notebook_attachment_download'),
 
 
     # ---------------- QR CODE (PAGE) --------------------------------
