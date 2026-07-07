@@ -64,7 +64,7 @@
     </div>
 
     <div class="chem-form-card">
-        <form method="post" id="createChemicalForm">
+        <form method="post" action="{% url 'chemical_add' %}" id="createChemicalForm">
             {% csrf_token %}
 
             <div class="row g-4">
