@@ -21,6 +21,10 @@ from core.models.lab_tools.notebook import (
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
 from core.permissions.samples import can_view_sample, visible_samples_for_user
+from core.permissions.notebook import (
+    can_edit_notebook_entry,
+    visible_notebook_entries_for_user,
+)
 
 
 def _sample_display_name(sample):
@@ -174,17 +178,26 @@ def _get_molecular_sequence_for_user(sequence_id, user):
     raise PermissionDenied
 
 
-def _get_entry_for_user(entry_id, user):
-    return get_object_or_404(
-        NotebookEntry.objects.prefetch_related("sample_links", "blocks", "attachments"),
+def _get_entry_for_user(entry_id, user, *, require_edit=False):
+    entry = get_object_or_404(
+        visible_notebook_entries_for_user(user).prefetch_related(
+            "sample_links",
+            "chemical_links",
+            "blocks",
+            "attachments",
+        ),
         id=entry_id,
-        author=user,
     )
+
+    if require_edit and not can_edit_notebook_entry(user, entry):
+        raise PermissionDenied
+
+    return entry
 
 
 @login_required
 def notebook_index(request):
-    entries = NotebookEntry.objects.filter(author=request.user)
+    entries = visible_notebook_entries_for_user(request.user)
     active_entry_id = request.GET.get("entry_id")
 
     active_entry = None
@@ -342,7 +355,7 @@ def notebook_save_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     try:
         data = json.loads(request.body)
@@ -410,7 +423,7 @@ def notebook_link_sample_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     try:
         data = json.loads(request.body)
@@ -449,7 +462,7 @@ def notebook_unlink_sample_api(request, entry_id, link_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
     link = get_object_or_404(NotebookSampleLink, id=link_id, entry=entry)
 
     sample = link.sample
@@ -493,7 +506,7 @@ def notebook_link_chemical_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST required."}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     try:
         data = json.loads(request.body.decode("utf-8") or "{}")
@@ -534,7 +547,7 @@ def notebook_unlink_chemical_api(request, entry_id, link_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST required."}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
     link = get_object_or_404(NotebookChemicalLink, id=link_id, entry=entry)
     link.delete()
 
@@ -545,7 +558,7 @@ def notebook_delete_entry_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
     deleted_title = entry.title
 
     # Deleting the entry removes database links, blocks and attachment records by cascade.
@@ -767,7 +780,7 @@ def notebook_create_molecular_sequence_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     try:
         data = json.loads(request.body)
@@ -838,7 +851,7 @@ def notebook_create_block_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    entry = _get_entry_for_user(entry_id, request.user)
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
 
     try:
         data = json.loads(request.body)
@@ -878,7 +891,9 @@ def notebook_update_block_api(request, block_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    block = get_object_or_404(NotebookBlock, id=block_id, entry__author=request.user)
+    block = get_object_or_404(NotebookBlock, id=block_id, entry__in=visible_notebook_entries_for_user(request.user))
+    if not can_edit_notebook_entry(request.user, block.entry):
+        raise PermissionDenied
 
     try:
         data = json.loads(request.body)
@@ -896,7 +911,9 @@ def notebook_delete_block_api(request, block_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    block = get_object_or_404(NotebookBlock, id=block_id, entry__author=request.user)
+    block = get_object_or_404(NotebookBlock, id=block_id, entry__in=visible_notebook_entries_for_user(request.user))
+    if not can_edit_notebook_entry(request.user, block.entry):
+        raise PermissionDenied
     block.delete()
 
     return JsonResponse({"status": "success"})
