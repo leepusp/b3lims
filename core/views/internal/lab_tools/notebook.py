@@ -20,7 +20,7 @@ from core.models.lab_tools.notebook import (
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
-from core.permissions.samples import can_view_sample
+from core.permissions.samples import can_view_sample, visible_samples_for_user
 
 
 def _sample_display_name(sample):
@@ -389,7 +389,7 @@ def search_samples_api(request):
     for field_name in searchable_fields:
         q_object |= Q(**{f"{field_name}__icontains": query})
 
-    samples = Sample.objects.filter(q_object).distinct()[:15]
+    samples = visible_samples_for_user(request.user).filter(q_object).distinct()[:15]
 
     results = [
         {
@@ -414,7 +414,7 @@ def notebook_link_sample_api(request, entry_id):
 
     try:
         data = json.loads(request.body)
-        sample = get_object_or_404(Sample, id=data.get("sample_id"))
+        sample = get_object_or_404(visible_samples_for_user(request.user), id=data.get("sample_id"))
         snapshot = build_sample_snapshot(sample)
 
         link, _created = NotebookSampleLink.objects.get_or_create(
