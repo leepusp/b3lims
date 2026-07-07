@@ -251,10 +251,10 @@ def notebook_index(request):
 
 @login_required
 def notebook_create_from_sample(request, sample_id):
-    sample = get_object_or_404(Sample, id=sample_id)
+    sample = get_object_or_404(visible_samples_for_user(request.user), id=sample_id)
 
-    if not can_view_sample(request.user, sample) and not request.user.is_superuser:
-        raise PermissionDenied
+    if request.method != "POST":
+        raise PermissionDenied("Notebook creation from sample requires POST confirmation.")
 
     snapshot = build_sample_snapshot(sample)
 
