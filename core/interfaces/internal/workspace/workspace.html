@@ -282,6 +282,32 @@
                         <div class="small text-danger mt-1">{{ postgresql_backup_status.error }}</div>
                     {% endif %}
                     {% endif %}
+                    {% if user.is_superuser and media_backup_status %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 mt-2">
+                        <span class="small"><i class="bi bi-folder-check text-success me-2"></i>Media backup</span>
+                        {% if media_backup_status.latest_status == "ok" and not media_backup_status.error %}
+                            <span class="badge bg-success-subtle text-success">OK</span>
+                        {% else %}
+                            <span class="badge bg-warning-subtle text-warning">Review</span>
+                        {% endif %}
+                    </div>
+                    <div class="small text-muted">
+                        {% if media_backup_status.latest_timestamp %}
+                            Last media backup: {{ media_backup_status.latest_timestamp }}
+                            {% if media_backup_status.latest_age_hours is not None %}
+                                · {{ media_backup_status.latest_age_hours }}h ago
+                            {% endif %}
+                            {% if media_backup_status.latest_source_file_count is not None %}
+                                · {{ media_backup_status.latest_source_file_count }} files
+                            {% endif %}
+                        {% else %}
+                            No media backup entry found.
+                        {% endif %}
+                    </div>
+                    {% if media_backup_status.error %}
+                        <div class="small text-danger mt-1">{{ media_backup_status.error }}</div>
+                    {% endif %}
+                    {% endif %}
 
                 </div>
             </div>
