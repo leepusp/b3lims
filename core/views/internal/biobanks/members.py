@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
+from django.db.models import Q
 
 from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole
@@ -111,12 +112,49 @@ def biobank_members_view(request, biobank_id):
     # ==================================================
     # CONTEXT
     # ==================================================
+    member_q = (request.GET.get("member_q") or "").strip()
+    user_q = (request.GET.get("user_q") or "").strip()
+
     current_user_ids = biobank.user_roles.values_list("user_id", flat=True)
+
+    members = (
+        biobank.user_roles
+        .select_related("user")
+        .exclude(user=biobank.owner)
+        .order_by("user__username")
+    )
+
+    if member_q:
+        members = members.filter(
+            Q(user__username__icontains=member_q)
+            | Q(user__email__icontains=member_q)
+            | Q(user__first_name__icontains=member_q)
+            | Q(user__last_name__icontains=member_q)
+            | Q(role__icontains=member_q)
+        )
+
+    available_users_qs = User.objects.exclude(
+        id__in=current_user_ids
+    ).order_by("username")
+
+    if user_q:
+        available_users_qs = available_users_qs.filter(
+            Q(username__icontains=user_q)
+            | Q(email__icontains=user_q)
+            | Q(first_name__icontains=user_q)
+            | Q(last_name__icontains=user_q)
+        )
+
+    available_users_count = available_users_qs.count()
+    available_users = available_users_qs[:50]
 
     ctx = {
         "biobank": biobank,
-        "members": biobank.user_roles.select_related("user"),
-        "available_users": User.objects.exclude(id__in=current_user_ids),
+        "members": members,
+        "available_users": available_users,
+        "available_users_count": available_users_count,
+        "member_q": member_q,
+        "user_q": user_q,
         "can_manage": can_manage,
     }
 
