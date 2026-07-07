@@ -118,7 +118,26 @@
     </div>
 
     <!-- MEMBERS -->
-    <h5 class="mb-3">Members</h5>
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <h5 class="mb-0">Members</h5>
+    </div>
+
+    <form method="get" class="card shadow-sm mb-3">
+        <div class="card-body">
+            {% if user_q %}
+                <input type="hidden" name="user_q" value="{{ user_q }}">
+            {% endif %}
+
+            <label class="form-label">Search members</label>
+            <div class="input-group">
+                <input type="text" name="member_q" value="{{ member_q }}" class="form-control" placeholder="Name, username, email or role">
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+                {% if member_q or user_q %}
+                <a href="{% url 'biobank_members' biobank.id %}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
 
     <div class="row g-3">
         {% for mr in members %}
@@ -133,7 +152,12 @@
                             <div class="avatar bg-secondary text-white">
                                 {{ mr.user.username|first|upper }}
                             </div>
-                            <strong>{{ mr.user.username }}</strong>
+                            <div>
+                                <strong>{{ mr.user.username }}</strong>
+                                {% if mr.user.email %}
+                                    <div class="small text-muted">{{ mr.user.email }}</div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <span class="badge bg-light text-dark">
@@ -179,7 +203,15 @@
         </div>
         {% endif %}
         {% empty %}
-            <p class="text-muted">No members registered.</p>
+            <div class="col-12">
+                <div class="alert alert-light border mb-0">
+                    {% if member_q %}
+                        No members matched <strong>{{ member_q }}</strong>.
+                    {% else %}
+                        No members registered.
+                    {% endif %}
+                </div>
+            </div>
         {% endfor %}
     </div>
 
