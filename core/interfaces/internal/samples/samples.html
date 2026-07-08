@@ -41,7 +41,7 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-white text-muted"><i class="bi bi-upc-scan"></i></span>
                                 <input type="text" name="sample_id" id="id_external_identifier" class="form-control fw-bold" placeholder="Ex: SMP-2026-001" value="{{ intake_prefill.sample_id|default:'' }}" required>
-                                <button type="button" id="btnGenerateAutoId" class="btn btn-outline-primary" title="Generate next ID">
+                                <button type="button" id="btnGenerateAutoId" class="btn btn-sm btn-outline-primary" title="Generate next ID">
                                     <i class="bi bi-arrow-clockwise"></i>
                                 </button>
                             </div>
@@ -198,7 +198,7 @@
                                                     <div class="avatar-xs bg-primary-subtle text-primary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="bi bi-building"></i></div>
                                                     <span class="fw-medium">{{ bb.name }}</span>
                                                 </div>
-                                                <button type="button" class="btn btn-sm btn-primary py-0 px-2 btn-add-bb" style="font-size: 0.75rem;">Select</button>
+                                                <button type="button" class="btn btn-sm btn-primary btn-add-bb">Select</button>
                                             </div>
                                             {% endfor %}
                                         </div>
@@ -244,7 +244,7 @@
                             <div class="p-3 border rounded bg-white h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                                     <label class="section-label mb-0"><i class="bi bi-tags me-1 text-primary"></i>Tags</label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
                                         <i class="bi bi-plus"></i> New Tag
                                     </button>
                                 </div>
@@ -262,7 +262,7 @@
                             <div class="p-3 border rounded bg-white h-100 shadow-sm">
                                 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                                     <label class="section-label mb-0"><i class="bi bi-key me-1 text-warning"></i>Custom Keywords</label>
-                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+                                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
                                         <i class="bi bi-plus"></i> Add Pair
                                     </button>
                                 </div>
@@ -300,8 +300,8 @@
             </div>
 
             <div class="card-footer bg-light border-top p-4 text-end">
-                <a href="{% url 'samples_list' %}" class="btn btn-white border me-2 px-4">Cancel</a>
-                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                <a href="{% url 'samples_list' %}" class="btn btn-sm btn-light me-2">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-primary">
                     <i class="bi bi-check2-circle me-2"></i>Save Sample
                 </button>
             </div>
@@ -479,7 +479,7 @@
                 const row = document.createElement("div");
                 row.className = "border p-2 rounded bg-white position-relative shadow-sm";
                 row.innerHTML = `
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="font-size: 0.6rem;" onclick="this.parentElement.remove()"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()"></button>
                     <div class="mb-2 pe-4">
                         <label class="small fw-bold text-muted">File <span class="text-danger">*</span></label>
                         <input type="file" name="file" class="form-control form-control-sm" required>

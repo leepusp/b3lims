@@ -22,19 +22,19 @@
 {# --- 2. ACTION BUTTONS --- #}
 {% block manage_actions %}
 <div class="d-flex gap-2">
-    <a href="{% url 'samples_dashboard' %}" class="btn btn-outline-success fw-bold shadow-sm">
+    <a href="{% url 'samples_dashboard' %}" class="btn btn-sm btn-outline-success">
         <i class="bi bi-speedometer2 me-2"></i>Dashboard
     </a>
-    <a href="{% url 'samples_network' %}" class="btn btn-info text-white fw-bold shadow-sm">
+    <a href="{% url 'samples_network' %}" class="btn btn-sm btn-outline-info">
         <i class="bi bi-diagram-3-fill me-2"></i>Network View
     </a>
-    <a href="{% url 'samples_import' %}" class="btn btn-outline-primary">
+    <a href="{% url 'samples_import' %}" class="btn btn-sm btn-outline-primary">
         <i class="bi bi-table me-2"></i>Import Table
     </a>
-    <a href="{% url 'export_samples_csv' %}" class="btn btn-outline-secondary">
+    <a href="{% url 'export_samples_csv' %}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-download me-2"></i>Export Table
     </a>
-    <a href="{% url 'sample_add' %}" class="btn btn-primary">
+    <a href="{% url 'sample_add' %}" class="btn btn-sm btn-primary">
         <i class="fas fa-plus me-2"></i>New Sample
     </a>
 </div>
@@ -49,7 +49,7 @@
         <input type="text" name="q" class="form-control border-start-0" placeholder="Search ID or Organism..." value="{{ request.GET.q|default:'' }}">
         
         {% if request.GET.q %}
-            <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary" title="Clear search">
+            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary" title="Clear search">
                 <i class="bi bi-x-lg"></i>
             </a>
         {% endif %}
@@ -145,7 +145,7 @@
         <td class="text-end pe-4 align-middle">
             
             <div class="dropdown">
-                <button class="btn btn-sm btn-light border dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
                     Options
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">

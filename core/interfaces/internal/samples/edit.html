@@ -28,11 +28,11 @@
         <div class="d-flex gap-2">
             <form method="post" action="{% url 'notebook_create_from_sample' sample.id %}" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-success">
+                <button type="submit" class="btn btn-sm btn-outline-success">
                     <i class="bi bi-journal-plus me-2"></i>New ELN entry
                 </button>
             </form>
-            <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </a>
         </div>
@@ -234,7 +234,7 @@
                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">{{ anexo.file_size }} bytes</span>
                                             {% endif %}
                                         </div>
-                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">
+                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                             Open
                                         </a>
                                     </div>
@@ -287,8 +287,8 @@
             </div>
 
             <div class="card-footer bg-light border-top p-4 text-end">
-                <a href="{% url 'samples_list' %}" class="btn btn-white border me-2 px-4">Cancel</a>
-                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                <a href="{% url 'samples_list' %}" class="btn btn-sm btn-light me-2">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-primary">
                     <i class="bi bi-save me-2"></i>Save Changes
                 </button>
             </div>
@@ -388,7 +388,7 @@
                 const row = document.createElement("div");
                 row.className = "border p-2 rounded bg-white position-relative shadow-sm";
                 row.innerHTML = `
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="font-size: 0.6rem;" onclick="this.parentElement.remove()"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()"></button>
                     <div class="mb-2 pe-4">
                         <input type="file" name="file" class="form-control form-control-sm" required>
                     </div>
