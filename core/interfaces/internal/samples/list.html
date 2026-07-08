@@ -6,10 +6,77 @@
 
 {% block extra_css %}
 <style>
-    /* Ensures the table area has enough space for dropdown menus to breathe */
+    /* Match the current card/table visual language used by Transport/Shipments. */
     .table-responsive {
         min-height: 300px !important;
-        padding-bottom: 150px; 
+        padding-bottom: 150px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        overflow: visible;
+    }
+
+    .table-responsive table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    .table-responsive thead th {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        border-bottom: 1px solid #e8edf3;
+        padding: 12px 14px;
+        background: #f8fafc;
+        white-space: nowrap;
+    }
+
+    .table-responsive tbody td {
+        font-size: 13px;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 12px 14px;
+        vertical-align: middle;
+    }
+
+    .table-responsive tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .sample-code {
+        font-weight: 850;
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    .sample-code:hover {
+        font-weight: 850;
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    .sample-code:hover {
+        text-decoration: underline;
+    }
+
+    .samples-empty {
+        padding: 28px;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .sample-status-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        font-weight: 800;
+        border: 1px solid transparent;
+        white-space: nowrap;
     }
 </style>
 {% endblock %}
@@ -35,7 +102,7 @@
         <i class="bi bi-download me-2"></i>Export Table
     </a>
     <a href="{% url 'sample_add' %}" class="btn btn-sm btn-primary">
-        <i class="fas fa-plus me-2"></i>New Sample
+        <i class="bi bi-plus-lg me-1"></i>New Sample
     </a>
 </div>
 {% endblock %}
@@ -91,7 +158,7 @@
     {% for sample in samples %}
     <tr>
         <td class="ps-4 fw-bold text-primary align-middle">
-            <a href="{% url 'sample_detail' sample.id %}" class="text-decoration-none">
+            <a href="{% url 'sample_detail' sample.id %}" class="sample-code">
                 {{ sample.sample_id }}
             </a>
                             <form method="post" action="{% url 'sample_create_shipment' sample.id %}" class="d-inline">
@@ -171,7 +238,7 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="7" class="text-center py-5 text-muted">
+        <td colspan="7" class="samples-empty">
             <i class="fas fa-vials fa-3x mb-3 text-secondary opacity-50"></i>
             <p class="mb-1">No samples found.</p>
             <small>Try changing filters or create a new sample.</small>
