@@ -171,15 +171,18 @@ def sample_create_view(request):
                 is_public = request.POST.get("is_public") == "true" or request.POST.get("is_public") == "on"
 
                 if sample_type == "Bacterium (Host)":
+                    official_name = request.POST.get("official_name", "").strip()
                     genus = request.POST.get("genus", "").strip()
                     species = request.POST.get("species", "").strip()
                     strain = request.POST.get("strain", "").strip()
-                    organism_name = f"{genus} {species} {strain}".strip()
+                    organism_name = official_name or f"{genus} {species} {strain}".strip()
 
                 elif sample_type == "Phage (Virus)":
+                    official_name = request.POST.get("official_name", "").strip()
+                    phage_name = request.POST.get("phage_name", "").strip()
                     genus = request.POST.get("genus", "").strip()
                     taxonomy = request.POST.get("taxonomy", "").strip()
-                    organism_name = f"{genus} {taxonomy}".strip()
+                    organism_name = official_name or phage_name or f"{genus} {taxonomy}".strip()
 
                 elif sample_type == "Plasmid":
                     construction = request.POST.get("construction_name", "").strip()
@@ -585,8 +588,8 @@ def _posted_sample_identity(request):
         "name",
         "display_name",
         "phage_name",
-        "backbone_name",
         "construction_name",
+        "backbone_name",
         "insert_name",
         "strain",
         "species",
@@ -633,6 +636,52 @@ def _infer_sample_identity(base_sample, real_sample=None):
     return ""
 
 
+def _preferred_sample_identity(base_sample, real_sample=None):
+    """
+    Canonical display identity for sample list/dashboard.
+
+    Rules:
+    - Bacterium: official_name first.
+    - Phage: official_name, then phage_name.
+    - Plasmid: construction_name first, then backbone_name.
+    """
+    sample_type = _safe_sample_text(getattr(base_sample, "sample_type", ""))
+
+    obj = real_sample or base_sample
+
+    if "Bacterium" in sample_type:
+        official_name = _safe_sample_text(getattr(obj, "official_name", ""))
+        if official_name:
+            return official_name
+
+        genus = _safe_sample_text(getattr(obj, "genus", ""))
+        species = _safe_sample_text(getattr(obj, "species", ""))
+        strain = _safe_sample_text(getattr(obj, "strain", ""))
+        inferred = " ".join(part for part in [genus, species, strain] if part)
+        if inferred:
+            return inferred
+
+    if "Phage" in sample_type:
+        for attr in ["official_name", "phage_name"]:
+            value = _safe_sample_text(getattr(obj, attr, ""))
+            if value:
+                return value
+
+        genus = _safe_sample_text(getattr(obj, "genus", ""))
+        taxonomy = _safe_sample_text(getattr(obj, "taxonomy", ""))
+        inferred = " ".join(part for part in [genus, taxonomy] if part)
+        if inferred:
+            return inferred
+
+    if "Plasmid" in sample_type:
+        for attr in ["construction_name", "backbone_name"]:
+            value = _safe_sample_text(getattr(obj, attr, ""))
+            if value:
+                return value
+
+    return _infer_sample_identity(base_sample, real_sample)
+
+
 def _sync_sample_after_successful_edit(base_sample, real_sample, request, identity_before):
     """
     After a successful internal edit:
@@ -645,11 +694,13 @@ def _sync_sample_after_successful_edit(base_sample, real_sample, request, identi
         pass
 
     posted_identity = _posted_sample_identity(request)
+    preferred_identity = _preferred_sample_identity(base_sample, real_sample)
     existing_identity = _safe_sample_text(getattr(base_sample, "organism_name", ""))
     inferred_identity = _infer_sample_identity(base_sample, real_sample)
 
     final_identity = (
-        posted_identity
+        preferred_identity
+        or posted_identity
         or existing_identity
         or _safe_sample_text(identity_before)
         or inferred_identity
