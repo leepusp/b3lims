@@ -57,6 +57,15 @@
                                 <option value="Plasmid" {% if intake_prefill.sample_type == "Plasmid" %}selected{% endif %}>Plasmid</option>
                                 <option value="Other" {% if intake_prefill.sample_type == "Other" %}selected{% endif %}>Other</option>
                             </select>
+
+                            <label class="form-label fw-bold text-muted small text-uppercase mt-3">Nível de biossegurança</label>
+                            <select class="form-select" name="biosafety_level" id="biosafetyLevelInput">
+                                <option value="">Not defined</option>
+                                <option value="NB-1">NB-1</option>
+                                <option value="NB-2">NB-2</option>
+                                <option value="NB-3">NB-3</option>
+                                <option value="NB-4">NB-4</option>
+                            </select>
                         </div>
 
                         <div class="col-md-4">

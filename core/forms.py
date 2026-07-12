@@ -47,12 +47,14 @@ class SampleForm(forms.ModelForm):
     class Meta:
         model = Sample
         fields = [
-            "sample_id", "sample_type", "organism_name", 
+            "sample_id", "sample_type",
+            "biosafety_level", "organism_name", 
             "status", "is_public", "storage_location",
             "biobank", "collections", "scientific_notes"
         ]
         widgets = {
             "sample_id": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}), 
+            "biosafety_level": forms.Select(attrs={"class": "form-select"}),
             "sample_type": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}),
             "organism_name": forms.TextInput(attrs={"class": "form-control"}),
             "status": forms.Select(attrs={"class": "form-select"}),

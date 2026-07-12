@@ -12,6 +12,12 @@ from core.models.keywords.model import KeywordValue
 from core.models.research_groups.model import ResearchGroup
 
 class Sample(models.Model):
+    BIOSAFETY_LEVEL_CHOICES = [
+        ("NB-1", "NB-1"),
+        ("NB-2", "NB-2"),
+        ("NB-3", "NB-3"),
+        ("NB-4", "NB-4"),
+    ]
     """
     Amostra biológica CEPIDB3. 
     Modelo Base com herança Polimórfica.
@@ -28,6 +34,14 @@ class Sample(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     sample_id = models.CharField(max_length=100, unique=True)
     sample_type = models.CharField(max_length=100, blank=True, null=True)
+    biosafety_level = models.CharField(
+        max_length=10,
+        choices=BIOSAFETY_LEVEL_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Nível de biossegurança",
+        help_text="Biosafety level required for handling this sample.",
+    )
     organism_name = models.CharField(max_length=255, blank=True, null=True)
 
     # ==========================================

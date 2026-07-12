@@ -165,6 +165,7 @@ def sample_create_view(request):
             try:
                 sample_id_base = request.POST.get("sample_id")
                 sample_type = request.POST.get("sample_type")
+                biosafety_level = request.POST.get("biosafety_level") or None
                 scientific_notes = request.POST.get("scientific_notes")
                 storage_location = request.POST.get("storage_location", "")
                 is_public = request.POST.get("is_public") == "true" or request.POST.get("is_public") == "on"
@@ -234,6 +235,7 @@ def sample_create_view(request):
                                 "sample_id": final_id,
                                 "organism_name": organism_name,
                                 "sample_type": sample_type,
+                                "biosafety_level": biosafety_level,
                                 "biobank": biobank,
                                 "research_group": biobank.research_group,
                                 "scientific_notes": final_notes,
