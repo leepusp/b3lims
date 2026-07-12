@@ -36,7 +36,7 @@
                     <h5 class="form-section-title">1. Basic Identification and Lineage</h5>
                     <div class="row g-4">
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="section-label">Sample ID / Barcode <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-white text-muted"><i class="bi bi-upc-scan"></i></span>
@@ -48,7 +48,7 @@
                             <div class="form-text small" id="autoIdHelpText">Select a Sample Type first to generate an ID.</div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="section-label">Sample Type <span class="text-danger">*</span></label>
                             <select class="form-select text-dark fw-bold border-primary-subtle" name="sample_type" id="sampleTypeInput" required>
                                 <option value="" {% if not intake_prefill.sample_type %}selected{% endif %} disabled>Select type...</option>
@@ -59,6 +59,9 @@
                             </select>
 
                             <label class="form-label fw-bold text-muted small text-uppercase mt-3">Nível de biossegurança</label>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted">Biosafety Level</label>
                             <select class="form-select" name="biosafety_level" id="biosafetyLevelInput">
                                 <option value="">Not defined</option>
                                 <option value="NB-1">NB-1</option>
@@ -68,7 +71,7 @@
                             </select>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="section-label">Physical Location (Path Builder)</label>
                             <p class="small text-muted mb-1" style="font-size: 0.75rem;">Type the location and press <strong>Enter</strong> to create levels. (Ex: Freezer 1 ↵ Box A ↵)</p>
 

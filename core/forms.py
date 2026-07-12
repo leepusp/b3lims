@@ -10,6 +10,9 @@ class BiobankForm(forms.ModelForm):
     class Meta:
         model = Biobank
         fields = ["name", "is_public", "location_label", "latitude", "longitude", "description"]
+        labels = {
+            "biosafety_level": "Biosafety Level",
+        }
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),

@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <p><strong>Sample ID:</strong><br>{{ sample.sample_id }}</p>
                     <p><strong>Type:</strong><br>{{ sample.sample_type|default:"Not defined" }}</p>
-                    <p><strong>Nível de biossegurança:</strong><br>{{ sample.biosafety_level|default:"Not defined" }}</p>
+                    <p><strong>Biosafety Level:</strong><br>{{ sample.biosafety_level|default:"Not defined" }}</p>
                     <p><strong>Organism:</strong><br>{{ sample.organism_name|default:"Not defined" }}</p>
                     <p><strong>Status:</strong><br>{{ sample.get_status_display|default:sample.status }}</p>
                     <p><strong>Public:</strong><br>{% if sample.is_public %}Yes{% else %}No{% endif %}</p>
