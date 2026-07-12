@@ -55,8 +55,6 @@ class SampleForm(forms.ModelForm):
             "biobank", "collections", "scientific_notes"
         ]
         labels = {
-        }
-        labels = {
             "biosafety_level": "Biosafety Level",
         }
         widgets = {

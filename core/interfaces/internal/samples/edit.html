@@ -47,6 +47,12 @@
         <input type="hidden" id="init_plasmids" value="{{ current_plasmids_string|default:'' }}">
         <input type="hidden" id="init_phages" value="{{ current_phages_string|default:'' }}">
 
+        <datalist id="allSamplesListForJS">
+            {% for s in all_samples %}
+                <option value="{{ s.sample_id }}">{{ s.organism_name|default:"No Organism" }} ({{ s.sample_type|default:"Generic" }})</option>
+            {% endfor %}
+        </datalist>
+
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body p-4">
                 
@@ -112,7 +118,7 @@
                         <div id="hostBacteriumDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
                             <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('hostBacteriumContainer', 'host_bacterium[]', '', 'Specific notes (e.g. EOP, Infection rate...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('hostBacteriumContainer', 'host_bacterium[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Infection rate...)')">
                                 <i class="bi bi-plus-lg"></i> Add Host Bacterium
                             </button>
                             <div class="form-text small mt-1 text-muted" id="hostBacteriumHelp"></div>
@@ -121,7 +127,7 @@
                         <div id="storedPlasmidsDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Stored Plasmids</label>
                             <div id="storedPlasmidsContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('storedPlasmidsContainer', 'stored_plasmids[]', '', 'Specific notes (e.g. Copy number, Stability...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('storedPlasmidsContainer', 'stored_plasmids[]', 'allSamplesListForJS', 'Specific notes (e.g. Copy number, Stability...)')">
                                 <i class="bi bi-plus-lg"></i> Add Plasmid
                             </button>
                         </div>
@@ -129,7 +135,7 @@
                         <div id="infectingPhagesDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Infecting Phages (Host-Range)</label>
                             <div id="infectingPhagesContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('infectingPhagesContainer', 'infecting_phages[]', '', 'Specific notes (e.g. EOP, Plaque morphology...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('infectingPhagesContainer', 'infecting_phages[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Plaque morphology...)')">
                                 <i class="bi bi-plus-lg"></i> Add Phage
                             </button>
                         </div>
@@ -138,7 +144,7 @@
 
                 {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
                 {% for field in form %}
-                    {% if field.name not in "sample_id,sample_type,organism_name,status,is_public,storage_location,biobank,collections,scientific_notes,collaborator" %}
+                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,is_public,storage_location,biobank,collections,scientific_notes,collaborator" %}
                         {% if forloop.first or forloop.counter0 == 0 %} 
                             <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
                                 <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
