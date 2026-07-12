@@ -118,7 +118,7 @@
                         <div id="hostBacteriumDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
                             <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('hostBacteriumContainer', 'host_bacterium[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Infection rate...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('hostBacteriumContainer', 'host_bacterium[]', 'Specific notes (e.g. EOP, Infection rate...)', '')">
                                 <i class="bi bi-plus-lg"></i> Add Host Bacterium
                             </button>
                             <div class="form-text small mt-1 text-muted" id="hostBacteriumHelp"></div>
@@ -127,7 +127,7 @@
                         <div id="storedPlasmidsDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Stored Plasmids</label>
                             <div id="storedPlasmidsContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('storedPlasmidsContainer', 'stored_plasmids[]', 'allSamplesListForJS', 'Specific notes (e.g. Copy number, Stability...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('storedPlasmidsContainer', 'stored_plasmids[]', 'Specific notes (e.g. Copy number, Stability...)', '')">
                                 <i class="bi bi-plus-lg"></i> Add Plasmid
                             </button>
                         </div>
@@ -135,7 +135,7 @@
                         <div id="infectingPhagesDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Infecting Phages (Host-Range)</label>
                             <div id="infectingPhagesContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRow('infectingPhagesContainer', 'infecting_phages[]', 'allSamplesListForJS', 'Specific notes (e.g. EOP, Plaque morphology...)')">
+                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('infectingPhagesContainer', 'infecting_phages[]', 'Specific notes (e.g. EOP, Plaque morphology...)', '')">
                                 <i class="bi bi-plus-lg"></i> Add Phage
                             </button>
                         </div>
@@ -317,7 +317,7 @@
         row.className = "d-flex gap-2 align-items-center bg-white p-2 border rounded relation-row-item shadow-sm mb-2";
         row.innerHTML = `
             <div style="flex: 1;">
-                <input type="text" name="${nameParam}" class="form-control form-control-sm border-success-subtle" value="${prefilledId}" required autocomplete="off">
+                <input type="text" name="${nameParam}" list="allSamplesListForJS" class="form-control form-control-sm border-success-subtle" value="${prefilledId}" placeholder="Search ID..." required autocomplete="off">
             </div>
             <div style="flex: 1.5;">
                 <input type="text" name="${nameParam.replace('[]', '_notes[]')}" class="form-control form-control-sm" placeholder="${notesPlaceholder}">

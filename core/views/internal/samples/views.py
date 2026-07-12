@@ -671,6 +671,92 @@ def _sync_sample_after_successful_edit(base_sample, real_sample, request, identi
     return final_identity
 
 
+
+def _clean_posted_sample_ids(values):
+    seen = set()
+    cleaned = []
+    for value in values:
+        value = _safe_sample_text(value)
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        cleaned.append(value)
+    return cleaned
+
+
+def _sync_sample_edit_relationships(base_sample, request, user):
+    """
+    Persist biological/storage relationships submitted from Edit Sample.
+
+    This mirrors the relationship creation flow used in Register New Sample.
+    """
+    sample_type = base_sample.sample_type or ""
+
+    host_ids = _clean_posted_sample_ids(request.POST.getlist("host_bacterium[]"))
+    host_notes = request.POST.getlist("host_bacterium_notes[]")
+
+    plasmid_ids = _clean_posted_sample_ids(request.POST.getlist("stored_plasmids[]"))
+    plasmid_notes = request.POST.getlist("stored_plasmids_notes[]")
+
+    phage_ids = _clean_posted_sample_ids(request.POST.getlist("infecting_phages[]"))
+    phage_notes = request.POST.getlist("infecting_phages_notes[]")
+
+    if "Bacterium" in sample_type:
+        for idx, plasmid_sample_id in enumerate(plasmid_ids):
+            target = Sample.objects.filter(sample_id=plasmid_sample_id).first()
+            if not target:
+                continue
+            notes = plasmid_notes[idx] if idx < len(plasmid_notes) else ""
+            SampleRelationship.objects.update_or_create(
+                source_sample=base_sample,
+                target_sample=target,
+                relationship_type="STORAGE",
+                defaults={
+                    "created_by": user,
+                    "notes": f"Linked during Bacterium edit. Details: {notes}",
+                },
+            )
+
+        if hasattr(base_sample, "bacteria"):
+            for idx, phage_sample_id in enumerate(phage_ids):
+                phage = Phage.objects.filter(sample_id=phage_sample_id).first()
+                if not phage:
+                    continue
+                notes = phage_notes[idx] if idx < len(phage_notes) else ""
+                HostRange.objects.update_or_create(
+                    phage=phage,
+                    bacteria=base_sample.bacteria,
+                    defaults={"notes": notes},
+                )
+
+    elif "Phage" in sample_type and hasattr(base_sample, "phage"):
+        for idx, host_sample_id in enumerate(host_ids):
+            bacteria = Bacteria.objects.filter(sample_id=host_sample_id).first()
+            if not bacteria:
+                continue
+            notes = host_notes[idx] if idx < len(host_notes) else ""
+            HostRange.objects.update_or_create(
+                phage=base_sample.phage,
+                bacteria=bacteria,
+                defaults={"notes": notes},
+            )
+
+    elif "Plasmid" in sample_type:
+        for idx, host_sample_id in enumerate(host_ids):
+            host = Sample.objects.filter(sample_id=host_sample_id).first()
+            if not host:
+                continue
+            notes = host_notes[idx] if idx < len(host_notes) else ""
+            SampleRelationship.objects.update_or_create(
+                source_sample=host,
+                target_sample=base_sample,
+                relationship_type="STORAGE",
+                defaults={
+                    "created_by": user,
+                    "notes": f"Linked during Plasmid edit. Details: {notes}",
+                },
+            )
+
 @login_required
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
@@ -702,6 +788,13 @@ def sample_edit_view(request, sample_id):
                 request=request,
                 identity_before=identity_before,
             )
+
+            _sync_sample_edit_relationships(
+                base_sample=base_sample,
+                request=request,
+                user=request.user,
+            )
+
 
             tag_ids = request.POST.getlist("tags")
             if tag_ids:
@@ -802,6 +895,7 @@ def sample_edit_view(request, sample_id):
         'current_phages_string': current_phages_string,
         'current_storage_location': current_storage_location,
         'current_storage_paths': current_storage_paths,
+        'all_samples': Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
     })
     return render(request, "internal/samples/edit.html", ctx)
 
