@@ -564,7 +564,6 @@ def export_samples_csv(request):
     """
     return export_samples_table(request)
 
-@login_required
 
 
 def _safe_sample_text(value):
@@ -672,6 +671,7 @@ def _sync_sample_after_successful_edit(base_sample, real_sample, request, identi
     return final_identity
 
 
+@login_required
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
 
