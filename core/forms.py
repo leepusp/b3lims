@@ -11,7 +11,6 @@ class BiobankForm(forms.ModelForm):
         model = Biobank
         fields = ["name", "is_public", "location_label", "latitude", "longitude", "description"]
         labels = {
-            "biosafety_level": "Biosafety Level",
         }
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
@@ -55,6 +54,9 @@ class SampleForm(forms.ModelForm):
             "status", "is_public", "storage_location",
             "biobank", "collections", "scientific_notes"
         ]
+        labels = {
+            "biosafety_level": "Biosafety Level",
+        }
         widgets = {
             "sample_id": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}), 
             "biosafety_level": forms.Select(attrs={"class": "form-select"}),
