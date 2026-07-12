@@ -46,11 +46,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if(notesInput) notesInput.value = quill.root.innerHTML;
             }
 
-            const biobankInputs = document.querySelectorAll('input[name="dist_biobank_id[]"]');
-            if (biobankInputs.length === 0) {
-                e.preventDefault();
-                alert("Please add at least one physical Biobank location for storage.");
-                return false;
+            const usesPhysicalBiobankDistribution = Boolean(document.getElementById("selectedBiobanksContainer"));
+            if (usesPhysicalBiobankDistribution) {
+                const biobankInputs = document.querySelectorAll('input[name="dist_biobank_id[]"]');
+                if (biobankInputs.length === 0) {
+                    e.preventDefault();
+                    alert("Please add at least one physical Biobank location for storage.");
+                    return false;
+                }
             }
         });
     }
