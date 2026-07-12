@@ -141,6 +141,7 @@
     <th class="ps-4">ID / Barcode</th>
     <th>Identification</th>
     <th>Biological Type</th>
+    <th>Biosafety Level</th>
     <th>Storage Location</th>
     <th>Status</th>
     <th>Created at</th>
@@ -180,6 +181,13 @@
                 <i class="fas fa-vial text-secondary me-2" title="Generic Sample"></i>
             {% endif %}
             {{ sample.sample_type|default:"Not defined" }}
+        </td>
+        <td class="align-middle">
+            {% if sample.biosafety_level %}
+                <span class="badge bg-light text-dark border">{{ sample.biosafety_level }}</span>
+            {% else %}
+                <span class="text-muted small">Not defined</span>
+            {% endif %}
         </td>
         <td class="align-middle">
             {% if sample.storage_location %}
@@ -232,7 +240,7 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="7" class="samples-empty">
+        <td colspan="8" class="samples-empty">
             <i class="fas fa-vials fa-3x mb-3 text-secondary opacity-50"></i>
             <p class="mb-1">No samples found.</p>
             <small>Try changing filters or create a new sample.</small>
