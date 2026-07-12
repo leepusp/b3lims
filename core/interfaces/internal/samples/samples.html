@@ -60,7 +60,7 @@
 
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted">Biosafety Level</label>
+                            <label class="section-label">Biosafety Level</label>
                             <select class="form-select" name="biosafety_level" id="biosafetyLevelInput">
                                 <option value="">Not defined</option>
                                 <option value="NB-1">NB-1</option>
@@ -72,12 +72,11 @@
 
                         <div class="col-md-3">
                             <label class="section-label">Physical Location (Path Builder)</label>
-                            <p class="small text-muted mb-1" style="font-size: 0.75rem;">Type the location and press <strong>Enter</strong> to create levels. (Ex: Freezer 1 ↵ Box A ↵)</p>
-
                             <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
                                 <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ intake_prefill.storage_location|default:'' }}">
                                 <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter..." value="{{ intake_prefill.storage_location|default:'' }}">
                             </div>
+                            <div class="form-text small">Type the location and press <strong>Enter</strong> to create levels. Ex: Freezer 1 ↵ Box A ↵</div>
                         </div>
 
                         <div class="col-md-12 border-start border-3 border-warning ps-4 mt-4">
