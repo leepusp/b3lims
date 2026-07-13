@@ -79,6 +79,7 @@ def _safe_label(value):
 
 SHIPMENT_DOCUMENT_LABELS = {
     "content_declaration": "Content declaration and traceability",
+    "cibio_authorization": "CIBio transport authorization for GMO",
     "sender_declaration": "Legacy ANTT sender declaration",
     "external_package_identification": "External package identification",
     "triple_packaging_checklist": "Triple packaging checklist",

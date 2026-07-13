@@ -36,7 +36,7 @@ DOCUMENTS = {
         "requires_signature": True,
     },
     "cibio_authorization": {
-        "label": "Autorização de transporte CIBio para OGM",
+        "label": "CIBio transport authorization for GMO",
         "category": "document",
         "reason": "Required when the shipment contains OGM material.",
         "requires_signature": True,

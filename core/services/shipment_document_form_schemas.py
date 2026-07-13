@@ -23,11 +23,74 @@ YES_NO_OPTIONS = [
     "No",
 ]
 
+TRANSPORT_MODE_OPTIONS = [
+    "",
+    "Personal delivery",
+    "Postal service",
+    "Carrier",
+    "Other",
+]
+
 INSTITUTION_CQB_OPTIONS = [""] + get_institution_cqb_select_options()
 
 
 def select(options):
     return "select:" + "|".join(options)
+
+
+def gmo_material_fields(prefix):
+    return [
+        (
+            f"{prefix}_common_name",
+            "Common Name of the GMO",
+            "text",
+        ),
+        (
+            f"{prefix}_scientific_name",
+            "Scientific Name of the GMO",
+            "text",
+        ),
+        (
+            f"{prefix}_gene_source_species",
+            "Species of Origin of the Gene",
+            "text",
+        ),
+        (
+            f"{prefix}_modified_sequences",
+            "Introduced or Modified Gene / Sequences",
+            "textarea",
+        ),
+        (
+            f"{prefix}_vector",
+            "Vector",
+            "text",
+        ),
+        (
+            f"{prefix}_gene_functions",
+            "Gene Functions",
+            "textarea",
+        ),
+        (
+            f"{prefix}_identification_method",
+            "Method Used to Identify the GMO",
+            "textarea",
+        ),
+        (
+            f"{prefix}_origin_institution",
+            "GMO Origin / Institution",
+            "text",
+        ),
+        (
+            f"{prefix}_risk_class",
+            "GMO Risk Class",
+            select(RISK_CLASS_OPTIONS),
+        ),
+        (
+            f"{prefix}_quantity",
+            "GMO Quantity",
+            "text",
+        ),
+    ]
 
 
 DOCUMENT_FORM_SCHEMAS = {
@@ -220,49 +283,274 @@ DOCUMENT_FORM_SCHEMAS = {
         ],
     },
     "cibio_authorization": {
-        "title": "CIBio Transport Authorization for GMO",
-        "description": "Required document for shipments containing genetically modified organisms.",
+        "title": "CIBio GMO Transport Authorization Request",
+        "description": (
+            "Internal authorization form for GMO transport. "
+            "The form is based on the institutional CIBio transport "
+            "authorization structure and must be signed by the requester "
+            "and the CIBio representatives of the institutions involved."
+        ),
         "sections": [
             {
-                "title": "Sender Institution",
+                "title": "Sender Institution and CIBio",
                 "fields": [
-                    ("sender_name", "Sender Responsible Person", "text"),
-                    ("sender_institution", "Sender Institution / CQB", select(INSTITUTION_CQB_OPTIONS)),
-                    ("sender_lab_cqb", "Sender Group / Laboratory / Researcher", "text"),
-                    ("sender_cibio_approval", "Sender CIBio Authorization / Consent", "textarea"),
+                    (
+                        "sender_legal_name",
+                        "Sender Legal Name",
+                        "text",
+                    ),
+                    (
+                        "sender_institution",
+                        "Sender Institution / CQB",
+                        select(INSTITUTION_CQB_OPTIONS),
+                    ),
+                    (
+                        "sender_address",
+                        "Sender Institution Address",
+                        "textarea",
+                    ),
+                    (
+                        "sender_cibio_name",
+                        "Sender CIBio",
+                        "text",
+                    ),
+                    (
+                        "sender_cibio_phone",
+                        "Sender CIBio Phone",
+                        "text",
+                    ),
+                    (
+                        "sender_cibio_email",
+                        "Sender CIBio Email",
+                        "text",
+                    ),
+                    (
+                        "sender_cqb_code",
+                        "Sender CQB Number",
+                        "text",
+                    ),
                 ],
             },
             {
-                "title": "Recipient Institution",
+                "title": "Responsible Researcher — Sender",
                 "fields": [
-                    ("recipient_name", "Recipient Responsible Person", "text"),
-                    ("recipient_institution", "Recipient Institution", "text"),
-                    ("recipient_lab_cqb", "Recipient Group / Laboratory / Researcher", "text"),
-                    ("recipient_cibio_approval", "Recipient CIBio Authorization / Consent", "textarea"),
+                    (
+                        "sender_name",
+                        "Responsible Researcher",
+                        "text",
+                    ),
+                    (
+                        "sender_researcher_address",
+                        "Researcher Institutional Address",
+                        "textarea",
+                    ),
+                    (
+                        "sender_phone",
+                        "Researcher Phone",
+                        "text",
+                    ),
+                    (
+                        "sender_email",
+                        "Researcher Email",
+                        "text",
+                    ),
+                    (
+                        "ogm_project_title",
+                        "Title of the Project Associated with the GMO",
+                        "textarea",
+                    ),
+                    (
+                        "sender_cibio_project_protocol",
+                        "Sender CIBio Project Approval Protocol",
+                        "text",
+                    ),
                 ],
             },
             {
-                "title": "GMO Material",
+                "title": "Recipient Institution and CIBio",
                 "fields": [
-                    ("organism_name", "Organism / Construct / Strain", "textarea"),
-                    ("risk_class", "Risk Class", select(RISK_CLASS_OPTIONS)),
-                    ("biosafety_level", "Biosafety Level", select(BIOSAFETY_LEVEL_OPTIONS)),
-                    ("is_ogm", "GMO", select(YES_NO_OPTIONS)),
-                    ("container_quantity", "Number of Containers", "text"),
-                    ("container_type", "Container Type", "text"),
-                    ("storage_temperature", "Storage / Transport Temperature", "text"),
-                    ("transport_method", "Transport Method", "textarea"),
+                    (
+                        "recipient_legal_name",
+                        "Recipient Legal Name",
+                        "text",
+                    ),
+                    (
+                        "recipient_institution",
+                        "Recipient Institution",
+                        "text",
+                    ),
+                    (
+                        "recipient_address",
+                        "Recipient Institution Address",
+                        "textarea",
+                    ),
+                    (
+                        "recipient_cibio_name",
+                        "Recipient CIBio",
+                        "text",
+                    ),
+                    (
+                        "recipient_cibio_phone",
+                        "Recipient CIBio Phone",
+                        "text",
+                    ),
+                    (
+                        "recipient_cibio_email",
+                        "Recipient CIBio Email",
+                        "text",
+                    ),
+                    (
+                        "recipient_cqb_code",
+                        "Recipient CQB Number",
+                        "text",
+                    ),
                 ],
             },
             {
-                "title": "Packaging and Traceability",
+                "title": "Responsible Researcher — Recipient",
                 "fields": [
-                    ("packaging_statement", "Packaging System", "textarea"),
-                    ("traceability_statement", "Traceability Record", "textarea"),
-                    ("declaration_place", "Place", "text"),
-                    ("declaration_date", "Date", "text"),
-                    ("signer_name", "Signatory Name", "text"),
-                    ("signer_document", "Signatory Document / ID", "text"),
+                    (
+                        "recipient_name",
+                        "Responsible Researcher",
+                        "text",
+                    ),
+                    (
+                        "recipient_researcher_address",
+                        "Researcher Institutional Address",
+                        "textarea",
+                    ),
+                    (
+                        "recipient_phone",
+                        "Researcher Phone",
+                        "text",
+                    ),
+                    (
+                        "recipient_email",
+                        "Researcher Email",
+                        "text",
+                    ),
+                    (
+                        "request_purpose",
+                        "Purpose and Brief Description of Use",
+                        "textarea",
+                    ),
+                ],
+            },
+            {
+                "title": "GMO Material 1",
+                "fields": gmo_material_fields("ogm_1"),
+            },
+            {
+                "title": "GMO Material 2 — Optional",
+                "fields": gmo_material_fields("ogm_2"),
+            },
+            {
+                "title": "GMO Material 3 — Optional",
+                "fields": gmo_material_fields("ogm_3"),
+            },
+            {
+                "title": "Transport and Packaging",
+                "fields": [
+                    (
+                        "transport_mode",
+                        "Transport Mode",
+                        select(TRANSPORT_MODE_OPTIONS),
+                    ),
+                    (
+                        "transport_mode_other",
+                        "Other Transport Mode",
+                        "text",
+                    ),
+                    (
+                        "transport_company",
+                        "Carrier / Qualified Transport Company",
+                        "text",
+                    ),
+                    (
+                        "packaging_description",
+                        "Detailed Packaging Description",
+                        "textarea",
+                    ),
+                    (
+                        "carrier_incident_acknowledged",
+                        "Carrier Was Informed About Accident and Spill Procedures",
+                        "checkbox",
+                    ),
+                    (
+                        "restricted_access_label_confirmed",
+                        "Restricted-Access Warning Is Included on the Outer Package",
+                        "checkbox",
+                    ),
+                ],
+            },
+            {
+                "title": "Genetically Modified Animals",
+                "fields": [
+                    (
+                        "animal_gmo",
+                        "Does the Shipment Contain Genetically Modified Animals?",
+                        select(YES_NO_OPTIONS),
+                    ),
+                    (
+                        "animal_transport_procedures",
+                        "Preparation, Transport and Reception Procedures for AnGM",
+                        "textarea",
+                    ),
+                ],
+            },
+            {
+                "title": "Authorization and Signatures",
+                "fields": [
+                    (
+                        "normative_reference",
+                        "Regulatory Reference",
+                        "textarea",
+                    ),
+                    (
+                        "authorization_statement",
+                        "Authorization Statement",
+                        "textarea",
+                    ),
+                    (
+                        "declaration_place",
+                        "Place",
+                        "text",
+                    ),
+                    (
+                        "declaration_date",
+                        "Date",
+                        "text",
+                    ),
+                    (
+                        "signer_name",
+                        "Requesting Researcher",
+                        "text",
+                    ),
+                    (
+                        "signer_document",
+                        "Requesting Researcher Document / ID",
+                        "text",
+                    ),
+                    (
+                        "sender_cibio_president_name",
+                        "Sender CIBio President",
+                        "text",
+                    ),
+                    (
+                        "sender_cibio_president_title",
+                        "Sender CIBio President Title",
+                        "text",
+                    ),
+                    (
+                        "recipient_cibio_president_name",
+                        "Recipient CIBio President",
+                        "text",
+                    ),
+                    (
+                        "recipient_cibio_president_title",
+                        "Recipient CIBio President Title",
+                        "text",
+                    ),
                 ],
             },
         ],

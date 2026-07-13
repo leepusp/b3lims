@@ -2,7 +2,10 @@ from html import escape
 
 from django.utils import timezone
 
-from core.services.cqb_registry import format_institution_cqb
+from core.services.cqb_registry import (
+    find_cqb_by_institution,
+    format_institution_cqb,
+)
 
 
 REGULATORY_COMPLIANCE_TEXT = """This shipment is in full compliance with applicable transport, biosafety, and institutional rules, including ANTT Resolution No. 5.998/2022 when applicable, CTNBio Normative Resolution No. 26/2020 when applicable, and any additional institutional requirements for biological material handling and shipment."""
@@ -15,7 +18,112 @@ RESPONSIBILITY_STATEMENT_TEXT = """The sender declares responsibility for the ac
 
 TRACEABILITY_STATEMENT_TEXT = """The shipment will be internally registered for traceability, including origin, destination, responsible person, material identification, transport condition, dispatch date, and receipt date."""
 
+CIBIO_NORMATIVE_REFERENCE_TEXT = (
+    "CTNBio Normative Resolution No. 26 of 22 May 2020, "
+    "and any complementary institutional biosafety requirements."
+)
 
+CIBIO_PACKAGING_DESCRIPTION_TEXT = (
+    "The GMO material must be transported in a sealed and leakproof "
+    "primary container, resistant secondary packaging, sufficient "
+    "absorbent material when applicable, and rigid outer packaging. "
+    "The outer package must identify the sender and recipient and must "
+    "display all required biohazard, fragile and restricted-access notices."
+)
+
+CIBIO_AUTHORIZATION_STATEMENT_TEXT = (
+    "This document records the awareness and authorization of the "
+    "CIBio committees involved in the transport and transfer of the "
+    "GMO or AnGM described in this request."
+)
+
+CIBIO_INSTITUTION_PROFILES = {
+    "IQ-USP": {
+        "legal_name": (
+            "Instituto de Química / Universidade de São Paulo — IQ-USP"
+        ),
+        "address": (
+            "Av. Prof. Lineu Prestes, 748, CEP 05508-000, "
+            "Cidade Universitária, Butantã, São Paulo, SP"
+        ),
+        "cibio_name": (
+            "CIBio IQ-USP — Instituto de Química "
+            "da Universidade de São Paulo"
+        ),
+        "cibio_phone": "(11) 3091-3811",
+        "cibio_email": "cibio@iq.usp.br",
+        "cqb": "0029/97",
+    },
+}
+
+
+
+
+def _cibio_profile(institution):
+    record = find_cqb_by_institution(institution)
+
+    canonical_name = (
+        record["institution"]
+        if record
+        else str(institution or "").strip()
+    )
+
+    profile = dict(
+        CIBIO_INSTITUTION_PROFILES.get(
+            canonical_name,
+            {},
+        )
+    )
+
+    profile.setdefault(
+        "legal_name",
+        canonical_name,
+    )
+    profile.setdefault(
+        "address",
+        "",
+    )
+    profile.setdefault(
+        "cibio_name",
+        f"CIBio — {canonical_name}" if canonical_name else "",
+    )
+    profile.setdefault(
+        "cibio_phone",
+        "",
+    )
+    profile.setdefault(
+        "cibio_email",
+        "",
+    )
+    profile.setdefault(
+        "cqb",
+        record["cqb"] if record else "",
+    )
+
+    return profile
+
+
+def _cibio_transport_mode(value):
+    raw = str(value or "").strip()
+    low = raw.lower()
+
+    if not raw:
+        return ""
+
+    if "personal" in low:
+        return "Personal delivery"
+
+    if "postal" in low or "correio" in low:
+        return "Postal service"
+
+    if (
+        "carrier" in low
+        or "transportadora" in low
+        or "courier" in low
+    ):
+        return "Carrier"
+
+    return "Other"
 
 
 def _normalize_risk_class_label(value):
@@ -150,6 +258,129 @@ def render_document_html(document, shipment, schema, values):
         or ""
     )
 
+    if document.document_type == "cibio_authorization":
+        sender_cibio_president_name = str(
+            values.get("sender_cibio_president_name")
+            or ""
+        )
+        sender_cibio_president_title = str(
+            values.get("sender_cibio_president_title")
+            or ""
+        )
+        recipient_cibio_president_name = str(
+            values.get("recipient_cibio_president_name")
+            or ""
+        )
+        recipient_cibio_president_title = str(
+            values.get("recipient_cibio_president_title")
+            or ""
+        )
+
+        sender_institution_label = str(
+            values.get("sender_institution")
+            or ""
+        )
+        recipient_institution_label = str(
+            values.get("recipient_institution")
+            or ""
+        )
+
+        sender_cqb_code = str(
+            values.get("sender_cqb_code")
+            or ""
+        )
+        recipient_cqb_code = str(
+            values.get("recipient_cqb_code")
+            or ""
+        )
+
+        signature_html = f"""
+        <div class="cibio-authorization-signatures">
+            <p class="cibio-signature-meta">
+                <strong>Place:</strong>
+                {escape(signature_place)}
+                &nbsp;&nbsp;
+                <strong>Date:</strong>
+                {escape(signature_date)}
+            </p>
+
+            <div class="cibio-requester-signature">
+                <div class="signature-line"></div>
+
+                <strong>{escape(signature_name)}</strong><br>
+                Requesting Researcher<br>
+                {escape(sender_institution_label)}<br>
+                Document / ID: {escape(signature_document)}
+            </div>
+
+            <div class="cibio-approval-grid">
+                <div class="cibio-signature-box">
+                    <strong>
+                        Authorized — Sender Institution
+                    </strong>
+
+                    <div class="signature-line"></div>
+
+                    <strong>
+                        {escape(sender_cibio_president_name)}
+                    </strong><br>
+
+                    {escape(sender_cibio_president_title)}<br>
+                    {escape(sender_institution_label)}<br>
+                    CQB: {escape(sender_cqb_code)}
+                </div>
+
+                <div class="cibio-signature-box">
+                    <strong>
+                        Authorized — Recipient Institution
+                    </strong>
+
+                    <div class="signature-line"></div>
+
+                    <strong>
+                        {escape(recipient_cibio_president_name)}
+                    </strong><br>
+
+                    {escape(recipient_cibio_president_title)}<br>
+                    {escape(recipient_institution_label)}<br>
+                    CQB: {escape(recipient_cqb_code)}
+                </div>
+            </div>
+        </div>
+        """
+    else:
+        signature_html = f"""
+        <div class="signature">
+            <p>
+                I certify that the information provided in this
+                declaration is true and correct.
+            </p>
+
+            <p>__________________________________________</p>
+            <p>Signature</p>
+
+            <p>
+                <strong>Name:</strong>
+                {escape(signature_name)}
+            </p>
+
+            <p>
+                <strong>Place:</strong>
+                {escape(signature_place)}
+            </p>
+
+            <p>
+                <strong>Date:</strong>
+                {escape(signature_date)}
+            </p>
+
+            <p>
+                <strong>Document / ID:</strong>
+                {escape(signature_document)}
+            </p>
+        </div>
+        """
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -197,6 +428,40 @@ th {{
 .signature {{
     margin-top: 60px;
 }}
+
+.cibio-authorization-signatures {{
+    margin-top: 55px;
+    page-break-inside: avoid;
+}}
+
+.cibio-signature-meta {{
+    margin-bottom: 45px;
+    text-align: right;
+}}
+
+.cibio-requester-signature {{
+    max-width: 480px;
+    margin: 0 auto 65px;
+    text-align: center;
+    line-height: 1.45;
+}}
+
+.cibio-approval-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 45px;
+}}
+
+.cibio-signature-box {{
+    min-height: 150px;
+    text-align: center;
+    line-height: 1.45;
+}}
+
+.signature-line {{
+    margin: 55px 0 10px;
+    border-top: 1px solid #111;
+}}
 .small {{
     color: #555;
     font-size: 10pt;
@@ -237,16 +502,7 @@ th {{
 </tbody>
 </table>
 
-<div class="signature">
-    <p>I certify that the information provided in this declaration is true and correct.</p>
-    <p>__________________________________________</p>
-    <p>Signature</p>
-    <p><strong>Name:</strong> {escape(signature_name)}</p>
-    <p><strong>Place:</strong> {escape(signature_place)}</p>
-    <p><strong>Date:</strong> {escape(signature_date)}</p>
-    <p><strong>Document / ID:</strong> {escape(signature_document)}</p>
-</div>
-
+{signature_html}
 </body>
 </html>"""
 
@@ -359,6 +615,20 @@ def get_initial_values_from_shipment(shipment, document_type):
     if is_ogm is None:
         is_ogm = getattr(classification, "is_ogm", False)
 
+    sender_cibio_profile = _cibio_profile(
+        sender_institution
+    )
+    recipient_cibio_profile = _cibio_profile(
+        recipient_institution
+    )
+
+    transport_method = str(
+        getattr(shipment, "transport_method", "") or ""
+    )
+    transport_mode = _cibio_transport_mode(
+        transport_method
+    )
+
     values = {
         "sender_name": sender_name,
         "sender_institution": format_institution_cqb(
@@ -377,6 +647,70 @@ def get_initial_values_from_shipment(shipment, document_type):
         "recipient_lab_cqb": "",
         "recipient_address": recipient_address,
         "recipient_contact": recipient_contact,
+
+        # CIBio sender institution and researcher.
+        "sender_legal_name": (
+            sender_cibio_profile.get("legal_name")
+            or sender_institution
+        ),
+        "sender_cibio_name": (
+            sender_cibio_profile.get("cibio_name")
+            or ""
+        ),
+        "sender_cibio_phone": (
+            sender_cibio_profile.get("cibio_phone")
+            or ""
+        ),
+        "sender_cibio_email": (
+            sender_cibio_profile.get("cibio_email")
+            or ""
+        ),
+        "sender_cqb_code": str(
+            getattr(shipment, "sender_cqb_code", "")
+            or sender_cibio_profile.get("cqb")
+            or ""
+        ),
+        "sender_researcher_address": sender_address,
+        "sender_phone": str(
+            getattr(shipment, "sender_phone", "") or ""
+        ),
+        "sender_email": str(
+            getattr(shipment, "sender_email", "") or ""
+        ),
+        "ogm_project_title": "",
+        "sender_cibio_project_protocol": "",
+
+        # CIBio recipient institution and researcher.
+        "recipient_legal_name": (
+            recipient_cibio_profile.get("legal_name")
+            or recipient_institution
+        ),
+        "recipient_cibio_name": (
+            recipient_cibio_profile.get("cibio_name")
+            or ""
+        ),
+        "recipient_cibio_phone": (
+            recipient_cibio_profile.get("cibio_phone")
+            or ""
+        ),
+        "recipient_cibio_email": (
+            recipient_cibio_profile.get("cibio_email")
+            or ""
+        ),
+        "recipient_cqb_code": (
+            recipient_cibio_profile.get("cqb")
+            or ""
+        ),
+        "recipient_researcher_address": recipient_address,
+        "recipient_phone": str(
+            getattr(shipment, "recipient_phone", "") or ""
+        ),
+        "recipient_email": str(
+            getattr(shipment, "recipient_email", "") or ""
+        ),
+        "request_purpose": str(
+            getattr(declaration, "purpose", "") or ""
+        ),
 
         "material_type": material_type,
         "risk_class": _normalize_risk_class_label(
@@ -420,9 +754,31 @@ def get_initial_values_from_shipment(shipment, document_type):
             or getattr(shipment, "temperature_condition", "")
             or ""
         ),
-        "transport_method": str(
-            getattr(shipment, "transport_method", "") or ""
+        "transport_method": transport_method,
+
+        # CIBio transport and packaging.
+        "transport_mode": transport_mode,
+        "transport_mode_other": (
+            transport_method
+            if transport_mode == "Other"
+            else ""
         ),
+        "transport_company": str(
+            getattr(shipment, "carrier_name", "") or ""
+        ),
+        "packaging_description": (
+            CIBIO_PACKAGING_DESCRIPTION_TEXT
+        ),
+        "carrier_incident_acknowledged": False,
+        "restricted_access_label_confirmed": bool(
+            getattr(
+                declaration,
+                "confirms_sender_recipient_identification",
+                False,
+            )
+        ),
+        "animal_gmo": "No",
+        "animal_transport_procedures": "",
 
         "shipment_code": str(
             getattr(shipment, "shipment_code", "") or ""
@@ -451,6 +807,18 @@ def get_initial_values_from_shipment(shipment, document_type):
         "declaration_date": declaration_date,
         "signer_name": signer_name,
         "signer_document": signer_document,
+
+        # CIBio authorization and signatures.
+        "normative_reference": (
+            CIBIO_NORMATIVE_REFERENCE_TEXT
+        ),
+        "authorization_statement": (
+            CIBIO_AUTHORIZATION_STATEMENT_TEXT
+        ),
+        "sender_cibio_president_name": "",
+        "sender_cibio_president_title": "",
+        "recipient_cibio_president_name": "",
+        "recipient_cibio_president_title": "",
 
         # Compatibility values for legacy schemas.
         "local_date": ", ".join(
@@ -491,6 +859,26 @@ def get_initial_values_from_shipment(shipment, document_type):
             ),
             "storage_temperature": str(
                 getattr(first_item, "storage_condition", "") or ""
+            ),
+
+            # First GMO entry is prefilled from the first shipment item.
+            "ogm_1_common_name": str(
+                first_item.material_name or ""
+            ),
+            "ogm_1_scientific_name": "",
+            "ogm_1_gene_source_species": "",
+            "ogm_1_modified_sequences": "",
+            "ogm_1_vector": "",
+            "ogm_1_gene_functions": "",
+            "ogm_1_identification_method": "",
+            "ogm_1_origin_institution": sender_institution,
+            "ogm_1_risk_class": values.get(
+                "risk_class",
+                "",
+            ),
+            "ogm_1_quantity": values.get(
+                "quantity_volume",
+                "",
             ),
         })
 
