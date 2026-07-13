@@ -102,6 +102,12 @@
                                        class="btn btn-sm btn-outline-success">
                                         Open signed file
                                     </a>
+                                {% elif document.form_data.signed_file %}
+                                    <a href="{{ document.form_data.signed_file.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success">
+                                        Open signed file
+                                    </a>
                                 {% else %}
                                     <span class="text-muted">Not uploaded</span>
                                 {% endif %}

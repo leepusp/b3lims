@@ -5,7 +5,7 @@ from core.models import ShipmentEvent
 
 SIGNATURE_REQUIRED_DOCUMENT_TYPES = [
     "content_declaration",
-    "sender_declaration",
+    "cibio_authorization",
     "ogm_transport_notification",
     "mta_ttm",
     "shipment_invoice",
@@ -32,11 +32,34 @@ def _status_value_for_document(document, preferred_values):
     return None
 
 
-def document_has_signed_file(document):
-    signed_file = getattr(document, "signed_file", None)
-    uploaded_file = getattr(document, "uploaded_file", None)
+def document_signed_file(document):
+    """
+    Return the signed file regardless of whether it was stored on the
+    ShipmentDocument or on its ShipmentDocumentFormData workspace.
+    """
+    for field_name in ["signed_file", "uploaded_file"]:
+        file_field = getattr(document, field_name, None)
 
-    return bool(signed_file) or bool(uploaded_file)
+        if file_field:
+            return file_field
+
+    try:
+        form_data = document.form_data
+    except Exception:
+        form_data = None
+
+    if form_data is not None:
+        for field_name in ["signed_file", "uploaded_file"]:
+            file_field = getattr(form_data, field_name, None)
+
+            if file_field:
+                return file_field
+
+    return None
+
+
+def document_has_signed_file(document):
+    return bool(document_signed_file(document))
 
 
 def normalize_document_signature_rules(shipment):

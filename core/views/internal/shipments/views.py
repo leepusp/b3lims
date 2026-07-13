@@ -396,6 +396,7 @@ def shipment_scan_view(request, shipment_uuid):
 from core.services.shipment_document_gate import (
     approve_document_package,
     can_release_final_package_outputs,
+    document_signed_file,
     get_pending_required_signed_documents,
 )
 
@@ -934,22 +935,61 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
                     document_id=document.id,
                 )
 
-            form_data.signed_file.save(uploaded_file.name, uploaded_file, save=False)
+            form_data.signed_file.save(
+                uploaded_file.name,
+                uploaded_file,
+                save=False,
+            )
             form_data.form_status = "signed_uploaded"
             form_data.uploaded_at = timezone.now()
             form_data.updated_by = request.user
             form_data.save()
 
+            document_update_fields = []
+
+            if hasattr(document, "signed_file"):
+                # Reuse the same stored file instead of writing a duplicate.
+                document.signed_file.name = form_data.signed_file.name
+                document_update_fields.append("signed_file")
+
+            if hasattr(document, "signed_at"):
+                document.signed_at = form_data.uploaded_at
+                document_update_fields.append("signed_at")
+
+            if hasattr(document, "uploaded_by"):
+                document.uploaded_by = request.user
+                document_update_fields.append("uploaded_by")
+
             if hasattr(document, "status"):
                 available_statuses = [
-                    value for value, _label in document._meta.get_field("status").choices
+                    value
+                    for value, _label
+                    in document._meta.get_field("status").choices
                 ]
 
-                for candidate in ["uploaded", "under_review", "submitted", "draft"]:
+                for candidate in [
+                    "uploaded",
+                    "signed",
+                    "waiting_signature",
+                    "draft",
+                ]:
                     if candidate in available_statuses:
                         document.status = candidate
-                        document.save(update_fields=["status"])
+                        document_update_fields.append("status")
                         break
+
+            if document_update_fields:
+                document.save(
+                    update_fields=list(
+                        dict.fromkeys(document_update_fields)
+                    )
+                )
+
+            if (
+                hasattr(document, "update_hashes")
+                and getattr(document, "signed_file", None)
+            ):
+                document.update_hashes(save=True)
 
             ShipmentEvent.objects.create(
                 shipment=shipment,
@@ -978,7 +1018,14 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
             "items": shipment.items.all(),
             "classification": getattr(shipment, "classification", None),
             "has_generated_document": bool(form_data.generated_html),
-            "has_signed_file": bool(form_data.signed_file),
+            "has_signed_file": bool(
+                document_signed_file(document)
+            ),
+            "signed_file_url": (
+                document_signed_file(document).url
+                if document_signed_file(document)
+                else ""
+            ),
         },
     )
 
