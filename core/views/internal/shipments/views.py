@@ -1165,9 +1165,14 @@ def shipments_dashboard_view(request):
     return render(request, "internal/shipments/dashboard.html", ctx)
 
 def _shipment_document_workspace_template(request):
-    """Select the classic or experimental wizard workspace."""
-    if request.GET.get("ui") == "wizard":
-        return "internal/shipments/document_workspace_wizard.html"
+    """
+    Use the structured wizard workspace by default.
 
-    return "internal/shipments/document_workspace.html"
+    The previous classic layout remains available through ?ui=classic
+    as a temporary compatibility and diagnostic fallback.
+    """
+    if request.GET.get("ui") == "classic":
+        return "internal/shipments/document_workspace.html"
+
+    return "internal/shipments/document_workspace_wizard.html"
 
