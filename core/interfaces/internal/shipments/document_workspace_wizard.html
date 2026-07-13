@@ -1,0 +1,1091 @@
+{% extends "internal/common/base.html" %}
+{% load biobank_extras %}
+
+{% block content %}
+<style>
+:root {
+    --wizard-ink: #10242b;
+    --wizard-soft: #546a70;
+    --wizard-faint: #829298;
+    --wizard-bg: #eef3f3;
+    --wizard-surface: #ffffff;
+    --wizard-accent: #0f766e;
+    --wizard-accent-dark: #0b5952;
+    --wizard-accent-soft: #e4f1ef;
+    --wizard-line: #dce5e6;
+    --wizard-line-strong: #c5d1d3;
+    --wizard-radius: 14px;
+    --wizard-shadow:
+        0 1px 2px rgba(16, 36, 43, .04),
+        0 12px 30px -18px rgba(16, 36, 43, .28);
+}
+
+.shipment-wizard-page {
+    color: var(--wizard-ink);
+    background:
+        radial-gradient(
+            900px 320px at 100% -5%,
+            #dcebea 0%,
+            transparent 65%
+        ),
+        var(--wizard-bg);
+    min-height: calc(100vh - 60px);
+    margin: -1rem;
+    padding-bottom: 4rem;
+}
+
+.wizard-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: .9rem 1.5rem;
+    background: rgba(255, 255, 255, .94);
+    border-bottom: 1px solid var(--wizard-line);
+    backdrop-filter: blur(10px);
+}
+
+.wizard-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-right: auto;
+}
+
+.wizard-glyph {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 10px;
+    color: #fff;
+    background:
+        linear-gradient(
+            140deg,
+            var(--wizard-accent),
+            var(--wizard-accent-dark)
+        );
+}
+
+.wizard-brand h1 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 750;
+    letter-spacing: -.01em;
+}
+
+.wizard-brand p {
+    margin: .1rem 0 0;
+    color: var(--wizard-faint);
+    font-size: .76rem;
+}
+
+.wizard-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.wizard-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .32rem .7rem;
+    font-size: .72rem;
+    font-weight: 650;
+    color: var(--wizard-soft);
+    background: #fff;
+    border: 1px solid var(--wizard-line-strong);
+    border-radius: 999px;
+}
+
+.wizard-chip.active {
+    color: #fff;
+    background: var(--wizard-accent);
+    border-color: var(--wizard-accent);
+}
+
+.wizard-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .75;
+}
+
+.wizard-layout {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 1.4rem 1.5rem;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr) 340px;
+    gap: 1.4rem;
+    align-items: start;
+}
+
+.wizard-rail {
+    position: sticky;
+    top: 86px;
+}
+
+.wizard-rail-title {
+    margin: 0 0 .7rem .35rem;
+    color: var(--wizard-faint);
+    font-size: .68rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .11em;
+}
+
+.wizard-step-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .72rem;
+    margin-bottom: .25rem;
+    color: var(--wizard-soft);
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    cursor: pointer;
+}
+
+.wizard-step-button:hover {
+    background: rgba(255, 255, 255, .7);
+}
+
+.wizard-step-button.active {
+    color: var(--wizard-ink);
+    background: #fff;
+    border-color: var(--wizard-line);
+    box-shadow: var(--wizard-shadow);
+}
+
+.wizard-step-number {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    font-size: .78rem;
+    font-weight: 750;
+    color: var(--wizard-soft);
+    background: var(--wizard-bg);
+    border: 1px solid var(--wizard-line);
+    border-radius: 8px;
+}
+
+.wizard-step-button.active .wizard-step-number {
+    color: #fff;
+    background: var(--wizard-accent);
+    border-color: var(--wizard-accent);
+}
+
+.wizard-step-button.completed .wizard-step-number {
+    color: var(--wizard-accent-dark);
+    background: var(--wizard-accent-soft);
+    border-color: transparent;
+}
+
+.wizard-step-label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+.wizard-progress {
+    margin: 1rem .35rem 0;
+}
+
+.wizard-progress-track {
+    height: 6px;
+    overflow: hidden;
+    background: var(--wizard-line);
+    border-radius: 999px;
+}
+
+.wizard-progress-fill {
+    width: 0;
+    height: 100%;
+    background:
+        linear-gradient(
+            90deg,
+            var(--wizard-accent),
+            var(--wizard-accent-dark)
+        );
+    transition: width .2s ease;
+}
+
+.wizard-progress-text {
+    margin-top: .55rem;
+    color: var(--wizard-faint);
+    font-size: .72rem;
+}
+
+.wizard-panel,
+.wizard-card {
+    overflow: hidden;
+    background: var(--wizard-surface);
+    border: 1px solid var(--wizard-line);
+    border-radius: var(--wizard-radius);
+    box-shadow: var(--wizard-shadow);
+}
+
+.wizard-panel-header {
+    padding: 1.35rem 1.5rem .4rem;
+}
+
+.wizard-eyebrow {
+    color: var(--wizard-accent);
+    font-size: .68rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+
+.wizard-panel-header h2 {
+    margin: .3rem 0 .25rem;
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -.02em;
+}
+
+.wizard-panel-header p {
+    max-width: 65ch;
+    margin: 0;
+    color: var(--wizard-soft);
+    font-size: .84rem;
+}
+
+.wizard-fields {
+    padding: 1.1rem 1.5rem 1.3rem;
+}
+
+.wizard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.15rem;
+}
+
+.wizard-field {
+    min-width: 0;
+}
+
+.wizard-field:has(textarea) {
+    grid-column: 1 / -1;
+}
+
+.wizard-label {
+    display: block;
+    margin-bottom: .38rem;
+    color: var(--wizard-ink);
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.wizard-field .form-control,
+.wizard-field .form-select {
+    width: 100%;
+    min-height: 42px;
+    padding: .58rem .72rem;
+    color: var(--wizard-ink);
+    font-size: .84rem;
+    background: #fbfcfc;
+    border-color: var(--wizard-line-strong);
+    border-radius: 10px;
+}
+
+.wizard-field textarea.form-control {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.wizard-field .form-control:focus,
+.wizard-field .form-select:focus {
+    background: #fff;
+    border-color: var(--wizard-accent);
+    box-shadow: 0 0 0 3px var(--wizard-accent-soft);
+}
+
+.wizard-check {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    padding: .65rem .8rem;
+    background: #fbfcfc;
+    border: 1px solid var(--wizard-line-strong);
+    border-radius: 10px;
+}
+
+.wizard-panel-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 1.5rem;
+    background: #fafbfb;
+    border-top: 1px solid var(--wizard-line);
+}
+
+.wizard-footer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55rem;
+}
+
+.wizard-primary {
+    color: #fff;
+    background: var(--wizard-accent);
+    border-color: var(--wizard-accent);
+}
+
+.wizard-primary:hover {
+    color: #fff;
+    background: var(--wizard-accent-dark);
+    border-color: var(--wizard-accent-dark);
+}
+
+.wizard-step-panel {
+    display: none;
+}
+
+.wizard-step-panel.active {
+    display: block;
+    animation: wizard-fade .2s ease;
+}
+
+@keyframes wizard-fade {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.wizard-aside {
+    position: sticky;
+    top: 86px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.wizard-card-header {
+    padding: .85rem 1rem;
+    font-size: .82rem;
+    font-weight: 750;
+    border-bottom: 1px solid var(--wizard-line);
+}
+
+.wizard-route {
+    padding: 1rem;
+}
+
+.wizard-route-row {
+    display: grid;
+    grid-template-columns: 1fr 26px 1fr;
+    align-items: center;
+    gap: .35rem;
+}
+
+.wizard-route-point {
+    min-width: 0;
+}
+
+.wizard-route-point:last-child {
+    text-align: right;
+}
+
+.wizard-route-tag {
+    color: var(--wizard-accent-dark);
+    font-size: .64rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.wizard-route-value {
+    margin-top: .25rem;
+    overflow: hidden;
+    color: var(--wizard-ink);
+    font-size: .78rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wizard-route-arrow {
+    color: var(--wizard-faint);
+    text-align: center;
+}
+
+.wizard-summary {
+    padding: 0 1rem .45rem;
+}
+
+.wizard-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: .8rem;
+    padding: .68rem 0;
+    font-size: .77rem;
+    border-top: 1px solid var(--wizard-line);
+}
+
+.wizard-summary-row:first-child {
+    border-top: 0;
+}
+
+.wizard-summary-key {
+    color: var(--wizard-faint);
+}
+
+.wizard-summary-value {
+    max-width: 60%;
+    color: var(--wizard-ink);
+    font-weight: 650;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.wizard-aside-body {
+    padding: 1rem;
+}
+
+.wizard-help {
+    color: var(--wizard-faint);
+    font-size: .73rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+    .wizard-layout {
+        grid-template-columns: 180px minmax(0, 1fr);
+    }
+
+    .wizard-aside {
+        position: static;
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 820px) {
+    .shipment-wizard-page {
+        margin: -.5rem;
+    }
+
+    .wizard-layout {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .wizard-rail {
+        position: static;
+        display: flex;
+        overflow-x: auto;
+        gap: .35rem;
+    }
+
+    .wizard-rail-title,
+    .wizard-progress {
+        display: none;
+    }
+
+    .wizard-step-button {
+        flex: none;
+        width: auto;
+    }
+
+    .wizard-grid,
+    .wizard-aside {
+        grid-template-columns: 1fr;
+    }
+
+    .wizard-aside {
+        grid-column: auto;
+    }
+}
+</style>
+
+<div class="shipment-wizard-page">
+
+    <header class="wizard-topbar">
+        <div class="wizard-brand">
+            <div class="wizard-glyph">
+                <i class="bi bi-file-earmark-medical"></i>
+            </div>
+
+            <div>
+                <h1>{{ schema.title }}</h1>
+                <p>
+                    <span class="font-monospace">
+                        {{ shipment.shipment_code }}
+                    </span>
+                    · {{ document.document_type }}
+                </p>
+            </div>
+        </div>
+
+        <div class="wizard-status">
+            <span class="wizard-chip active">
+                <span class="wizard-chip-dot"></span>
+                Form
+            </span>
+
+            <span class="wizard-chip {% if has_generated_document %}active{% endif %}">
+                <span class="wizard-chip-dot"></span>
+                Generated
+            </span>
+
+            <span class="wizard-chip {% if has_signed_file %}active{% endif %}">
+                <span class="wizard-chip-dot"></span>
+                Signed
+            </span>
+
+            <span class="wizard-chip">
+                <span class="wizard-chip-dot"></span>
+                Internal Review
+            </span>
+        </div>
+
+        <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm">
+            Classic Layout
+        </a>
+
+        <a href="{% url 'shipment_detail' shipment.id %}"
+           class="btn btn-outline-secondary btn-sm">
+            Back to Shipment
+        </a>
+    </header>
+
+    <div class="wizard-layout">
+
+        <nav class="wizard-rail" aria-label="Document form sections">
+            <p class="wizard-rail-title">Sections</p>
+
+            {% for section in schema.sections %}
+                <button type="button"
+                        class="wizard-step-button {% if forloop.first %}active{% endif %}"
+                        data-wizard-step="{{ forloop.counter0 }}">
+                    <span class="wizard-step-number">
+                        {{ forloop.counter }}
+                    </span>
+
+                    <span class="wizard-step-label">
+                        {{ section.title }}
+                    </span>
+                </button>
+            {% endfor %}
+
+            <div class="wizard-progress">
+                <div class="wizard-progress-track">
+                    <div class="wizard-progress-fill"
+                         id="wizardProgressFill"></div>
+                </div>
+
+                <div class="wizard-progress-text">
+                    <strong id="wizardCompletedFields">0</strong>
+                    of
+                    <span id="wizardTotalFields">0</span>
+                    fields completed
+                </div>
+            </div>
+        </nav>
+
+        <main class="wizard-panel">
+            <form method="post" id="shipmentDocumentWizardForm">
+                {% csrf_token %}
+
+                {% for section in schema.sections %}
+                    <section class="wizard-step-panel {% if forloop.first %}active{% endif %}"
+                             data-wizard-panel="{{ forloop.counter0 }}">
+
+                        <div class="wizard-panel-header">
+                            <span class="wizard-eyebrow">
+                                Section {{ forloop.counter }}
+                            </span>
+
+                            <h2>{{ section.title }}</h2>
+
+                            {% if forloop.first and schema.description %}
+                                <p>{{ schema.description }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="wizard-fields">
+                            <div class="wizard-grid">
+
+                                {% for field in section.fields %}
+                                    {% with name=field.0 label=field.1 type=field.2 %}
+                                        <div class="wizard-field"
+                                             data-wizard-field="{{ name }}">
+
+                                            <label class="wizard-label"
+                                                   for="wizard_{{ name }}">
+                                                {{ label }}
+                                            </label>
+
+                                            {% if type == "textarea" %}
+                                                <textarea id="wizard_{{ name }}"
+                                                          name="{{ name }}"
+                                                          class="form-control wizard-input"
+                                                          rows="3">{{ form_values|get_item:name }}</textarea>
+
+                                            {% elif type == "checkbox" %}
+                                                <div class="wizard-check">
+                                                    <div class="form-check mb-0">
+                                                        <input id="wizard_{{ name }}"
+                                                               type="checkbox"
+                                                               name="{{ name }}"
+                                                               class="form-check-input wizard-input"
+                                                               {% if form_values|get_item:name %}checked{% endif %}>
+
+                                                        <label class="form-check-label"
+                                                               for="wizard_{{ name }}">
+                                                            Confirmed
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                            {% elif type|slice:":6" == "select" %}
+                                                {% with current_value=form_values|get_item:name %}
+                                                    <select id="wizard_{{ name }}"
+                                                            name="{{ name }}"
+                                                            class="form-select wizard-input">
+
+                                                        {% if current_value %}
+                                                            <option value="{{ current_value }}"
+                                                                    selected>
+                                                                {{ current_value }}
+                                                            </option>
+                                                        {% endif %}
+
+                                                        {% for option in type|cut:"select:"|split:"|" %}
+                                                            {% if option != current_value %}
+                                                                <option value="{{ option }}">
+                                                                    {{ option }}
+                                                                </option>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </select>
+                                                {% endwith %}
+
+                                            {% else %}
+                                                <input id="wizard_{{ name }}"
+                                                       type="text"
+                                                       name="{{ name }}"
+                                                       value="{{ form_values|get_item:name }}"
+                                                       class="form-control wizard-input">
+                                            {% endif %}
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+
+                            </div>
+                        </div>
+
+                        <div class="wizard-panel-footer">
+                            <button type="button"
+                                    class="btn btn-outline-secondary wizard-prev">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Previous
+                            </button>
+
+                            <div class="wizard-footer-actions">
+                                <button type="submit"
+                                        name="action"
+                                        value="save_form"
+                                        class="btn btn-outline-primary">
+                                    <i class="bi bi-save me-1"></i>
+                                    Save Form
+                                </button>
+
+                                <button type="submit"
+                                        name="action"
+                                        value="generate_document"
+                                        class="btn wizard-primary">
+                                    <i class="bi bi-file-earmark-text me-1"></i>
+                                    Generate Document
+                                </button>
+
+                                <button type="button"
+                                        class="btn wizard-primary wizard-next">
+                                    Next
+                                    <i class="bi bi-arrow-right ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                {% endfor %}
+            </form>
+        </main>
+
+        <aside class="wizard-aside">
+
+            <section class="wizard-card">
+                <div class="wizard-card-header">
+                    Shipment Route
+                </div>
+
+                <div class="wizard-route">
+                    <div class="wizard-route-row">
+                        <div class="wizard-route-point">
+                            <div class="wizard-route-tag">Origin</div>
+                            <div class="wizard-route-value"
+                                 id="wizardRouteOrigin">
+                                {{ form_values|get_item:"sender_institution"|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="wizard-route-arrow">
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+
+                        <div class="wizard-route-point">
+                            <div class="wizard-route-tag">Destination</div>
+                            <div class="wizard-route-value"
+                                 id="wizardRouteDestination">
+                                {{ form_values|get_item:"recipient_institution"|default:"Not provided" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="wizard-card">
+                <div class="wizard-card-header">
+                    Shipment Summary
+                </div>
+
+                <div class="wizard-summary">
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">Material</span>
+                        <span class="wizard-summary-value"
+                              id="wizardSummaryMaterial">
+                            {{ form_values|get_item:"material_description"|default:"Not provided" }}
+                        </span>
+                    </div>
+
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">Material Type</span>
+                        <span class="wizard-summary-value"
+                              id="wizardSummaryType">
+                            {{ form_values|get_item:"material_type"|default:"Not provided" }}
+                        </span>
+                    </div>
+
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">Risk Class</span>
+                        <span class="wizard-summary-value"
+                              id="wizardSummaryRisk">
+                            {{ form_values|get_item:"risk_class"|default:"Not provided" }}
+                        </span>
+                    </div>
+
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">Biosafety</span>
+                        <span class="wizard-summary-value"
+                              id="wizardSummaryBiosafety">
+                            {{ form_values|get_item:"biosafety_level"|default:"Not provided" }}
+                        </span>
+                    </div>
+
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">GMO</span>
+                        <span class="wizard-summary-value"
+                              id="wizardSummaryGmo">
+                            {{ form_values|get_item:"is_ogm"|default:"Not provided" }}
+                        </span>
+                    </div>
+
+                    <div class="wizard-summary-row">
+                        <span class="wizard-summary-key">Shipment</span>
+                        <span class="wizard-summary-value font-monospace">
+                            {{ shipment.shipment_code }}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="wizard-card">
+                <div class="wizard-card-header">
+                    Generated Document
+                </div>
+
+                <div class="wizard-aside-body">
+                    {% if has_generated_document %}
+                        <a href="{% url 'shipment_generated_document' shipment.id document.id %}"
+                           target="_blank"
+                           class="btn btn-outline-primary w-100">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>
+                            Open Generated Document
+                        </a>
+                    {% else %}
+                        <div class="wizard-help">
+                            Complete and save the form before generating the
+                            final document.
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="wizard-card">
+                <div class="wizard-card-header">
+                    Signed Document Upload
+                </div>
+
+                <div class="wizard-aside-body">
+                    {% if has_signed_file %}
+                        <div class="alert alert-success py-2 small">
+                            Signed document already uploaded.
+                        </div>
+
+                        <a href="{{ form_data.signed_file.url }}"
+                           target="_blank"
+                           class="btn btn-outline-success w-100 mb-3">
+                            View Signed File
+                        </a>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <input type="hidden"
+                               name="action"
+                               value="upload_signed_file">
+
+                        <input type="file"
+                               name="signed_file"
+                               class="form-control form-control-sm mb-2"
+                               required>
+
+                        <button type="submit"
+                                class="btn btn-primary btn-sm w-100">
+                            Upload Signed File
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+        </aside>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const panels = Array.from(
+        document.querySelectorAll("[data-wizard-panel]")
+    );
+
+    const steps = Array.from(
+        document.querySelectorAll("[data-wizard-step]")
+    );
+
+    const inputs = Array.from(
+        document.querySelectorAll(".wizard-input")
+    );
+
+    let activeStep = 0;
+
+    function showStep(index) {
+        if (!panels.length) {
+            return;
+        }
+
+        activeStep = Math.max(
+            0,
+            Math.min(index, panels.length - 1)
+        );
+
+        panels.forEach(function (panel, panelIndex) {
+            panel.classList.toggle(
+                "active",
+                panelIndex === activeStep
+            );
+
+            const previousButton = panel.querySelector(".wizard-prev");
+            const nextButton = panel.querySelector(".wizard-next");
+
+            if (previousButton) {
+                previousButton.style.visibility =
+                    activeStep === 0 ? "hidden" : "visible";
+            }
+
+            if (nextButton) {
+                nextButton.style.display =
+                    activeStep === panels.length - 1
+                        ? "none"
+                        : "inline-flex";
+            }
+        });
+
+        steps.forEach(function (step, stepIndex) {
+            step.classList.toggle(
+                "active",
+                stepIndex === activeStep
+            );
+        });
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
+
+    function fieldHasValue(input) {
+        if (input.type === "checkbox") {
+            return input.checked;
+        }
+
+        return String(input.value || "").trim() !== "";
+    }
+
+    function updateProgress() {
+        const completed = inputs.filter(fieldHasValue).length;
+        const total = inputs.length;
+        const percentage = total
+            ? Math.round((completed / total) * 100)
+            : 0;
+
+        document.getElementById(
+            "wizardCompletedFields"
+        ).textContent = completed;
+
+        document.getElementById(
+            "wizardTotalFields"
+        ).textContent = total;
+
+        document.getElementById(
+            "wizardProgressFill"
+        ).style.width = percentage + "%";
+
+        panels.forEach(function (panel, panelIndex) {
+            const panelInputs = Array.from(
+                panel.querySelectorAll(".wizard-input")
+            );
+
+            const panelComplete =
+                panelInputs.length > 0 &&
+                panelInputs.every(fieldHasValue);
+
+            if (steps[panelIndex]) {
+                steps[panelIndex].classList.toggle(
+                    "completed",
+                    panelComplete
+                );
+            }
+        });
+    }
+
+    function fieldValue(name) {
+        const input = document.querySelector(
+            '[name="' + name + '"]'
+        );
+
+        if (!input) {
+            return "";
+        }
+
+        if (input.type === "checkbox") {
+            return input.checked ? "Yes" : "No";
+        }
+
+        return String(input.value || "").trim();
+    }
+
+    function setText(id, value) {
+        const element = document.getElementById(id);
+
+        if (element) {
+            element.textContent = value || "Not provided";
+        }
+    }
+
+    function updateSummary() {
+        setText(
+            "wizardRouteOrigin",
+            fieldValue("sender_institution")
+        );
+
+        setText(
+            "wizardRouteDestination",
+            fieldValue("recipient_institution")
+        );
+
+        setText(
+            "wizardSummaryMaterial",
+            fieldValue("material_description") ||
+            fieldValue("organism_name")
+        );
+
+        setText(
+            "wizardSummaryType",
+            fieldValue("material_type")
+        );
+
+        setText(
+            "wizardSummaryRisk",
+            fieldValue("risk_class")
+        );
+
+        setText(
+            "wizardSummaryBiosafety",
+            fieldValue("biosafety_level")
+        );
+
+        setText(
+            "wizardSummaryGmo",
+            fieldValue("is_ogm")
+        );
+    }
+
+    steps.forEach(function (step) {
+        step.addEventListener("click", function () {
+            showStep(
+                Number(step.dataset.wizardStep)
+            );
+        });
+    });
+
+    document.querySelectorAll(".wizard-next").forEach(function (button) {
+        button.addEventListener("click", function () {
+            showStep(activeStep + 1);
+        });
+    });
+
+    document.querySelectorAll(".wizard-prev").forEach(function (button) {
+        button.addEventListener("click", function () {
+            showStep(activeStep - 1);
+        });
+    });
+
+    inputs.forEach(function (input) {
+        input.addEventListener("input", function () {
+            updateProgress();
+            updateSummary();
+        });
+
+        input.addEventListener("change", function () {
+            updateProgress();
+            updateSummary();
+        });
+    });
+
+    showStep(0);
+    updateProgress();
+    updateSummary();
+});
+</script>
+{% endblock %}

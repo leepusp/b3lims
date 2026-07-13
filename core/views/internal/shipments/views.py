@@ -841,7 +841,7 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
 
     return render(
         request,
-        "internal/shipments/document_workspace.html",
+        _shipment_document_workspace_template(request),
         {
             "shipment": shipment,
             "document": document,
@@ -960,7 +960,7 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
 
     return render(
         request,
-        "internal/shipments/document_workspace.html",
+        _shipment_document_workspace_template(request),
         {
             "shipment": shipment,
             "document": document,
@@ -1108,3 +1108,11 @@ def shipments_dashboard_view(request):
     })
 
     return render(request, "internal/shipments/dashboard.html", ctx)
+
+def _shipment_document_workspace_template(request):
+    """Select the classic or experimental wizard workspace."""
+    if request.GET.get("ui") == "wizard":
+        return "internal/shipments/document_workspace_wizard.html"
+
+    return "internal/shipments/document_workspace.html"
+
