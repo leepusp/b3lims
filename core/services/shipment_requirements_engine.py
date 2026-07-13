@@ -12,13 +12,13 @@ class Requirement:
 
 DOCUMENTS = {
     "content_declaration": {
-        "label": "Content declaration",
+        "label": "Content declaration and traceability",
         "category": "document",
-        "reason": "Required for biological material shipments.",
+        "reason": "Required consolidated content, traceability, compliance, and sender responsibility document.",
         "requires_signature": True,
     },
     "sender_declaration": {
-        "label": "ANTT sender declaration",
+        "label": "Legacy ANTT sender declaration",
         "category": "document",
         "reason": "Required sender responsibility declaration.",
         "requires_signature": True,
@@ -48,7 +48,7 @@ DOCUMENTS = {
         "requires_signature": False,
     },
     "traceability_report": {
-        "label": "Registro de traceability",
+        "label": "Legacy traceability record",
         "category": "document",
         "reason": "Internal traceability record for controlled biological shipments.",
         "requires_signature": False,
@@ -312,7 +312,6 @@ def evaluate_shipment_requirements(shipment):
 
     for code in [
         "content_declaration",
-        "sender_declaration",
         "external_package_identification",
         "mta_ttm",
     ]:
@@ -342,13 +341,6 @@ def evaluate_shipment_requirements(shipment):
             DOCUMENTS,
             "cibio_authorization",
             reason="OGM shipment requires CIBio transport authorization.",
-        )
-        _add_requirement(
-            documents,
-            seen_documents,
-            DOCUMENTS,
-            "traceability_report",
-            reason="OGM shipment requires traceability records.",
         )
 
     if needs_un3373:

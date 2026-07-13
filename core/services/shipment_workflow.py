@@ -7,7 +7,6 @@ from core.services.shipment_requirements_engine import evaluate_shipment_require
 
 DOCUMENT_TYPES_REQUIRING_SIGNATURE = {
     "content_declaration",
-    "sender_declaration",
     "ogm_transport_notification",
     "cibio_authorization",
     "ctnbio_authorization",

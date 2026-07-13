@@ -288,10 +288,7 @@ class TransportClassification(models.Model):
         ]
 
         if self.is_category_b_un3373 or self.is_ogm:
-            documents.extend([
-                "sender_declaration",
-                "triple_packaging_checklist",
-            ])
+            documents.append("triple_packaging_checklist")
 
         if self.is_ogm:
             documents.append("ogm_transport_notification")
@@ -307,8 +304,8 @@ class TransportClassification(models.Model):
 
 class ShipmentDocument(models.Model):
     DOCUMENT_TYPES = [
-        ("content_declaration", "Content declaration"),
-        ("sender_declaration", "Sender declaration"),
+        ("content_declaration", "Content declaration and traceability"),
+        ("sender_declaration", "Legacy ANTT sender declaration"),
         ("external_package_identification", "External package identification"),
         ("triple_packaging_checklist", "Triple packaging checklist"),
         ("ogm_transport_notification", "OGM transport notification"),

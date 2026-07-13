@@ -78,8 +78,8 @@ def _safe_label(value):
 
 
 SHIPMENT_DOCUMENT_LABELS = {
-    "content_declaration": "Content declaration",
-    "sender_declaration": "Sender declaration",
+    "content_declaration": "Content declaration and traceability",
+    "sender_declaration": "Legacy ANTT sender declaration",
     "external_package_identification": "External package identification",
     "triple_packaging_checklist": "Triple packaging checklist",
     "ogm_transport_notification": "OGM transport notification",
@@ -877,9 +877,17 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
         },
     )
 
-    initial_values = get_initial_values_from_shipment(shipment, document.document_type)
+    initial_values = get_initial_values_from_shipment(
+        shipment,
+        document.document_type,
+    )
     form_values = dict(initial_values)
-    form_values.update(form_data.data_json or {})
+
+    for key, value in (form_data.data_json or {}).items():
+        if isinstance(value, bool):
+            form_values[key] = value
+        elif value not in [None, "", [], {}]:
+            form_values[key] = value
 
     if request.method == "POST":
         action = request.POST.get("action", "").strip()

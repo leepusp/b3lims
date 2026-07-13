@@ -56,6 +56,36 @@ def _normalize_biosafety_level_label(value):
     return raw
 
 
+
+def _shipment_declaration(shipment):
+    try:
+        return shipment.declaration
+    except Exception:
+        return None
+
+
+def _join_contact(*values):
+    return " / ".join(
+        str(value).strip()
+        for value in values
+        if str(value or "").strip()
+    )
+
+
+def _format_document_date(value):
+    if not value:
+        return ""
+
+    if hasattr(value, "hour") and timezone.is_aware(value):
+        value = timezone.localtime(value)
+
+    try:
+        return value.strftime("%d/%m/%Y")
+    except Exception:
+        return str(value)
+
+
+
 def render_document_html(document, shipment, schema, values):
     title = schema["title"]
 
@@ -100,6 +130,25 @@ def render_document_html(document, shipment, schema, values):
         item_rows.append("<tr><td colspan='4'>No items registered.</td></tr>")
 
     generated_at = timezone.now().strftime("%d/%m/%Y %H:%M")
+
+    signature_name = str(
+        values.get("signer_name")
+        or values.get("sender_name")
+        or ""
+    )
+    signature_place = str(
+        values.get("declaration_place")
+        or ""
+    )
+    signature_date = str(
+        values.get("declaration_date")
+        or ""
+    )
+    signature_document = str(
+        values.get("signer_document")
+        or values.get("sender_document")
+        or ""
+    )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -192,8 +241,10 @@ th {{
     <p>I certify that the information provided in this declaration is true and correct.</p>
     <p>__________________________________________</p>
     <p>Signature</p>
-    <p>Name: ____________________________________</p>
-    <p>Date: ____/____/________</p>
+    <p><strong>Name:</strong> {escape(signature_name)}</p>
+    <p><strong>Place:</strong> {escape(signature_place)}</p>
+    <p><strong>Date:</strong> {escape(signature_date)}</p>
+    <p><strong>Document / ID:</strong> {escape(signature_document)}</p>
 </div>
 
 </body>
@@ -202,52 +253,246 @@ th {{
 
 def get_initial_values_from_shipment(shipment, document_type):
     classification = getattr(shipment, "classification", None)
+    declaration = _shipment_declaration(shipment)
     first_item = shipment.items.first()
 
+    sender_name = str(
+        getattr(declaration, "sender_full_name", "")
+        or getattr(shipment, "sender_responsible_name", "")
+        or ""
+    )
+
+    sender_address = str(
+        getattr(declaration, "sender_address", "")
+        or getattr(shipment, "sender_address", "")
+        or ""
+    )
+
+    sender_contact = str(
+        getattr(declaration, "sender_phone_email", "")
+        or _join_contact(
+            getattr(shipment, "sender_phone", ""),
+            getattr(shipment, "sender_email", ""),
+        )
+    )
+
+    recipient_name = str(
+        getattr(declaration, "recipient_name", "")
+        or getattr(shipment, "recipient_responsible_name", "")
+        or ""
+    )
+
+    recipient_institution = str(
+        getattr(declaration, "recipient_institution", "")
+        or getattr(shipment, "recipient_institution", "")
+        or getattr(
+            getattr(shipment, "destination_biobank", None),
+            "name",
+            "",
+        )
+        or ""
+    )
+
+    recipient_address = str(
+        getattr(declaration, "recipient_address", "")
+        or getattr(shipment, "recipient_address", "")
+        or ""
+    )
+
+    recipient_contact = str(
+        getattr(declaration, "recipient_phone_email", "")
+        or _join_contact(
+            getattr(shipment, "recipient_phone", ""),
+            getattr(shipment, "recipient_email", ""),
+        )
+    )
+
+    declaration_place = str(
+        getattr(declaration, "declaration_place", "")
+        or ""
+    )
+
+    declaration_date = (
+        _format_document_date(
+            getattr(declaration, "submitted_at", None)
+        )
+        or timezone.localdate().strftime("%d/%m/%Y")
+    )
+
+    signer_name = str(
+        getattr(declaration, "signer_name", "")
+        or sender_name
+    )
+
+    signer_document = str(
+        getattr(declaration, "signer_document", "")
+        or getattr(declaration, "sender_document", "")
+        or ""
+    )
+
+    sender_institution = str(
+        getattr(shipment, "sender_institution", "")
+        or getattr(declaration, "sender_institution", "")
+        or getattr(
+            getattr(shipment, "origin_biobank", None),
+            "name",
+            "",
+        )
+        or ""
+    )
+
+    material_type = str(
+        getattr(declaration, "material_type", "")
+        or (
+            getattr(classification, "material_type", "")
+            if classification
+            else ""
+        )
+    )
+
+    is_ogm = (
+        getattr(declaration, "is_ogm", None)
+        if declaration is not None
+        else None
+    )
+
+    if is_ogm is None:
+        is_ogm = getattr(classification, "is_ogm", False)
+
     values = {
+        "sender_name": sender_name,
         "sender_institution": format_institution_cqb(
-            getattr(shipment, "sender_institution", "")
-            or getattr(getattr(shipment, "origin_biobank", None), "name", "")
-            or "",
+            sender_institution,
             getattr(shipment, "sender_cqb_code", "") or "",
         ),
         "sender_lab_cqb": str(
             getattr(shipment, "sender_group_researcher", "") or ""
         ),
-        "recipient_institution": str(
-            getattr(shipment, "recipient_institution", "")
-            or getattr(getattr(shipment, "destination_biobank", None), "name", "")
+        "sender_address": sender_address,
+        "sender_contact": sender_contact,
+        "sender_document": signer_document,
+
+        "recipient_name": recipient_name,
+        "recipient_institution": recipient_institution,
+        "recipient_lab_cqb": "",
+        "recipient_address": recipient_address,
+        "recipient_contact": recipient_contact,
+
+        "material_type": material_type,
+        "risk_class": _normalize_risk_class_label(
+            getattr(declaration, "risk_class", "")
+            or (
+                getattr(classification, "risk_class", "")
+                if classification
+                else ""
+            )
+        ),
+        "biosafety_level": _normalize_biosafety_level_label(
+            getattr(declaration, "biosafety_level", "")
+            or (
+                getattr(classification, "biosafety_level", "")
+                if classification
+                else ""
+            )
+            or (
+                getattr(classification, "nb_level", "")
+                if classification
+                else ""
+            )
+        ),
+        "is_ogm": "Yes" if is_ogm else "No",
+
+        "material_description": str(
+            getattr(declaration, "content_description", "")
+            or getattr(declaration, "additional_description", "")
             or ""
         ),
-        "material_type": str(getattr(classification, "material_type", "") if classification else ""),
-        "risk_class": _normalize_risk_class_label(getattr(classification, "risk_class", "") if classification else ""),
-        "is_ogm": "Yes" if getattr(classification, "is_ogm", False) else "No",
-        "biosafety_level": _normalize_biosafety_level_label(
-            getattr(classification, "biosafety_level", "")
-            or getattr(classification, "nb_level", "")
-            or getattr(classification, "containment_level", "")
+        "quantity_volume": str(
+            getattr(declaration, "quantity_volume", "")
+            or ""
         ),
-        "transport_conditions": str(getattr(shipment, "temperature_condition", "") or ""),
-        "transport_method": str(getattr(shipment, "transport_method", "") or ""),
-        "carrier_name": str(getattr(shipment, "carrier_name", "") or ""),
-        "expected_arrival": str(getattr(shipment, "expected_arrival_date", "") or ""),
+        "purpose": str(
+            getattr(declaration, "purpose", "")
+            or ""
+        ),
+        "transport_conditions": str(
+            getattr(declaration, "transport_conditions", "")
+            or getattr(shipment, "temperature_condition", "")
+            or ""
+        ),
+        "transport_method": str(
+            getattr(shipment, "transport_method", "") or ""
+        ),
+
+        "shipment_code": str(
+            getattr(shipment, "shipment_code", "") or ""
+        ),
+        "dispatch_date": _format_document_date(
+            getattr(shipment, "dispatched_at", None)
+            or getattr(shipment, "expected_dispatch_date", None)
+        ),
+        "expected_arrival": _format_document_date(
+            getattr(shipment, "expected_arrival_date", None)
+        ),
+        "carrier_name": str(
+            getattr(shipment, "carrier_name", "") or ""
+        ),
+        "tracking_code": str(
+            getattr(shipment, "tracking_code", "") or ""
+        ),
+
         "regulatory_compliance": REGULATORY_COMPLIANCE_TEXT,
         "packaging_statement": PACKAGING_STATEMENT_TEXT,
         "transport_condition_statement": TRANSPORT_CONDITION_STATEMENT_TEXT,
         "responsibility_statement": RESPONSIBILITY_STATEMENT_TEXT,
         "traceability_statement": TRACEABILITY_STATEMENT_TEXT,
-        "shipment_code": str(getattr(shipment, "shipment_code", "") or ""),
+
+        "declaration_place": declaration_place,
+        "declaration_date": declaration_date,
+        "signer_name": signer_name,
+        "signer_document": signer_document,
+
+        # Compatibility values for legacy schemas.
+        "local_date": ", ".join(
+            value
+            for value in [
+                declaration_place,
+                declaration_date,
+            ]
+            if value
+        ),
+        "notes": str(getattr(shipment, "notes", "") or ""),
     }
 
     if first_item:
+        if not values["material_description"]:
+            values["material_description"] = str(
+                first_item.material_name or ""
+            )
+
+        if not values["material_type"]:
+            values["material_type"] = str(
+                first_item.sample_type or ""
+            )
+
+        if not values["quantity_volume"]:
+            values["quantity_volume"] = (
+                f"{first_item.quantity or ''} "
+                f"{first_item.quantity_unit or ''}"
+            ).strip()
+
         values.update({
-            "material_description": str(first_item.material_name or ""),
-            "material_type": values.get("material_type") or str(first_item.sample_type or ""),
-            "quantity_volume": f"{first_item.quantity or ''} {first_item.quantity_unit or ''}".strip(),
             "organism_name": str(first_item.material_name or ""),
-            "container_quantity": str(getattr(first_item, "container_count", "") or ""),
-            "container_type": str(getattr(first_item, "container_type", "") or ""),
-            "storage_temperature": str(getattr(first_item, "storage_condition", "") or ""),
+            "container_quantity": str(
+                getattr(first_item, "container_count", "") or ""
+            ),
+            "container_type": str(
+                getattr(first_item, "container_type", "") or ""
+            ),
+            "storage_temperature": str(
+                getattr(first_item, "storage_condition", "") or ""
+            ),
         })
 
     return values
+

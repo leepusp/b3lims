@@ -32,8 +32,8 @@ def select(options):
 
 DOCUMENT_FORM_SCHEMAS = {
     "content_declaration": {
-        "title": "Content declaration",
-        "description": "Required document for GMO and non-GMO biological material shipments, Risk Class 1/2 and NB1/NB2.",
+        "title": "Content declaration and traceability",
+        "description": "Consolidated content declaration, shipment traceability, regulatory compliance, and sender responsibility record.",
         "sections": [
             {
                 "title": "Sender",
@@ -69,21 +69,34 @@ DOCUMENT_FORM_SCHEMAS = {
                 ],
             },
             {
+                "title": "Traceability",
+                "fields": [
+                    ("shipment_code", "Shipment Code", "text"),
+                    ("dispatch_date", "Dispatch Date", "text"),
+                    ("expected_arrival", "Expected Arrival Date", "text"),
+                    ("carrier_name", "Carrier", "text"),
+                    ("tracking_code", "Tracking Code", "text"),
+                    ("traceability_statement", "Traceability Statement", "textarea"),
+                ],
+            },
+            {
                 "title": "Compliance and Responsibility",
                 "fields": [
                     ("regulatory_compliance", "Compliance with Applicable Regulations", "textarea"),
                     ("packaging_statement", "Packaging", "textarea"),
                     ("transport_condition_statement", "Transport Conditions", "textarea"),
                     ("responsibility_statement", "Responsibility", "textarea"),
-                    ("local_date", "Place and Date", "text"),
-                    ("sender_document", "Responsible person's document/ID", "text"),
+                    ("declaration_place", "Place", "text"),
+                    ("declaration_date", "Date", "text"),
+                    ("signer_name", "Signatory Name", "text"),
+                    ("signer_document", "Signatory Document / ID", "text"),
                 ],
             },
         ],
     },
     "sender_declaration": {
-        "title": "ANTT sender declaration",
-        "description": "Sender responsibility declaration for biological material transport, when applicable.",
+        "title": "Legacy ANTT sender declaration",
+        "description": "Legacy document retained only for historical shipment records.",
         "sections": [
             {
                 "title": "Sender",
@@ -113,7 +126,10 @@ DOCUMENT_FORM_SCHEMAS = {
                     ("packaging_statement", "Packaging", "textarea"),
                     ("transport_condition_statement", "Transport Conditions", "textarea"),
                     ("responsibility_statement", "Responsibility", "textarea"),
-                    ("local_date", "Place and Date", "text"),
+                    ("declaration_place", "Place", "text"),
+                    ("declaration_date", "Date", "text"),
+                    ("signer_name", "Signatory Name", "text"),
+                    ("signer_document", "Signatory Document / ID", "text"),
                 ],
             },
         ],
@@ -195,7 +211,10 @@ DOCUMENT_FORM_SCHEMAS = {
                     ("transport_conditions", "Transport Conditions", "textarea"),
                     ("regulatory_compliance", "Compliance with Applicable Regulations", "textarea"),
                     ("responsibility_statement", "Responsibility", "textarea"),
-                    ("local_date", "Place and Date", "text"),
+                    ("declaration_place", "Place", "text"),
+                    ("declaration_date", "Date", "text"),
+                    ("signer_name", "Signatory Name", "text"),
+                    ("signer_document", "Signatory Document / ID", "text"),
                 ],
             },
         ],
@@ -240,7 +259,10 @@ DOCUMENT_FORM_SCHEMAS = {
                 "fields": [
                     ("packaging_statement", "Packaging System", "textarea"),
                     ("traceability_statement", "Traceability Record", "textarea"),
-                    ("local_date", "Place and Date", "text"),
+                    ("declaration_place", "Place", "text"),
+                    ("declaration_date", "Date", "text"),
+                    ("signer_name", "Signatory Name", "text"),
+                    ("signer_document", "Signatory Document / ID", "text"),
                 ],
             },
         ],
@@ -264,8 +286,8 @@ DOCUMENT_FORM_SCHEMAS = {
         ],
     },
     "traceability_report": {
-        "title": "Traceability Record",
-        "description": "Internal shipment traceability record.",
+        "title": "Legacy traceability record",
+        "description": "Legacy record superseded by Content declaration and traceability.",
         "sections": [
             {
                 "title": "Traceability",
