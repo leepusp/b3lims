@@ -55,12 +55,12 @@
             </div>
             <div class="card-body">
                 <div class="mb-2">
-                    <span class="text-muted">Origem:</span>
-                    {{ shipment.sender_institution|default:"Não informado" }}
+                    <span class="text-muted">Origin:</span>
+                    {{ shipment.sender_institution|default:"Not provided" }}
                 </div>
 
                 <div>
-                    <span class="text-muted">Destino:</span>
+                    <span class="text-muted">Destination:</span>
                     {{ shipment.recipient_institution|default:"Biobank CEPID B3" }}
                 </div>
             </div>

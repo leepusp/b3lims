@@ -2,6 +2,8 @@ from html import escape
 
 from django.utils import timezone
 
+from core.services.cqb_registry import format_institution_cqb
+
 
 REGULATORY_COMPLIANCE_TEXT = """This shipment is in full compliance with applicable transport, biosafety, and institutional rules, including ANTT Resolution No. 5.998/2022 when applicable, CTNBio Normative Resolution No. 26/2020 when applicable, and any additional institutional requirements for biological material handling and shipment."""
 
@@ -66,7 +68,7 @@ def render_document_html(document, shipment, schema, values):
             value = values.get(name, "")
 
             if isinstance(value, bool):
-                value = "Sim" if value else "Não"
+                value = "Yes" if value else "No"
 
             rows.append(
                 "<tr>"
@@ -76,7 +78,7 @@ def render_document_html(document, shipment, schema, values):
             )
 
         section_html.append(
-            f"<h2>{escape(section.get('title', 'Seção'))}</h2>"
+            f"<h2>{escape(section.get('title', 'Section'))}</h2>"
             "<table>"
             + "".join(rows)
             + "</table>"
@@ -95,12 +97,12 @@ def render_document_html(document, shipment, schema, values):
         )
 
     if not item_rows:
-        item_rows.append("<tr><td colspan='4'>Nenhum item cadastrado.</td></tr>")
+        item_rows.append("<tr><td colspan='4'>No items registered.</td></tr>")
 
     generated_at = timezone.now().strftime("%d/%m/%Y %H:%M")
 
     return f"""<!doctype html>
-<html lang="pt-br">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>{escape(title)}</title>
@@ -159,14 +161,14 @@ th {{
 <body>
 <div class="no-print">
     <button onclick="window.print()">Print / save as PDF</button>
-    <span class="small">Use esta opção para gerar o PDF e assinar fora da plataforma.</span>
+    <span class="small">Use this option to generate the PDF and sign it outside the platform.</span>
 </div>
 
 <h1>{escape(title)}</h1>
 <p class="small">
     Shipment: {escape(str(shipment.shipment_code))} ·
-    Documento: {escape(str(document.document_type))} ·
-    Generated em: {escape(generated_at)}
+    Document: {escape(str(document.document_type))} ·
+    Generated at: {escape(generated_at)}
 </p>
 
 {''.join(section_html)}
@@ -177,8 +179,8 @@ th {{
 <tr>
 <th>Sample ID</th>
 <th>Material</th>
-<th>Tipo</th>
-<th>Quantidade</th>
+<th>Type</th>
+<th>Quantity</th>
 </tr>
 </thead>
 <tbody>
@@ -190,8 +192,8 @@ th {{
     <p>I certify that the information provided in this declaration is true and correct.</p>
     <p>__________________________________________</p>
     <p>Signature</p>
-    <p>Nome: ____________________________________</p>
-    <p>Data: ____/____/________</p>
+    <p>Name: ____________________________________</p>
+    <p>Date: ____/____/________</p>
 </div>
 
 </body>
@@ -203,10 +205,14 @@ def get_initial_values_from_shipment(shipment, document_type):
     first_item = shipment.items.first()
 
     values = {
-        "sender_institution": str(
+        "sender_institution": format_institution_cqb(
             getattr(shipment, "sender_institution", "")
             or getattr(getattr(shipment, "origin_biobank", None), "name", "")
-            or ""
+            or "",
+            getattr(shipment, "sender_cqb_code", "") or "",
+        ),
+        "sender_lab_cqb": str(
+            getattr(shipment, "sender_group_researcher", "") or ""
         ),
         "recipient_institution": str(
             getattr(shipment, "recipient_institution", "")
@@ -215,7 +221,7 @@ def get_initial_values_from_shipment(shipment, document_type):
         ),
         "material_type": str(getattr(classification, "material_type", "") if classification else ""),
         "risk_class": _normalize_risk_class_label(getattr(classification, "risk_class", "") if classification else ""),
-        "is_ogm": "Sim" if getattr(classification, "is_ogm", False) else "Não",
+        "is_ogm": "Yes" if getattr(classification, "is_ogm", False) else "No",
         "biosafety_level": _normalize_biosafety_level_label(
             getattr(classification, "biosafety_level", "")
             or getattr(classification, "nb_level", "")

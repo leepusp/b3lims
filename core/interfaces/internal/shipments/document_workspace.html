@@ -48,7 +48,7 @@
 
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white fw-bold">
-                        <i class="bi bi-ui-checks me-2"></i>Formulário do documento
+                        <i class="bi bi-ui-checks me-2"></i>Document Form
                     </div>
 
                     <div class="card-body">
@@ -70,14 +70,21 @@
                                             {% elif type == "checkbox" %}
                                                 <div class="form-check">
                                                     <input type="checkbox" name="{{ name }}" class="form-check-input" {% if form_values|get_item:name %}checked{% endif %}>
-                                                    <label class="form-check-label">Confirmado</label>
+                                                    <label class="form-check-label">Confirmed</label>
                                                 </div>
                                             {% elif type|slice:":6" == "select" %}
+                                                {% with current_value=form_values|get_item:name %}
                                                 <select name="{{ name }}" class="form-select">
+                                                    {% if current_value %}
+                                                        <option value="{{ current_value }}" selected>{{ current_value }}</option>
+                                                    {% endif %}
                                                     {% for option in type|cut:"select:"|split:"|" %}
-                                                        <option value="{{ option }}" {% if form_values|get_item:name == option %}selected{% endif %}>{{ option }}</option>
+                                                        {% if option != current_value %}
+                                                            <option value="{{ option }}">{{ option }}</option>
+                                                        {% endif %}
                                                     {% endfor %}
                                                 </select>
+                                                {% endwith %}
                                             {% else %}
                                                 <input type="text" name="{{ name }}" value="{{ form_values|get_item:name }}" class="form-control">
                                             {% endif %}
@@ -111,7 +118,7 @@
                             Open generated document
                         </a>
                         <div class="form-text mt-2">
-                            Abra, imprima ou salve como PDF, assine fora da plataforma e depois envie o arquivo assinado.
+                            Open, print or save as PDF, sign outside the platform, and then upload the signed file.
                         </div>
                     {% else %}
                         <div class="alert alert-warning mb-0">
@@ -123,12 +130,12 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white fw-bold">
-                    Upload do documento assinado
+                    Signed Document Upload
                 </div>
                 <div class="card-body">
                     {% if has_signed_file %}
                         <div class="alert alert-success">
-                            Documento assinado já enviado.
+                            Signed document already uploaded.
                         </div>
                         <a href="{{ form_data.signed_file.url }}" target="_blank" class="btn btn-outline-success w-100 mb-3">
                             View signed file
@@ -140,7 +147,7 @@
                         <input type="hidden" name="action" value="upload_signed_file">
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Arquivo assinado</label>
+                            <label class="form-label fw-semibold">Signed File</label>
                             <input type="file" name="signed_file" class="form-control" required>
                         </div>
 

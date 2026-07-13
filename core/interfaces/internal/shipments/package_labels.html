@@ -240,10 +240,10 @@
         <div class="label-title">External identification</div>
 
         <div class="field"><strong>Shipment:</strong> {{ shipment.shipment_code }}</div>
-        <div class="field"><strong>Origem:</strong> {{ shipment.sender_institution|default:"Não informado" }}</div>
-        <div class="field"><strong>Destino:</strong> {{ shipment.recipient_institution|default:"BBAMS / Biobank" }}</div>
-        <div class="field"><strong>Responsável:</strong> {{ shipment.sender_responsible_name|default:"Não informado" }}</div>
-        <div class="field"><strong>Temperatura:</strong> {{ shipment.temperature_condition|default:"Não informado" }}</div>
+        <div class="field"><strong>Origin:</strong> {{ shipment.sender_institution|default:"Not provided" }}</div>
+        <div class="field"><strong>Destination:</strong> {{ shipment.recipient_institution|default:"BBAMS / Biobank" }}</div>
+        <div class="field"><strong>Responsible Person:</strong> {{ shipment.sender_responsible_name|default:"Not provided" }}</div>
+        <div class="field"><strong>Temperature:</strong> {{ shipment.temperature_condition|default:"Not provided" }}</div>
 
         {% if classification %}
             <div class="field"><strong>Classe risco:</strong> {{ classification.risk_class }}</div>
@@ -343,7 +343,7 @@
             <div class="cut-label restricted-label">
                 <div class="warning-title">CUIDADO:</div>
                 <div class="warning-text">
-                    Abertura autorizada apenas no interior do laboratório por técnico especializado.<br>
+                    Opening is authorized only inside the laboratory by trained technical personnel.<br>
                     Access to this content is restricted to duly trained technical staff.
                 </div>
             </div>
