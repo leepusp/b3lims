@@ -33,8 +33,20 @@
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Instituição do remetente</label>
-                <input type="text" name="sender_institution" class="form-control" required>
+                <label class="form-label">Sender Institution / CQB</label>
+                <select name="sender_institution" class="form-select" required>
+                    <option value="" selected disabled>Select sender institution / CQB...</option>
+                    <option value="IQ-USP">IQ-USP — CQB 0029/97</option>
+                    <option value="ICB II">ICB II — CQB 0046/98</option>
+                    <option value="IB-UNICAMP">IB-UNICAMP — CQB 0069/98</option>
+                    <option value="IAC - Campinas">IAC - Campinas — CQB 417/16</option>
+                    <option value="FCFRP">FCFRP — CQB pending</option>
+                    <option value="FMRP">FMRP — CQB pending</option>
+                    <option value="IB-UNESP Rio Claro">IB-UNESP Rio Claro — CQB pending</option>
+                </select>
+                <div class="form-text">Select the institution responsible for the CQB.</div>
+                <label class="form-label mt-3">Sender Group / Laboratory / Researcher</label>
+                <input type="text" name="sender_group_researcher" class="form-control" placeholder="Laboratory, research group or responsible researcher">
             </div>
 
             <div class="col-md-6">

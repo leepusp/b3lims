@@ -199,6 +199,20 @@ def public_shipment_new_view(request):
 
     if request.method == "POST":
         sender_institution = request.POST.get("sender_institution", "").strip()
+        sender_group_researcher = request.POST.get(
+            "sender_group_researcher", ""
+        ).strip()
+
+        sender_cqb_codes = {
+            "IQ-USP": "0029/97",
+            "ICB II": "0046/98",
+            "IB-UNICAMP": "0069/98",
+            "IAC - Campinas": "417/16",
+            "FCFRP": "",
+            "FMRP": "",
+            "IB-UNESP Rio Claro": "",
+        }
+        sender_cqb_code = sender_cqb_codes.get(sender_institution, "")
         sender_responsible_name = request.POST.get("sender_responsible_name", "").strip()
         sender_email = request.POST.get("sender_email", "").strip()
         sender_phone = request.POST.get("sender_phone", "").strip()
@@ -222,6 +236,8 @@ def public_shipment_new_view(request):
             status="under_review",
             destination_biobank=destination_biobank,
             sender_institution=sender_institution,
+            sender_cqb_code=sender_cqb_code,
+            sender_group_researcher=sender_group_researcher,
             sender_responsible_name=sender_responsible_name,
             sender_email=sender_email,
             sender_phone=sender_phone,

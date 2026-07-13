@@ -61,6 +61,16 @@ class Shipment(models.Model):
     )
 
     sender_institution = models.CharField(max_length=255, blank=True)
+    sender_cqb_code = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Sender CQB code",
+    )
+    sender_group_researcher = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Sender group / researcher",
+    )
     sender_responsible_name = models.CharField(max_length=255, blank=True)
     sender_email = models.EmailField(blank=True)
     sender_phone = models.CharField(max_length=100, blank=True)
