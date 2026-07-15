@@ -114,6 +114,21 @@ STATICFILES_DIRS = [
 # Onde o comando 'collectstatic' vai juntar tudo para o Apache ler
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Uploaded media remain private to the application (0660/02770 below), while
+# collected static assets must be readable by Apache.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "OPTIONS": {
+            "file_permissions_mode": 0o644,
+            "directory_permissions_mode": 0o755,
+        },
+    },
+}
+
 # =========================
 # MEDIA (UPLOADS DE AMOSTRAS E ARQUIVOS)
 # =========================

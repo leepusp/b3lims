@@ -1,0 +1,49 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}{{ chemical.name }} · Reagent QR{% endblock %}
+{% block page_title %}Reagent Identification{% endblock %}
+{% block page_subtitle %}Protected reagent record opened from a QR label{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+    <div class="text-center mb-4">
+        <i class="bi bi-qr-code-scan display-4 text-primary d-block mb-2"></i>
+        <h1 class="h3 fw-bold">{{ chemical.name }}</h1>
+        <span class="badge text-bg-primary">{{ chemical.get_status_display }}</span>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white fw-bold">Identification and storage</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">CAS number</dt><dd class="col-sm-8">{{ chemical.cas_number|default:"Not defined" }}</dd>
+                <dt class="col-sm-4">Supplier</dt><dd class="col-sm-8">{{ chemical.supplier|default:"Not defined" }}</dd>
+                <dt class="col-sm-4">Catalog / lot</dt><dd class="col-sm-8">{{ chemical.catalog_number|default:"-" }} / {{ chemical.lot_number|default:"-" }}</dd>
+                <dt class="col-sm-4">Physical location</dt><dd class="col-sm-8 fw-semibold text-danger">{{ chemical.storage_location|default:chemical.location|default:"Unassigned" }}</dd>
+                <dt class="col-sm-4">Temperature</dt><dd class="col-sm-8">{{ chemical.storage_temperature|default:"Not defined" }}</dd>
+                <dt class="col-sm-4">Expiry</dt><dd class="col-sm-8">{{ chemical.expiry_date|date:"d/m/Y"|default:"Not defined" }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white fw-bold"><i class="bi bi-shield-exclamation me-2"></i>Safety information</div>
+        <div class="card-body">
+            {{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}
+            {% if primary_sds %}
+            <a class="btn btn-danger w-100" href="{% url 'chemical_file_download' chemical.id primary_sds.id %}" target="_blank" rel="noopener">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Open Primary Safety Data Sheet
+            </a>
+            {% elif chemical.msds_link %}
+            <a class="btn btn-outline-danger w-100" href="{{ chemical.msds_link }}" target="_blank" rel="noopener">
+                Open Legacy MSDS Link
+            </a>
+            {% else %}
+            <div class="alert alert-warning mb-0">No primary Safety Data Sheet is attached.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{% url 'chemical_detail' chemical.id %}" class="btn btn-outline-secondary w-100">Open Full Reagent Record</a>
+</div>
+{% endblock %}

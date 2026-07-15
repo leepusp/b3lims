@@ -28,8 +28,13 @@
             <a href="{% url 'chemical_edit' chemical.id %}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>
+            {% endif %}
+            <a href="{% url 'print_chemical_label' chemical.id %}" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-qr-code me-1"></i>Print QR
+            </a>
+            {% if can_deactivate_chemical %}
             <a href="{% url 'chemical_delete' chemical.id %}" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-trash me-1"></i>Delete
+                <i class="bi bi-archive me-1"></i>Deactivate
             </a>
             {% endif %}
         </div>
@@ -75,7 +80,7 @@
                     <p><strong>Temperature:</strong><br>{{ chemical.storage_temperature|default:"Not defined" }}</p>
                     <p><strong>Expiry:</strong><br>{{ chemical.expiry_date|date:"d/m/Y"|default:"Not defined" }}</p>
                     <p><strong>Status:</strong><br>{{ chemical.get_status_display }}</p>
-                    <p><strong>MSDS:</strong><br>
+                    <p><strong>Legacy MSDS link:</strong><br>
                         {% if chemical.msds_link %}
                             <a href="{{ chemical.msds_link }}" target="_blank" rel="noopener">Open MSDS</a>
                         {% else %}
@@ -93,6 +98,113 @@
         </div>
         <div class="card-body">
             {{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-paperclip me-2"></i>Reagent documents</span>
+            <span class="badge text-bg-secondary">{{ chemical_files|length }}</span>
+        </div>
+        <div class="card-body">
+            {% if chemical_files %}
+            <div class="table-responsive mb-4">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Document</th>
+                            <th>Type</th>
+                            <th>Version / date</th>
+                            <th>File</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in chemical_files %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ document.title }}
+                                    {% if document.is_primary %}<span class="badge text-bg-primary ms-1">Primary SDS</span>{% endif %}
+                                </div>
+                                {% if document.description %}<small class="text-muted">{{ document.description }}</small>{% endif %}
+                            </td>
+                            <td>{{ document.get_document_type_display }}</td>
+                            <td>
+                                {{ document.version|default:"-" }}
+                                {% if document.document_date %}<br><small>{{ document.document_date|date:"d/m/Y" }}</small>{% endif %}
+                            </td>
+                            <td>
+                                <small>{{ document.original_filename }}</small><br>
+                                <small class="text-muted">{{ document.file_size|filesizeformat }}</small>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="{% url 'chemical_file_download' chemical.id document.id %}"
+                                   {% if document.mime_type == 'application/pdf' %}target="_blank" rel="noopener"{% endif %}>
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                                {% if can_manage_chemical %}
+                                <form method="post" action="{% url 'chemical_file_remove' chemical.id document.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Remove document">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No files are attached to this reagent.</p>
+            {% endif %}
+
+            {% if can_manage_chemical %}
+            <form method="post" action="{% url 'chemical_file_add' chemical.id %}" enctype="multipart/form-data" class="border rounded p-3 bg-light">
+                {% csrf_token %}
+                <h3 class="h6 fw-bold mb-3">Attach document with metadata</h3>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">File *</label>
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Uses the filename when empty">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Document type</label>
+                        <select name="document_type" class="form-select">
+                            {% for value, label in document_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Version</label>
+                        <input type="text" name="version" class="form-control" placeholder="e.g. 2.1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Document date</label>
+                        <input type="date" name="document_date" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Description</label>
+                        <input type="text" name="description" class="form-control">
+                    </div>
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_primary" id="id_primary_sds">
+                            <label class="form-check-label" for="id_primary_sds">Use as the primary SDS on the QR page</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>Attach document
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
         </div>
     </div>
 

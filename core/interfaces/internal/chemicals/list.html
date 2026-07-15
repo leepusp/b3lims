@@ -182,7 +182,7 @@
                     {% for chem in chemicals %}
                         <tr>
                             <td>
-                                <div class="chem-name">{{ chem.name }}</div>
+                                <a class="chem-name text-decoration-none" href="{% url 'chemical_detail' chem.id %}">{{ chem.name }}</a>
                                 <div class="chem-sub">
                                     {% if chem.cas_number %}CAS {{ chem.cas_number }}{% endif %}
                                     {% if chem.formula %}{% if chem.cas_number %} · {% endif %}{{ chem.formula }}{% endif %}

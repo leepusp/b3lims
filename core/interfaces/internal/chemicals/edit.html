@@ -1,8 +1,10 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
 
 {% block title %}Edit {{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
 {% block page_title %}Chemicals{% endblock %}
 {% block page_subtitle %}Edit reagent inventory metadata{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'internal/chemicals/chemical.css' %}">{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -82,8 +84,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Storage Location</label>
-                        <input type="text" name="storage_location" class="form-control" value="{{ chemical.storage_location|default:chemical.location|default_if_none:'' }}">
+                        {% include "internal/chemicals/_storage_builder.html" with value=chemical.storage_location|default:chemical.location %}
                     </div>
 
                     <div class="col-md-4">
@@ -94,11 +95,6 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Barcode / Internal Code</label>
                         <input type="text" name="barcode" class="form-control" value="{{ chemical.barcode|default_if_none:'' }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">MSDS Link</label>
-                        <input type="url" name="msds_link" class="form-control" value="{{ chemical.msds_link|default_if_none:'' }}">
                     </div>
 
                     <div class="col-12">
@@ -125,3 +121,4 @@
     </form>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260715-1"></script>{% endblock %}

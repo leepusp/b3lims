@@ -14,6 +14,9 @@ def can_view_chemical(user, chemical):
     if not getattr(user, "is_authenticated", False):
         return False
 
+    if not getattr(chemical, "is_active", True):
+        return False
+
     if getattr(user, "is_superuser", False):
         return True
 
@@ -56,7 +59,7 @@ def can_delete_chemical(user, chemical):
 def visible_chemicals_for_user(user):
     from core.models.chemicals.chemical import Chemical
 
-    qs = Chemical.objects.all().select_related(
+    qs = Chemical.objects.filter(is_active=True).select_related(
         "created_by",
         "research_group",
     )
@@ -70,7 +73,7 @@ def visible_chemicals_for_user(user):
         if can_view_chemical(user, chemical)
     ]
 
-    return Chemical.objects.filter(pk__in=visible_ids).select_related(
+    return Chemical.objects.filter(pk__in=visible_ids, is_active=True).select_related(
         "created_by",
         "research_group",
     )

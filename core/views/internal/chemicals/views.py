@@ -1,14 +1,28 @@
+import base64
+import io
+import os
 from decimal import Decimal, InvalidOperation
+
+import qrcode
 from django.core.exceptions import PermissionDenied
+from django.http import FileResponse
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Q, Count, Count
+from django.db import transaction
+from django.db.models import Q, Count
+from django.urls import reverse
+from django.utils.dateparse import parse_date
 from core.context import base_context
-from core.models.chemicals.chemical import Chemical, ChemicalStockMovement
-from core.permissions.chemicals import visible_chemicals_for_user, can_edit_chemical
+from core.models.chemicals.chemical import Chemical, ChemicalFile, ChemicalStockMovement
+from core.permissions.chemicals import (
+    can_delete_chemical,
+    can_edit_chemical,
+    can_view_chemical,
+    visible_chemicals_for_user,
+)
 
 @login_required
 def chemicals_list_view(request):
@@ -24,7 +38,10 @@ def chemicals_list_view(request):
         qs = qs.filter(
             Q(name__icontains=query) | 
             Q(cas_number__icontains=query) |
-            Q(formula__icontains=query)
+            Q(formula__icontains=query) |
+            Q(supplier__icontains=query) |
+            Q(catalog_number__icontains=query) |
+            Q(lot_number__icontains=query)
         )
 
     status_filter = request.GET.get('status')
@@ -154,28 +171,11 @@ def chemicals_dashboard_view(request):
 
 
 def _chemical_access_queryset(user):
-    qs = Chemical.objects.select_related("created_by", "research_group").all()
-
-    if user.is_superuser or user.is_staff:
-        return qs
-
-    if hasattr(user, "research_groups"):
-        groups = user.research_groups.all()
-        return qs.filter(
-            Q(is_public=True) |
-            Q(created_by=user) |
-            Q(research_group__in=groups)
-        ).distinct()
-
-    return qs.filter(Q(is_public=True) | Q(created_by=user)).distinct()
+    return visible_chemicals_for_user(user)
 
 
 def _user_can_manage_chemical(user, chemical):
-    return (
-        user.is_superuser
-        or user.is_staff
-        or chemical.created_by_id == user.id
-    )
+    return can_edit_chemical(user, chemical)
 
 
 
@@ -246,6 +246,9 @@ def chemical_detail_view(request, chemical_id):
     ctx.update({
         "chemical": chemical,
         "can_manage_chemical": _user_can_manage_chemical(request.user, chemical),
+        "can_deactivate_chemical": can_delete_chemical(request.user, chemical),
+        "chemical_files": chemical.files.filter(is_active=True).select_related("uploaded_by"),
+        "document_types": ChemicalFile.DOCUMENT_TYPES,
         "stock_movements": chemical.stock_movements.select_related("performed_by").all()[:20],
     })
     return render(request, "internal/chemicals/detail.html", ctx)
@@ -293,7 +296,8 @@ def chemical_edit_view(request, chemical_id):
             chemical.barcode = request.POST.get("barcode") or None
             chemical.location = legacy_location
             chemical.expiry_date = request.POST.get("expiry_date") or None
-            chemical.msds_link = request.POST.get("msds_link") or None
+            if "msds_link" in request.POST:
+                chemical.msds_link = request.POST.get("msds_link") or None
             chemical.hazard_notes = request.POST.get("hazard_notes") or None
             chemical.status = request.POST.get("status") or chemical.status
             chemical.is_public = request.POST.get("is_public") in ["true", "on", "1"]
@@ -317,18 +321,131 @@ def chemical_edit_view(request, chemical_id):
 def chemical_delete_view(request, chemical_id):
     chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
 
-    if not _user_can_manage_chemical(request.user, chemical):
-        raise PermissionDenied("You do not have permission to delete this reagent.")
+    if not can_delete_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to deactivate this reagent.")
 
     if request.method == "POST":
         name = chemical.name
-        chemical.delete()
-        messages.success(request, f"Reagent {name} deleted successfully.")
+        chemical.is_active = False
+        chemical.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, f"Reagent {name} deactivated successfully.")
         return redirect("chemicals_list")
 
     ctx = base_context(request)
     ctx.update({"chemical": chemical})
     return render(request, "internal/chemicals/confirm_delete.html", ctx)
+
+
+@login_required
+@transaction.atomic
+def chemical_file_upload_view(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+    if not can_edit_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to add reagent documents.")
+    if request.method != "POST":
+        return redirect("chemical_detail", chemical_id=chemical.id)
+
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        messages.error(request, "Select a document to upload.")
+        return redirect("chemical_detail", chemical_id=chemical.id)
+
+    document_type = request.POST.get("document_type") or "other"
+    valid_types = {value for value, _ in ChemicalFile.DOCUMENT_TYPES}
+    if document_type not in valid_types:
+        messages.error(request, "Invalid document type.")
+        return redirect("chemical_detail", chemical_id=chemical.id)
+
+    is_primary = (
+        document_type == "sds"
+        and request.POST.get("is_primary") in {"true", "on", "1"}
+    )
+    if is_primary:
+        chemical.files.filter(is_active=True, is_primary=True).update(is_primary=False)
+
+    original_filename = os.path.basename(uploaded_file.name)[:255]
+    chemical_file = ChemicalFile.objects.create(
+        chemical=chemical,
+        file=uploaded_file,
+        original_filename=original_filename,
+        title=(request.POST.get("title") or original_filename)[:255],
+        document_type=document_type,
+        description=request.POST.get("description") or "",
+        version=(request.POST.get("version") or "")[:50],
+        document_date=parse_date(request.POST.get("document_date") or ""),
+        is_primary=is_primary,
+        uploaded_by=request.user,
+    )
+    messages.success(request, f"Document {chemical_file.title} uploaded successfully.")
+    return redirect("chemical_detail", chemical_id=chemical.id)
+
+
+@login_required
+def chemical_file_download_view(request, chemical_id, file_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+    chemical_file = get_object_or_404(
+        chemical.files.filter(is_active=True),
+        id=file_id,
+    )
+    response = FileResponse(
+        chemical_file.file.open("rb"),
+        as_attachment=chemical_file.mime_type != "application/pdf",
+        filename=chemical_file.original_filename,
+        content_type=chemical_file.mime_type or "application/octet-stream",
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@login_required
+def chemical_file_deactivate_view(request, chemical_id, file_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+    if not can_edit_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to remove reagent documents.")
+    chemical_file = get_object_or_404(chemical.files.filter(is_active=True), id=file_id)
+    if request.method == "POST":
+        chemical_file.is_active = False
+        chemical_file.is_primary = False
+        chemical_file.save(update_fields=["is_active", "is_primary", "updated_at"])
+        messages.success(request, "Document removed from the reagent interface.")
+    return redirect("chemical_detail", chemical_id=chemical.id)
+
+
+@login_required
+def print_chemical_label(request, chemical_id):
+    chemical = get_object_or_404(_chemical_access_queryset(request.user), id=chemical_id)
+    qr_url = request.build_absolute_uri(reverse("chemical_qr_scan", args=[chemical.uuid]))
+    qr = qrcode.QRCode(version=1, box_size=10, border=0)
+    qr.add_data(qr_url)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return render(
+        request,
+        "internal/chemicals/print_label.html",
+        {"chemical": chemical, "qr_code": qr_base64},
+    )
+
+
+def chemical_qr_scan_view(request, uuid):
+    chemical = get_object_or_404(Chemical, uuid=uuid, is_active=True)
+    if not request.user.is_authenticated:
+        login_url = reverse("login")
+        next_url = reverse("chemical_qr_scan", args=[chemical.uuid])
+        return redirect(f"{login_url}?next={next_url}")
+    if not can_view_chemical(request.user, chemical):
+        raise PermissionDenied("You do not have permission to view this reagent.")
+
+    primary_sds = chemical.files.filter(
+        is_active=True,
+        is_primary=True,
+        document_type="sds",
+    ).first()
+    ctx = base_context(request)
+    ctx.update({"chemical": chemical, "primary_sds": primary_sds})
+    return render(request, "internal/chemicals/qr_view.html", ctx)
 
 
 

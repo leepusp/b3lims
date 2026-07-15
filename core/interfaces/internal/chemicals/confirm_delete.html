@@ -1,17 +1,17 @@
 {% extends "internal/common/base.html" %}
 
-{% block title %}Delete {{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
+{% block title %}Deactivate {{ chemical.name }} · Chemicals · Biobank LIMS{% endblock %}
 {% block page_title %}Chemicals{% endblock %}
-{% block page_subtitle %}Confirm reagent deletion{% endblock %}
+{% block page_subtitle %}Confirm reagent deactivation{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="card border-danger shadow-sm">
         <div class="card-header bg-danger text-white fw-bold">
-            <i class="bi bi-exclamation-triangle me-2"></i>Delete Reagent
+            <i class="bi bi-exclamation-triangle me-2"></i>Deactivate Reagent
         </div>
         <div class="card-body">
-            <p class="mb-2">You are about to delete this reagent:</p>
+            <p class="mb-2">You are about to deactivate this reagent:</p>
 
             <h2 class="h5 fw-bold">{{ chemical.name }}</h2>
 
@@ -20,7 +20,7 @@
             </div>
 
             <div class="alert alert-warning">
-                This action removes the reagent record from the inventory. Use this only for incorrect test records or invalid entries.
+                The reagent will be hidden from the interface. Its metadata, documents and stock movement history will remain preserved in the database.
             </div>
 
             <form method="post">
@@ -28,7 +28,7 @@
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{% url 'chemical_detail' chemical.id %}" class="btn btn-light">Cancel</a>
                     <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Delete reagent
+                        <i class="bi bi-archive me-1"></i>Deactivate reagent
                     </button>
                 </div>
             </form>

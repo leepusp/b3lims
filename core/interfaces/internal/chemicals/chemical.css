@@ -1,0 +1,46 @@
+.chemical-storage-builder {
+    min-height: 42px;
+    padding: 7px 10px;
+    border: 1px solid #dee2e6;
+    border-radius: .375rem;
+    background: #fff;
+}
+
+.chemical-storage-builder:focus-within {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 .25rem rgba(13, 110, 253, .25);
+}
+
+.chemical-storage-levels {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chemical-storage-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chemical-storage-level button {
+    color: inherit;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    line-height: 1;
+}
+
+.chemical-storage-input {
+    flex: 1 1 160px;
+    min-width: 160px;
+    border: 0;
+    outline: 0;
+    padding: 3px 0;
+    background: transparent;
+}
+
+@media print {
+    .no-print { display: none !important; }
+}

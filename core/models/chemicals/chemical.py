@@ -1,7 +1,15 @@
+import mimetypes
+import os
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from core.models.research_groups.model import ResearchGroup
+
+
+def chemical_document_upload_to(instance, filename):
+    """Store documents under an opaque reagent UUID and opaque filename."""
+    extension = os.path.splitext(filename)[1].lower()[:16]
+    return f"chemicals/{instance.chemical.uuid}/documents/{uuid.uuid4().hex}{extension}"
 
 class Chemical(models.Model):
     """
@@ -59,12 +67,81 @@ class Chemical(models.Model):
         help_text="Research group responsible for this reagent."
     )
     is_public = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.quantity})"
+
+
+class ChemicalFile(models.Model):
+    DOCUMENT_TYPES = [
+        ("sds", "Safety Data Sheet (SDS)"),
+        ("coa", "Certificate of Analysis"),
+        ("specification", "Product Specification"),
+        ("protocol", "Protocol / Instructions"),
+        ("other", "Other Document"),
+    ]
+
+    chemical = models.ForeignKey(
+        Chemical,
+        on_delete=models.CASCADE,
+        related_name="files",
+    )
+    file = models.FileField(upload_to=chemical_document_upload_to)
+    original_filename = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    document_type = models.CharField(
+        max_length=30,
+        choices=DOCUMENT_TYPES,
+        default="other",
+    )
+    description = models.TextField(blank=True)
+    version = models.CharField(max_length=50, blank=True)
+    document_date = models.DateField(blank=True, null=True)
+    mime_type = models.CharField(max_length=150, blank=True)
+    file_size = models.BigIntegerField(blank=True, null=True)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary SDS shown on the reagent QR page.",
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chemical_files",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_primary", "-document_date", "-uploaded_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chemical"],
+                condition=models.Q(is_active=True, is_primary=True),
+                name="unique_active_primary_chemical_document",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(is_primary=False) | models.Q(document_type="sds"),
+                name="primary_chemical_document_must_be_sds",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.file:
+            if not self.original_filename:
+                self.original_filename = os.path.basename(self.file.name)
+            self.file_size = self.file.size
+            self.mime_type = mimetypes.guess_type(self.original_filename)[0] or "application/octet-stream"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.chemical.name} · {self.title}"
 
 
 

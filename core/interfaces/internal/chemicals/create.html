@@ -1,8 +1,10 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
 
 {% block title %}Create Reagent · Biobank LIMS{% endblock %}
 {% block page_title %}Chemicals{% endblock %}
 {% block page_subtitle %}Management of reagent inventory, stock locations and safety metadata{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'internal/chemicals/chemical.css' %}">{% endblock %}
 
 {% block content %}
 <style>
@@ -110,10 +112,6 @@
                         <input type="text" name="lot_number" class="form-control" placeholder="Batch or lot number">
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">MSDS Link</label>
-                        <input type="url" name="msds_link" class="form-control" placeholder="https://...">
-                    </div>
                 </div>
 
                 <div class="col-lg-4">
@@ -160,8 +158,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Storage Location</label>
-                        <input type="text" name="storage_location" class="form-control" placeholder="Room, cabinet, freezer, shelf, box">
+                        {% include "internal/chemicals/_storage_builder.html" with value="" %}
                     </div>
 
                     <div class="mb-3">
@@ -200,3 +197,4 @@
     </div>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260715-1"></script>{% endblock %}

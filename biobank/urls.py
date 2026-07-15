@@ -58,7 +58,20 @@ from core.views.internal.samples.views import (
 )
 
 # 6. CHEMICALS (REAGENTES)
-from core.views.internal.chemicals.views import chemicals_list_view, chemical_create_view, chemicals_dashboard_view, chemical_detail_view, chemical_edit_view, chemical_delete_view, chemical_movement_create_view
+from core.views.internal.chemicals.views import (
+    chemical_create_view,
+    chemical_delete_view,
+    chemical_detail_view,
+    chemical_edit_view,
+    chemical_file_deactivate_view,
+    chemical_file_download_view,
+    chemical_file_upload_view,
+    chemical_movement_create_view,
+    chemical_qr_scan_view,
+    chemicals_dashboard_view,
+    chemicals_list_view,
+    print_chemical_label,
+)
 
 # 7. TAGS & KEYWORDS
 from core.views.internal.tags.views import tags_view, create_tag_ajax_view
@@ -139,10 +152,15 @@ urlpatterns = [
     path("chemicals/", chemicals_list_view, name="chemicals_list"),
     path("chemicals/dashboard/", chemicals_dashboard_view, name="chemicals_dashboard"),
     path("chemicals/<int:chemical_id>/movements/add/", chemical_movement_create_view, name="chemical_movement_add"),
+    path("chemicals/<int:chemical_id>/documents/add/", chemical_file_upload_view, name="chemical_file_add"),
+    path("chemicals/<int:chemical_id>/documents/<int:file_id>/download/", chemical_file_download_view, name="chemical_file_download"),
+    path("chemicals/<int:chemical_id>/documents/<int:file_id>/remove/", chemical_file_deactivate_view, name="chemical_file_remove"),
+    path("chemicals/<int:chemical_id>/print/", print_chemical_label, name="print_chemical_label"),
     path("chemicals/<int:chemical_id>/edit/", chemical_edit_view, name="chemical_edit"),
     path("chemicals/<int:chemical_id>/delete/", chemical_delete_view, name="chemical_delete"),
     path("chemicals/<int:chemical_id>/", chemical_detail_view, name="chemical_detail"),
     path("chemicals/add/", chemical_create_view, name="chemical_add"),
+    path("chemicals/scan/<uuid:uuid>/", chemical_qr_scan_view, name="chemical_qr_scan"),
 
     # ---------------- INTERNAL: MANAGEMENT (TAGS) ----------------
     path("tags/", tags_view, name="tags_view"),

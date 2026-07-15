@@ -1,0 +1,17 @@
+<label class="form-label fw-semibold">Physical Location</label>
+<div class="chemical-storage-builder" data-storage-builder>
+    <input type="hidden"
+           name="storage_location"
+           value="{{ value|default_if_none:'' }}"
+           data-storage-value>
+    <div class="chemical-storage-levels" data-storage-levels>
+        <input type="text"
+               class="chemical-storage-input"
+               placeholder="Add level and press Enter..."
+               autocomplete="off"
+               data-storage-input>
+    </div>
+</div>
+<div class="form-text">
+    Add one level at a time, for example: Room 2 → Cabinet A → Shelf 3.
+</div>
