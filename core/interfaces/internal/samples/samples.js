@@ -33,8 +33,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* --- 0. ELN INITIALIZATION (QUILL) --- */
     let quill = null;
-    if(document.getElementById('eln-editor')) {
-        quill = new Quill('#eln-editor', { theme: 'snow' });
+    const editorElement = document.getElementById("eln-editor");
+
+    if (editorElement && typeof window.Quill === "function") {
+        quill = new window.Quill("#eln-editor", { theme: "snow" });
+    } else if (editorElement) {
+        console.warn(
+            "Quill could not be loaded. Continuing without the rich-text editor."
+        );
     }
 
     /* --- 1. MAIN FORM (Validation & Submit) --- */
