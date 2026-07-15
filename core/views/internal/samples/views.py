@@ -35,6 +35,7 @@ from core.models.samples.relationship import SampleRelationship
 from core.forms import SampleForm, get_form_class_for_sample
 from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample, visible_samples_for_user
 from core.permissions.collections import can_edit_collection
+from core.permissions.biobanks import visible_biobanks_for_user
 from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
@@ -157,6 +158,7 @@ def samples_dashboard_view(request):
 @login_required
 def sample_create_view(request):
     user = request.user
+    allowed_biobanks = visible_biobanks_for_user(user)
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -221,7 +223,7 @@ def sample_create_view(request):
                     for i in range(len(biobank_ids)):
                         bb_id = biobank_ids[i]
                         qty = int(quantities[i]) if quantities[i] else 1
-                        biobank = get_object_or_404(Biobank, id=bb_id)
+                        biobank = get_object_or_404(allowed_biobanks, id=bb_id)
 
                         for j in range(qty):
                             final_id = sample_id_base if qty == 1 and len(biobank_ids) == 1 else f"{sample_id_base}_{i+1}.{j+1}"
@@ -450,9 +452,7 @@ def sample_create_view(request):
                 logger.exception("Critical error while creating sample.")
                 messages.error(request, f"Error processing sample: {str(e)}")
 
-    user_biobanks = Biobank.objects.filter(
-        Q(owner=user) | Q(is_public=True)
-    ).distinct()
+    user_biobanks = allowed_biobanks
 
     empty_plasmids = list(Plasmid.objects.filter(is_active=True, is_empty_vector=True).values(
         'sample_id', 'backbone_name', 'backbone_aliases', 'vector_type',
