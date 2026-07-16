@@ -27,6 +27,39 @@
     </div>
 
     <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-tags me-2"></i>Classification metadata
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Tags</dt>
+                <dd class="col-sm-8">
+                    {% for tag in chemical.tags.all %}
+                        {% if tag.is_active %}
+                            <span class="badge text-bg-primary me-1 mb-1">{{ tag.name }}</span>
+                        {% endif %}
+                    {% empty %}
+                        Not defined
+                    {% endfor %}
+                </dd>
+
+                <dt class="col-sm-4">Keywords</dt>
+                <dd class="col-sm-8">
+                    {% for item in chemical.keywords.all %}
+                        {% if item.is_active and item.keyword.is_active %}
+                            <span class="badge text-bg-light border text-dark me-1 mb-1">
+                                {{ item.keyword.name }}: {{ item.value }}
+                            </span>
+                        {% endif %}
+                    {% empty %}
+                        Not defined
+                    {% endfor %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
         <div class="card-header bg-white fw-bold"><i class="bi bi-shield-exclamation me-2"></i>Safety information</div>
         <div class="card-body">
             {{ chemical.hazard_notes|default:"No hazard notes registered."|linebreaks }}

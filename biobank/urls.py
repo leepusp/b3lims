@@ -74,8 +74,20 @@ from core.views.internal.chemicals.views import (
 )
 
 # 7. TAGS & KEYWORDS
-from core.views.internal.tags.views import tags_view, create_tag_ajax_view
-from core.views.internal.keywords.views import keywords_view
+from core.views.internal.tags.views import (
+    create_tag_ajax_view,
+    create_tag_view,
+    delete_tag_view,
+    edit_tag_view,
+    tags_view,
+)
+from core.views.internal.keywords.views import (
+    create_keyword_view,
+    delete_keyword_value_view,
+    delete_keyword_view,
+    edit_keyword_view,
+    keywords_view,
+)
 
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
@@ -164,7 +176,22 @@ urlpatterns = [
 
     # ---------------- INTERNAL: MANAGEMENT (TAGS) ----------------
     path("tags/", tags_view, name="tags_view"),
+    path("tags/create/", create_tag_view, name="tag_create"),
+    path("tags/edit/", edit_tag_view, name="tag_edit"),
+    path("tags/deactivate/", delete_tag_view, name="tag_deactivate"),
     path("keywords/", keywords_view, name="keywords_view"),
+    path("keywords/create/", create_keyword_view, name="keyword_create"),
+    path("keywords/edit/", edit_keyword_view, name="keyword_edit"),
+    path(
+        "keywords/deactivate/",
+        delete_keyword_view,
+        name="keyword_deactivate",
+    ),
+    path(
+        "keywords/values/deactivate/",
+        delete_keyword_value_view,
+        name="keyword_value_deactivate",
+    ),
     path("ajax/add_tag/", create_tag_ajax_view, name="ajax_add_tag"),
 
     # ---------------- INTERNAL: LAB TOOLS ----------------

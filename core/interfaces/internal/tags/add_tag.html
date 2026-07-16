@@ -7,7 +7,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
 
-            <form id="addTagForm">
+            <form id="addTagForm" data-create-url="{% url 'ajax_add_tag' %}">
                 {% csrf_token %}
 
                 <div class="modal-header">

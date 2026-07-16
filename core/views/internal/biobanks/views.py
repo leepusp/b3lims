@@ -1,3 +1,4 @@
+from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
@@ -122,7 +123,7 @@ def biobanks_list_view(request, template_name="internal/biobanks/biobanks.html")
                 )
 
                 tag_ids = request.POST.getlist("tags")
-                if tag_ids: biobank.tags.set(tag_ids)
+                biobank.tags.set(active_tags_from_ids(tag_ids))
 
                 for raw in request.POST.getlist("keyword_pairs"):
                     if ":::" not in raw: continue
@@ -130,9 +131,13 @@ def biobanks_list_view(request, template_name="internal/biobanks/biobanks.html")
                     
                     if not key or not value: continue 
                     
-                    keyword_obj, _ = Keyword.objects.get_or_create(name=key)
-                    kv, _ = KeywordValue.objects.get_or_create(keyword=keyword_obj, value=value)
-                    biobank.keywords.add(kv)
+                    keyword_value, _ = (
+                        get_or_create_active_keyword_value(
+                            key,
+                            value,
+                        )
+                    )
+                    biobank.keywords.add(keyword_value)
 
                 messages.success(request, "Biobank created successfully!")
         except Exception as e:
@@ -166,7 +171,11 @@ def biobanks_list_view(request, template_name="internal/biobanks/biobanks.html")
     # 4. VIEW LOGIC (GET)
     ctx = base_context(request)
     ctx["biobank_form"] = BiobankForm()
-    ctx["all_tags"] = Tag.objects.all().order_by("name")
+    ctx["all_tags"] = (
+        Tag.objects
+        .filter(is_active=True)
+        .order_by("name")
+    )
 
     visible_biobanks = list(visible_biobanks_for_user(user).order_by("name"))
 

@@ -69,6 +69,17 @@ class Chemical(models.Model):
     is_public = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, db_index=True)
 
+    tags = models.ManyToManyField(
+        "Tag",
+        blank=True,
+        related_name="chemicals",
+    )
+    keywords = models.ManyToManyField(
+        "KeywordValue",
+        blank=True,
+        related_name="chemicals",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

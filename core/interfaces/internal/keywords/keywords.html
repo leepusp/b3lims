@@ -1,38 +1,85 @@
 {% extends "internal/common/base.html" %}
-{% load static %}
 
-{% block title %}Manage Keywords · Biobank LIMS{% endblock %}
+{% block title %}Manage Keywords · Biobank{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Estilos idênticos ao tags.html para manter o padrão CEBID B3 */
-    .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; justify-content:center; align-items:center; z-index:1050; }
-    .modal-card { background:white; padding:25px; border-radius:8px; width:400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .section-subtitle { color: #6c757d; font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .value-chip { background: #f0f4f8; color: #475467; border: 1px solid #d0d5dd; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; display: inline-block; margin: 2px; }
-    .badge-usage { font-size: 0.75rem; padding: 4px 8px; }
+    .metadata-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .metadata-modal-card {
+        width: min(100% - 2rem, 500px);
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.5rem;
+    }
+
+    .keyword-value-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0.15rem;
+        padding: 0.25rem 0.55rem;
+        color: #475467;
+        background: #f8fafc;
+        border: 1px solid #d0d5dd;
+        border-radius: 0.375rem;
+        font-size: 0.78rem;
+    }
+
+    .keyword-value-chip form {
+        display: inline;
+        margin: 0;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-
-    <div class="d-flex align-items-center mb-4">
-        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm rounded-circle me-3 shadow-sm" title="Voltar">
-            <i class="bi bi-arrow-left"></i>
-        </a>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h2 class="h3 mb-0">Manage Keywords</h2>
-            <p class="section-subtitle mb-0">
-                View, edit and delete keywords and their associated recorded values.
+            <h1 class="h4 mb-1">
+                <i class="bi bi-key me-2"></i>Keyword Management
+            </h1>
+            <p class="text-muted mb-0">
+                Manage structured metadata keys and their recorded values.
             </p>
         </div>
+
+        <form method="post" action="{% url 'keyword_create' %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input
+                type="text"
+                name="name"
+                class="form-control"
+                maxlength="120"
+                placeholder="New keyword name"
+                required
+            >
+            <button type="submit" class="btn btn-primary text-nowrap">
+                <i class="bi bi-plus-lg me-1"></i>Add Keyword
+            </button>
+        </form>
     </div>
 
-    <div class="mb-4">
-        <div class="input-group" style="max-width: 400px;">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input id="kw-search" type="text" class="form-control border-start-0" placeholder="Search keywords by name...">
+    <div class="mb-3" style="max-width: 420px;">
+        <div class="input-group">
+            <span class="input-group-text bg-white">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input
+                id="keyword-search"
+                type="search"
+                class="form-control"
+                placeholder="Search keywords..."
+            >
         </div>
     </div>
 
@@ -40,129 +87,192 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
-                    <tr class="small text-uppercase">
-                        <th class="ps-4">Keyword Key & Values</th>
+                    <tr>
+                        <th class="ps-4">Keyword and Values</th>
                         <th>Usage Summary</th>
-                        <th class="text-end pe-4" style="width:180px;">Actions</th>
+                        <th class="text-end pe-4">Actions</th>
                     </tr>
                 </thead>
-
-                <tbody id="kw-table-body">
+                <tbody>
                     {% for item in keywords %}
-                    <tr class="kw-row" data-name="{{ item.keyword.name|lower }}">
-                        <td class="ps-4">
-                            <div class="fw-bold text-dark mb-2">{{ item.keyword.name }}</div>
-                            <div class="d-flex flex-wrap">
-                                {% for v in item.values %}
-                                    <span class="value-chip">{{ v.value }}</span>
-                                {% empty %}
-                                    <span class="text-muted small italic">No values recorded.</span>
-                                {% endfor %}
-                            </div>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-light text-dark border badge-usage mb-1">{{ item.biobank_count }} Biobank(s)</span><br>
-                            <span class="badge bg-light text-dark border badge-usage mb-1">{{ item.collection_count }} Collection(s)</span><br>
-                            <span class="badge bg-light text-dark border badge-usage">{{ item.sample_count }} Sample(s)</span>
-                        </td>
-
-                        <td class="text-end pe-4">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                        onclick="openEditModal('{{ item.keyword.id }}', '{{ item.keyword.name|escapejs }}')">
-                                    <i class="bi bi-pencil me-1"></i> Edit
+                        <tr class="keyword-row" data-name="{{ item.keyword.name|lower }}">
+                            <td class="ps-4">
+                                <div class="fw-semibold mb-2">
+                                    {{ item.keyword.name }}
+                                </div>
+                                <div class="d-flex flex-wrap">
+                                    {% for value in item.values %}
+                                        <span class="keyword-value-chip">
+                                            {{ value.value }}
+                                            <form
+                                                method="post"
+                                                action="{% url 'keyword_value_deactivate' %}"
+                                            >
+                                                {% csrf_token %}
+                                                <input
+                                                    type="hidden"
+                                                    name="id"
+                                                    value="{{ value.id }}"
+                                                >
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-link text-danger p-0 border-0"
+                                                    title="Deactivate this value"
+                                                    aria-label="Deactivate {{ value.value }}"
+                                                >
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </form>
+                                        </span>
+                                    {% empty %}
+                                        <span class="small text-muted">
+                                            No active values recorded.
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ item.biobank_count }} Biobank(s)
+                                </span>
+                                <span class="badge bg-light text-dark border">
+                                    {{ item.collection_count }} Collection(s)
+                                </span>
+                                <span class="badge bg-light text-dark border">
+                                    {{ item.sample_count }} Sample(s)
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="openKeywordEditModal(
+                                        '{{ item.keyword.id }}',
+                                        '{{ item.keyword.name|escapejs }}'
+                                    )"
+                                >
+                                    <i class="bi bi-pencil me-1"></i>Edit
                                 </button>
-
-                                <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                                        onclick="openDeleteModal('{{ item.keyword.id }}', '{{ item.keyword.name|escapejs }}', {{ item.total_use }})">
-                                    <i class="bi bi-trash me-1"></i> Delete
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-danger ms-2"
+                                    onclick="openKeywordDeactivateModal(
+                                        '{{ item.keyword.id }}',
+                                        '{{ item.keyword.name|escapejs }}',
+                                        '{{ item.total_use }}'
+                                    )"
+                                >
+                                    <i class="bi bi-archive me-1"></i>Deactivate
                                 </button>
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="bi bi-key display-4 d-block mb-2"></i>
-                            No keywords found in the system.
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-muted">
+                                <i class="bi bi-key display-4 d-block mb-2"></i>
+                                No active keywords found.
+                            </td>
+                        </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-
-    <div id="editModal" class="modal-bg">
-        <div class="modal-card shadow-lg">
-            <h5 class="mb-3"><i class="bi bi-pencil me-2"></i>Edit Keyword</h5>
-            <form method="post" action="/?page=edit_keyword">
-                {% csrf_token %}
-                <input type="hidden" name="id" id="editKwId">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Name</label>
-                    <input type="text" name="name" id="editKwName" class="form-control" required>
-                </div>
-                <div class="text-end">
-                    <button type="button" class="btn btn-light border btn-sm" onclick="closeModal('editModal')">Cancel</button>
-                    <button class="btn btn-primary btn-sm ms-2">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="deleteModal" class="modal-bg">
-        <div class="modal-card border-top border-danger border-4">
-            <h5 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Keyword</h5>
-            <p id="deleteMessage" class="small"></p>
-            <form method="post" action="/?page=delete_keyword">
-                {% csrf_token %}
-                <input type="hidden" name="id" id="deleteKwId">
-                <div class="text-end mt-4">
-                    <button type="button" class="btn btn-light border btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-                    <button id="deleteConfirmBtn" class="btn btn-danger btn-sm ms-2">Confirm Delete</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 </div>
 
+<div id="keywordEditModal" class="metadata-modal">
+    <div class="metadata-modal-card shadow-lg">
+        <h2 class="h5 mb-3">
+            <i class="bi bi-pencil me-2"></i>Edit Keyword
+        </h2>
+        <form method="post" action="{% url 'keyword_edit' %}">
+            {% csrf_token %}
+            <input type="hidden" name="id" id="keywordEditId">
+            <label for="keywordEditName" class="form-label fw-semibold">
+                Name
+            </label>
+            <input
+                type="text"
+                name="name"
+                id="keywordEditName"
+                class="form-control"
+                maxlength="120"
+                required
+            >
+            <div class="text-end mt-4">
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    onclick="closeMetadataModal('keywordEditModal')"
+                >
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary ms-2">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="keywordDeactivateModal" class="metadata-modal">
+    <div class="metadata-modal-card shadow-lg border-top border-danger border-4">
+        <h2 class="h5 text-danger mb-3">
+            <i class="bi bi-archive me-2"></i>Deactivate Keyword
+        </h2>
+        <p id="keywordDeactivateMessage"></p>
+        <p class="small text-muted">
+            Existing values and associations will be preserved.
+        </p>
+        <form method="post" action="{% url 'keyword_deactivate' %}">
+            {% csrf_token %}
+            <input type="hidden" name="id" id="keywordDeactivateId">
+            <div class="text-end mt-4">
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    onclick="closeMetadataModal('keywordDeactivateModal')"
+                >
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-danger ms-2">
+                    Confirm Deactivation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
-
-function openEditModal(id, name) {
-    document.getElementById("editKwId").value = id;
-    document.getElementById("editKwName").value = name;
-    document.getElementById("editModal").style.display = "flex";
+function openKeywordEditModal(id, name) {
+    document.getElementById("keywordEditId").value = id;
+    document.getElementById("keywordEditName").value = name;
+    document.getElementById("keywordEditModal").style.display = "flex";
 }
 
-function openDeleteModal(id, name, totalUse) {
-    const msg = document.getElementById("deleteMessage");
-    const btn = document.getElementById("deleteConfirmBtn");
-    document.getElementById("deleteKwId").value = id;
-
-    if (totalUse > 0 && !IS_ADMIN) {
-        msg.innerHTML = `Keyword "<b>${name}</b>" is linked to <b>${totalUse}</b> entities. Only admins can delete metadata in use.`;
-        btn.disabled = true;
-    } else {
-        msg.innerHTML = `Are you sure you want to permanently delete "<b>${name}</b>"?`;
-        btn.disabled = false;
-    }
-    document.getElementById("deleteModal").style.display = "flex";
+function openKeywordDeactivateModal(id, name, totalUse) {
+    document.getElementById("keywordDeactivateId").value = id;
+    document.getElementById("keywordDeactivateMessage").textContent =
+        `Deactivate "${name}"? It is currently linked to ${totalUse} record(s).`;
+    document.getElementById("keywordDeactivateModal").style.display = "flex";
 }
 
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = "none";
+function closeMetadataModal(id) {
+    document.getElementById(id).style.display = "none";
 }
 
-// Busca instantânea idêntica ao Tags
-document.getElementById("kw-search").addEventListener("input", function() {
-    const q = this.value.toLowerCase();
-    document.querySelectorAll(".kw-row").forEach(row => {
-        row.style.display = row.dataset.name.includes(q) ? "" : "none";
+const keywordSearch = document.getElementById("keyword-search");
+
+if (keywordSearch) {
+    keywordSearch.addEventListener("input", function() {
+        const query = this.value.toLowerCase();
+
+        document.querySelectorAll(".keyword-row").forEach(row => {
+            row.style.display = row.dataset.name.includes(query) ? "" : "none";
+        });
     });
-});
+}
 </script>
 {% endblock %}

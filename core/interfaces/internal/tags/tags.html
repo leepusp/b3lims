@@ -1,156 +1,236 @@
 {% extends "internal/common/base.html" %}
-{% load static %}
 
 {% block title %}Manage Tags · Biobank{% endblock %}
 
 {% block extra_css %}
 <style>
-    .modal-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
-    .modal-card { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 8px; }
-    .badge-usage { font-size: 0.8rem; font-weight: normal; }
+    .metadata-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .metadata-modal-card {
+        width: min(100% - 2rem, 500px);
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.5rem;
+    }
+
+    .metadata-usage {
+        font-size: 0.78rem;
+        font-weight: normal;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h4 mb-1">
+                <i class="bi bi-tags me-2"></i>Tag Management
+            </h1>
+            <p class="text-muted mb-0">
+                Manage the global controlled vocabulary used to classify records.
+            </p>
+        </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="h4 mb-0"><i class="bi bi-tags me-2"></i>Tag Management</h3>
-        <div class="d-flex gap-2">
-            <input type="text" id="tag-search" class="form-control" placeholder="Search tags...">
-            </div>
+        <form method="post" action="{% url 'tag_create' %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input
+                type="text"
+                name="name"
+                class="form-control"
+                maxlength="120"
+                placeholder="New tag name"
+                required
+            >
+            <button type="submit" class="btn btn-primary text-nowrap">
+                <i class="bi bi-plus-lg me-1"></i>Add Tag
+            </button>
+        </form>
+    </div>
+
+    <div class="mb-3" style="max-width: 420px;">
+        <div class="input-group">
+            <span class="input-group-text bg-white">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input
+                id="tag-search"
+                type="search"
+                class="form-control"
+                placeholder="Search tags..."
+            >
+        </div>
     </div>
 
     <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
+        <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">Tag Name</th>
-                        <th>Usage in Samples</th>
+                        <th>Usage Summary</th>
                         <th class="text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {# AQUI INICIA O LOOP CORRETAMENTE #}
                     {% for item in tags %}
-                    <tr class="tag-row" data-name="{{ item.tag.name|lower }}">
-                        <td class="ps-4 fw-bold text-primary">
-                            {{ item.tag.name }}
-                        </td>
-                        <td>
-                            {# O trecho que você enviou começa aqui #}
-                            <span class="badge bg-light text-dark border badge-usage">
-                                {{ item.sample_count|default:"0" }} Sample(s)
-                            </span>
-                        </td>
-
-                        <td class="text-end pe-4">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                        onclick="openEditModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}')">
-                                    <i class="bi bi-pencil me-1"></i> Edit
+                        <tr class="tag-row" data-name="{{ item.tag.name|lower }}">
+                            <td class="ps-4">
+                                <div class="fw-semibold text-primary">
+                                    {{ item.tag.name }}
+                                </div>
+                                {% if item.tag.description %}
+                                    <div class="small text-muted">
+                                        {{ item.tag.description }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border metadata-usage">
+                                    {{ item.biobank_count }} Biobank(s)
+                                </span>
+                                <span class="badge bg-light text-dark border metadata-usage">
+                                    {{ item.collection_count }} Collection(s)
+                                </span>
+                                <span class="badge bg-light text-dark border metadata-usage">
+                                    {{ item.sample_count }} Sample(s)
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="openTagEditModal(
+                                        '{{ item.tag.id }}',
+                                        '{{ item.tag.name|escapejs }}'
+                                    )"
+                                >
+                                    <i class="bi bi-pencil me-1"></i>Edit
                                 </button>
-
-                                <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                                        onclick="openDeleteModal('{{ item.tag.id }}', '{{ item.tag.name|escapejs }}', {{ item.total_use|default:0 }})">
-                                    <i class="bi bi-trash me-1"></i> Delete
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-danger ms-2"
+                                    onclick="openTagDeactivateModal(
+                                        '{{ item.tag.id }}',
+                                        '{{ item.tag.name|escapejs }}',
+                                        '{{ item.total_use }}'
+                                    )"
+                                >
+                                    <i class="bi bi-archive me-1"></i>Deactivate
                                 </button>
-                            </div>
-                        </td>
-                    </tr>
-
-                    {# O bloco empty deve ficar DENTRO do for, logo antes do endfor #}
+                            </td>
+                        </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="bi bi-tags display-4 d-block mb-2"></i>
-                            No tags found in the system.
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-muted">
+                                <i class="bi bi-tags display-4 d-block mb-2"></i>
+                                No active tags found.
+                            </td>
+                        </tr>
                     {% endfor %}
-                    {# FIM DO LOOP #}
                 </tbody>
             </table>
         </div>
     </div>
+</div>
 
-    <div id="editModal" class="modal-bg" style="display:none;">
-        <div class="modal-card shadow-lg">
-            <h5 class="mb-3"><i class="bi bi-pencil me-2"></i>Edit Tag</h5>
-            <form method="post" action="/?page=edit_tag"> {% csrf_token %}
-                <input type="hidden" name="id" id="editTagId">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Name</label>
-                    <input type="text" name="name" id="editTagName" class="form-control" required>
-                </div>
-                <div class="text-end">
-                    <button type="button" class="btn btn-light border btn-sm" onclick="closeEditModal()">Cancel</button>
-                    <button class="btn btn-primary btn-sm ms-2">Save Changes</button>
-                </div>
-            </form>
-        </div>
+<div id="tagEditModal" class="metadata-modal">
+    <div class="metadata-modal-card shadow-lg">
+        <h2 class="h5 mb-3">
+            <i class="bi bi-pencil me-2"></i>Edit Tag
+        </h2>
+        <form method="post" action="{% url 'tag_edit' %}">
+            {% csrf_token %}
+            <input type="hidden" name="id" id="tagEditId">
+            <label for="tagEditName" class="form-label fw-semibold">Name</label>
+            <input
+                type="text"
+                name="name"
+                id="tagEditName"
+                class="form-control"
+                maxlength="120"
+                required
+            >
+            <div class="text-end mt-4">
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    onclick="closeMetadataModal('tagEditModal')"
+                >
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary ms-2">
+                    Save Changes
+                </button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <div id="deleteModal" class="modal-bg" style="display:none;">
-        <div class="modal-card border-top border-danger border-4">
-            <h5 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Tag</h5>
-            <p id="deleteMessage" class="small"></p>
-            <form method="post" action="/?page=delete_tag"> {% csrf_token %}
-                <input type="hidden" name="id" id="deleteTagId">
-                <div class="text-end mt-4">
-                    <button type="button" class="btn btn-light border btn-sm" onclick="closeDeleteModal()">Cancel</button>
-                    <button id="deleteConfirmBtn" class="btn btn-danger btn-sm ms-2">Confirm Delete</button>
-                </div>
-            </form>
-        </div>
+<div id="tagDeactivateModal" class="metadata-modal">
+    <div class="metadata-modal-card shadow-lg border-top border-danger border-4">
+        <h2 class="h5 text-danger mb-3">
+            <i class="bi bi-archive me-2"></i>Deactivate Tag
+        </h2>
+        <p id="tagDeactivateMessage"></p>
+        <p class="small text-muted">
+            Existing associations will be preserved.
+        </p>
+        <form method="post" action="{% url 'tag_deactivate' %}">
+            {% csrf_token %}
+            <input type="hidden" name="id" id="tagDeactivateId">
+            <div class="text-end mt-4">
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    onclick="closeMetadataModal('tagDeactivateModal')"
+                >
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-danger ms-2">
+                    Confirm Deactivation
+                </button>
+            </div>
+        </form>
     </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Ajuste para garantir que IS_ADMIN seja booleano JS
-const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
-
-function openEditModal(id, name) {
-    document.getElementById("editTagId").value = id;
-    document.getElementById("editTagName").value = name;
-    document.getElementById("editModal").style.display = "flex";
+function openTagEditModal(id, name) {
+    document.getElementById("tagEditId").value = id;
+    document.getElementById("tagEditName").value = name;
+    document.getElementById("tagEditModal").style.display = "flex";
 }
 
-function closeEditModal() {
-    document.getElementById("editModal").style.display = "none";
+function openTagDeactivateModal(id, name, totalUse) {
+    document.getElementById("tagDeactivateId").value = id;
+    document.getElementById("tagDeactivateMessage").textContent =
+        `Deactivate "${name}"? It is currently linked to ${totalUse} record(s).`;
+    document.getElementById("tagDeactivateModal").style.display = "flex";
 }
 
-function openDeleteModal(id, name, totalUse) {
-    const msg = document.getElementById("deleteMessage");
-    const btn = document.getElementById("deleteConfirmBtn");
-    document.getElementById("deleteTagId").value = id;
-
-    if (totalUse > 0 && !IS_ADMIN) {
-        msg.innerHTML = `The tag "<b>${name}</b>" is currently linked to <b>${totalUse}</b> entities. Only administrators can delete tags in use.`;
-        btn.disabled = true;
-    } else {
-        msg.innerHTML = `Are you sure you want to permanently delete "<b>${name}</b>"? This action cannot be undone.`;
-        btn.disabled = false;
-    }
-
-    document.getElementById("deleteModal").style.display = "flex";
+function closeMetadataModal(id) {
+    document.getElementById(id).style.display = "none";
 }
 
-function closeDeleteModal() {
-    document.getElementById("deleteModal").style.display = "none";
-}
+const tagSearch = document.getElementById("tag-search");
 
-// Filtro de busca em tempo real
-const searchInput = document.getElementById("tag-search");
-if (searchInput) {
-    searchInput.addEventListener("input", function() {
-        const q = this.value.toLowerCase();
+if (tagSearch) {
+    tagSearch.addEventListener("input", function() {
+        const query = this.value.toLowerCase();
+
         document.querySelectorAll(".tag-row").forEach(row => {
-            row.style.display = row.dataset.name.includes(q) ? "" : "none";
+            row.style.display = row.dataset.name.includes(query) ? "" : "none";
         });
     });
 }

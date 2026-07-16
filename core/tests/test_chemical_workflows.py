@@ -7,7 +7,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from core.models import Tag
 from core.models.chemicals.chemical import Chemical, ChemicalFile
+from core.services.metadata_vocabularies import get_or_create_active_keyword_value
 from core.permissions.chemicals import visible_chemicals_for_user
 
 
@@ -162,3 +164,159 @@ class ChemicalWorkflowTests(TestCase):
         self.assertContains(response, "View Details")
         self.assertContains(response, "Print QR Label")
         self.assertNotContains(response, "Edit Reagent")
+
+    def test_create_reagent_assigns_tags_and_keywords(self):
+        tag = Tag.objects.create(name="Flammable")
+
+        response = self.client.post(
+            request_path("chemical_add"),
+            {
+                "name": "Methanol",
+                "quantity_value": "250",
+                "quantity_unit": "mL",
+                "tags": [str(tag.pk)],
+                "keyword_pairs": [
+                    "Hazard Class:::Flammable Liquid",
+                    "Grade:::HPLC",
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        chemical = Chemical.objects.get(name="Methanol")
+
+        self.assertTrue(
+            chemical.tags.filter(pk=tag.pk).exists()
+        )
+        self.assertTrue(
+            chemical.keywords.filter(
+                keyword__name="Hazard Class",
+                value="Flammable Liquid",
+            ).exists()
+        )
+        self.assertTrue(
+            chemical.keywords.filter(
+                keyword__name="Grade",
+                value="HPLC",
+            ).exists()
+        )
+
+    def test_edit_reagent_replaces_active_metadata(self):
+        old_tag = Tag.objects.create(name="Old Classification")
+        new_tag = Tag.objects.create(name="New Classification")
+
+        old_value, _ = get_or_create_active_keyword_value(
+            "Grade",
+            "Technical",
+        )
+        new_value, _ = get_or_create_active_keyword_value(
+            "Grade",
+            "Analytical",
+        )
+
+        self.chemical.tags.add(old_tag)
+        self.chemical.keywords.add(old_value)
+
+        response = self.client.post(
+            request_path("chemical_edit", [self.chemical.id]),
+            {
+                "name": self.chemical.name,
+                "quantity_value": "500",
+                "quantity_unit": "mL",
+                "minimum_quantity": "",
+                "storage_location": self.chemical.storage_location,
+                "storage_temperature": "",
+                "status": "available",
+                "tags": [str(new_tag.pk)],
+                "keyword_pairs": [
+                    "Grade:::Analytical",
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.chemical.refresh_from_db()
+
+        self.assertFalse(
+            self.chemical.tags.filter(pk=old_tag.pk).exists()
+        )
+        self.assertTrue(
+            self.chemical.tags.filter(pk=new_tag.pk).exists()
+        )
+        self.assertFalse(
+            self.chemical.keywords.filter(
+                pk=old_value.pk,
+            ).exists()
+        )
+        self.assertTrue(
+            self.chemical.keywords.filter(
+                pk=new_value.pk,
+            ).exists()
+        )
+
+    def test_edit_preserves_archived_metadata_relationships(self):
+        archived_tag = Tag.objects.create(
+            name="Archived Classification",
+            is_active=False,
+        )
+        archived_value, _ = get_or_create_active_keyword_value(
+            "Historical Grade",
+            "Legacy",
+        )
+        archived_value.is_active = False
+        archived_value.save(update_fields=["is_active"])
+
+        self.chemical.tags.add(archived_tag)
+        self.chemical.keywords.add(archived_value)
+
+        response = self.client.post(
+            request_path("chemical_edit", [self.chemical.id]),
+            {
+                "name": self.chemical.name,
+                "quantity_value": "500",
+                "quantity_unit": "mL",
+                "minimum_quantity": "",
+                "storage_location": self.chemical.storage_location,
+                "storage_temperature": "",
+                "status": "available",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            self.chemical.tags.filter(
+                pk=archived_tag.pk,
+            ).exists()
+        )
+        self.assertTrue(
+            self.chemical.keywords.filter(
+                pk=archived_value.pk,
+            ).exists()
+        )
+
+    def test_detail_and_qr_show_active_metadata(self):
+        tag = Tag.objects.create(name="Controlled Substance")
+        value, _ = get_or_create_active_keyword_value(
+            "Storage Class",
+            "Locked Cabinet",
+        )
+
+        self.chemical.tags.add(tag)
+        self.chemical.keywords.add(value)
+
+        detail = self.client.get(
+            request_path("chemical_detail", [self.chemical.id])
+        )
+        qr_page = self.client.get(
+            request_path("chemical_qr_scan", [self.chemical.uuid])
+        )
+
+        self.assertContains(detail, "Controlled Substance")
+        self.assertContains(detail, "Storage Class")
+        self.assertContains(detail, "Locked Cabinet")
+
+        self.assertContains(qr_page, "Controlled Substance")
+        self.assertContains(qr_page, "Storage Class")
+        self.assertContains(qr_page, "Locked Cabinet")

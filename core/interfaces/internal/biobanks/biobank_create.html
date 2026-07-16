@@ -224,7 +224,7 @@
                                         <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Quick visual labels to classify the biobank (e.g., 'BSL-3', 'Cryogenic')."></i>
                                     </label>
                                     <div class="d-flex gap-2">
-                                        <a href="/?page=tags" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <a href="{% url 'tags_view' %}" target="_blank" class="btn-manage-mini">Manage</a>
                                         <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addTagModal">+ New</button>
                                     </div>
                                 </div>
@@ -244,7 +244,7 @@
                                         <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Add specific key/value pairs for advanced filtering (e.g., 'Funding Agency: FAPESP')."></i>
                                     </label>
                                     <div class="d-flex gap-2">
-                                        <a href="/?page=keywords" target="_blank" class="btn-manage-mini">Manage</a>
+                                        <a href="{% url 'keywords_view' %}" target="_blank" class="btn-manage-mini">Manage</a>
                                         <button type="button" class="btn btn-link text-decoration-none p-0 small fw-bold" data-bs-toggle="modal" data-bs-target="#addKeywordModal">+ Add</button>
                                     </div>
                                 </div>
@@ -285,6 +285,9 @@
                 </div>
             </form>
 </div>
+
+{% include "internal/tags/add_tag.html" %}
+{% include "internal/keywords/add_keyword.html" %}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 

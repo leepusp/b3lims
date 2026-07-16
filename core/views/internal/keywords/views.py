@@ -1,62 +1,166 @@
-from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.contrib.auth.decorators import login_required
+from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
 from core.context import base_context
 from core.models import Keyword, KeywordValue
+from core.models.keywords.model import normalize_metadata_text
+from core.permissions.metadata import require_metadata_manager
 
 
+@login_required
 def keywords_view(request):
-    if not request.user.is_authenticated:
-        raise PermissionDenied
+    require_metadata_manager(request.user)
 
-    ctx = base_context(request)
-    ctx["back_url"] = request.META.get('HTTP_REFERER', '/?page=workspace')
+    query = normalize_metadata_text(request.GET.get("q", ""))
 
-    # Captura busca se existir
-    query = request.GET.get("q", "").strip().lower()
+    active_values = (
+        KeywordValue.objects
+        .filter(is_active=True)
+        .prefetch_related("samples", "collections", "biobanks")
+        .order_by("value")
+    )
 
-    enriched = []
-    # Prefetch para otimizar performance na LEEP3
-    values_prefetched = KeywordValue.objects.prefetch_related("samples", "collections", "biobanks")
-
-    keywords_qs = Keyword.objects.all().order_by("name")
+    keywords = (
+        Keyword.objects
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch(
+                "values",
+                queryset=active_values,
+                to_attr="active_values",
+            )
+        )
+        .order_by("name")
+    )
 
     if query:
-        keywords_qs = keywords_qs.filter(name__icontains=query)
+        keywords = keywords.filter(name__icontains=query)
 
-    for key in keywords_qs:
-        values = values_prefetched.filter(keyword=key)
+    enriched = []
+    for keyword in keywords:
+        values = keyword.active_values
         enriched.append({
-            "keyword": key,
+            "keyword": keyword,
             "values": values,
             "sample_count": sum(v.samples.count() for v in values),
             "collection_count": sum(v.collections.count() for v in values),
             "biobank_count": sum(v.biobanks.count() for v in values),
-            "total_values": values.count(),
+            "total_values": len(values),
+            "total_use": sum(
+                v.samples.count()
+                + v.collections.count()
+                + v.biobanks.count()
+                for v in values
+            ),
         })
 
+    ctx = base_context(request)
+    ctx["back_url"] = request.META.get("HTTP_REFERER", "/")
     ctx["keywords"] = enriched
     ctx["query"] = query
-    ctx["is_admin"] = request.user.is_superuser
+    ctx["is_admin"] = True
     return render(request, "internal/keywords/keywords.html", ctx)
 
 
-def edit_keyword_view(request):
-    if request.method == "POST":
-        key = Keyword.objects.get(id=request.POST.get("id"))
-        key.name = request.POST.get("name")
-        key.save()
-        messages.success(request, "Chave de metadados atualizada.")
-    return redirect("/?page=keywords")
+@login_required
+@require_POST
+def create_keyword_view(request):
+    require_metadata_manager(request.user)
 
+    name = normalize_metadata_text(request.POST.get("name", ""))
 
-def delete_keyword_view(request):
-    if request.method == "POST":
-        key = Keyword.objects.get(id=request.POST.get("id"))
-        # Verifica se existem valores vinculados para segurança
-        if KeywordValue.objects.filter(keyword=key).exists() and not request.user.is_superuser:
-            messages.error(request, "Esta chave possui valores em uso e não pode ser removida.")
+    if not name:
+        messages.error(request, "Keyword name is required.")
+        return redirect("keywords_view")
+
+    existing = Keyword.objects.filter(name__iexact=name).first()
+    if existing:
+        if existing.is_active:
+            messages.info(request, "A keyword with this name already exists.")
         else:
-            key.delete()
-            messages.success(request, "Chave removida do sistema.")
-    return redirect("/?page=keywords")
+            messages.error(request, "This keyword is currently inactive.")
+        return redirect("keywords_view")
+
+    Keyword.objects.create(name=name)
+    messages.success(request, f"Keyword '{name}' was created.")
+    return redirect("keywords_view")
+
+
+@login_required
+@require_POST
+def edit_keyword_view(request):
+    require_metadata_manager(request.user)
+
+    keyword = get_object_or_404(
+        Keyword,
+        pk=request.POST.get("id"),
+        is_active=True,
+    )
+    name = normalize_metadata_text(request.POST.get("name", ""))
+
+    if not name:
+        messages.error(request, "Keyword name is required.")
+        return redirect("keywords_view")
+
+    duplicate = (
+        Keyword.objects
+        .filter(name__iexact=name)
+        .exclude(pk=keyword.pk)
+        .exists()
+    )
+    if duplicate:
+        messages.error(
+            request,
+            "A keyword with this name already exists.",
+        )
+        return redirect("keywords_view")
+
+    keyword.name = name
+    keyword.save()
+
+    messages.success(request, "Keyword was updated.")
+    return redirect("keywords_view")
+
+
+@login_required
+@require_POST
+def delete_keyword_view(request):
+    require_metadata_manager(request.user)
+
+    keyword = get_object_or_404(
+        Keyword,
+        pk=request.POST.get("id"),
+        is_active=True,
+    )
+    keyword.is_active = False
+    keyword.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        "Keyword was deactivated. Existing values and associations were preserved.",
+    )
+    return redirect("keywords_view")
+
+
+@login_required
+@require_POST
+def delete_keyword_value_view(request):
+    require_metadata_manager(request.user)
+
+    value = get_object_or_404(
+        KeywordValue,
+        pk=request.POST.get("id"),
+        is_active=True,
+        keyword__is_active=True,
+    )
+    value.is_active = False
+    value.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        "Keyword value was deactivated. Existing associations were preserved.",
+    )
+    return redirect("keywords_view")

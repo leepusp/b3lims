@@ -1,3 +1,4 @@
+from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db import transaction
@@ -90,8 +91,9 @@ def collections_list_view(request, template_name="internal/collections/collectio
 
                     # --- Tags ---
                     selected_tags = request.POST.getlist("tags")
-                    if selected_tags:
-                        collection.tags.set(selected_tags)
+                    collection.tags.set(
+                        active_tags_from_ids(selected_tags)
+                    )
 
                     # --- Keywords ---
                     pairs = request.POST.getlist("keyword_pairs")
@@ -99,9 +101,13 @@ def collections_list_view(request, template_name="internal/collections/collectio
                         if ":::" not in raw: continue
                         key, value = raw.split(":::")
                         if key.strip() and value.strip():
-                            keyword_obj, _ = Keyword.objects.get_or_create(name=key.strip())
-                            kv, _ = KeywordValue.objects.get_or_create(keyword=keyword_obj, value=value.strip())
-                            collection.keywords.add(kv)
+                            keyword_value, _ = (
+                                get_or_create_active_keyword_value(
+                                    key,
+                                    value,
+                                )
+                            )
+                            collection.keywords.add(keyword_value)
 
                 messages.success(request, "Collection created successfully!")
                 return redirect("collections_list")
@@ -131,7 +137,11 @@ def collections_list_view(request, template_name="internal/collections/collectio
     ctx = base_context(request)
 
     ctx["biobanks"] = Biobank.objects.filter(is_active=True).order_by("name")
-    ctx["all_tags"] = Tag.objects.all().order_by("name")
+    ctx["all_tags"] = (
+        Tag.objects
+        .filter(is_active=True)
+        .order_by("name")
+    )
     ctx["collection_form"] = CollectionForm()
 
     collections_qs = visible_collections_for_user(user).order_by("-created_at")

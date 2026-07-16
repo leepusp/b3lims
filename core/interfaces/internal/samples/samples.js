@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fd.append('name', tagName);
                 fd.append('csrfmiddlewaretoken', getCsrfToken());
 
-                fetch('/ajax/add_tag/', { method: 'POST', body: fd })
+                fetch(addTagForm.dataset.createUrl, { method: 'POST', body: fd })
                 .then(res => res.json())
                 .then(data => {
                     if (data.id) {

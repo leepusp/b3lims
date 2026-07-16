@@ -94,6 +94,35 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header fw-bold">
+            <i class="bi bi-tags me-2"></i>Classification metadata
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <strong class="d-block mb-2">Tags</strong>
+                {% for tag in chemical.tags.all %}
+                    <span class="badge rounded-pill {% if tag.is_active %}text-bg-primary{% else %}text-bg-secondary{% endif %} me-1 mb-1">
+                        {{ tag.name }}{% if not tag.is_active %} · archived{% endif %}
+                    </span>
+                {% empty %}
+                    <span class="text-muted">No tags assigned.</span>
+                {% endfor %}
+            </div>
+
+            <div>
+                <strong class="d-block mb-2">Keywords</strong>
+                {% for item in chemical.keywords.all %}
+                    <span class="badge {% if item.is_active and item.keyword.is_active %}text-bg-light border text-dark{% else %}text-bg-secondary{% endif %} me-1 mb-1">
+                        {{ item.keyword.name }}: {{ item.value }}{% if not item.is_active or not item.keyword.is_active %} · archived{% endif %}
+                    </span>
+                {% empty %}
+                    <span class="text-muted">No keywords assigned.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
             <i class="bi bi-exclamation-triangle me-2"></i>Hazard notes
         </div>
         <div class="card-body">

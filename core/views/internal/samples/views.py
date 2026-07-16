@@ -1,3 +1,4 @@
+from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
 import qrcode
 import io
@@ -337,18 +338,20 @@ def sample_create_view(request):
 
                             # Tags & Keywords
                             tag_ids = request.POST.getlist("tags")
-                            if tag_ids:
-                                sample.tags.set(tag_ids)
+                            sample.tags.set(
+                                active_tags_from_ids(tag_ids)
+                            )
 
                             for raw in request.POST.getlist("keyword_pairs"):
                                 if ":::" in raw:
                                     key, value = raw.split(":::")
-                                    keyword_obj, _ = Keyword.objects.get_or_create(name=key.strip())
-                                    kv, _ = KeywordValue.objects.get_or_create(
-                                        keyword=keyword_obj,
-                                        value=value.strip()
+                                    keyword_value, _ = (
+                                        get_or_create_active_keyword_value(
+                                            key,
+                                            value,
+                                        )
                                     )
-                                    sample.keywords.add(kv)
+                                    sample.keywords.add(keyword_value)
 
                             # =========================================================
                             # RELAÇÕES BIOLÓGICAS (LINHAS DINÂMICAS)
@@ -489,7 +492,9 @@ def sample_create_view(request):
     ctx = base_context(request)
     ctx.update({
         "collections": Collection.objects.all(),
-        "all_tags": Tag.objects.all(),
+        "all_tags": Tag.objects.filter(
+            is_active=True,
+        ).order_by("name"),
         "biobanks": user_biobanks,
         "all_samples": Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
         "empty_plasmids_json": json.dumps(empty_plasmids),

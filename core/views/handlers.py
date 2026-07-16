@@ -1,3 +1,5 @@
+from django.core.exceptions import PermissionDenied
+from core.services.metadata_vocabularies import get_or_create_active_tag
 # core/views/handlers.py
 
 from django.contrib import messages
@@ -68,36 +70,46 @@ def handle_add_collection(request):
 # TAGS
 # ----------------------------------------------------------
 def handle_add_tag(request):
-    name = request.POST.get("tag_name", "").strip()
-    desc = request.POST.get("tag_description", "").strip()
+    if not request.user.is_superuser:
+        raise PermissionDenied
 
-    if not name:
-        messages.error(request, "Nome obrigatório.")
-        return redirect("/?page=tags")
+    name = request.POST.get("tag_name", "")
+    description = request.POST.get("tag_description", "")
 
-    tag, created = Tag.objects.get_or_create(
-        name=name,
-        defaults={"description": desc},
+    tag, created = get_or_create_active_tag(
+        name,
+        description=description,
     )
 
-    if not created:
-        tag.description = desc
-        tag.save()
+    if not created and description.strip():
+        tag.description = description.strip()
+        tag.save(update_fields=["description"])
 
-    messages.success(request, f"Tag '{name}' salva com sucesso.")
-    return redirect("/?page=tags")
+    messages.success(request, f"Tag '{tag.name}' was saved.")
+    return redirect("tags_view")
 
 
 def handle_delete_tag(request):
-    tag_id = request.POST.get("tag_id")
+    if not request.user.is_superuser:
+        raise PermissionDenied
 
-    try:
-        Tag.objects.get(id=tag_id).delete()
-        messages.success(request, "Tag removida.")
-    except Tag.DoesNotExist:
-        messages.error(request, "Tag não encontrada.")
+    tag = Tag.objects.filter(
+        pk=request.POST.get("tag_id"),
+        is_active=True,
+    ).first()
 
-    return redirect("/?page=tags")
+    if tag is None:
+        messages.error(request, "Active tag was not found.")
+        return redirect("tags_view")
+
+    tag.is_active = False
+    tag.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        "Tag was deactivated. Existing associations were preserved.",
+    )
+    return redirect("tags_view")
 
 
 # ----------------------------------------------------------

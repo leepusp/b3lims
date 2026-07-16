@@ -183,7 +183,7 @@ function initTagSystem() {
             if(spinner) spinner.classList.remove("d-none");
             btnSubmit.disabled = true;
 
-            fetch("/ajax/add_tag/", {
+            fetch(newForm.dataset.createUrl, {
                 method: "POST",
                 body: fd,
                 headers: { "X-CSRFToken": getCsrfToken() }

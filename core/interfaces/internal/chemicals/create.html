@@ -187,6 +187,8 @@
                 </div>
             </div>
 
+            {% include "internal/chemicals/_metadata_fields.html" %}
+
             <div class="text-end mt-4 pt-3 border-top">
                 <a href="{% url 'chemicals_list' %}" class="btn btn-light me-2">Cancel</a>
                 <button type="submit" class="btn btn-primary px-4">
@@ -196,5 +198,8 @@
         </form>
     </div>
 </div>
+
+{% include "internal/tags/add_tag.html" %}
+{% include "internal/keywords/add_keyword.html" %}
 {% endblock %}
-{% block extra_js %}<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260715-1"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260716-metadata"></script>{% endblock %}

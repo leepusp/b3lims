@@ -1,3 +1,4 @@
+from core.permissions.metadata import can_manage_metadata_vocabulary
 from django.db.models import Q
 from core.models import Biobank, Collection, Sample, Tag, Keyword, KeywordValue
 
@@ -7,7 +8,7 @@ def base_context(request, public: bool = False):
     if public:
         return {"request": request, "user": user, "is_public": True}
 
-    all_keywords = Keyword.objects.all().order_by("name")
+    all_keywords = Keyword.objects.filter(is_active=True).order_by("name")
 
     if user.is_superuser:
         collections = Collection.objects.all()
@@ -29,5 +30,6 @@ def base_context(request, public: bool = False):
         "all_keywords": all_keywords,
         "biobank_form": None, "collection_form": None, "sample_form": None,
         "can_manage_permissions": can_manage_permissions,
+        "can_manage_metadata": can_manage_metadata_vocabulary(user),
         "selected_collection": None,
     }

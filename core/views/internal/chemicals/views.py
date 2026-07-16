@@ -16,13 +16,89 @@ from django.db.models import Q, Count
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 from core.context import base_context
+from core.models import Tag
 from core.models.chemicals.chemical import Chemical, ChemicalFile, ChemicalStockMovement
+from core.services.metadata_vocabularies import (
+    active_tags_from_ids,
+    get_or_create_active_keyword_value,
+)
 from core.permissions.chemicals import (
     can_delete_chemical,
     can_edit_chemical,
     can_view_chemical,
     visible_chemicals_for_user,
 )
+
+
+def _chemical_metadata_context(chemical=None):
+    """Build active controlled-vocabulary context for reagent forms."""
+    selected_tag_ids = []
+    selected_keywords = []
+
+    if chemical is not None:
+        selected_tag_ids = list(
+            chemical.tags.filter(is_active=True)
+            .values_list("id", flat=True)
+        )
+        selected_keywords = list(
+            chemical.keywords.filter(
+                is_active=True,
+                keyword__is_active=True,
+            )
+            .select_related("keyword")
+            .order_by("keyword__name", "value")
+        )
+
+    return {
+        "all_tags": Tag.objects.filter(
+            is_active=True,
+        ).order_by("name"),
+        "selected_tag_ids": selected_tag_ids,
+        "selected_keywords": selected_keywords,
+    }
+
+
+def _apply_chemical_metadata(chemical, submitted_data):
+    """
+    Assign active submitted metadata while preserving archived relations.
+
+    Inactive vocabulary entries remain linked for historical traceability,
+    but cannot be newly assigned through the interface.
+    """
+    active_tag_ids = set(
+        active_tags_from_ids(
+            submitted_data.getlist("tags"),
+        ).values_list("id", flat=True)
+    )
+
+    archived_tag_ids = set(
+        chemical.tags.filter(
+            is_active=False,
+        ).values_list("id", flat=True)
+    )
+
+    chemical.tags.set(active_tag_ids | archived_tag_ids)
+
+    keyword_values = {}
+
+    for raw_pair in submitted_data.getlist("keyword_pairs"):
+        if ":::" not in raw_pair:
+            continue
+
+        keyword_name, value = raw_pair.split(":::", 1)
+        keyword_value, _ = get_or_create_active_keyword_value(
+            keyword_name,
+            value,
+        )
+        keyword_values[keyword_value.pk] = keyword_value
+
+    for archived_value in chemical.keywords.filter(
+        Q(is_active=False) | Q(keyword__is_active=False)
+    ):
+        keyword_values[archived_value.pk] = archived_value
+
+    chemical.keywords.set(keyword_values.values())
+
 
 @login_required
 def chemicals_list_view(request):
@@ -63,59 +139,62 @@ def chemical_create_view(request):
     """
     if request.method == "POST":
         try:
-            name = (request.POST.get("name") or "").strip()
+            with transaction.atomic():
+                name = (request.POST.get("name") or "").strip()
 
-            quantity_value = (request.POST.get("quantity_value") or "").strip()
-            quantity_unit = (request.POST.get("quantity_unit") or "").strip()
-            minimum_quantity = (request.POST.get("minimum_quantity") or "").strip() or None
+                quantity_value = (request.POST.get("quantity_value") or "").strip()
+                quantity_unit = (request.POST.get("quantity_unit") or "").strip()
+                minimum_quantity = (request.POST.get("minimum_quantity") or "").strip() or None
 
-            legacy_quantity = (request.POST.get("quantity") or "").strip()
-            if quantity_value and quantity_unit:
-                legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
-            elif quantity_value:
-                legacy_quantity = quantity_value
+                legacy_quantity = (request.POST.get("quantity") or "").strip()
+                if quantity_value and quantity_unit:
+                    legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
+                elif quantity_value:
+                    legacy_quantity = quantity_value
 
-            storage_location = (request.POST.get("storage_location") or "").strip()
-            storage_temperature = (request.POST.get("storage_temperature") or "").strip()
-            legacy_location = storage_location or (request.POST.get("location") or "").strip()
+                storage_location = (request.POST.get("storage_location") or "").strip()
+                storage_temperature = (request.POST.get("storage_temperature") or "").strip()
+                legacy_location = storage_location or (request.POST.get("location") or "").strip()
 
-            if not name or not legacy_quantity:
-                raise ValueError("Name and quantity are required.")
+                if not name or not legacy_quantity:
+                    raise ValueError("Name and quantity are required.")
 
-            research_group = None
-            if hasattr(request.user, "research_groups"):
-                research_group = request.user.research_groups.first()
+                research_group = None
+                if hasattr(request.user, "research_groups"):
+                    research_group = request.user.research_groups.first()
 
-            Chemical.objects.create(
-                name=name,
-                formula=request.POST.get("formula") or None,
-                cas_number=request.POST.get("cas_number") or None,
-                supplier=request.POST.get("supplier") or None,
-                catalog_number=request.POST.get("catalog_number") or None,
-                lot_number=request.POST.get("lot_number") or None,
-                quantity_value=quantity_value or None,
-                quantity_unit=quantity_unit or None,
-                minimum_quantity=minimum_quantity,
-                quantity=legacy_quantity,
-                storage_temperature=storage_temperature or None,
-                storage_location=storage_location or None,
-                barcode=request.POST.get("barcode") or None,
-                location=legacy_location,
-                expiry_date=request.POST.get("expiry_date") or None,
-                msds_link=request.POST.get("msds_link") or None,
-                hazard_notes=request.POST.get("hazard_notes") or None,
-                created_by=request.user,
-                research_group=research_group,
-                is_public=request.POST.get("is_public") in ["true", "on", "1"],
-            )
+                chemical = Chemical.objects.create(
+                    name=name,
+                    formula=request.POST.get("formula") or None,
+                    cas_number=request.POST.get("cas_number") or None,
+                    supplier=request.POST.get("supplier") or None,
+                    catalog_number=request.POST.get("catalog_number") or None,
+                    lot_number=request.POST.get("lot_number") or None,
+                    quantity_value=quantity_value or None,
+                    quantity_unit=quantity_unit or None,
+                    minimum_quantity=minimum_quantity,
+                    quantity=legacy_quantity,
+                    storage_temperature=storage_temperature or None,
+                    storage_location=storage_location or None,
+                    barcode=request.POST.get("barcode") or None,
+                    location=legacy_location,
+                    expiry_date=request.POST.get("expiry_date") or None,
+                    msds_link=request.POST.get("msds_link") or None,
+                    hazard_notes=request.POST.get("hazard_notes") or None,
+                    created_by=request.user,
+                    research_group=research_group,
+                    is_public=request.POST.get("is_public") in ["true", "on", "1"],
+                )
+                _apply_chemical_metadata(chemical, request.POST)
 
-            messages.success(request, f"Reagent {name} registered successfully.")
-            return redirect("chemicals_list")
+                messages.success(request, f"Reagent {name} registered successfully.")
+                return redirect("chemicals_list")
 
         except Exception as e:
             messages.error(request, f"Error creating reagent: {e}")
 
     ctx = base_context(request)
+    ctx.update(_chemical_metadata_context())
     return render(request, "internal/chemicals/create.html", ctx)
 
 @login_required
@@ -267,48 +346,50 @@ def chemical_edit_view(request, chemical_id):
 
     if request.method == "POST":
         try:
-            name = (request.POST.get("name") or "").strip()
-            quantity_value = (request.POST.get("quantity_value") or "").strip()
-            quantity_unit = (request.POST.get("quantity_unit") or "").strip()
-            minimum_quantity = (request.POST.get("minimum_quantity") or "").strip() or None
+            with transaction.atomic():
+                name = (request.POST.get("name") or "").strip()
+                quantity_value = (request.POST.get("quantity_value") or "").strip()
+                quantity_unit = (request.POST.get("quantity_unit") or "").strip()
+                minimum_quantity = (request.POST.get("minimum_quantity") or "").strip() or None
 
-            legacy_quantity = (request.POST.get("quantity") or "").strip()
-            if quantity_value and quantity_unit:
-                legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
-            elif quantity_value:
-                legacy_quantity = quantity_value
+                legacy_quantity = (request.POST.get("quantity") or "").strip()
+                if quantity_value and quantity_unit:
+                    legacy_quantity = f"{quantity_value} {quantity_unit}".strip()
+                elif quantity_value:
+                    legacy_quantity = quantity_value
 
-            storage_location = (request.POST.get("storage_location") or "").strip()
-            storage_temperature = (request.POST.get("storage_temperature") or "").strip()
-            legacy_location = storage_location or (request.POST.get("location") or "").strip()
+                storage_location = (request.POST.get("storage_location") or "").strip()
+                storage_temperature = (request.POST.get("storage_temperature") or "").strip()
+                legacy_location = storage_location or (request.POST.get("location") or "").strip()
 
-            if not name or not legacy_quantity:
-                raise ValueError("Name and quantity are required.")
+                if not name or not legacy_quantity:
+                    raise ValueError("Name and quantity are required.")
 
-            chemical.name = name
-            chemical.formula = request.POST.get("formula") or None
-            chemical.cas_number = request.POST.get("cas_number") or None
-            chemical.supplier = request.POST.get("supplier") or None
-            chemical.catalog_number = request.POST.get("catalog_number") or None
-            chemical.lot_number = request.POST.get("lot_number") or None
-            chemical.quantity_value = quantity_value or None
-            chemical.quantity_unit = quantity_unit or None
-            chemical.minimum_quantity = minimum_quantity
-            chemical.quantity = legacy_quantity
-            chemical.storage_temperature = storage_temperature or None
-            chemical.storage_location = storage_location or None
-            chemical.barcode = request.POST.get("barcode") or None
-            chemical.location = legacy_location
-            chemical.expiry_date = request.POST.get("expiry_date") or None
-            if "msds_link" in request.POST:
-                chemical.msds_link = request.POST.get("msds_link") or None
-            chemical.hazard_notes = request.POST.get("hazard_notes") or None
-            chemical.status = request.POST.get("status") or chemical.status
-            chemical.is_public = request.POST.get("is_public") in ["true", "on", "1"]
-            chemical.save()
+                chemical.name = name
+                chemical.formula = request.POST.get("formula") or None
+                chemical.cas_number = request.POST.get("cas_number") or None
+                chemical.supplier = request.POST.get("supplier") or None
+                chemical.catalog_number = request.POST.get("catalog_number") or None
+                chemical.lot_number = request.POST.get("lot_number") or None
+                chemical.quantity_value = quantity_value or None
+                chemical.quantity_unit = quantity_unit or None
+                chemical.minimum_quantity = minimum_quantity
+                chemical.quantity = legacy_quantity
+                chemical.storage_temperature = storage_temperature or None
+                chemical.storage_location = storage_location or None
+                chemical.barcode = request.POST.get("barcode") or None
+                chemical.location = legacy_location
+                chemical.expiry_date = request.POST.get("expiry_date") or None
+                if "msds_link" in request.POST:
+                    chemical.msds_link = request.POST.get("msds_link") or None
+                chemical.hazard_notes = request.POST.get("hazard_notes") or None
+                chemical.status = request.POST.get("status") or chemical.status
+                chemical.is_public = request.POST.get("is_public") in ["true", "on", "1"]
+                chemical.save()
+                _apply_chemical_metadata(chemical, request.POST)
 
-            messages.success(request, f"Reagent {chemical.name} updated successfully.")
-            return redirect("chemical_detail", chemical_id=chemical.id)
+                messages.success(request, f"Reagent {chemical.name} updated successfully.")
+                return redirect("chemical_detail", chemical_id=chemical.id)
 
         except Exception as e:
             messages.error(request, f"Error updating reagent: {e}")
@@ -318,6 +399,7 @@ def chemical_edit_view(request, chemical_id):
         "chemical": chemical,
         "status_choices": Chemical.STATUS_CHOICES,
     })
+    ctx.update(_chemical_metadata_context(chemical))
     return render(request, "internal/chemicals/edit.html", ctx)
 
 

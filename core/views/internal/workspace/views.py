@@ -25,7 +25,10 @@ from core.views.internal.tags.views import (
     tags_view, search_view, create_tag_view, edit_tag_view, delete_tag_view
 )
 from core.views.internal.keywords.views import (
-    keywords_view, edit_keyword_view, delete_keyword_view
+    create_keyword_view,
+    delete_keyword_view,
+    edit_keyword_view,
+    keywords_view,
 )
 
 @login_required
@@ -48,6 +51,7 @@ def home(request):
         "edit_tag": edit_tag_view,
         "delete_tag": delete_tag_view,
         "keywords": keywords_view,
+        "add_keyword": create_keyword_view,
         "edit_keyword": edit_keyword_view,
         "delete_keyword": delete_keyword_view,
     }
