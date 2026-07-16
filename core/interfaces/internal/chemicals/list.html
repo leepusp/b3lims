@@ -176,6 +176,7 @@
                         <th>Storage</th>
                         <th>Expiry</th>
                         <th>Status</th>
+                        <th class="text-end">Options</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -227,10 +228,47 @@
                                     {{ chem.get_status_display }}
                                 </span>
                             </td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-boundary="window"
+                                        aria-expanded="false"
+                                    >
+                                        Options
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li>
+                                            <a class="dropdown-item py-2" href="{% url 'chemical_detail' chem.id %}">
+                                                <i class="bi bi-eye text-secondary me-2"></i>View Details
+                                            </a>
+                                        </li>
+                                        {% if chem.can_edit_for_user %}
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{% url 'chemical_edit' chem.id %}">
+                                                    <i class="bi bi-pencil text-primary me-2"></i>Edit Reagent
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        <li>
+                                            <a
+                                                class="dropdown-item py-2"
+                                                href="{% url 'print_chemical_label' chem.id %}"
+                                                target="_blank"
+                                                rel="noopener"
+                                            >
+                                                <i class="bi bi-qr-code text-secondary me-2"></i>Print QR Label
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 No chemicals registered yet.
                             </td>
                         </tr>

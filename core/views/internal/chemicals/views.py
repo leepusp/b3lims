@@ -48,8 +48,12 @@ def chemicals_list_view(request):
     if status_filter:
         qs = qs.filter(status=status_filter)
 
+    chemicals = list(qs)
+    for chemical in chemicals:
+        chemical.can_edit_for_user = can_edit_chemical(user, chemical)
+
     ctx = base_context(request)
-    ctx['chemicals'] = qs
+    ctx['chemicals'] = chemicals
     return render(request, "internal/chemicals/list.html", ctx)
 
 @login_required

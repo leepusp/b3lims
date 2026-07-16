@@ -129,3 +129,36 @@ class ChemicalWorkflowTests(TestCase):
         self.assertContains(response, html.escape(self.chemical.storage_location))
         self.assertContains(response, "data-storage-builder")
         self.assertContains(response, "internal/chemicals/chemical.js")
+
+    def test_list_options_show_edit_and_print_for_owner(self):
+        response = self.client.get(request_path("chemicals_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Options")
+        self.assertContains(response, "View Details")
+        self.assertContains(response, "Edit Reagent")
+        self.assertContains(response, "Print QR Label")
+        self.assertContains(
+            response,
+            reverse("chemical_edit", args=[self.chemical.id]),
+        )
+        self.assertContains(
+            response,
+            reverse("print_chemical_label", args=[self.chemical.id]),
+        )
+
+    def test_list_options_hide_edit_from_read_only_user(self):
+        viewer = get_user_model().objects.create_user(
+            username="chemical-viewer",
+            password="test-password",
+        )
+        self.chemical.is_public = True
+        self.chemical.save(update_fields=["is_public"])
+
+        self.client.force_login(viewer)
+        response = self.client.get(request_path("chemicals_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View Details")
+        self.assertContains(response, "Print QR Label")
+        self.assertNotContains(response, "Edit Reagent")
