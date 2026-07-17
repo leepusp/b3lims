@@ -155,6 +155,25 @@ class PersistentJupyterExecutionTests(TestCase):
             run_directory=self.temporary_directory.name,
         )
 
+    def test_new_notebook_starts_with_empty_code_cell(self):
+        notebook = starter_notebook(
+            "Blank analysis",
+            self.user.get_username(),
+        )
+
+        self.assertEqual(
+            len(notebook["cells"]),
+            2,
+        )
+        self.assertEqual(
+            notebook["cells"][1]["cell_type"],
+            "code",
+        )
+        self.assertEqual(
+            notebook["cells"][1]["source"],
+            [],
+        )
+
     def test_execute_cell_updates_saved_notebook(self):
         import json
         from unittest.mock import patch

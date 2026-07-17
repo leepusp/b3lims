@@ -37,8 +37,9 @@ RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 
 
 def starter_notebook(title, username):
-    title = str(title or "Untitled Jupyter notebook").strip()
-    username = str(username or "").strip()
+    title = str(
+        title or "Untitled Jupyter notebook"
+    ).strip()
 
     return {
         "cells": [
@@ -57,25 +58,7 @@ def starter_notebook(title, username):
                 "execution_count": None,
                 "metadata": {},
                 "outputs": [],
-                "source": [
-                    "import os\n",
-                    "import platform\n",
-                    "\n",
-                    f"print('Biobank user: {username}')\n",
-                    "print('Compute node:', platform.node())\n",
-                    "print('Working directory:', os.getcwd())\n",
-                ],
-            },
-            {
-                "cell_type": "code",
-                "execution_count": None,
-                "metadata": {},
-                "outputs": [],
-                "source": [
-                    "# Add the analysis for this notebook here.\n",
-                    "values = [1, 2, 3, 4]\n",
-                    "sum(values)\n",
-                ],
+                "source": [],
             },
         ],
         "metadata": {
@@ -89,12 +72,12 @@ def starter_notebook(title, username):
             },
             "biobank": {
                 "persistent_slurm_kernel": True,
+                "owner": str(username or "").strip(),
             },
         },
         "nbformat": 4,
         "nbformat_minor": 5,
     }
-
 
 def can_view_notebook(user, notebook):
     if not user or not user.is_authenticated or notebook is None:
@@ -503,8 +486,19 @@ def execute_cell(
         else:
             result = payload.get("result") or payload
     finally:
-        request_path.unlink(missing_ok=True)
-        response_path.unlink(missing_ok=True)
+        for temporary_path in (
+            request_path,
+            response_path,
+        ):
+            try:
+                temporary_path.unlink(
+                    missing_ok=True
+                )
+            except OSError:
+                # Response files are created by the Linux
+                # service account. A cleanup ownership mismatch
+                # must not turn a successful cell into a failure.
+                pass
 
     if not isinstance(result, dict):
         raise JupyterNotebookError(
