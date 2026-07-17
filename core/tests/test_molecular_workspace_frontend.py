@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -59,7 +62,75 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertNotContains(response, "unpkg.com")
         self.assertNotContains(response, "localStorage")
         self.assertNotContains(response, "buildDemoFeatures")
-        self.assertNotContains(response, "SeqViz")
+        self.assertContains(response, "SeqViz interactive viewer")
+        self.assertContains(
+            response,
+            "internal/lab_tools/vendor/seqviz-3.10.22.min.js",
+        )
+        self.assertContains(
+            response,
+            "internal/lab_tools/molecular_seqviz.js",
+        )
+
+    def test_workspace_offers_synchronized_visualization_modes(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            request_path(
+                "molecular_sequence_detail",
+                [self.molecule.id],
+            )
+        )
+
+        self.assertContains(response, 'data-mw-view="seqviz"')
+        self.assertContains(response, 'data-mw-view="construction"')
+        self.assertContains(response, 'data-mw-view="sequence"')
+        self.assertContains(response, 'data-mw-view="split"')
+        self.assertContains(response, 'data-mw-view="all"')
+        self.assertContains(response, 'id="mw-map-tool"')
+        self.assertContains(response, 'id="mw-construction-track"')
+        self.assertContains(response, 'id="mw-selection-summary"')
+
+        script = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/molecular_workspace.js",
+        ).read_text()
+
+        for function_name in (
+            "applyWorkspaceView",
+            "renderConstructionTrack",
+            "moveFeatureFromDrag",
+            "appendInteractiveSequence",
+            "createFeatureFromSelection",
+        ):
+            self.assertIn(f"function {function_name}(", script)
+
+        self.assertNotIn("localStorage", script)
+
+        adapter = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/molecular_seqviz.js",
+        ).read_text()
+        self.assertIn("window.seqviz.Viewer", adapter)
+        self.assertIn("BiobankMolecularWorkspace", adapter)
+        self.assertNotIn("unpkg", adapter)
+        self.assertNotIn("localStorage", adapter)
+
+    def test_notebook_exposes_one_linked_molecular_workspace_flow(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            request_path("notebook_index")
+            + f"?entry_id={self.entry.id}&tab=items"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Molecular Workspace")
+        self.assertContains(response, 'id="molecular-workspace-creator"')
+        self.assertContains(response, "Create and open")
+        self.assertContains(response, "insertRelevantItemIntoMainNote(data, false)")
+        self.assertContains(response, "window.location.href = data.detail_url")
+        self.assertContains(response, "ql-biobank-molecular")
 
     def test_lab_viewer_receives_read_only_workspace(self):
         self.client.force_login(self.viewer)

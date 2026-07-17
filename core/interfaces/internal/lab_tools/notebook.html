@@ -706,9 +706,15 @@
                                         <div class="fw-bold">
                                             <i class="bi bi-dna me-2"></i>Molecular items
                                         </div>
+                                        <button type="button"
+                                                class="btn btn-sm btn-success"
+                                                onclick="openMolecularWorkspaceCreator()">
+                                            <i class="bi bi-bezier2 me-1"></i>
+                                            Molecular Workspace
+                                        </button>
                                     </div>
 
-                                    <div class="border rounded bg-light p-3 mb-3">
+                                    <div id="molecular-workspace-creator" class="border rounded bg-light p-3 mb-3">
                                         <div class="row g-2">
                                             <div class="col-md-4">
                                                 <label class="form-label small text-muted">Name</label>
@@ -735,7 +741,7 @@
 
                                             <div class="col-md-2 d-flex align-items-end">
                                                 <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="createMolecularItem()">
-                                                    Create
+                                                    Create and open
                                                 </button>
                                             </div>
 
@@ -1315,7 +1321,6 @@ function buildRelevantItemNoteHtml(item) {
 
     const openButton = detailUrl
         ? `<a href="${escapeRelevantItemHtml(detailUrl)}"
-              target="_blank"
               contenteditable="false"
               style="border:1px solid #198754;color:#198754;border-radius:4px;padding:3px 10px;text-decoration:none;font-size:0.85rem;">
                 Open
@@ -1346,7 +1351,7 @@ function buildRelevantItemNoteHtml(item) {
     `;
 }
 
-function insertRelevantItemIntoMainNote(item) {
+function insertRelevantItemIntoMainNote(item, autoSave = true) {
     const html = buildRelevantItemNoteHtml(item);
 
     if (typeof insertHtmlDirectlyIntoQuillRoot === "function") {
@@ -1358,12 +1363,26 @@ function insertRelevantItemIntoMainNote(item) {
         return;
     }
 
-    if (typeof saveEntry === "function") {
+    if (autoSave && typeof saveEntry === "function") {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(saveEntry, 300);
     }
 }
 /* BIOBANK_RELEVANT_ITEM_NOTE_INSERT_END */
+
+function openMolecularWorkspaceCreator() {
+    activateEntryTab("items-tab");
+
+    const creator = document.getElementById("molecular-workspace-creator");
+    const nameInput = document.getElementById("molecular-item-name");
+
+    window.setTimeout(() => {
+        creator?.scrollIntoView({behavior: "smooth", block: "center"});
+        creator?.classList.add("border-success");
+        nameInput?.focus();
+        window.setTimeout(() => creator?.classList.remove("border-success"), 1400);
+    }, 180);
+}
 
 function createMolecularItem() {
         const nameInput = document.getElementById("molecular-item-name");
@@ -1390,15 +1409,22 @@ function createMolecularItem() {
         postJson("{% url 'notebook_create_molecular_sequence_api' active_entry.id %}", payload)
             .then(data => {
                 if (data.status === "success") {
-                    saveStatus.textContent = "Relevant item created.";
+                    saveStatus.textContent = "Linking Molecular Workspace to this note...";
                     saveStatus.classList.remove("text-danger");
+                    insertRelevantItemIntoMainNote(data, false);
+                    clearTimeout(timeoutId);
 
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("entry_id", "{{ active_entry.id }}");
-                    url.searchParams.set("tab", "items");
-                    url.hash = "items-pane";
+                    const saveRequest = typeof saveEntry === "function"
+                        ? saveEntry()
+                        : Promise.resolve({status: "success"});
 
-                    window.location.href = url.toString();
+                    Promise.resolve(saveRequest).then(saveData => {
+                        if (saveData && saveData.status !== "success") {
+                            throw new Error("The Molecular Item was created, but its note reference could not be saved.");
+                        }
+
+                        window.location.href = data.detail_url;
+                    });
                 } else {
                     saveStatus.textContent = "Molecular item error";
                     saveStatus.classList.add("text-danger");
@@ -1496,7 +1522,7 @@ function createMolecularItem() {
             experiment_date: document.getElementById("entry-experiment-date")?.value || null
         };
 
-        postJson("{% url 'notebook_save_api' active_entry.id %}", data)
+        return postJson("{% url 'notebook_save_api' active_entry.id %}", data)
             .then(data => {
                 if (data.status === "success") {
                     saveStatus.textContent = "Saved at " + new Date().toLocaleTimeString();
@@ -1505,6 +1531,7 @@ function createMolecularItem() {
                     saveStatus.textContent = "Save error";
                     saveStatus.classList.add("text-danger");
                 }
+                return data;
             });
     }
 
@@ -2188,6 +2215,24 @@ function makeBiobankChecklistToolbarButton() {
     return button;
 }
 
+function makeBiobankMolecularToolbarButton() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ql-biobank-molecular";
+    button.title = "Create or open a Molecular Workspace";
+    button.setAttribute("aria-label", "Molecular Workspace");
+    button.innerHTML = '<i class="bi bi-bezier2"></i>';
+
+    button.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        openMolecularWorkspaceCreator();
+        return false;
+    });
+
+    return button;
+}
+
 function installBiobankProtocolButtonsNextToTable() {
     const toolbar = document.querySelector(".ql-toolbar");
     if (!toolbar) return false;
@@ -2199,12 +2244,13 @@ function installBiobankProtocolButtonsNextToTable() {
     const tableButton = toolbar.querySelector("button.ql-biobank-table");
     if (!tableButton) return false;
 
-    toolbar.querySelectorAll("button.ql-biobank-protocol-timer, button.ql-biobank-protocol-checklist").forEach(function(button) {
+    toolbar.querySelectorAll("button.ql-biobank-protocol-timer, button.ql-biobank-protocol-checklist, button.ql-biobank-molecular").forEach(function(button) {
         button.remove();
     });
 
     const checklistButton = makeBiobankChecklistToolbarButton();
     tableButton.insertAdjacentElement("afterend", checklistButton);
+    checklistButton.insertAdjacentElement("afterend", makeBiobankMolecularToolbarButton());
 
     return true;
 }

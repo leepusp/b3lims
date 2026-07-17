@@ -1018,7 +1018,11 @@ def notebook_create_molecular_sequence_api(request, entry_id):
                 "status": "success",
                 "id": molecule.id,
                 "name": molecule.name,
+                "sequence_type": molecule.sequence_type,
+                "topology": molecule.topology,
                 "length": molecule.length,
+                "description": molecule.description,
+                "source_entry_id": molecule.source_entry_id,
                 "detail_url": reverse(
                     "molecular_sequence_detail",
                     args=[molecule.id],

@@ -5,20 +5,21 @@
 {% csrf_token %}
 
 <link rel="stylesheet"
-      href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260717-clean">
+      href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260717-hybrid">
 
 <div id="molecular-workspace"
      class="mw-page"
      data-features-url="{% url 'molecular_sequence_features_api' molecule.id %}"
      data-update-url="{% url 'molecular_sequence_update_api' molecule.id %}"
      data-delete-url="{% url 'molecular_sequence_delete_api' molecule.id %}"
-     data-back-url="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}"
+     data-back-url="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}"
+     data-view-storage-key="biobank.molecular-workspace.preferred-view"
      data-can-edit="{% if can_edit_molecule %}true{% else %}false{% endif %}">
 
     <header class="mw-header">
         <div>
             <nav class="mw-breadcrumb" aria-label="Breadcrumb">
-                <a href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}">
+                <a href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}">
                     ELN Notebook
                 </a>
                 <span>/</span>
@@ -48,7 +49,7 @@
             </span>
 
             <a class="btn btn-sm btn-outline-secondary"
-               href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}{% endif %}">
+               href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}">
                 <i class="bi bi-arrow-left"></i>
                 Back
             </a>
@@ -99,7 +100,37 @@
         </div>
     </section>
 
-    <section class="mw-card mw-metadata-card">
+    <nav class="mw-view-switcher" aria-label="Molecular workspace view">
+        <div>
+            <strong>Workspace view</strong>
+            <span>Choose the representation that best fits the current task.</span>
+        </div>
+
+        <div class="mw-view-options" role="group" aria-label="Visualization mode">
+            <button type="button" class="mw-view-option" data-mw-view="seqviz">
+                <i class="bi bi-compass"></i>
+                SeqViz
+            </button>
+            <button type="button" class="mw-view-option" data-mw-view="construction">
+                <i class="bi bi-bezier2"></i>
+                Construction
+            </button>
+            <button type="button" class="mw-view-option" data-mw-view="sequence">
+                <i class="bi bi-body-text"></i>
+                Colored sequence
+            </button>
+            <button type="button" class="mw-view-option" data-mw-view="split">
+                <i class="bi bi-layout-split"></i>
+                Split
+            </button>
+            <button type="button" class="mw-view-option" data-mw-view="all">
+                <i class="bi bi-grid-1x2"></i>
+                All views
+            </button>
+        </div>
+    </nav>
+
+    <section class="mw-card mw-metadata-card" data-mw-shared-panel>
         <div class="mw-card-header">
             <div>
                 <h2>Record information</h2>
@@ -159,7 +190,51 @@
         </div>
     </section>
 
-    <section class="mw-workspace-grid">
+    <section class="mw-card mw-seqviz-card" data-mw-view-panel="seqviz">
+        <div class="mw-card-header mw-toolbar-header">
+            <div>
+                <h2>SeqViz interactive viewer</h2>
+                <p>Circular and linear maps, colored annotations, primers, translations, enzymes and coordinated selection.</p>
+            </div>
+
+            <div class="mw-toolbar">
+                <label>
+                    <span>Layout</span>
+                    <select id="mw-seqviz-mode" class="form-select form-select-sm">
+                        <option value="both">Circular + linear</option>
+                        <option value="circular">Circular</option>
+                        <option value="linear">Linear</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Enzymes</span>
+                    <select id="mw-seqviz-enzymes" class="form-select form-select-sm">
+                        <option value="none">None</option>
+                        <option value="common">Common enzymes</option>
+                    </select>
+                </label>
+
+                <label class="mw-search-label">
+                    <span>Find</span>
+                    <input id="mw-seqviz-search"
+                           type="search"
+                           class="form-control form-control-sm"
+                           placeholder="Sequence motif">
+                </label>
+            </div>
+        </div>
+
+        <div id="mw-seqviz-selection" class="mw-seqviz-selection">
+            Select a feature or sequence region in any representation.
+        </div>
+        <div id="mw-seqviz-viewer" class="mw-seqviz-viewer" aria-label="SeqViz molecular viewer">
+            <div class="mw-empty">Preparing SeqViz…</div>
+        </div>
+        <div id="mw-seqviz-legend" class="mw-legend"></div>
+    </section>
+
+    <section class="mw-workspace-grid" data-mw-view-panel="construction">
         <article class="mw-card mw-map-card">
             <div class="mw-card-header mw-toolbar-header">
                 <div>
@@ -168,6 +243,17 @@
                 </div>
 
                 <div class="mw-toolbar">
+                    <label>
+                        <span>Tool</span>
+                        <select id="mw-map-tool" class="form-select form-select-sm">
+                            <option value="navigate">Navigate</option>
+                            {% if can_edit_molecule %}
+                                <option value="move">Move annotation</option>
+                                <option value="resize">Resize annotation</option>
+                            {% endif %}
+                        </select>
+                    </label>
+
                     <label>
                         <span>View</span>
                         <select id="mw-map-mode" class="form-select form-select-sm">
@@ -190,7 +276,17 @@
                         <input id="mw-show-labels" type="checkbox" checked>
                         <span>Labels</span>
                     </label>
+
+                    <div class="mw-map-zoom" role="group" aria-label="Map zoom">
+                        <button id="mw-map-zoom-out" type="button" class="btn btn-sm btn-outline-secondary" title="Zoom out">−</button>
+                        <button id="mw-map-reset" type="button" class="btn btn-sm btn-outline-secondary">Reset</button>
+                        <button id="mw-map-zoom-in" type="button" class="btn btn-sm btn-outline-secondary" title="Zoom in">+</button>
+                    </div>
                 </div>
+            </div>
+
+            <div id="mw-map-guidance" class="mw-map-guidance">
+                Drag the background to pan, use the mouse wheel to zoom, or choose an annotation editing tool.
             </div>
 
             <div class="mw-map-stage">
@@ -203,6 +299,17 @@
                     Add a sequence to render the molecular map.
                 </div>
             </div>
+
+            <section class="mw-construction-panel" aria-label="Linear construction">
+                <div class="mw-construction-header">
+                    <div>
+                        <strong>Linear construction</strong>
+                        <span>Click a part to inspect it. In Move annotation mode, drag it to another coordinate.</span>
+                    </div>
+                    <span id="mw-construction-selection" class="mw-construction-selection">No part selected</span>
+                </div>
+                <div id="mw-construction-track" class="mw-construction-track"></div>
+            </section>
 
             <div id="mw-map-legend" class="mw-legend"></div>
         </article>
@@ -319,7 +426,7 @@
         </aside>
     </section>
 
-    <section class="mw-card mw-sequence-card">
+    <section class="mw-card mw-sequence-card" data-mw-view-panel="sequence">
         <div class="mw-card-header mw-toolbar-header">
             <div>
                 <h2>Sequence</h2>
@@ -377,8 +484,22 @@
                   {% if not can_edit_molecule %}disabled{% endif %}></textarea>
 
         <div class="mw-preview-header">
-            <strong>Coordinate view</strong>
-            <span>60 residues per row</span>
+            <div>
+                <strong>Colored coordinate view</strong>
+                <span id="mw-selection-summary">Click or drag across the sequence to select a region.</span>
+            </div>
+
+            <div class="mw-preview-actions">
+                {% if can_edit_molecule %}
+                    <button id="mw-selection-feature"
+                            type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            disabled>
+                        Create feature from selection
+                    </button>
+                {% endif %}
+                <span>60 residues per row</span>
+            </div>
         </div>
 
         <div id="mw-sequence-preview"
@@ -389,6 +510,10 @@
 
 {{ molecule.sequence|json_script:"mw-sequence-data" }}
 
-<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260717-clean"
+<script src="{% static 'internal/lab_tools/vendor/seqviz-3.10.22.min.js' %}?v=3.10.22"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260717-unified"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_seqviz.js' %}?v=20260717-unified"
         defer></script>
 {% endblock %}

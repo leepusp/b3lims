@@ -78,8 +78,15 @@
             mapEmpty: document.getElementById("mw-map-empty"),
             mapLegend: document.getElementById("mw-map-legend"),
             mapMode: document.getElementById("mw-map-mode"),
+            mapTool: document.getElementById("mw-map-tool"),
+            mapGuidance: document.getElementById("mw-map-guidance"),
+            mapZoomOut: document.getElementById("mw-map-zoom-out"),
+            mapZoomIn: document.getElementById("mw-map-zoom-in"),
+            mapReset: document.getElementById("mw-map-reset"),
             enzymeMode: document.getElementById("mw-enzyme-mode"),
             showLabels: document.getElementById("mw-show-labels"),
+            constructionTrack: document.getElementById("mw-construction-track"),
+            constructionSelection: document.getElementById("mw-construction-selection"),
             featureList: document.getElementById("mw-feature-list"),
             featureEmpty: document.getElementById("mw-feature-empty"),
             featureForm: document.getElementById("mw-feature-form"),
@@ -96,6 +103,8 @@
             search: document.getElementById("mw-search"),
             searchResult: document.getElementById("mw-search-result"),
             preview: document.getElementById("mw-sequence-preview"),
+            selectionSummary: document.getElementById("mw-selection-summary"),
+            selectionFeature: document.getElementById("mw-selection-feature"),
             copy: document.getElementById("mw-copy"),
             importFasta: document.getElementById("mw-import-fasta"),
             fastaFile: document.getElementById("mw-fasta-file"),
@@ -107,11 +116,79 @@
             sequence: parseSequenceData(sequenceData),
             features: [],
             selectedFeature: -1,
+            sequenceSelection: null,
+            mapViewBox: {x: 0, y: 0, width: 820, height: 560},
+            mapDrag: null,
+            constructionDrag: null,
+            sequenceDrag: null,
             dirty: false,
             renderTimer: null,
         };
 
         elements.sequence.value = state.sequence;
+
+        const viewButtons = [
+            ...root.querySelectorAll("[data-mw-view]"),
+        ];
+        const viewPanels = [
+            ...root.querySelectorAll("[data-mw-view-panel]"),
+        ];
+
+        function preferredView() {
+            const key = root.dataset.viewStorageKey;
+            const prefix = `${encodeURIComponent(key)}=`;
+            const value = document.cookie
+                .split(";")
+                .map(item => item.trim())
+                .find(item => item.startsWith(prefix));
+            return value
+                ? decodeURIComponent(value.slice(prefix.length))
+                : "all";
+        }
+
+        function applyWorkspaceView(view) {
+            const resolved = [
+                "seqviz",
+                "construction",
+                "sequence",
+                "split",
+                "all",
+            ].includes(view) ? view : "all";
+
+            root.dataset.workspaceView = resolved;
+            viewButtons.forEach(button => {
+                const active = button.dataset.mwView === resolved;
+                button.classList.toggle("is-active", active);
+                button.setAttribute("aria-pressed", String(active));
+            });
+            viewPanels.forEach(panel => {
+                const panelView = panel.dataset.mwViewPanel;
+                panel.hidden = !(
+                    resolved === "all"
+                    || (
+                        resolved === "split"
+                        && ["construction", "sequence"].includes(panelView)
+                    )
+                    || panelView === resolved
+                );
+            });
+
+            document.cookie = [
+                `${encodeURIComponent(root.dataset.viewStorageKey)}=${encodeURIComponent(resolved)}`,
+                "Path=/biobank",
+                "Max-Age=31536000",
+                "SameSite=Lax",
+            ].join("; ");
+
+            if (["construction", "split", "all"].includes(resolved)) {
+                window.requestAnimationFrame(renderMap);
+            }
+
+            root.dispatchEvent(new CustomEvent(
+                "biobank:molecular-view-change",
+                {detail: {view: resolved}}
+            ));
+        }
 
         function parseSequenceData(node) {
             if (!node) {
@@ -275,6 +352,51 @@
             return [[Math.min(start, end), Math.max(start, end)]];
         }
 
+        function featureContainsCoordinate(feature, coordinate, length) {
+            return featureSegments(
+                feature,
+                length,
+                currentTopology() === "circular"
+            ).some(([start, end]) => (
+                coordinate >= start && coordinate <= end
+            ));
+        }
+
+        function featuresAtCoordinate(
+            coordinate,
+            length = currentSequence().length
+        ) {
+
+            return state.features
+                .map((feature, index) => ({feature, index}))
+                .filter(({feature}) => (
+                    featureContainsCoordinate(
+                        feature,
+                        coordinate,
+                        length
+                    )
+                ));
+        }
+
+        function normalizedCoordinate(value, length) {
+            if (!length) {
+                return 1;
+            }
+
+            return ((Math.round(value) - 1) % length + length) % length + 1;
+        }
+
+        function featureSpan(feature, length) {
+            if (
+                currentTopology() === "circular"
+                && feature.start > feature.end
+            ) {
+                return length - feature.start + feature.end + 1;
+            }
+
+            return Math.abs(feature.end - feature.start) + 1;
+        }
+
         function svgElement(name, attributes = {}) {
             const node = document.createElementNS(SVG_NS, name);
 
@@ -331,6 +453,69 @@
             elements.mapLegend.replaceChildren();
         }
 
+        function applyMapViewBox() {
+            const box = state.mapViewBox;
+            elements.map.setAttribute(
+                "viewBox",
+                `${box.x} ${box.y} ${box.width} ${box.height}`
+            );
+        }
+
+        function resetMapView() {
+            state.mapViewBox = {x: 0, y: 0, width: 820, height: 560};
+            applyMapViewBox();
+        }
+
+        function zoomMap(factor, center = null) {
+            const box = state.mapViewBox;
+            const nextWidth = Math.max(300, Math.min(1640, box.width * factor));
+            const nextHeight = nextWidth * 560 / 820;
+            const cx = center?.x ?? box.x + box.width / 2;
+            const cy = center?.y ?? box.y + box.height / 2;
+            const ratioX = (cx - box.x) / box.width;
+            const ratioY = (cy - box.y) / box.height;
+
+            state.mapViewBox = {
+                x: cx - nextWidth * ratioX,
+                y: cy - nextHeight * ratioY,
+                width: nextWidth,
+                height: nextHeight,
+            };
+            applyMapViewBox();
+        }
+
+        function mapPoint(event) {
+            const point = elements.map.createSVGPoint();
+            point.x = event.clientX;
+            point.y = event.clientY;
+            return point.matrixTransform(
+                elements.map.getScreenCTM().inverse()
+            );
+        }
+
+        function coordinateFromMapPoint(point, length) {
+            if (resolvedMapMode() === "circular") {
+                const angle = Math.atan2(
+                    point.y - 278,
+                    point.x - 410
+                ) * 180 / Math.PI;
+                const normalizedAngle = (angle + 90 + 360) % 360;
+                return normalizedCoordinate(
+                    normalizedAngle / 360 * length + 1,
+                    length
+                );
+            }
+
+            const fraction = Math.max(
+                0,
+                Math.min(1, (point.x - 65) / (755 - 65))
+            );
+            return Math.max(1, Math.min(
+                length,
+                Math.round(fraction * (length - 1)) + 1
+            ));
+        }
+
         function appendSvgText(parent, text, attributes) {
             const node = svgElement("text", attributes);
             node.textContent = text;
@@ -342,6 +527,52 @@
             return index === state.selectedFeature
                 ? "mw-map-feature is-selected"
                 : "mw-map-feature";
+        }
+
+        function appendFeatureHandle(x, y, edge) {
+            const handle = svgElement("circle", {
+                cx: x,
+                cy: y,
+                r: 7,
+                class: "mw-map-handle",
+            });
+            handle.dataset.featureHandle = edge;
+            handle.dataset.featureIndex = String(state.selectedFeature);
+            elements.map.appendChild(handle);
+        }
+
+        function renderCircularHandles(length, cx, cy, radius) {
+            if (
+                !canEdit
+                || elements.mapTool.value !== "resize"
+                || state.selectedFeature < 0
+            ) {
+                return;
+            }
+
+            const feature = state.features[state.selectedFeature];
+            const startAngle = ((feature.start - 1) / length) * 360 - 90;
+            const endAngle = (feature.end / length) * 360 - 90;
+            const start = polarPoint(cx, cy, radius, startAngle);
+            const end = polarPoint(cx, cy, radius, endAngle);
+            appendFeatureHandle(start.x, start.y, "start");
+            appendFeatureHandle(end.x, end.y, "end");
+        }
+
+        function renderLinearHandles(length, left, width, y) {
+            if (
+                !canEdit
+                || elements.mapTool.value !== "resize"
+                || state.selectedFeature < 0
+            ) {
+                return;
+            }
+
+            const feature = state.features[state.selectedFeature];
+            const startX = left + ((feature.start - 1) / length) * width;
+            const endX = left + (feature.end / length) * width;
+            appendFeatureHandle(startX, y, "start");
+            appendFeatureHandle(endX, y, "end");
         }
 
         function resolvedMapMode() {
@@ -488,6 +719,7 @@
                     radius,
                 }
             );
+            renderCircularHandles(length, cx, cy, radius);
         }
 
         function renderLinearMap(sequence) {
@@ -600,6 +832,7 @@
                     y,
                 }
             );
+            renderLinearHandles(length, left, width, y);
         }
 
         function restrictionSites(sequence, circular) {
@@ -767,6 +1000,68 @@
             });
         }
 
+        function renderConstructionTrack() {
+            const sequence = currentSequence();
+            const length = sequence.length;
+            elements.constructionTrack.replaceChildren();
+
+            if (!length) {
+                elements.constructionTrack.textContent =
+                    "Add a sequence to build the construction track.";
+                elements.constructionTrack.classList.add("is-empty");
+                return;
+            }
+
+            elements.constructionTrack.classList.remove("is-empty");
+
+            const axis = document.createElement("div");
+            axis.className = "mw-construction-axis";
+            elements.constructionTrack.appendChild(axis);
+
+            state.features.forEach((feature, index) => {
+                featureSegments(
+                    feature,
+                    length,
+                    currentTopology() === "circular"
+                ).forEach(([start, end], segmentIndex) => {
+                    const part = document.createElement("button");
+                    part.type = "button";
+                    part.className = "mw-construction-part";
+                    part.style.left = `${(start - 1) / length * 100}%`;
+                    part.style.width = `${Math.max(
+                        .8,
+                        (end - start + 1) / length * 100
+                    )}%`;
+                    part.style.setProperty("--mw-part-color", feature.color);
+                    part.dataset.featureIndex = String(index);
+                    part.dataset.segmentIndex = String(segmentIndex);
+                    part.title = `${feature.name}: ${feature.start}..${feature.end}`;
+                    part.textContent = feature.name;
+                    part.classList.toggle(
+                        "is-selected",
+                        index === state.selectedFeature
+                    );
+                    part.addEventListener("click", () => selectFeature(index));
+                    elements.constructionTrack.appendChild(part);
+                });
+            });
+
+            const ticks = document.createElement("div");
+            ticks.className = "mw-construction-ticks";
+            [0, .25, .5, .75, 1].forEach(fraction => {
+                const tick = document.createElement("span");
+                tick.style.left = `${fraction * 100}%`;
+                tick.textContent = Math.round(length * fraction);
+                ticks.appendChild(tick);
+            });
+            elements.constructionTrack.appendChild(ticks);
+
+            const selected = state.features[state.selectedFeature];
+            elements.constructionSelection.textContent = selected
+                ? `${selected.name} · ${selected.start}..${selected.end}`
+                : "No part selected";
+        }
+
         function renderMap() {
             const sequence = currentSequence();
             clearMap();
@@ -775,6 +1070,7 @@
             elements.mapEmpty.hidden = Boolean(sequence.length);
 
             if (!sequence.length) {
+                renderConstructionTrack();
                 return;
             }
 
@@ -785,6 +1081,8 @@
             }
 
             renderLegend();
+            renderConstructionTrack();
+            applyMapViewBox();
         }
 
         function renderFeatureList() {
@@ -843,11 +1141,17 @@
                 elements.featureForm.hidden = true;
                 renderFeatureList();
                 renderMap();
+                notifyWorkspaceChange("selection");
                 return;
             }
 
             state.selectedFeature = index;
             const feature = state.features[index];
+            state.sequenceSelection = {
+                start: feature.start,
+                end: feature.end,
+                featureIndex: index,
+            };
 
             elements.featureForm.hidden = false;
             elements.featureHeading.textContent = feature.name;
@@ -861,6 +1165,9 @@
 
             renderFeatureList();
             renderMap();
+            renderConstructionTrack();
+            renderSequencePreview();
+            notifyWorkspaceChange("selection");
         }
 
         function updateSelectedFeature() {
@@ -987,6 +1294,102 @@
             }
         }
 
+        function selectionContainsCoordinate(coordinate) {
+            const selection = state.sequenceSelection;
+            if (!selection) {
+                return false;
+            }
+
+            if (
+                currentTopology() === "circular"
+                && selection.start > selection.end
+            ) {
+                return coordinate >= selection.start
+                    || coordinate <= selection.end;
+            }
+
+            const start = Math.min(selection.start, selection.end);
+            const end = Math.max(selection.start, selection.end);
+            return coordinate >= start && coordinate <= end;
+        }
+
+        function renderSelectionSummary() {
+            const selection = state.sequenceSelection;
+            const length = currentSequence().length;
+
+            if (!selection || !length) {
+                elements.selectionSummary.textContent =
+                    "Click or drag across the sequence to select a region.";
+                if (elements.selectionFeature) {
+                    elements.selectionFeature.disabled = true;
+                }
+                return;
+            }
+
+            const selectedLength = selection.start <= selection.end
+                ? selection.end - selection.start + 1
+                : length - selection.start + selection.end + 1;
+            const feature = Number.isInteger(selection.featureIndex)
+                ? state.features[selection.featureIndex]
+                : null;
+
+            elements.selectionSummary.textContent = [
+                `${selection.start}..${selection.end}`,
+                `${selectedLength} ${sequenceUnit()}`,
+                feature?.name,
+            ].filter(Boolean).join(" · ");
+
+            if (elements.selectionFeature) {
+                elements.selectionFeature.disabled = !canEdit;
+            }
+        }
+
+        function appendInteractiveSequence(
+            container,
+            text,
+            offset,
+            matches
+        ) {
+            [...text].forEach((character, localIndex) => {
+                const coordinate = offset + localIndex + 1;
+                const base = document.createElement("span");
+                const covering = featuresAtCoordinate(
+                    coordinate,
+                    state.sequence.length
+                );
+                const feature = covering[0];
+
+                base.className = "mw-sequence-base";
+                base.dataset.coordinate = String(coordinate);
+                base.textContent = character;
+
+                if (feature) {
+                    base.classList.add("has-feature");
+                    base.style.setProperty(
+                        "--mw-base-color",
+                        feature.feature.color
+                    );
+                    base.dataset.featureIndex = String(feature.index);
+                    base.title = covering
+                        .map(item => item.feature.name)
+                        .join(", ");
+                }
+
+                if (matches.some(([start, end]) => (
+                    coordinate - 1 >= start
+                    && coordinate - 1 < end
+                ))) {
+                    base.classList.add("is-search-match");
+                }
+
+                if (selectionContainsCoordinate(coordinate)) {
+                    base.classList.add("is-selected");
+                }
+
+                container.appendChild(base);
+            });
+        }
+
         function renderSequencePreview() {
             const sequence = currentSequence();
             const query = cleanSequence(elements.search.value);
@@ -1036,7 +1439,7 @@
                         chunkOffset + 10
                     );
 
-                    appendHighlightedSequence(
+                    appendInteractiveSequence(
                         text,
                         chunk,
                         offset + chunkOffset,
@@ -1060,6 +1463,8 @@
                 row.append(start, text, end);
                 elements.preview.appendChild(row);
             }
+
+            renderSelectionSummary();
         }
 
         function syncStatistics() {
@@ -1084,12 +1489,194 @@
                 ]?.text || currentTopology();
         }
 
+        function syncFeatureInputs(feature) {
+            elements.featureStart.value = feature.start;
+            elements.featureEnd.value = feature.end;
+            elements.featureHeading.textContent = feature.name;
+        }
+
+        function moveFeatureFromDrag(drag, coordinate) {
+            const length = currentSequence().length;
+            const feature = state.features[drag.featureIndex];
+            if (!length || !feature) {
+                return;
+            }
+
+            if (drag.kind === "resize") {
+                if (drag.edge === "start") {
+                    feature.start = currentTopology() === "circular"
+                        ? normalizedCoordinate(coordinate, length)
+                        : Math.min(feature.end, Math.max(1, coordinate));
+                } else {
+                    feature.end = currentTopology() === "circular"
+                        ? normalizedCoordinate(coordinate, length)
+                        : Math.max(feature.start, Math.min(length, coordinate));
+                }
+            } else {
+                let delta = coordinate - drag.anchorCoordinate;
+
+                if (currentTopology() === "circular") {
+                    if (delta > length / 2) delta -= length;
+                    if (delta < -length / 2) delta += length;
+                    feature.start = normalizedCoordinate(
+                        drag.originalStart + delta,
+                        length
+                    );
+                    feature.end = normalizedCoordinate(
+                        drag.originalEnd + delta,
+                        length
+                    );
+                } else {
+                    const minimum = 1 - Math.min(
+                        drag.originalStart,
+                        drag.originalEnd
+                    );
+                    const maximum = length - Math.max(
+                        drag.originalStart,
+                        drag.originalEnd
+                    );
+                    delta = Math.max(minimum, Math.min(maximum, delta));
+                    feature.start = drag.originalStart + delta;
+                    feature.end = drag.originalEnd + delta;
+                }
+            }
+
+            state.sequenceSelection = {
+                start: feature.start,
+                end: feature.end,
+                featureIndex: drag.featureIndex,
+            };
+            syncFeatureInputs(feature);
+            markDirty();
+            renderFeatureList();
+            renderMap();
+            renderSequencePreview();
+        }
+
+        function startFeatureDrag(index, coordinate, kind, edge = null) {
+            if (!canEdit || index < 0 || index >= state.features.length) {
+                return null;
+            }
+
+            selectFeature(index);
+            const feature = state.features[index];
+            return {
+                kind,
+                edge,
+                featureIndex: index,
+                anchorCoordinate: coordinate,
+                originalStart: feature.start,
+                originalEnd: feature.end,
+            };
+        }
+
+        function coordinateFromConstructionEvent(event) {
+            const rect = elements.constructionTrack.getBoundingClientRect();
+            const fraction = Math.max(
+                0,
+                Math.min(1, (event.clientX - rect.left) / rect.width)
+            );
+            const length = currentSequence().length;
+            return Math.max(1, Math.min(
+                length,
+                Math.round(fraction * (length - 1)) + 1
+            ));
+        }
+
+        function updateSequenceSelectionClasses() {
+            elements.preview.querySelectorAll("[data-coordinate]")
+                .forEach(base => {
+                    base.classList.toggle(
+                        "is-selected",
+                        selectionContainsCoordinate(
+                            Number(base.dataset.coordinate)
+                        )
+                    );
+                });
+            renderSelectionSummary();
+        }
+
+        function createFeatureFromSelection() {
+            if (!canEdit || !state.sequenceSelection) {
+                return;
+            }
+
+            const selection = state.sequenceSelection;
+            state.features.push(normalizeFeature({
+                name: "Selected region",
+                type: "custom",
+                start: selection.start,
+                end: selection.end,
+                strand: "+",
+                color: FEATURE_COLORS.custom,
+            }, state.features.length));
+            markDirty();
+            selectFeature(state.features.length - 1);
+            elements.featureName.focus();
+            elements.featureName.select();
+        }
+
         function renderAll() {
             syncStatistics();
             renderMap();
             renderFeatureList();
             renderSequencePreview();
+            notifyWorkspaceChange("render");
         }
+
+        function workspaceSnapshot() {
+            return {
+                name: elements.name.value.trim(),
+                sequence: currentSequence(),
+                sequenceType: currentType(),
+                topology: currentTopology(),
+                features: state.features.map(feature => ({...feature})),
+                selectedFeature: state.selectedFeature,
+                sequenceSelection: state.sequenceSelection
+                    ? {...state.sequenceSelection}
+                    : null,
+                canEdit,
+                view: root.dataset.workspaceView || "all",
+            };
+        }
+
+        function notifyWorkspaceChange(reason) {
+            root.dispatchEvent(new CustomEvent(
+                "biobank:molecular-workspace-change",
+                {
+                    detail: {
+                        reason,
+                        snapshot: workspaceSnapshot(),
+                    },
+                }
+            ));
+        }
+
+        function selectSequenceRange(start, end) {
+            const length = currentSequence().length;
+            if (!length) {
+                return;
+            }
+
+            state.sequenceSelection = {
+                start: normalizedCoordinate(start, length),
+                end: normalizedCoordinate(end, length),
+                featureIndex: null,
+            };
+            state.selectedFeature = -1;
+            elements.featureForm.hidden = true;
+            renderFeatureList();
+            renderMap();
+            renderSequencePreview();
+            notifyWorkspaceChange("selection");
+        }
+
+        window.BiobankMolecularWorkspace = {
+            getSnapshot: workspaceSnapshot,
+            selectFeature,
+            selectSequenceRange,
+            refresh: renderAll,
+        };
 
         function scheduleRender() {
             clearTimeout(state.renderTimer);
@@ -1412,6 +1999,271 @@
             reader.readAsText(file);
         }
 
+        viewButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                applyWorkspaceView(button.dataset.mwView);
+            });
+        });
+
+        elements.mapTool.addEventListener("change", () => {
+            const guidance = {
+                navigate: "Drag the background to pan and use the mouse wheel to zoom.",
+                move: "Drag a colored annotation around the map or along the linear construction.",
+                resize: "Select an annotation and drag either circular handle to change its boundaries.",
+            };
+            elements.mapGuidance.textContent = guidance[
+                elements.mapTool.value
+            ];
+            renderMap();
+        });
+
+        elements.mapZoomOut.addEventListener(
+            "click",
+            () => zoomMap(1.2)
+        );
+        elements.mapZoomIn.addEventListener(
+            "click",
+            () => zoomMap(.8)
+        );
+        elements.mapReset.addEventListener("click", resetMapView);
+
+        elements.map.addEventListener("wheel", event => {
+            event.preventDefault();
+            zoomMap(event.deltaY < 0 ? .88 : 1.14, mapPoint(event));
+        }, {passive: false});
+
+        elements.map.addEventListener("pointerdown", event => {
+            const featureNode = event.target.closest?.(
+                "[data-feature-index]"
+            );
+            const point = mapPoint(event);
+            const length = currentSequence().length;
+
+            if (featureNode && length) {
+                const index = Number(featureNode.dataset.featureIndex);
+                const coordinate = coordinateFromMapPoint(point, length);
+                const handle = featureNode.dataset.featureHandle;
+
+                if (
+                    canEdit
+                    && elements.mapTool.value === "resize"
+                    && handle
+                ) {
+                    state.mapDrag = startFeatureDrag(
+                        index,
+                        coordinate,
+                        "resize",
+                        handle
+                    );
+                } else if (
+                    canEdit
+                    && elements.mapTool.value === "move"
+                ) {
+                    state.mapDrag = startFeatureDrag(
+                        index,
+                        coordinate,
+                        "move"
+                    );
+                } else {
+                    selectFeature(index);
+                }
+            } else if (elements.mapTool.value === "navigate") {
+                state.mapDrag = {
+                    kind: "pan",
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    original: {...state.mapViewBox},
+                };
+            }
+
+            if (state.mapDrag) {
+                elements.map.setPointerCapture(event.pointerId);
+                event.preventDefault();
+            }
+        });
+
+        elements.map.addEventListener("pointermove", event => {
+            const drag = state.mapDrag;
+            if (!drag) {
+                return;
+            }
+
+            if (drag.kind === "pan") {
+                const rect = elements.map.getBoundingClientRect();
+                state.mapViewBox = {
+                    ...drag.original,
+                    x: drag.original.x - (
+                        event.clientX - drag.clientX
+                    ) * drag.original.width / rect.width,
+                    y: drag.original.y - (
+                        event.clientY - drag.clientY
+                    ) * drag.original.height / rect.height,
+                };
+                applyMapViewBox();
+            } else {
+                moveFeatureFromDrag(
+                    drag,
+                    coordinateFromMapPoint(
+                        mapPoint(event),
+                        currentSequence().length
+                    )
+                );
+            }
+        });
+
+        function finishMapDrag(event) {
+            if (state.mapDrag) {
+                state.mapDrag = null;
+                if (elements.map.hasPointerCapture(event.pointerId)) {
+                    elements.map.releasePointerCapture(event.pointerId);
+                }
+            }
+        }
+
+        elements.map.addEventListener("pointerup", finishMapDrag);
+        elements.map.addEventListener("pointercancel", finishMapDrag);
+
+        elements.constructionTrack.addEventListener(
+            "pointerdown",
+            event => {
+                const part = event.target.closest("[data-feature-index]");
+                if (!part) {
+                    return;
+                }
+
+                const index = Number(part.dataset.featureIndex);
+                if (canEdit && elements.mapTool.value === "move") {
+                    state.constructionDrag = startFeatureDrag(
+                        index,
+                        coordinateFromConstructionEvent(event),
+                        "move"
+                    );
+                    elements.constructionTrack.setPointerCapture(
+                        event.pointerId
+                    );
+                    event.preventDefault();
+                } else {
+                    selectFeature(index);
+                }
+            }
+        );
+        elements.constructionTrack.addEventListener(
+            "pointermove",
+            event => {
+                if (state.constructionDrag) {
+                    moveFeatureFromDrag(
+                        state.constructionDrag,
+                        coordinateFromConstructionEvent(event)
+                    );
+                }
+            }
+        );
+        ["pointerup", "pointercancel"].forEach(eventName => {
+            elements.constructionTrack.addEventListener(
+                eventName,
+                event => {
+                    state.constructionDrag = null;
+                    if (
+                        elements.constructionTrack.hasPointerCapture(
+                            event.pointerId
+                        )
+                    ) {
+                        elements.constructionTrack.releasePointerCapture(
+                            event.pointerId
+                        );
+                    }
+                }
+            );
+        });
+
+        elements.preview.addEventListener("pointerdown", event => {
+            const base = event.target.closest("[data-coordinate]");
+            if (!base) {
+                return;
+            }
+
+            const coordinate = Number(base.dataset.coordinate);
+            state.sequenceDrag = {
+                anchor: coordinate,
+                current: coordinate,
+                moved: false,
+                featureIndex: base.dataset.featureIndex === undefined
+                    ? null
+                    : Number(base.dataset.featureIndex),
+            };
+            state.sequenceSelection = {
+                start: coordinate,
+                end: coordinate,
+                featureIndex: null,
+            };
+            elements.preview.setPointerCapture(event.pointerId);
+            updateSequenceSelectionClasses();
+            event.preventDefault();
+        });
+
+        elements.preview.addEventListener("pointermove", event => {
+            if (!state.sequenceDrag) {
+                return;
+            }
+
+            const target = document.elementFromPoint(
+                event.clientX,
+                event.clientY
+            )?.closest?.("[data-coordinate]");
+            if (!target) {
+                return;
+            }
+
+            const coordinate = Number(target.dataset.coordinate);
+            state.sequenceDrag.current = coordinate;
+            state.sequenceDrag.moved = state.sequenceDrag.moved
+                || coordinate !== state.sequenceDrag.anchor;
+            state.sequenceSelection = {
+                start: Math.min(
+                    state.sequenceDrag.anchor,
+                    coordinate
+                ),
+                end: Math.max(
+                    state.sequenceDrag.anchor,
+                    coordinate
+                ),
+                featureIndex: null,
+            };
+            updateSequenceSelectionClasses();
+        });
+
+        function finishSequenceSelection(event) {
+            const drag = state.sequenceDrag;
+            if (!drag) {
+                return;
+            }
+
+            state.sequenceDrag = null;
+            if (elements.preview.hasPointerCapture(event.pointerId)) {
+                elements.preview.releasePointerCapture(event.pointerId);
+            }
+
+            if (!drag.moved && Number.isInteger(drag.featureIndex)) {
+                selectFeature(drag.featureIndex);
+            } else {
+                updateSequenceSelectionClasses();
+                renderConstructionTrack();
+            }
+        }
+
+        elements.preview.addEventListener(
+            "pointerup",
+            finishSequenceSelection
+        );
+        elements.preview.addEventListener(
+            "pointercancel",
+            finishSequenceSelection
+        );
+        elements.selectionFeature?.addEventListener(
+            "click",
+            createFeatureFromSelection
+        );
+
         [
             elements.name,
             elements.type,
@@ -1522,6 +2374,8 @@
             event.returnValue = "";
         });
 
+        applyWorkspaceView(preferredView());
+        resetMapView();
         renderAll();
         loadFeatures();
     });

@@ -67,7 +67,13 @@ class MolecularWorkspaceTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "success")
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["sequence_type"], "plasmid")
+        self.assertEqual(payload["topology"], "circular")
+        self.assertEqual(payload["source_entry_id"], self.entry.id)
+        self.assertEqual(payload["description"], "Test molecular record")
+        self.assertTrue(payload["detail_url"])
 
         molecule = MolecularSequence.objects.get()
         self.assertEqual(molecule.sequence, "ATGCRYSWKMBDHVN")
