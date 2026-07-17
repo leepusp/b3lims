@@ -188,5 +188,15 @@ BIOBANK_SAMPLE_DOCS_ROOT = Path(os.environ.get("BIOBANK_SAMPLE_DOCS_ROOT", str(B
 BIOBANK_MANIFESTS_ROOT = Path(os.environ.get("BIOBANK_MANIFESTS_ROOT", str(BIOBANK_STORAGE_ROOT / "manifests")))
 BIOBANK_SHARED_ROOT = Path(os.environ.get("BIOBANK_SHARED_ROOT", str(BIOBANK_STORAGE_ROOT / "shared")))
 
+# Jupyter sessions are launched through the authenticated Open OnDemand app.
+# The ELN never stores JupyterHub credentials or service tokens.
+BIOBANK_JUPYTER_LAUNCH_URL = os.environ.get(
+    "BIOBANK_JUPYTER_LAUNCH_URL",
+    (
+        "https://davinci.icb.usp.br/pun/sys/dashboard/"
+        "batch_connect/sys/jupyter/session_contexts/new"
+    ),
+)
+
 FILE_UPLOAD_PERMISSIONS = 0o660
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o2770

@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import models
@@ -324,6 +325,7 @@ def notebook_index(request):
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "entry_workspace_path": entry_workspace_path,
+            "jupyter_launch_url": settings.BIOBANK_JUPYTER_LAUNCH_URL,
         },
     )
 

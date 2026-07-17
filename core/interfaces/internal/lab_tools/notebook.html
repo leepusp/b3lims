@@ -696,9 +696,34 @@
                                         </div>
                                     {% empty %}
                                         <div class="text-muted small border rounded p-3 bg-light">
-                                            No relevant items linked yet. Add a linked sample, chemical, attachment, or create a Molecular Item.
+                                            No relevant items linked yet. Add a linked sample, chemical, attachment, Molecular Item, or Jupyter analysis.
                                         </div>
                                     {% endfor %}
+
+                                    <hr>
+
+                                    <div class="border rounded p-3 mb-3 bg-light">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div>
+                                                <div class="fw-bold">
+                                                    <i class="bi bi-code-square me-2"></i>Jupyter analysis
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Start an authenticated Jupyter session through Open OnDemand. The computation is submitted to the DaVinci Slurm cluster.
+                                                </div>
+                                                <div class="small mt-2">
+                                                    Save the resulting <code>.ipynb</code> file and attach it to this ELN entry from the Files tab to preserve the analysis with the experiment.
+                                                </div>
+                                            </div>
+                                            <a href="{{ jupyter_launch_url }}"
+                                               target="_blank"
+                                               rel="noopener noreferrer"
+                                               class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                               data-jupyter-launch>
+                                                <i class="bi bi-box-arrow-up-right me-1"></i>Launch Jupyter
+                                            </a>
+                                        </div>
+                                    </div>
 
                                     <hr>
 
@@ -874,10 +899,17 @@
                                     <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
                                         <i class="bi bi-box-seam me-1"></i>Browse samples
                                     </a>
+                                    <a href="{{ jupyter_launch_url }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="btn btn-outline-primary"
+                                       data-jupyter-launch>
+                                        <i class="bi bi-code-square me-1"></i>Launch Jupyter
+                                    </a>
                                 </div>
 
                                 <div class="row g-3 text-start">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="border rounded bg-light p-3 h-100">
                                             <div class="fw-bold mb-1">
                                                 <i class="bi bi-pencil-square me-1"></i>Write
@@ -888,7 +920,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="border rounded bg-light p-3 h-100">
                                             <div class="fw-bold mb-1">
                                                 <i class="bi bi-link-45deg me-1"></i>Link
@@ -899,13 +931,24 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="border rounded bg-light p-3 h-100">
                                             <div class="fw-bold mb-1">
                                                 <i class="bi bi-dna me-1"></i>Build
                                             </div>
                                             <div class="small text-muted">
                                                 Create DNA, plasmid, primer and protein records from Insert.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="fw-bold mb-1">
+                                                <i class="bi bi-code-square me-1"></i>Analyze
+                                            </div>
+                                            <div class="small text-muted">
+                                                Launch Jupyter through Open OnDemand and run analyses on Slurm compute nodes.
                                             </div>
                                         </div>
                                     </div>
