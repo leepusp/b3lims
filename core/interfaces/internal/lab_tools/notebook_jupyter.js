@@ -459,10 +459,19 @@
                 { method: "GET" },
             );
             state.execution = payload.execution;
-            if (payload.document) {
+            if (payload.document && !state.dirty) {
                 state.notebook = payload.document;
-                state.dirty = false;
                 renderCells();
+            } else if (payload.document && state.dirty) {
+                const message = root.querySelector(
+                    "[data-execution-message]"
+                );
+                if (message) {
+                    message.textContent = (
+                        "Unsaved local changes were preserved "
+                        + "while the Slurm session was refreshed."
+                    );
+                }
             }
             renderExecution(state.execution);
             if (["submitted", "pending", "running", "unknown"].includes(state.execution.status)) {
@@ -523,6 +532,14 @@
                 saveDocument().catch((error) => alert(error.message));
             }
         }
+    });
+
+
+    window.addEventListener("beforeunload", (event) => {
+        if (!state.dirty) return;
+
+        event.preventDefault();
+        event.returnValue = "";
     });
 
     loadDocument();

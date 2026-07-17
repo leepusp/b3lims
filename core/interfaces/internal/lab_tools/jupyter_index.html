@@ -54,13 +54,13 @@
             <div class="list-group list-group-flush">
                 {% for notebook in jupyter_notebooks %}
                     {% with session=notebook.sessions.first %}
-                        <a class="list-group-item list-group-item-action py-3"
-                           href="{% url 'jupyter_workspace' notebook.id %}">
-                            <div class="d-flex flex-wrap justify-content-between gap-3">
-                                <div>
-                                    <div class="fw-semibold">
+                        <div class="list-group-item py-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                <div class="flex-grow-1">
+                                    <a class="fw-semibold text-decoration-none"
+                                       href="{% url 'jupyter_workspace' notebook.id %}">
                                         {{ notebook.title }}
-                                    </div>
+                                    </a>
 
                                     {% if notebook.description %}
                                         <div class="small text-muted mt-1">
@@ -90,7 +90,7 @@
                                             {% endif %}">
                                             {{ session.get_status_display }}
                                         </span>
-                                        <div class="small text-muted mt-2">
+                                        <div class="small text-muted mt-1">
                                             Job {{ session.job_id }}
                                             · {{ session.partition }}
                                         </div>
@@ -99,9 +99,34 @@
                                             No session
                                         </span>
                                     {% endif %}
+
+                                    <div class="d-flex flex-wrap justify-content-end gap-1 mt-2">
+                                        <a class="btn btn-sm btn-outline-primary"
+                                           href="{% url 'jupyter_workspace' notebook.id %}">
+                                            <i class="bi bi-box-arrow-in-right"></i>
+                                            Open
+                                        </a>
+
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{% url 'jupyter_download' notebook.id %}">
+                                            <i class="bi bi-download"></i>
+                                            Download
+                                        </a>
+
+                                        <form method="post"
+                                              action="{% url 'jupyter_delete' notebook.id %}"
+                                              onsubmit="return window.confirm('Delete this Jupyter notebook? Its active Slurm session will be stopped.');">
+                                            {% csrf_token %}
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    type="submit">
+                                                <i class="bi bi-trash"></i>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </a>
+                        </div>
                     {% endwith %}
                 {% endfor %}
             </div>
@@ -109,11 +134,8 @@
             <div class="card-body text-center py-5">
                 <i class="bi bi-code-square display-5 text-primary"></i>
                 <h2 class="h4 mt-3">Start a Jupyter notebook</h2>
-                <p class="text-muted mx-auto"
-                   style="max-width: 620px;">
-                    Create a notebook, select the Slurm partition,
-                    CPU, memory and duration, then work with a
-                    persistent Python kernel.
+                <p class="text-muted">
+                    Select Slurm resources and work with a persistent kernel.
                 </p>
                 <a class="btn btn-primary"
                    href="{% url 'jupyter_launch' %}">

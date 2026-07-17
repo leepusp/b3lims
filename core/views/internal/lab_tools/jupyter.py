@@ -687,3 +687,69 @@ def jupyter_download(request, notebook_id):
         f'biobank-jupyter-{notebook.id}.ipynb"'
     )
     return response
+
+
+@login_required
+def jupyter_delete(request, notebook_id):
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "POST required.",
+            },
+            status=405,
+        )
+
+    notebook = _notebook_for_user(
+        notebook_id,
+        request.user,
+    )
+
+    if not can_edit_notebook(
+        request.user,
+        notebook,
+    ):
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Permission denied.",
+            },
+            status=403,
+        )
+
+    active_sessions = list(
+        notebook.sessions
+        .filter(status__in=ACTIVE_STATUSES)
+        .select_related(
+            "notebook",
+            "started_by",
+        )
+    )
+
+    for session in active_sessions:
+        try:
+            stop_session(
+                session,
+                request.user,
+            )
+        except JupyterNotebookError as exc:
+            messages.error(
+                request,
+                "The notebook was not deleted because "
+                "its Slurm session could not be stopped: "
+                f"{exc}",
+            )
+            return redirect(
+                "jupyter_workspace",
+                notebook_id=notebook.id,
+            )
+
+    deleted_title = notebook.title
+    notebook.delete()
+
+    messages.success(
+        request,
+        f'Jupyter notebook "{deleted_title}" was deleted.',
+    )
+
+    return redirect("jupyter_index")

@@ -256,6 +256,11 @@ urlpatterns = [
         jupyter_views.jupyter_download,
         name='jupyter_download',
     ),
+    path(
+        'internal/lab-tools/jupyter/<int:notebook_id>/delete/',
+        jupyter_views.jupyter_delete,
+        name='jupyter_delete',
+    ),
     path('internal/lab-tools/notebook/jupyter/launch/', notebook_views.notebook_jupyter_launch, name='notebook_jupyter_launch'),
     path('internal/lab-tools/notebook/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_workspace, name='notebook_jupyter_workspace'),
     path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_document_api, name='notebook_jupyter_document_api'),

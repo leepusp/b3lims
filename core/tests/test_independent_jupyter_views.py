@@ -209,6 +209,75 @@ class IndependentJupyterViewTests(TestCase):
             4,
         )
 
+    def test_index_exposes_download_action(self):
+        notebook = JupyterNotebook.objects.create(
+            title="Downloadable notebook",
+            owner=self.owner,
+            updated_by=self.owner,
+            notebook_json=starter_notebook(
+                "Downloadable notebook",
+                self.owner.get_username(),
+            ),
+        )
+
+        response = self.client.get(
+            reverse("jupyter_index")
+        )
+
+        self.assertContains(
+            response,
+            reverse(
+                "jupyter_download",
+                args=[notebook.id],
+            ),
+        )
+
+    def test_owner_can_delete_independent_notebook(self):
+        notebook = JupyterNotebook.objects.create(
+            title="Delete notebook",
+            owner=self.owner,
+            updated_by=self.owner,
+            notebook_json=starter_notebook(
+                "Delete notebook",
+                self.owner.get_username(),
+            ),
+        )
+
+        session = notebook.sessions.create(
+            started_by=self.owner,
+            job_id="99881",
+            run_id="delete_notebook_session",
+            status="running",
+            partition="basic",
+            cpus=2,
+            memory_mb=2048,
+            time_minutes=60,
+            run_directory="/tmp/delete-notebook-session",
+        )
+
+        with patch(
+            "core.views.internal.lab_tools.jupyter."
+            "stop_session",
+            return_value=session,
+        ) as mocked_stop:
+            response = self.client.post(
+                reverse(
+                    "jupyter_delete",
+                    args=[notebook.id],
+                )
+            )
+
+        self.assertRedirects(
+            response,
+            reverse("jupyter_index"),
+        )
+        self.assertFalse(
+            JupyterNotebook.objects.filter(
+                pk=notebook.id
+            ).exists()
+        )
+        mocked_stop.assert_called_once()
+
     def test_legacy_jupyter_entry_is_hidden_from_notes_list(self):
         entry = NotebookEntry.objects.create(
             title="Legacy Jupyter entry",

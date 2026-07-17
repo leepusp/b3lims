@@ -89,6 +89,12 @@
             <span class="nav-label">ELN Notebook</span>
         </a>
 
+        <a href="{% url 'jupyter_index' %}"
+           class="nav-link {% if '/lab-tools/jupyter/' in request.path %}active{% endif %}">
+            <i class="bi bi-code-square"></i>
+            <span class="nav-label">Jupyter Notebooks</span>
+        </a>
+
     </nav>
 
     <div class="sidebar-footer"
