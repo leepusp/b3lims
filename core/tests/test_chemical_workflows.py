@@ -202,6 +202,57 @@ class ChemicalWorkflowTests(TestCase):
             ).exists()
         )
 
+    def test_create_reagent_with_multiple_documents(self):
+        sds = SimpleUploadedFile(
+            "methanol-sds.pdf",
+            b"%PDF-1.4\nsafety data\n%%EOF",
+            content_type="application/pdf",
+        )
+        certificate = SimpleUploadedFile(
+            "methanol-coa.pdf",
+            b"%PDF-1.4\ncertificate\n%%EOF",
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(
+            request_path("chemical_add"),
+            {
+                "name": "Methanol with documents",
+                "quantity_value": "250",
+                "quantity_unit": "mL",
+                "documents-TOTAL_FORMS": "2",
+                "documents-0-file": sds,
+                "documents-0-title": "Methanol SDS",
+                "documents-0-document_type": "sds",
+                "documents-0-is_primary": "on",
+                "documents-1-file": certificate,
+                "documents-1-title": "Methanol Certificate",
+                "documents-1-document_type": "coa",
+            },
+        )
+
+        chemical = Chemical.objects.get(
+            name="Methanol with documents",
+        )
+
+        self.assertEqual(
+            response.url,
+            reverse("chemical_detail", args=[chemical.id]),
+        )
+        self.assertEqual(chemical.files.count(), 2)
+        self.assertTrue(
+            chemical.files.filter(
+                document_type="sds",
+                is_primary=True,
+            ).exists()
+        )
+        self.assertTrue(
+            chemical.files.filter(
+                document_type="coa",
+                is_primary=False,
+            ).exists()
+        )
+
     def test_edit_reagent_replaces_active_metadata(self):
         old_tag = Tag.objects.create(name="Old Classification")
         new_tag = Tag.objects.create(name="New Classification")

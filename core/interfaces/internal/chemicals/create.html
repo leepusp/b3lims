@@ -51,6 +51,17 @@
     color: #64748b;
     font-size: 12px;
 }
+
+.chem-document-row {
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+}
+
+.chem-document-row + .chem-document-row {
+    margin-top: 12px;
+}
 </style>
 
 <div class="chem-create-page">
@@ -66,7 +77,7 @@
     </div>
 
     <div class="chem-form-card">
-        <form method="post" action="{% url 'chemical_add' %}" id="createChemicalForm">
+        <form method="post" action="{% url 'chemical_add' %}" id="createChemicalForm" enctype="multipart/form-data">
             {% csrf_token %}
 
             <div class="row g-4">
@@ -189,6 +200,26 @@
 
             {% include "internal/chemicals/_metadata_fields.html" %}
 
+            <section class="mt-4 pt-3 border-top" data-chemical-documents>
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <div class="chem-section-title mb-1">6. Documents</div>
+                        <div class="chem-help">Attach SDS, certificates, specifications or protocols while registering the reagent.</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-add-document>
+                        <i class="bi bi-plus-lg me-1"></i>Add another document
+                    </button>
+                </div>
+
+                <input type="hidden" name="documents-TOTAL_FORMS" value="1" data-document-total>
+                <div data-document-list>
+                    {% include "internal/chemicals/_document_form.html" with document_index="0" show_remove=False %}
+                </div>
+                <template data-document-template>
+                    {% include "internal/chemicals/_document_form.html" with document_index="__prefix__" show_remove=True %}
+                </template>
+            </section>
+
             <div class="text-end mt-4 pt-3 border-top">
                 <a href="{% url 'chemicals_list' %}" class="btn btn-light me-2">Cancel</a>
                 <button type="submit" class="btn btn-primary px-4">
@@ -202,4 +233,7 @@
 {% include "internal/tags/add_tag.html" %}
 {% include "internal/keywords/add_keyword.html" %}
 {% endblock %}
-{% block extra_js %}<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260716-metadata"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'internal/chemicals/chemical.js' %}?v=20260716-metadata"></script>
+<script src="{% static 'internal/chemicals/chemical_documents.js' %}?v=20260717-create"></script>
+{% endblock %}

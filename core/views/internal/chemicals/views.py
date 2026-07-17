@@ -30,6 +30,92 @@ from core.permissions.chemicals import (
 )
 
 
+MAX_CHEMICAL_DOCUMENTS_PER_REQUEST = 10
+MAX_CHEMICAL_DOCUMENT_SIZE = 25 * 1024 * 1024
+
+
+def _chemical_document_data(post_data, uploaded_file, prefix=""):
+    """Validate and normalize one reagent document submission."""
+    document_type = post_data.get(f"{prefix}document_type") or "other"
+    valid_types = {value for value, _ in ChemicalFile.DOCUMENT_TYPES}
+    if document_type not in valid_types:
+        raise ValueError("Invalid document type.")
+
+    if uploaded_file.size > MAX_CHEMICAL_DOCUMENT_SIZE:
+        raise ValueError(
+            f"{uploaded_file.name} exceeds the 25 MB document limit."
+        )
+
+    raw_document_date = post_data.get(f"{prefix}document_date") or ""
+    document_date = parse_date(raw_document_date)
+    if raw_document_date and document_date is None:
+        raise ValueError("Invalid document date.")
+
+    original_filename = os.path.basename(uploaded_file.name)[:255]
+    return {
+        "file": uploaded_file,
+        "original_filename": original_filename,
+        "title": (
+            post_data.get(f"{prefix}title") or original_filename
+        ).strip()[:255],
+        "document_type": document_type,
+        "description": post_data.get(f"{prefix}description") or "",
+        "version": (
+            post_data.get(f"{prefix}version") or ""
+        ).strip()[:50],
+        "document_date": document_date,
+        "is_primary": (
+            document_type == "sds"
+            and post_data.get(f"{prefix}is_primary")
+            in {"true", "on", "1"}
+        ),
+    }
+
+
+def _create_chemical_document(chemical, user, document_data):
+    """Create a reagent document and maintain one active primary SDS."""
+    if document_data["is_primary"]:
+        chemical.files.filter(
+            is_active=True,
+            is_primary=True,
+        ).update(is_primary=False)
+
+    return ChemicalFile.objects.create(
+        chemical=chemical,
+        uploaded_by=user,
+        **document_data,
+    )
+
+
+def _pending_create_documents(request):
+    """Return validated indexed document submissions from reagent creation."""
+    raw_total = request.POST.get("documents-TOTAL_FORMS") or "0"
+    try:
+        total = int(raw_total)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid document form count.") from exc
+
+    if total < 0 or total > MAX_CHEMICAL_DOCUMENTS_PER_REQUEST:
+        raise ValueError(
+            "A maximum of 10 documents may be uploaded per registration."
+        )
+
+    documents = []
+    for index in range(total):
+        prefix = f"documents-{index}-"
+        uploaded_file = request.FILES.get(f"{prefix}file")
+        if uploaded_file is None:
+            continue
+        documents.append(
+            _chemical_document_data(
+                request.POST,
+                uploaded_file,
+                prefix,
+            )
+        )
+    return documents
+
+
 def _chemical_metadata_context(chemical=None):
     """Build active controlled-vocabulary context for reagent forms."""
     selected_tag_ids = []
@@ -139,6 +225,8 @@ def chemical_create_view(request):
     """
     if request.method == "POST":
         try:
+            pending_documents = _pending_create_documents(request)
+
             with transaction.atomic():
                 name = (request.POST.get("name") or "").strip()
 
@@ -187,7 +275,28 @@ def chemical_create_view(request):
                 )
                 _apply_chemical_metadata(chemical, request.POST)
 
-                messages.success(request, f"Reagent {name} registered successfully.")
+                for document_data in pending_documents:
+                    _create_chemical_document(
+                        chemical,
+                        request.user,
+                        document_data,
+                    )
+
+                document_count = len(pending_documents)
+                document_message = (
+                    f" with {document_count} document(s)"
+                    if document_count
+                    else ""
+                )
+                messages.success(
+                    request,
+                    f"Reagent {name} registered successfully{document_message}.",
+                )
+                if document_count:
+                    return redirect(
+                        "chemical_detail",
+                        chemical_id=chemical.id,
+                    )
                 return redirect("chemicals_list")
 
         except Exception as e:
@@ -195,6 +304,7 @@ def chemical_create_view(request):
 
     ctx = base_context(request)
     ctx.update(_chemical_metadata_context())
+    ctx["document_types"] = ChemicalFile.DOCUMENT_TYPES
     return render(request, "internal/chemicals/create.html", ctx)
 
 @login_required
@@ -436,31 +546,19 @@ def chemical_file_upload_view(request, chemical_id):
         messages.error(request, "Select a document to upload.")
         return redirect("chemical_detail", chemical_id=chemical.id)
 
-    document_type = request.POST.get("document_type") or "other"
-    valid_types = {value for value, _ in ChemicalFile.DOCUMENT_TYPES}
-    if document_type not in valid_types:
-        messages.error(request, "Invalid document type.")
+    try:
+        document_data = _chemical_document_data(
+            request.POST,
+            uploaded_file,
+        )
+    except ValueError as exc:
+        messages.error(request, str(exc))
         return redirect("chemical_detail", chemical_id=chemical.id)
 
-    is_primary = (
-        document_type == "sds"
-        and request.POST.get("is_primary") in {"true", "on", "1"}
-    )
-    if is_primary:
-        chemical.files.filter(is_active=True, is_primary=True).update(is_primary=False)
-
-    original_filename = os.path.basename(uploaded_file.name)[:255]
-    chemical_file = ChemicalFile.objects.create(
-        chemical=chemical,
-        file=uploaded_file,
-        original_filename=original_filename,
-        title=(request.POST.get("title") or original_filename)[:255],
-        document_type=document_type,
-        description=request.POST.get("description") or "",
-        version=(request.POST.get("version") or "")[:50],
-        document_date=parse_date(request.POST.get("document_date") or ""),
-        is_primary=is_primary,
-        uploaded_by=request.user,
+    chemical_file = _create_chemical_document(
+        chemical,
+        request.user,
+        document_data,
     )
     messages.success(request, f"Document {chemical_file.title} uploaded successfully.")
     return redirect("chemical_detail", chemical_id=chemical.id)
