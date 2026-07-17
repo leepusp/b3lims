@@ -279,15 +279,6 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-global-action="add-markdown"><i class="bi bi-markdown me-1"></i>Markdown</button>
                 <button type="button" class="btn btn-sm btn-primary" data-global-action="save"><i class="bi bi-floppy me-1"></i>Save</button>
                 <button type="button" class="btn btn-sm btn-success" data-global-action="run-all"><i class="bi bi-play-fill me-1"></i>Run all</button>
-                <select class="form-select form-select-sm eln-jupyter-resource" data-resource="cpus" aria-label="CPU count">
-                    <option value="1">1 CPU</option><option value="2" selected>2 CPUs</option><option value="4">4 CPUs</option><option value="8">8 CPUs</option>
-                </select>
-                <select class="form-select form-select-sm eln-jupyter-resource" data-resource="memory" aria-label="Memory">
-                    <option value="2048">2 GB</option><option value="4096">4 GB</option><option value="8192" selected>8 GB</option><option value="16384">16 GB</option><option value="32768">32 GB</option>
-                </select>
-                <select class="form-select form-select-sm eln-jupyter-resource" data-resource="time" aria-label="Time limit">
-                    <option value="15">15 min</option><option value="30">30 min</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option>
-                </select>
                 <a class="btn btn-sm btn-outline-dark" data-jupyter-download><i class="bi bi-download me-1"></i>.ipynb</a>
                 <a class="btn btn-sm btn-outline-primary" data-open-workspace><i class="bi bi-window me-1"></i><span data-workspace-label>Open workspace</span></a>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-global-action="expand"><i class="bi bi-arrows-fullscreen me-1"></i><span data-expand-label>Expand</span></button>
@@ -308,10 +299,6 @@
             button.classList.toggle("d-none", !canEdit);
         });
         root.querySelector('[data-global-action="run-all"]').classList.toggle("d-none", !canExecute);
-        root.querySelectorAll("[data-resource]").forEach((select) => {
-            select.classList.toggle("d-none", !canExecute);
-        });
-
         root.querySelector("[data-jupyter-download]").href = downloadUrl;
         const workspaceLink = root.querySelector("[data-open-workspace]");
         workspaceLink.href = standalone ? notebookUrl : workspaceUrl;
@@ -412,16 +399,10 @@
         if (!canExecute) return;
         try {
             await saveDocument();
-            const cpus = Number(root.querySelector('[data-resource="cpus"]').value);
-            const memoryMb = Number(root.querySelector('[data-resource="memory"]').value);
-            const timeMinutes = Number(root.querySelector('[data-resource="time"]').value);
             setStatus("Submitting…", "bg-primary");
             const payload = await requestJson(submitUrl, {
                 method: "POST",
                 body: JSON.stringify({
-                    cpus,
-                    memory_mb: memoryMb,
-                    time_minutes: timeMinutes,
                     cell_index: cellIndex,
                 }),
             });

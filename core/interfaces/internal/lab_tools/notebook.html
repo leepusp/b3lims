@@ -925,16 +925,11 @@
                                     <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
                                         <i class="bi bi-box-seam me-1"></i>Browse samples
                                     </a>
-                                    <form method="post"
-                                          action="{% url 'notebook_jupyter_launch' %}"
-                                          class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                                class="btn btn-outline-primary"
-                                                data-jupyter-launch>
-                                            <i class="bi bi-code-square me-1"></i>Launch Jupyter
-                                        </button>
-                                    </form>
+                                    <a href="{% url 'notebook_jupyter_launch' %}"
+                                       class="btn btn-outline-primary"
+                                       data-jupyter-launch>
+                                        <i class="bi bi-code-square me-1"></i>Launch Jupyter
+                                    </a>
                                 </div>
 
                                 <div class="row g-3 text-start">

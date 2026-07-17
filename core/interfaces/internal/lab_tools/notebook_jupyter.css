@@ -97,11 +97,6 @@ body.eln-jupyter-expanded-open {
     width: min(340px, 100%);
 }
 
-.eln-jupyter-resource {
-    width: auto;
-    min-width: 105px;
-}
-
 .eln-jupyter-status {
     margin-left: auto;
     white-space: nowrap;

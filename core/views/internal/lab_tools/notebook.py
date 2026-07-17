@@ -1317,15 +1317,64 @@ def _starter_jupyter_notebook(entry, user):
 
 @login_required
 def notebook_jupyter_launch(request):
+    now = timezone.localtime()
+    defaults = {
+        "title": f"Jupyter analysis {now:%Y-%m-%d %H:%M}",
+        "partition": settings.BIOBANK_JUPYTER_PARTITION,
+        "cpus": settings.BIOBANK_JUPYTER_DEFAULT_CPUS,
+        "memory_mb": settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB,
+        "hours": max(
+            1,
+            settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES // 60,
+        ),
+    }
+
+    if request.method == "GET":
+        return render(
+            request,
+            "internal/lab_tools/notebook_jupyter_launch.html",
+            {"launch": defaults},
+        )
+
     if request.method != "POST":
         return JsonResponse(
-            {"status": "error", "message": "POST required."},
+            {"status": "error", "message": "GET or POST required."},
             status=405,
         )
 
-    now = timezone.localtime()
+    launch = {
+        "title": str(request.POST.get("title") or defaults["title"]).strip(),
+        "partition": settings.BIOBANK_JUPYTER_PARTITION,
+        "cpus": request.POST.get("cpus", defaults["cpus"]),
+        "memory_mb": request.POST.get("memory_mb", defaults["memory_mb"]),
+        "hours": request.POST.get("hours", defaults["hours"]),
+    }
+
+    try:
+        launch["cpus"] = int(launch["cpus"])
+        launch["memory_mb"] = int(launch["memory_mb"])
+        launch["hours"] = int(launch["hours"])
+
+        if not launch["title"]:
+            raise JupyterNotebookError("Notebook title is required.")
+        if len(launch["title"]) > 255:
+            raise JupyterNotebookError("Notebook title is too long.")
+        if launch["cpus"] not in {1, 2, 4, 8}:
+            raise JupyterNotebookError("Invalid CPU selection.")
+        if launch["memory_mb"] not in {2048, 4096, 8192, 16384, 32768}:
+            raise JupyterNotebookError("Invalid memory selection.")
+        if launch["hours"] not in {1, 2, 4}:
+            raise JupyterNotebookError("Invalid duration selection.")
+    except (TypeError, ValueError, JupyterNotebookError) as exc:
+        return render(
+            request,
+            "internal/lab_tools/notebook_jupyter_launch.html",
+            {"launch": launch, "launch_error": str(exc)},
+            status=400,
+        )
+
     entry = NotebookEntry.objects.create(
-        title=f"Jupyter analysis {now:%Y-%m-%d %H:%M}",
+        title=launch["title"],
         author=request.user,
         entry_type="analysis",
         status="draft",
@@ -1350,9 +1399,9 @@ def notebook_jupyter_launch(request):
             submit_document(
                 document,
                 request.user,
-                cpus=settings.BIOBANK_JUPYTER_DEFAULT_CPUS,
-                memory_mb=settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB,
-                time_minutes=settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES,
+                cpus=launch["cpus"],
+                memory_mb=launch["memory_mb"],
+                time_minutes=launch["hours"] * 60,
                 cell_index=None,
             )
             messages.success(
@@ -1483,6 +1532,23 @@ def notebook_jupyter_submit_api(request, entry_id):
     try:
         data = json.loads(request.body.decode("utf-8") or "{}")
         document = get_or_create_document(entry, request.user)
+        resource_execution = document.executions.first()
+
+        cpus = (
+            resource_execution.cpus
+            if resource_execution
+            else settings.BIOBANK_JUPYTER_DEFAULT_CPUS
+        )
+        memory_mb = (
+            resource_execution.memory_mb
+            if resource_execution
+            else settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB
+        )
+        time_minutes = (
+            resource_execution.time_minutes
+            if resource_execution
+            else settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES
+        )
 
         active_execution = document.executions.filter(
             status__in=["submitted", "pending", "running"]
@@ -1505,9 +1571,9 @@ def notebook_jupyter_submit_api(request, entry_id):
         execution = submit_document(
             document,
             request.user,
-            cpus=data.get("cpus", 2),
-            memory_mb=data.get("memory_mb", 8192),
-            time_minutes=data.get("time_minutes", 60),
+            cpus=cpus,
+            memory_mb=memory_mb,
+            time_minutes=time_minutes,
             cell_index=cell_index,
         )
     except (json.JSONDecodeError, JupyterNotebookError, TypeError, ValueError) as exc:

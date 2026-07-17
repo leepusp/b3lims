@@ -185,12 +185,29 @@ class ElnJupyterTests(TestCase):
             )
 
         self.client.force_login(self.owner)
+
+        form = self.client.get(
+            request_path("notebook_jupyter_launch")
+        )
+        self.assertEqual(form.status_code, 200)
+        self.assertContains(form, "Launch Jupyter Workspace")
+        self.assertContains(form, "Number of hours")
+        self.assertContains(form, "Number of cores")
+        self.assertContains(form, "Memory")
+        self.assertContains(form, "max50")
+
         with patch(
             "core.views.internal.lab_tools.notebook.submit_document",
             side_effect=fake_submit,
         ):
             response = self.client.post(
-                request_path("notebook_jupyter_launch")
+                request_path("notebook_jupyter_launch"),
+                {
+                    "title": "RNA sequencing analysis",
+                    "cpus": "4",
+                    "memory_mb": "16384",
+                    "hours": "2",
+                },
             )
 
         entry = NotebookEntry.objects.exclude(pk=self.entry.pk).get()
@@ -202,9 +219,12 @@ class ElnJupyterTests(TestCase):
             request_path("notebook_jupyter_workspace", [entry.id]),
         )
         self.assertEqual(entry.entry_type, "analysis")
+        self.assertEqual(entry.title, "RNA sequencing analysis")
         self.assertEqual(len(document.notebook_json["cells"]), 3)
         self.assertEqual(execution.submitted_by, self.owner)
-        self.assertEqual(execution.cpus, settings.BIOBANK_JUPYTER_DEFAULT_CPUS)
+        self.assertEqual(execution.cpus, 4)
+        self.assertEqual(execution.memory_mb, 16384)
+        self.assertEqual(execution.time_minutes, 120)
 
     def test_dedicated_workspace_is_full_width_and_linked_to_eln(self):
         self.client.force_login(self.owner)
@@ -225,6 +245,19 @@ class ElnJupyterTests(TestCase):
             notebook_json=normalize_notebook(self.notebook),
             created_by=self.owner,
             updated_by=self.owner,
+        )
+        NotebookKernelExecution.objects.create(
+            document=document,
+            submitted_by=self.owner,
+            job_id="39999",
+            run_id="resource_profile_39999",
+            status="completed",
+            cpus=4,
+            memory_mb=16384,
+            time_minutes=120,
+            source_path="/tmp/profile.ipynb",
+            run_directory="/tmp/profile",
+            result_path="/tmp/profile/executed.ipynb",
         )
 
         def fake_submit(document_arg, user, **resources):
@@ -252,9 +285,9 @@ class ElnJupyterTests(TestCase):
                 request_path("notebook_jupyter_submit_api", [self.entry.id]),
                 data=json.dumps(
                     {
-                        "cpus": 4,
-                        "memory_mb": 16384,
-                        "time_minutes": 120,
+                        "cpus": 8,
+                        "memory_mb": 32768,
+                        "time_minutes": 240,
                         "cell_index": 1,
                     }
                 ),
@@ -262,11 +295,13 @@ class ElnJupyterTests(TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        execution = NotebookKernelExecution.objects.get(document=document)
+        execution = NotebookKernelExecution.objects.get(job_id="40001")
         self.assertEqual(execution.submitted_by, self.admin)
         self.assertEqual(execution.job_id, "40001")
         self.assertEqual(execution.requested_cell_index, 1)
         self.assertEqual(execution.cpus, 4)
+        self.assertEqual(execution.memory_mb, 16384)
+        self.assertEqual(execution.time_minutes, 120)
 
     def test_html_outputs_are_not_persisted_as_executable_markup(self):
         notebook = dict(self.notebook)
