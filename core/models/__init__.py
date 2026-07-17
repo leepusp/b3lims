@@ -36,3 +36,4 @@ from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole
 from core.models.research_groups.model import ResearchGroup
 from core.models.chemicals.chemical import Chemical, ChemicalFile, ChemicalStockMovement
+from core.models.lab_tools.notebook import JupyterKernelSession, JupyterNotebook

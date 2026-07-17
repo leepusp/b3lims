@@ -277,7 +277,10 @@ def _get_entry_for_user(entry_id, user, *, require_edit=False):
 
 @login_required
 def notebook_index(request):
-    entries = visible_notebook_entries_for_user(request.user)
+    entries = (
+        visible_notebook_entries_for_user(request.user)
+        .filter(kernel_document__isnull=True)
+    )
     active_entry_id = request.GET.get("entry_id")
 
     active_entry = None

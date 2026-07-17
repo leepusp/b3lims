@@ -287,7 +287,7 @@
             </div>
             <div data-execution-message class="small text-muted mb-3"></div>
             <div data-jupyter-cells></div>
-            <div class="eln-jupyter-history small text-muted" data-jupyter-history>No Slurm execution recorded yet.</div>
+            <div class="eln-jupyter-history small text-muted" data-jupyter-history>No persistent Slurm session recorded yet.</div>
         `;
 
         const title = root.querySelector("[data-jupyter-title]");
@@ -426,7 +426,7 @@
         if (!history || !message || !cancel) return;
 
         if (!execution) {
-            history.textContent = "No Slurm execution recorded yet.";
+            history.textContent = "No persistent Slurm session recorded yet.";
             cancel.classList.add("d-none");
             return;
         }
@@ -437,7 +437,7 @@
             : `through cell ${execution.requested_cell_index + 1}`;
         history.textContent = `Job ${execution.job_id} · ${execution.status} · ${scopeText} · ${resourceText} · submitted by ${execution.submitted_by}`;
         message.textContent = ["submitted", "pending", "running"].includes(execution.status)
-            ? "Execution runs as the Biobank Slurm service account and remains linked to this ELN entry."
+            ? "The persistent kernel runs as the Biobank Slurm service account and remains available until the session time limit ends."
             : "";
         cancel.classList.toggle(
             "d-none",
@@ -479,7 +479,7 @@
 
     async function cancelExecution() {
         if (!state.execution || !canExecute) return;
-        if (!window.confirm(`Cancel Slurm job ${state.execution.job_id}?`)) return;
+        if (!window.confirm(`Stop persistent Slurm session ${state.execution.job_id}?`)) return;
         try {
             const payload = await requestJson(
                 executionUrl(cancelUrlTemplate, state.execution.id),

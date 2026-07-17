@@ -264,14 +264,14 @@ def _runner_command(*arguments):
     ]
 
 
-def _run_runner(*arguments) -> dict:
+def _run_runner(*arguments, timeout=30) -> dict:
     try:
         completed = subprocess.run(
             _runner_command(*arguments),
             check=True,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=timeout,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         message = getattr(exc, "stderr", "") or str(exc)

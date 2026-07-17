@@ -1,0 +1,126 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Jupyter Notebooks{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <div class="small text-muted mb-1">
+                <a href="{% url 'notebook_index' %}">ELN Notebook</a>
+                <span class="mx-1">/</span>
+                Jupyter
+            </div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-code-square me-2"></i>Jupyter Notebooks
+            </h1>
+            <p class="text-muted mb-0">
+                Persistent notebooks executed in time-limited Slurm sessions.
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary"
+               href="{% url 'notebook_index' %}">
+                <i class="bi bi-journal-text me-1"></i>ELN Notes
+            </a>
+            <a class="btn btn-primary"
+               href="{% url 'jupyter_launch' %}">
+                <i class="bi bi-plus-lg me-1"></i>New Jupyter notebook
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}"
+                 role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>Your Jupyter notebooks</strong>
+                <span class="badge bg-light text-dark border">
+                    {{ jupyter_notebooks|length }}
+                </span>
+            </div>
+        </div>
+
+        {% if jupyter_notebooks %}
+            <div class="list-group list-group-flush">
+                {% for notebook in jupyter_notebooks %}
+                    {% with session=notebook.sessions.first %}
+                        <a class="list-group-item list-group-item-action py-3"
+                           href="{% url 'jupyter_workspace' notebook.id %}">
+                            <div class="d-flex flex-wrap justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-semibold">
+                                        {{ notebook.title }}
+                                    </div>
+
+                                    {% if notebook.description %}
+                                        <div class="small text-muted mt-1">
+                                            {{ notebook.description|truncatechars:160 }}
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="small text-muted mt-2">
+                                        Owner:
+                                        {{ notebook.owner.get_username|default:"Unavailable" }}
+                                        · Updated:
+                                        {{ notebook.updated_at|date:"Y-m-d H:i" }}
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    {% if session %}
+                                        <span class="badge
+                                            {% if session.status == 'running' %}
+                                                bg-success
+                                            {% elif session.status == 'pending' or session.status == 'submitted' %}
+                                                bg-warning text-dark
+                                            {% elif session.status == 'failed' %}
+                                                bg-danger
+                                            {% else %}
+                                                bg-secondary
+                                            {% endif %}">
+                                            {{ session.get_status_display }}
+                                        </span>
+                                        <div class="small text-muted mt-2">
+                                            Job {{ session.job_id }}
+                                            · {{ session.partition }}
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark border">
+                                            No session
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card-body text-center py-5">
+                <i class="bi bi-code-square display-5 text-primary"></i>
+                <h2 class="h4 mt-3">Start a Jupyter notebook</h2>
+                <p class="text-muted mx-auto"
+                   style="max-width: 620px;">
+                    Create a notebook, select the Slurm partition,
+                    CPU, memory and duration, then work with a
+                    persistent Python kernel.
+                </p>
+                <a class="btn btn-primary"
+                   href="{% url 'jupyter_launch' %}">
+                    <i class="bi bi-play-fill me-1"></i>Launch Jupyter
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

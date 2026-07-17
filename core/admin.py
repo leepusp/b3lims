@@ -349,3 +349,82 @@ class ChemicalStockMovementAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("created_at",)
     ordering = ("-created_at", "-id")
+
+
+# BIOBANK_INDEPENDENT_JUPYTER_ADMIN
+from core.models.lab_tools.notebook import (
+    JupyterKernelSession,
+    JupyterNotebook,
+)
+
+
+@admin.register(JupyterNotebook)
+class JupyterNotebookAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "title",
+        "owner",
+        "is_archived",
+        "updated_at",
+    )
+    list_filter = (
+        "is_archived",
+        "created_at",
+        "updated_at",
+    )
+    search_fields = (
+        "title",
+        "description",
+        "owner__username",
+    )
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+    raw_id_fields = (
+        "owner",
+        "updated_by",
+        "legacy_document",
+    )
+
+
+@admin.register(JupyterKernelSession)
+class JupyterKernelSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "notebook",
+        "job_id",
+        "partition",
+        "status",
+        "started_by",
+        "submitted_at",
+        "finished_at",
+    )
+    list_filter = (
+        "status",
+        "partition",
+        "submitted_at",
+    )
+    search_fields = (
+        "notebook__title",
+        "job_id",
+        "run_id",
+        "started_by__username",
+    )
+    readonly_fields = (
+        "job_id",
+        "run_id",
+        "run_directory",
+        "kernel_info",
+        "submitted_at",
+        "started_at",
+        "ready_at",
+        "last_activity_at",
+        "expires_at",
+        "finished_at",
+        "updated_at",
+    )
+    raw_id_fields = (
+        "notebook",
+        "started_by",
+    )

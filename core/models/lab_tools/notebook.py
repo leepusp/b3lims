@@ -536,3 +536,110 @@ class MolecularSequence(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.sequence_type}, {self.length} bp/aa)"
+
+
+class JupyterNotebook(models.Model):
+    """Jupyter notebook independent from ELN NotebookEntry records."""
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="jupyter_notebooks",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="jupyter_notebooks_updated",
+    )
+
+    notebook_json = models.JSONField(default=dict, blank=True)
+    is_archived = models.BooleanField(default=False, db_index=True)
+
+    legacy_document = models.OneToOneField(
+        "NotebookKernelDocument",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="independent_notebook",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        verbose_name = "Jupyter Notebook"
+        verbose_name_plural = "Jupyter Notebooks"
+
+    def __str__(self):
+        return self.title
+
+
+class JupyterKernelSession(models.Model):
+    """Persistent Jupyter kernel hosted by a time-limited Slurm job."""
+
+    STATUS_CHOICES = [
+        ("submitted", "Submitted"),
+        ("pending", "Pending"),
+        ("running", "Running"),
+        ("stopping", "Stopping"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+        ("cancelled", "Cancelled"),
+        ("unknown", "Unknown"),
+    ]
+
+    notebook = models.ForeignKey(
+        JupyterNotebook,
+        on_delete=models.CASCADE,
+        related_name="sessions",
+    )
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="jupyter_kernel_sessions",
+    )
+
+    job_id = models.CharField(max_length=32, db_index=True)
+    run_id = models.CharField(max_length=100, unique=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="submitted",
+        db_index=True,
+    )
+
+    partition = models.CharField(max_length=32)
+    cpus = models.PositiveSmallIntegerField(default=2)
+    memory_mb = models.PositiveIntegerField(default=8192)
+    time_minutes = models.PositiveIntegerField(default=60)
+
+    run_directory = models.CharField(max_length=1024)
+    kernel_info = models.JSONField(default=dict, blank=True)
+    last_error = models.TextField(blank=True)
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ready_at = models.DateTimeField(null=True, blank=True)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-submitted_at", "-id"]
+        verbose_name = "Jupyter Kernel Session"
+        verbose_name_plural = "Jupyter Kernel Sessions"
+
+    def __str__(self):
+        return (
+            f"{self.notebook_id} · "
+            f"{self.job_id} · {self.status}"
+        )

@@ -1,0 +1,114 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Jupyter · {{ jupyter_notebook.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'internal/lab_tools/notebook_jupyter.css' %}"
+      rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="eln-jupyter-page">
+    <header class="eln-jupyter-page-header">
+        <div>
+            <nav class="eln-jupyter-breadcrumb"
+                 aria-label="Breadcrumb">
+                <a href="{% url 'jupyter_index' %}">
+                    Jupyter Notebooks
+                </a>
+                <span>/</span>
+                <span>Workspace</span>
+            </nav>
+
+            <h1>{{ jupyter_notebook.title }}</h1>
+            <p>
+                Persistent Python kernel executed on the
+                DaVinci Slurm cluster.
+            </p>
+        </div>
+
+        <div class="eln-jupyter-page-actions">
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
+                <i class="bi bi-play-fill me-1"></i>
+                {% if active_session %}
+                    Session active
+                {% else %}
+                    Start session
+                {% endif %}
+            </a>
+
+            <a class="btn btn-sm btn-outline-secondary"
+               href="{% url 'jupyter_index' %}">
+                <i class="bi bi-arrow-left me-1"></i>
+                Jupyter list
+            </a>
+        </div>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} py-2"
+                 role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if session_error %}
+        <div class="alert alert-warning py-2"
+             role="alert">
+            {{ session_error }}
+        </div>
+    {% endif %}
+
+    {% if active_session %}
+        <div class="alert alert-success py-2"
+             role="status">
+            Slurm job {{ active_session.job_id }}
+            · {{ active_session.partition }}
+            · {{ active_session.cpus }} CPU
+            · {{ active_session.memory_mb }} MB
+            · {{ active_session.get_status_display }}
+        </div>
+    {% else %}
+        <div class="alert alert-warning py-2"
+             role="status">
+            This notebook has no active kernel.
+            Start a Slurm session to execute cells.
+        </div>
+    {% endif %}
+
+    <main class="eln-jupyter-page-body">
+        <div id="eln-jupyter-workspace"
+             class="eln-jupyter-workspace eln-jupyter-standalone"
+             data-entry-id="{{ jupyter_notebook.id }}"
+             data-document-url="{% url 'jupyter_document_api' jupyter_notebook.id %}"
+             data-submit-url="{% url 'jupyter_execute_api' jupyter_notebook.id %}"
+             data-status-url-template="{% url 'jupyter_session_status_api' 0 %}"
+             data-cancel-url-template="{% url 'jupyter_session_stop_api' 0 %}"
+             data-download-url="{% url 'jupyter_download' jupyter_notebook.id %}"
+             data-workspace-url="{% url 'jupyter_workspace' jupyter_notebook.id %}"
+             data-notebook-url="{% url 'jupyter_index' %}"
+             data-standalone="true"
+             data-can-edit="{% if can_edit_jupyter %}true{% else %}false{% endif %}"
+             data-can-execute="{% if can_execute_jupyter %}true{% else %}false{% endif %}">
+            <div class="eln-jupyter-loading">
+                <span class="spinner-border spinner-border-sm me-2"
+                      aria-hidden="true"></span>
+                Loading persistent Jupyter notebook…
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const csrfToken = "{{ csrf_token }}";
+</script>
+<script src="{% static 'internal/lab_tools/notebook_jupyter.js' %}"></script>
+{% endblock %}

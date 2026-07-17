@@ -91,6 +91,7 @@ from core.views.internal.keywords.views import (
 
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
+from core.views.internal.lab_tools import jupyter as jupyter_views
 
 # 9. QR CODE (PAGE)
 from core.views.internal.samples.views import sample_qr_scan_view
@@ -215,6 +216,46 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
     path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
     path('internal/lab-tools/notebook/attachments/<int:attachment_id>/download/', notebook_views.notebook_attachment_download, name='notebook_attachment_download'),
+    path(
+        'internal/lab-tools/jupyter/',
+        jupyter_views.jupyter_index,
+        name='jupyter_index',
+    ),
+    path(
+        'internal/lab-tools/jupyter/launch/',
+        jupyter_views.jupyter_launch,
+        name='jupyter_launch',
+    ),
+    path(
+        'internal/lab-tools/jupyter/<int:notebook_id>/',
+        jupyter_views.jupyter_workspace,
+        name='jupyter_workspace',
+    ),
+    path(
+        'internal/lab-tools/jupyter/api/<int:notebook_id>/',
+        jupyter_views.jupyter_document_api,
+        name='jupyter_document_api',
+    ),
+    path(
+        'internal/lab-tools/jupyter/api/<int:notebook_id>/execute/',
+        jupyter_views.jupyter_execute_api,
+        name='jupyter_execute_api',
+    ),
+    path(
+        'internal/lab-tools/jupyter/api/sessions/<int:session_id>/',
+        jupyter_views.jupyter_session_status_api,
+        name='jupyter_session_status_api',
+    ),
+    path(
+        'internal/lab-tools/jupyter/api/sessions/<int:session_id>/stop/',
+        jupyter_views.jupyter_session_stop_api,
+        name='jupyter_session_stop_api',
+    ),
+    path(
+        'internal/lab-tools/jupyter/<int:notebook_id>/download/',
+        jupyter_views.jupyter_download,
+        name='jupyter_download',
+    ),
     path('internal/lab-tools/notebook/jupyter/launch/', notebook_views.notebook_jupyter_launch, name='notebook_jupyter_launch'),
     path('internal/lab-tools/notebook/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_workspace, name='notebook_jupyter_workspace'),
     path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_document_api, name='notebook_jupyter_document_api'),
