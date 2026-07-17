@@ -119,6 +119,24 @@ class PersistentJupyterSessionTests(TestCase):
         self.assertIsNotNone(active.ready_at)
 
 
+    def test_unknown_session_is_not_reused(self):
+        self.notebook.sessions.create(
+            job_id="999999",
+            run_id="stale-session-regression",
+            status="unknown",
+            partition="basic",
+            cpus=2,
+            memory_mb=2048,
+            time_minutes=60,
+            run_directory="/tmp/stale-session-regression",
+            started_by=self.user,
+        )
+
+        self.assertIsNone(
+            active_session_for_notebook(self.notebook)
+        )
+
+
 @override_settings(
     BIOBANK_JUPYTER_PARTITIONS=("basic", "max50"),
 )
@@ -155,26 +173,46 @@ class PersistentJupyterExecutionTests(TestCase):
             run_directory=self.temporary_directory.name,
         )
 
-    def test_new_notebook_starts_with_empty_code_cell(self):
+    def test_new_notebook_starts_without_cells(self):
         notebook = starter_notebook(
-            "Blank analysis",
+            "Empty notebook",
             self.user.get_username(),
         )
 
-        self.assertEqual(
-            len(notebook["cells"]),
-            2,
-        )
-        self.assertEqual(
-            notebook["cells"][1]["cell_type"],
-            "code",
-        )
-        self.assertEqual(
-            notebook["cells"][1]["source"],
-            [],
-        )
+        self.assertEqual(notebook["cells"], [])
+        self.assertEqual(notebook["nbformat"], 4)
 
     def test_execute_cell_updates_saved_notebook(self):
+        # Explicit cells for execution regression.
+        notebook_data = starter_notebook(
+            "Execution regression",
+            self.user.get_username(),
+        )
+        notebook_data["cells"] = [
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": ["seed = 40\n"],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": ["seed + 2\n"],
+            },
+        ]
+
+        self.notebook.notebook_json = notebook_data
+        self.notebook.save(
+            update_fields=[
+                "notebook_json",
+                "updated_at",
+            ]
+        )
+
         import json
         from unittest.mock import patch
 

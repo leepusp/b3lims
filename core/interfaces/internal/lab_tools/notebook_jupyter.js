@@ -33,7 +33,9 @@
                     language: "python",
                     name: "python3",
                 },
-                language_info: { name: "python" },
+                language_info: {
+                    name: "python",
+                },
             },
             nbformat: 4,
             nbformat_minor: 5,

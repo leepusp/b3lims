@@ -26,42 +26,26 @@ from core.services.jupyter_notebooks import (
 )
 
 
-ACTIVE_STATUSES = {
-    "submitted",
-    "pending",
-    "running",
-    "unknown",
-}
+ACTIVE_STATUSES = {"submitted", "pending", "running"}
 
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 
 
 def starter_notebook(title, username):
+    """Return a valid, completely empty Jupyter notebook."""
+
     title = str(
         title or "Untitled Jupyter notebook"
     ).strip()
+    username = str(username or "").strip()
 
     return {
-        "cells": [
-            {
-                "cell_type": "markdown",
-                "metadata": {},
-                "source": [
-                    f"# {title}\n",
-                    "\n",
-                    "Persistent Jupyter notebook executed on the "
-                    "DaVinci Slurm cluster.\n",
-                ],
-            },
-            {
-                "cell_type": "code",
-                "execution_count": None,
-                "metadata": {},
-                "outputs": [],
-                "source": [],
-            },
-        ],
+        "cells": [],
         "metadata": {
+            "biobank": {
+                "title": title,
+                "owner": username,
+            },
             "kernelspec": {
                 "display_name": "Python 3",
                 "language": "python",
@@ -69,10 +53,6 @@ def starter_notebook(title, username):
             },
             "language_info": {
                 "name": "python",
-            },
-            "biobank": {
-                "persistent_slurm_kernel": True,
-                "owner": str(username or "").strip(),
             },
         },
         "nbformat": 4,
