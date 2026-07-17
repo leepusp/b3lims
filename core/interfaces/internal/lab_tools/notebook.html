@@ -716,18 +716,16 @@
                                                     <i class="bi bi-code-square me-2"></i>Jupyter analysis
                                                 </div>
                                                 <div class="small text-muted mt-1">
-                                                    Start an authenticated Jupyter session through Open OnDemand. The computation is submitted to the DaVinci Slurm cluster.
+                                                    Open the integrated full-width cell workspace. Analyses are saved with this ELN entry and submitted to the DaVinci Slurm cluster.
                                                 </div>
                                                 <div class="small mt-2">
                                                     Save the resulting <code>.ipynb</code> file and attach it to this ELN entry from the Files tab to preserve the analysis with the experiment.
                                                 </div>
                                             </div>
-                                            <a href="{{ jupyter_launch_url }}"
-                                               target="_blank"
-                                               rel="noopener noreferrer"
+                                            <a href="{% url 'notebook_jupyter_workspace' active_entry.id %}"
                                                class="btn btn-sm btn-outline-primary flex-shrink-0"
                                                data-jupyter-launch>
-                                                <i class="bi bi-box-arrow-up-right me-1"></i>Launch Jupyter
+                                                <i class="bi bi-arrows-fullscreen me-1"></i>Open workspace
                                             </a>
                                         </div>
                                     </div>
@@ -831,9 +829,11 @@
                                  data-status-url-template="{% url 'notebook_jupyter_execution_status_api' 0 %}"
                                  data-cancel-url-template="{% url 'notebook_jupyter_execution_cancel_api' 0 %}"
                                  data-download-url="{% url 'notebook_jupyter_download' active_entry.id %}"
-                                 data-open-ondemand-url="{{ jupyter_launch_url }}"
+                                 data-workspace-url="{% url 'notebook_jupyter_workspace' active_entry.id %}"
+                                 data-notebook-url="{% url 'notebook_index' %}?entry_id={{ active_entry.id }}&amp;tab=jupyter#jupyter-pane"
+                                 data-standalone="false"
                                  data-can-edit="{% if request.user.is_superuser or request.user == active_entry.author %}true{% else %}false{% endif %}"
-                                 data-can-execute="{% if request.user.is_superuser %}true{% else %}false{% endif %}">
+                                 data-can-execute="{% if can_execute_jupyter %}true{% else %}false{% endif %}">
                                 <div class="eln-jupyter-loading">
                                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                     Loading Jupyter notebook…
@@ -925,13 +925,16 @@
                                     <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
                                         <i class="bi bi-box-seam me-1"></i>Browse samples
                                     </a>
-                                    <a href="{{ jupyter_launch_url }}"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="btn btn-outline-primary"
-                                       data-jupyter-launch>
-                                        <i class="bi bi-code-square me-1"></i>Launch Jupyter
-                                    </a>
+                                    <form method="post"
+                                          action="{% url 'notebook_jupyter_launch' %}"
+                                          class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit"
+                                                class="btn btn-outline-primary"
+                                                data-jupyter-launch>
+                                            <i class="bi bi-code-square me-1"></i>Launch Jupyter
+                                        </button>
+                                    </form>
                                 </div>
 
                                 <div class="row g-3 text-start">
@@ -974,7 +977,7 @@
                                                 <i class="bi bi-code-square me-1"></i>Analyze
                                             </div>
                                             <div class="small text-muted">
-                                                Launch Jupyter through Open OnDemand and run analyses on Slurm compute nodes.
+                                                Create an integrated notebook with starter cells and submit its default run to Slurm.
                                             </div>
                                         </div>
                                     </div>

@@ -91,7 +91,11 @@ class ElnJupyterTests(TestCase):
         self.assertContains(response, 'id="eln-jupyter-workspace"')
         self.assertContains(response, "internal/lab_tools/notebook_jupyter.css")
         self.assertContains(response, "internal/lab_tools/notebook_jupyter.js")
-        self.assertContains(response, 'data-can-execute="false"')
+        self.assertContains(response, 'data-can-execute="true"')
+        self.assertContains(
+            response,
+            reverse("notebook_jupyter_workspace", args=[self.entry.id]),
+        )
 
     def test_owner_can_save_and_download_ipynb(self):
         self.client.force_login(self.owner)
@@ -125,14 +129,94 @@ class ElnJupyterTests(TestCase):
         self.assertEqual(download["Content-Type"], "application/x-ipynb+json")
         self.assertIn(".ipynb", download["Content-Disposition"])
 
-    def test_owner_cannot_submit_managed_execution(self):
-        self.client.force_login(self.owner)
-        response = self.client.post(
-            request_path("notebook_jupyter_submit_api", [self.entry.id]),
-            data="{}",
-            content_type="application/json",
+    def test_owner_can_submit_managed_execution(self):
+        document = NotebookKernelDocument.objects.create(
+            entry=self.entry,
+            title="Owner execution",
+            notebook_json=normalize_notebook(self.notebook),
+            created_by=self.owner,
+            updated_by=self.owner,
         )
-        self.assertEqual(response.status_code, 403)
+
+        def fake_submit(document_arg, user, **resources):
+            return NotebookKernelExecution.objects.create(
+                document=document_arg,
+                submitted_by=user,
+                job_id="40000",
+                run_id="owner_run_40000",
+                status="submitted",
+                cpus=resources["cpus"],
+                memory_mb=resources["memory_mb"],
+                time_minutes=resources["time_minutes"],
+                source_path="/tmp/source.ipynb",
+                run_directory="/tmp/run",
+                result_path="/tmp/run/executed.ipynb",
+            )
+
+        self.client.force_login(self.owner)
+        with patch(
+            "core.views.internal.lab_tools.notebook.submit_document",
+            side_effect=fake_submit,
+        ):
+            response = self.client.post(
+                request_path("notebook_jupyter_submit_api", [self.entry.id]),
+                data="{}",
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        execution = NotebookKernelExecution.objects.get(document=document)
+        self.assertEqual(execution.submitted_by, self.owner)
+
+    def test_launch_creates_workspace_starter_cells_and_default_job(self):
+        def fake_submit(document_arg, user, **resources):
+            return NotebookKernelExecution.objects.create(
+                document=document_arg,
+                submitted_by=user,
+                job_id="40002",
+                run_id="launch_run_40002",
+                status="submitted",
+                cpus=resources["cpus"],
+                memory_mb=resources["memory_mb"],
+                time_minutes=resources["time_minutes"],
+                source_path="/tmp/source.ipynb",
+                run_directory="/tmp/run",
+                result_path="/tmp/run/executed.ipynb",
+            )
+
+        self.client.force_login(self.owner)
+        with patch(
+            "core.views.internal.lab_tools.notebook.submit_document",
+            side_effect=fake_submit,
+        ):
+            response = self.client.post(
+                request_path("notebook_jupyter_launch")
+            )
+
+        entry = NotebookEntry.objects.exclude(pk=self.entry.pk).get()
+        document = entry.kernel_document
+        execution = document.executions.get()
+
+        self.assertRedirects(
+            response,
+            request_path("notebook_jupyter_workspace", [entry.id]),
+        )
+        self.assertEqual(entry.entry_type, "analysis")
+        self.assertEqual(len(document.notebook_json["cells"]), 3)
+        self.assertEqual(execution.submitted_by, self.owner)
+        self.assertEqual(execution.cpus, settings.BIOBANK_JUPYTER_DEFAULT_CPUS)
+
+    def test_dedicated_workspace_is_full_width_and_linked_to_eln(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            request_path("notebook_jupyter_workspace", [self.entry.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "eln-jupyter-standalone")
+        self.assertContains(response, 'data-standalone="true"')
+        self.assertContains(response, 'data-can-execute="true"')
+        self.assertContains(response, "Back to ELN")
 
     def test_superuser_submission_is_audited(self):
         document = NotebookKernelDocument.objects.create(

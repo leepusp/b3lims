@@ -1,0 +1,73 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Jupyter · {{ entry.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'internal/lab_tools/notebook_jupyter.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="eln-jupyter-page">
+    <header class="eln-jupyter-page-header">
+        <div>
+            <nav class="eln-jupyter-breadcrumb" aria-label="Breadcrumb">
+                <a href="{% url 'notebook_index' %}?entry_id={{ entry.id }}&amp;tab=jupyter#jupyter-pane">
+                    ELN Notebook
+                </a>
+                <span>/</span>
+                <span>Jupyter</span>
+            </nav>
+            <h1>{{ entry.title }}</h1>
+            <p>
+                Integrated notebook cells persisted with ELN entry {{ entry.id }}
+                and executed on the DaVinci Slurm cluster.
+            </p>
+        </div>
+        <div class="eln-jupyter-page-actions">
+            <a class="btn btn-sm btn-outline-secondary"
+               href="{% url 'notebook_index' %}?entry_id={{ entry.id }}&amp;tab=jupyter#jupyter-pane">
+                <i class="bi bi-arrow-left me-1"></i>Back to ELN
+            </a>
+        </div>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} py-2" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <main class="eln-jupyter-page-body">
+        <div id="eln-jupyter-workspace"
+             class="eln-jupyter-workspace eln-jupyter-standalone"
+             data-entry-id="{{ entry.id }}"
+             data-document-url="{% url 'notebook_jupyter_document_api' entry.id %}"
+             data-submit-url="{% url 'notebook_jupyter_submit_api' entry.id %}"
+             data-status-url-template="{% url 'notebook_jupyter_execution_status_api' 0 %}"
+             data-cancel-url-template="{% url 'notebook_jupyter_execution_cancel_api' 0 %}"
+             data-download-url="{% url 'notebook_jupyter_download' entry.id %}"
+             data-workspace-url="{% url 'notebook_jupyter_workspace' entry.id %}"
+             data-notebook-url="{% url 'notebook_index' %}?entry_id={{ entry.id }}&amp;tab=jupyter#jupyter-pane"
+             data-standalone="true"
+             data-can-edit="{% if can_edit_jupyter %}true{% else %}false{% endif %}"
+             data-can-execute="{% if can_execute_jupyter %}true{% else %}false{% endif %}">
+            <div class="eln-jupyter-loading">
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Loading Jupyter notebook…
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const csrfToken = "{{ csrf_token }}";
+</script>
+<script src="{% static 'internal/lab_tools/notebook_jupyter.js' %}"></script>
+{% endblock %}

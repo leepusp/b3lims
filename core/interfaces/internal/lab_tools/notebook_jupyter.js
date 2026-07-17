@@ -11,7 +11,9 @@
     const statusUrlTemplate = root.dataset.statusUrlTemplate;
     const cancelUrlTemplate = root.dataset.cancelUrlTemplate;
     const downloadUrl = root.dataset.downloadUrl;
-    const openOnDemandUrl = root.dataset.openOndemandUrl;
+    const workspaceUrl = root.dataset.workspaceUrl;
+    const notebookUrl = root.dataset.notebookUrl;
+    const standalone = root.dataset.standalone === "true";
 
     const state = {
         documentId: null,
@@ -287,7 +289,8 @@
                     <option value="15">15 min</option><option value="30">30 min</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option>
                 </select>
                 <a class="btn btn-sm btn-outline-dark" data-jupyter-download><i class="bi bi-download me-1"></i>.ipynb</a>
-                <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" data-open-ondemand><i class="bi bi-box-arrow-up-right me-1"></i>Full JupyterLab</a>
+                <a class="btn btn-sm btn-outline-primary" data-open-workspace><i class="bi bi-window me-1"></i><span data-workspace-label>Open workspace</span></a>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-global-action="expand"><i class="bi bi-arrows-fullscreen me-1"></i><span data-expand-label>Expand</span></button>
                 <button type="button" class="btn btn-sm btn-outline-danger d-none" data-global-action="cancel"><i class="bi bi-stop-fill me-1"></i>Cancel</button>
                 <span class="eln-jupyter-status badge bg-secondary" data-jupyter-status>Ready</span>
             </div>
@@ -310,7 +313,11 @@
         });
 
         root.querySelector("[data-jupyter-download]").href = downloadUrl;
-        root.querySelector("[data-open-ondemand]").href = openOnDemandUrl;
+        const workspaceLink = root.querySelector("[data-open-workspace]");
+        workspaceLink.href = standalone ? notebookUrl : workspaceUrl;
+        workspaceLink.querySelector("[data-workspace-label]").textContent = standalone
+            ? "Back to ELN"
+            : "Open workspace";
         root.addEventListener("click", handleGlobalAction);
         renderCells();
         renderExecution(state.execution);
@@ -358,7 +365,30 @@
             runNotebook(null);
         } else if (action === "cancel") {
             cancelExecution();
+        } else if (action === "expand") {
+            toggleExpanded();
         }
+    }
+
+    function toggleExpanded(forceExpanded) {
+        const nextExpanded = typeof forceExpanded === "boolean"
+            ? forceExpanded
+            : !root.classList.contains("is-expanded");
+        root.classList.toggle("is-expanded", nextExpanded);
+        document.body.classList.toggle(
+            "eln-jupyter-expanded-open",
+            nextExpanded,
+        );
+
+        const button = root.querySelector('[data-global-action="expand"]');
+        if (!button) return;
+        button.querySelector("i").className = nextExpanded
+            ? "bi bi-fullscreen-exit me-1"
+            : "bi bi-arrows-fullscreen me-1";
+        button.querySelector("[data-expand-label]").textContent = nextExpanded
+            ? "Exit full screen"
+            : "Expand";
+        button.setAttribute("aria-pressed", String(nextExpanded));
     }
 
     async function saveDocument() {
@@ -501,9 +531,13 @@
     }
 
     document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && root.classList.contains("is-expanded")) {
+            toggleExpanded(false);
+            return;
+        }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && canEdit) {
             const pane = document.getElementById("jupyter-pane");
-            if (pane && pane.classList.contains("active")) {
+            if (standalone || (pane && pane.classList.contains("active"))) {
                 event.preventDefault();
                 saveDocument().catch((error) => alert(error.message));
             }

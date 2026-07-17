@@ -132,7 +132,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertContains(response, "window.location.href = data.detail_url")
         self.assertContains(response, "ql-biobank-molecular")
 
-    def test_notebook_exposes_open_ondemand_jupyter_launcher(self):
+    def test_notebook_exposes_integrated_jupyter_workspace(self):
         self.client.force_login(self.owner)
 
         response = self.client.get(
@@ -142,20 +142,22 @@ class MolecularWorkspaceFrontendTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Jupyter analysis")
-        self.assertContains(response, "Launch Jupyter")
-        self.assertContains(response, "Open OnDemand")
+        self.assertContains(response, "Open workspace")
+        self.assertContains(
+            response,
+            "integrated full-width cell workspace",
+        )
         self.assertContains(response, "Slurm cluster")
         self.assertContains(
             response,
-            settings.BIOBANK_JUPYTER_LAUNCH_URL,
+            reverse(
+                "notebook_jupyter_workspace",
+                args=[self.entry.id],
+            ),
         )
         self.assertContains(
             response,
             "data-jupyter-launch",
-        )
-        self.assertContains(
-            response,
-            'rel="noopener noreferrer"',
         )
 
     def test_lab_viewer_receives_read_only_workspace(self):

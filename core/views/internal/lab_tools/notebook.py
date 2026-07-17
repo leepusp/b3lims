@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import models
@@ -10,6 +11,7 @@ from django.db import transaction
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models.lab_tools.notebook import (
     MolecularSequence,
@@ -336,7 +338,10 @@ def notebook_index(request):
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "entry_workspace_path": entry_workspace_path,
-            "jupyter_launch_url": settings.BIOBANK_JUPYTER_LAUNCH_URL,
+            "can_execute_jupyter": bool(
+                active_entry
+                and _can_execute_managed_notebook(request.user, active_entry)
+            ),
         },
     )
 
@@ -1238,6 +1243,148 @@ def _document_payload(document, *, can_edit, can_execute):
     }
 
 
+def _can_execute_managed_notebook(user, entry):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return bool(
+        settings.BIOBANK_JUPYTER_ALLOW_ENTRY_OWNERS
+        and entry.author_id == user.id
+    )
+
+
+def _starter_jupyter_notebook(entry, user):
+    username = user.get_username() or "ELN user"
+    return normalize_notebook(
+        {
+            "cells": [
+                {
+                    "cell_type": "markdown",
+                    "id": "eln-introduction",
+                    "metadata": {},
+                    "source": (
+                        f"# {entry.title}\n\n"
+                        "This notebook is linked to the Biobank ELN and runs "
+                        "on the DaVinci Slurm cluster."
+                    ),
+                },
+                {
+                    "cell_type": "code",
+                    "id": "runtime-context",
+                    "metadata": {},
+                    "source": (
+                        "import os\n"
+                        "import platform\n\n"
+                        f"print('Biobank user: {username}')\n"
+                        f"print('ELN entry: {entry.id}')\n"
+                        "print('Compute node:', platform.node())\n"
+                        "print('Working directory:', os.getcwd())"
+                    ),
+                    "execution_count": None,
+                    "outputs": [],
+                },
+                {
+                    "cell_type": "code",
+                    "id": "analysis-workspace",
+                    "metadata": {},
+                    "source": (
+                        "# Add the analysis for this ELN entry here.\n"
+                        "values = [1, 2, 3, 4]\n"
+                        "sum(values)"
+                    ),
+                    "execution_count": None,
+                    "outputs": [],
+                },
+            ],
+            "metadata": {
+                "kernelspec": {
+                    "display_name": "Python 3",
+                    "language": "python",
+                    "name": "python3",
+                },
+                "language_info": {"name": "python"},
+                "biobank": {
+                    "entry_id": entry.id,
+                    "created_for": username,
+                },
+            },
+            "nbformat": 4,
+            "nbformat_minor": 5,
+        }
+    )
+
+
+@login_required
+def notebook_jupyter_launch(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "POST required."},
+            status=405,
+        )
+
+    now = timezone.localtime()
+    entry = NotebookEntry.objects.create(
+        title=f"Jupyter analysis {now:%Y-%m-%d %H:%M}",
+        author=request.user,
+        entry_type="analysis",
+        status="draft",
+        visibility="private",
+    )
+    document = get_or_create_document(entry, request.user)
+    document.title = entry.title
+    document.notebook_json = _starter_jupyter_notebook(entry, request.user)
+    document.updated_by = request.user
+    document.save(
+        update_fields=[
+            "title",
+            "notebook_json",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    persist_document(document)
+
+    if _can_execute_managed_notebook(request.user, entry):
+        try:
+            submit_document(
+                document,
+                request.user,
+                cpus=settings.BIOBANK_JUPYTER_DEFAULT_CPUS,
+                memory_mb=settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB,
+                time_minutes=settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES,
+                cell_index=None,
+            )
+            messages.success(
+                request,
+                "The starter notebook was submitted to Slurm.",
+            )
+        except JupyterNotebookError as exc:
+            messages.warning(
+                request,
+                f"The workspace was created, but Slurm submission failed: {exc}",
+            )
+
+    return redirect("notebook_jupyter_workspace", entry_id=entry.id)
+
+
+@login_required
+def notebook_jupyter_workspace(request, entry_id):
+    entry = _get_entry_for_user(entry_id, request.user)
+    return render(
+        request,
+        "internal/lab_tools/notebook_jupyter_workspace.html",
+        {
+            "entry": entry,
+            "can_edit_jupyter": can_edit_notebook_entry(request.user, entry),
+            "can_execute_jupyter": _can_execute_managed_notebook(
+                request.user,
+                entry,
+            ),
+        },
+    )
+
+
 @login_required
 def notebook_jupyter_document_api(request, entry_id):
     entry = _get_entry_for_user(entry_id, request.user)
@@ -1264,7 +1411,7 @@ def notebook_jupyter_document_api(request, entry_id):
                 "document": _document_payload(
                     document,
                     can_edit=can_edit,
-                    can_execute=request.user.is_superuser,
+                    can_execute=_can_execute_managed_notebook(request.user, entry),
                 ),
             }
         )
@@ -1313,7 +1460,7 @@ def notebook_jupyter_document_api(request, entry_id):
             "document": _document_payload(
                 document,
                 can_edit=True,
-                can_execute=request.user.is_superuser,
+                can_execute=_can_execute_managed_notebook(request.user, entry),
             ),
         }
     )
@@ -1328,9 +1475,9 @@ def notebook_jupyter_submit_api(request, entry_id):
         )
 
     entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
-    if not request.user.is_superuser:
+    if not _can_execute_managed_notebook(request.user, entry):
         raise PermissionDenied(
-            "Managed notebook execution is currently restricted to administrators."
+            "You cannot execute this managed notebook."
         )
 
     try:
@@ -1424,9 +1571,6 @@ def notebook_jupyter_execution_cancel_api(request, execution_id):
             {"status": "error", "message": "POST required."},
             status=405,
         )
-    if not request.user.is_superuser:
-        raise PermissionDenied
-
     execution = get_object_or_404(
         NotebookKernelExecution.objects.select_related(
             "document",
@@ -1435,6 +1579,11 @@ def notebook_jupyter_execution_cancel_api(request, execution_id):
         id=execution_id,
     )
     if not can_edit_notebook_entry(request.user, execution.document.entry):
+        raise PermissionDenied
+    if not _can_execute_managed_notebook(
+        request.user,
+        execution.document.entry,
+    ):
         raise PermissionDenied
 
     try:

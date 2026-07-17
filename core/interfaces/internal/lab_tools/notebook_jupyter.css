@@ -4,6 +4,79 @@
     min-height: 620px;
 }
 
+.eln-jupyter-workspace.is-expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    min-height: 100vh;
+    padding: 1rem;
+    overflow: auto;
+    background: #f5f7fb;
+}
+
+body.eln-jupyter-expanded-open {
+    overflow: hidden;
+}
+
+.eln-jupyter-workspace.is-expanded .eln-jupyter-toolbar {
+    top: 0;
+}
+
+.eln-jupyter-workspace.is-expanded [data-jupyter-cells],
+.eln-jupyter-workspace.is-expanded .eln-jupyter-history,
+.eln-jupyter-workspace.is-expanded [data-execution-message] {
+    width: min(1600px, 100%);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.eln-jupyter-page {
+    width: 100%;
+    min-height: calc(100vh - 95px);
+}
+
+.eln-jupyter-page-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.eln-jupyter-page-header h1 {
+    margin: .2rem 0;
+    font-size: 1.55rem;
+}
+
+.eln-jupyter-page-header p {
+    margin: 0;
+    color: #64748b;
+}
+
+.eln-jupyter-breadcrumb {
+    display: flex;
+    gap: .45rem;
+    color: #64748b;
+    font-size: .8rem;
+}
+
+.eln-jupyter-page-actions {
+    display: flex;
+    align-items: flex-start;
+}
+
+.eln-jupyter-page-body {
+    width: 100%;
+    min-height: calc(100vh - 180px);
+    padding: 1rem;
+    border: 1px solid #d8dee8;
+    border-radius: .8rem;
+    background: #fff;
+}
+
+.eln-jupyter-standalone {
+    min-height: calc(100vh - 215px);
+}
+
 .eln-jupyter-toolbar {
     position: sticky;
     top: 0;
@@ -147,5 +220,17 @@
 
     .eln-jupyter-cell {
         grid-template-columns: 42px minmax(0, 1fr);
+    }
+
+    .eln-jupyter-page-header {
+        display: block;
+    }
+
+    .eln-jupyter-page-actions {
+        margin-top: .75rem;
+    }
+
+    .eln-jupyter-page-body {
+        padding: .6rem;
     }
 }
