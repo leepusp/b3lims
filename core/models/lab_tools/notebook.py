@@ -412,6 +412,7 @@ class NotebookKernelExecution(models.Model):
     cpus = models.PositiveSmallIntegerField(default=2)
     memory_mb = models.PositiveIntegerField(default=8192)
     time_minutes = models.PositiveIntegerField(default=60)
+    partition = models.CharField(max_length=32, default="max50")
     source_path = models.CharField(max_length=1024)
     run_directory = models.CharField(max_length=1024)
     result_path = models.CharField(max_length=1024, blank=True)

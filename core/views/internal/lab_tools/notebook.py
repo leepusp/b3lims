@@ -338,10 +338,6 @@ def notebook_index(request):
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "entry_workspace_path": entry_workspace_path,
-            "can_execute_jupyter": bool(
-                active_entry
-                and _can_execute_managed_notebook(request.user, active_entry)
-            ),
         },
     )
 
@@ -1204,6 +1200,7 @@ def _execution_payload(execution):
         "cpus": execution.cpus,
         "memory_mb": execution.memory_mb,
         "time_minutes": execution.time_minutes,
+        "partition": execution.partition,
         "summary": execution.summary_json or {},
         "submitted_by": (
             execution.submitted_by.get_username()
@@ -1318,6 +1315,10 @@ def _starter_jupyter_notebook(entry, user):
 @login_required
 def notebook_jupyter_launch(request):
     now = timezone.localtime()
+    partition_choices = tuple(
+        settings.BIOBANK_JUPYTER_PARTITIONS
+    )
+
     defaults = {
         "title": f"Jupyter analysis {now:%Y-%m-%d %H:%M}",
         "partition": settings.BIOBANK_JUPYTER_PARTITION,
@@ -1329,25 +1330,47 @@ def notebook_jupyter_launch(request):
         ),
     }
 
+    context = {
+        "launch": defaults,
+        "launch_partitions": partition_choices,
+    }
+
     if request.method == "GET":
         return render(
             request,
             "internal/lab_tools/notebook_jupyter_launch.html",
-            {"launch": defaults},
+            context,
         )
 
     if request.method != "POST":
         return JsonResponse(
-            {"status": "error", "message": "GET or POST required."},
+            {
+                "status": "error",
+                "message": "GET or POST required.",
+            },
             status=405,
         )
 
     launch = {
-        "title": str(request.POST.get("title") or defaults["title"]).strip(),
-        "partition": settings.BIOBANK_JUPYTER_PARTITION,
-        "cpus": request.POST.get("cpus", defaults["cpus"]),
-        "memory_mb": request.POST.get("memory_mb", defaults["memory_mb"]),
-        "hours": request.POST.get("hours", defaults["hours"]),
+        "title": str(
+            request.POST.get("title") or defaults["title"]
+        ).strip(),
+        "partition": str(
+            request.POST.get("partition")
+            or defaults["partition"]
+        ).strip(),
+        "cpus": request.POST.get(
+            "cpus",
+            defaults["cpus"],
+        ),
+        "memory_mb": request.POST.get(
+            "memory_mb",
+            defaults["memory_mb"],
+        ),
+        "hours": request.POST.get(
+            "hours",
+            defaults["hours"],
+        ),
     }
 
     try:
@@ -1356,20 +1379,53 @@ def notebook_jupyter_launch(request):
         launch["hours"] = int(launch["hours"])
 
         if not launch["title"]:
-            raise JupyterNotebookError("Notebook title is required.")
+            raise JupyterNotebookError(
+                "Notebook title is required."
+            )
+
         if len(launch["title"]) > 255:
-            raise JupyterNotebookError("Notebook title is too long.")
+            raise JupyterNotebookError(
+                "Notebook title is too long."
+            )
+
+        if launch["partition"] not in partition_choices:
+            raise JupyterNotebookError(
+                "Invalid Slurm partition."
+            )
+
         if launch["cpus"] not in {1, 2, 4, 8}:
-            raise JupyterNotebookError("Invalid CPU selection.")
-        if launch["memory_mb"] not in {2048, 4096, 8192, 16384, 32768}:
-            raise JupyterNotebookError("Invalid memory selection.")
+            raise JupyterNotebookError(
+                "Invalid CPU selection."
+            )
+
+        if launch["memory_mb"] not in {
+            2048,
+            4096,
+            8192,
+            16384,
+            32768,
+        }:
+            raise JupyterNotebookError(
+                "Invalid memory selection."
+            )
+
         if launch["hours"] not in {1, 2, 4}:
-            raise JupyterNotebookError("Invalid duration selection.")
-    except (TypeError, ValueError, JupyterNotebookError) as exc:
+            raise JupyterNotebookError(
+                "Invalid duration selection."
+            )
+    except (
+        TypeError,
+        ValueError,
+        JupyterNotebookError,
+    ) as exc:
         return render(
             request,
             "internal/lab_tools/notebook_jupyter_launch.html",
-            {"launch": launch, "launch_error": str(exc)},
+            {
+                "launch": launch,
+                "launch_partitions": partition_choices,
+                "launch_error": str(exc),
+            },
             status=400,
         )
 
@@ -1380,9 +1436,13 @@ def notebook_jupyter_launch(request):
         status="draft",
         visibility="private",
     )
+
     document = get_or_create_document(entry, request.user)
     document.title = entry.title
-    document.notebook_json = _starter_jupyter_notebook(entry, request.user)
+    document.notebook_json = _starter_jupyter_notebook(
+        entry,
+        request.user,
+    )
     document.updated_by = request.user
     document.save(
         update_fields=[
@@ -1402,20 +1462,29 @@ def notebook_jupyter_launch(request):
                 cpus=launch["cpus"],
                 memory_mb=launch["memory_mb"],
                 time_minutes=launch["hours"] * 60,
+                partition=launch["partition"],
                 cell_index=None,
             )
             messages.success(
                 request,
-                "The starter notebook was submitted to Slurm.",
+                (
+                    "The starter notebook was submitted "
+                    f"to Slurm partition {launch['partition']}."
+                ),
             )
         except JupyterNotebookError as exc:
             messages.warning(
                 request,
-                f"The workspace was created, but Slurm submission failed: {exc}",
+                (
+                    "The workspace was created, but "
+                    f"Slurm submission failed: {exc}"
+                ),
             )
 
-    return redirect("notebook_jupyter_workspace", entry_id=entry.id)
-
+    return redirect(
+        "notebook_jupyter_workspace",
+        entry_id=entry.id,
+    )
 
 @login_required
 def notebook_jupyter_workspace(request, entry_id):
@@ -1549,6 +1618,11 @@ def notebook_jupyter_submit_api(request, entry_id):
             if resource_execution
             else settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES
         )
+        partition = (
+            resource_execution.partition
+            if resource_execution
+            else settings.BIOBANK_JUPYTER_PARTITION
+        )
 
         active_execution = document.executions.filter(
             status__in=["submitted", "pending", "running"]
@@ -1574,6 +1648,7 @@ def notebook_jupyter_submit_api(request, entry_id):
             cpus=cpus,
             memory_mb=memory_mb,
             time_minutes=time_minutes,
+            partition=partition,
             cell_index=cell_index,
         )
     except (json.JSONDecodeError, JupyterNotebookError, TypeError, ValueError) as exc:

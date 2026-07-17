@@ -78,23 +78,20 @@ class ElnJupyterTests(TestCase):
             "nbformat_minor": 5,
         }
 
-    def test_notebook_page_exposes_native_jupyter_cells(self):
+    def test_notebook_page_uses_dedicated_jupyter_workspace(self):
         self.client.force_login(self.owner)
+
         response = self.client.get(
             request_path("notebook_index")
-            + f"?entry_id={self.entry.id}&tab=jupyter"
+            + f"?entry_id={self.entry.id}"
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="jupyter-tab"')
-        self.assertContains(response, 'id="jupyter-pane"')
-        self.assertContains(response, 'id="eln-jupyter-workspace"')
-        self.assertContains(response, "internal/lab_tools/notebook_jupyter.css")
-        self.assertContains(response, "internal/lab_tools/notebook_jupyter.js")
-        self.assertContains(response, 'data-can-execute="true"')
-        self.assertContains(
+        self.assertNotContains(response, 'id="jupyter-tab"')
+        self.assertNotContains(response, 'id="jupyter-pane"')
+        self.assertNotContains(
             response,
-            reverse("notebook_jupyter_workspace", args=[self.entry.id]),
+            "notebook_jupyter.js",
         )
 
     def test_owner_can_save_and_download_ipynb(self):

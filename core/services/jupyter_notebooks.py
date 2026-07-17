@@ -290,11 +290,23 @@ def submit_document(
     cpus=2,
     memory_mb=8192,
     time_minutes=60,
+    partition=None,
     cell_index=None,
 ) -> NotebookKernelExecution:
     cpus = int(cpus)
     memory_mb = int(memory_mb)
     time_minutes = int(time_minutes)
+    partition = str(
+        partition or settings.BIOBANK_JUPYTER_PARTITION
+    ).strip()
+
+    allowed_partitions = set(
+        settings.BIOBANK_JUPYTER_PARTITIONS
+    )
+    if partition not in allowed_partitions:
+        raise JupyterNotebookError(
+            "Invalid Slurm partition."
+        )
 
     if not 1 <= cpus <= 8:
         raise JupyterNotebookError("CPU count must be between 1 and 8.")
@@ -325,6 +337,7 @@ def submit_document(
         cpus,
         memory_mb,
         time_minutes,
+        partition,
     )
 
     run_id = str(payload.get("run_id") or "")
@@ -347,6 +360,7 @@ def submit_document(
         cpus=cpus,
         memory_mb=memory_mb,
         time_minutes=time_minutes,
+        partition=partition,
         source_path=str(source_path),
         run_directory=str(run_directory),
         result_path=str(run_directory / "executed.ipynb"),
