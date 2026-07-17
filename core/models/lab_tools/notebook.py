@@ -363,7 +363,6 @@ class MolecularSequence(models.Model):
     gc_content = models.FloatField(null=True, blank=True)
     checksum_sha256 = models.CharField(max_length=64, blank=True)
 
-    features_json = models.JSONField(default=list, blank=True)
 
     linked_sample = models.ForeignKey(
         Sample,

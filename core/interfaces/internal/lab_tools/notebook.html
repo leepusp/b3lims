@@ -1244,111 +1244,6 @@ function insertProtocolStep() {
         );
     }
 
-    function repeatToLength(motif, length) {
-        let sequence = "";
-        while (sequence.length < length) {
-            sequence += motif;
-        }
-        return sequence.slice(0, length);
-    }
-
-    function molecularDefaults(sequenceType, topology) {
-        if (sequenceType === "plasmid") {
-            const sequence = repeatToLength("ATGCGTACGATCGATTAACCGGTTGCAAGCTTGATATCGAATTCCCGGG", 5968);
-
-            return {
-                name: "pBR322_EGFR_plasmid",
-                sequence_type: "plasmid",
-                topology: "circular",
-                description: "Default circular plasmid record with example promoter, CDS, resistance marker and origin annotations.",
-                sequence: sequence,
-                features_json: [
-                    {name: "M13_fwd_primer", type: "primer", start: 120, end: 150, strand: "+", notes: "Forward sequencing primer"},
-                    {name: "CMV_promoter", type: "promoter", start: 240, end: 760, strand: "+", notes: "Example mammalian promoter"},
-                    {name: "EGFR_signal_peptide", type: "signal_peptide", start: 860, end: 1100, strand: "+", notes: "Example signal peptide"},
-                    {name: "EGFR_CDS", type: "CDS", start: 1101, end: 3640, strand: "+", notes: "Example coding sequence"},
-                    {name: "SV40_polyA", type: "terminator", start: 3700, end: 4050, strand: "+", notes: "Polyadenylation signal"},
-                    {name: "Ampicillin", type: "resistance", start: 4300, end: 5200, strand: "+", notes: "Antibiotic resistance marker"},
-                    {name: "pBR322_origin", type: "origin", start: 5250, end: 5750, strand: "+", notes: "Replication origin"}
-                ]
-            };
-        }
-
-        if (sequenceType === "dna") {
-            const sequence = repeatToLength("ATGCGTACGATCGATTAACCGGTTGCAAGCTT", 1200);
-
-            return {
-                name: "New_DNA_sequence",
-                sequence_type: "dna",
-                topology: topology || "linear",
-                description: "Default linear molecular record with example promoter and CDS features.",
-                sequence: sequence,
-                features_json: [
-                    {name: "promoter", type: "promoter", start: 80, end: 220, strand: "+", notes: ""},
-                    {name: "CDS", type: "CDS", start: 260, end: 980, strand: "+", notes: ""}
-                ]
-            };
-        }
-
-        if (sequenceType === "primer") {
-            return {
-                name: "New_primer",
-                sequence_type: "primer",
-                topology: "linear",
-                description: "Default primer record.",
-                sequence: "ATGCGTACGATCGATTAACC",
-                features_json: [
-                    {name: "primer_binding_site", type: "primer", start: 1, end: 20, strand: "+", notes: ""}
-                ]
-            };
-        }
-
-        if (sequenceType === "protein") {
-            return {
-                name: "New_protein",
-                sequence_type: "protein",
-                topology: "linear",
-                description: "Default protein record.",
-                sequence: "MKTIIALSYIFCLVFADYKDDDDK",
-                features_json: [
-                    {name: "signal_peptide", type: "domain", start: 1, end: 18, strand: ".", notes: ""}
-                ]
-            };
-        }
-
-        return {
-            name: "New_molecular_item",
-            sequence_type: sequenceType || "dna",
-            topology: topology || "linear",
-            description: "",
-            sequence: "",
-            features_json: []
-        };
-    }
-
-    function prepareMolecularItem(sequenceType, topology) {
-        const payload = molecularDefaults(sequenceType, topology);
-        const detailTemplate = "{% url 'molecular_sequence_detail' 0 %}";
-
-        saveStatus.textContent = "Creating molecular item...";
-
-        postJson("{% url 'notebook_create_molecular_sequence_api' active_entry.id %}", payload)
-            .then(data => {
-                if (data.status === "success") {
-                    window.location.href = detailTemplate.replace("/0/", `/${data.id}/`);
-                } else {
-                    saveStatus.textContent = "Molecular item error";
-                    saveStatus.classList.add("text-danger");
-                    alert(data.message || "Could not create molecular item.");
-                }
-            })
-            .catch(error => {
-                saveStatus.textContent = "Molecular item error";
-                saveStatus.classList.add("text-danger");
-                alert(error);
-            });
-    }
-
     function focusSampleSearch() {
         const candidates = [
             document.getElementById("sample-search"),
@@ -1492,7 +1387,7 @@ function createMolecularItem() {
 
         saveStatus.textContent = "Creating molecular item...";
 
-        postJson("/biobank/internal/lab-tools/notebook/api/molecular-sequence/create/{{ active_entry.id }}/", payload)
+        postJson("{% url 'notebook_create_molecular_sequence_api' active_entry.id %}", payload)
             .then(data => {
                 if (data.status === "success") {
                     saveStatus.textContent = "Relevant item created.";

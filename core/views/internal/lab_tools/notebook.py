@@ -21,11 +21,17 @@ from core.models.lab_tools.notebook import (
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
-from core.permissions.samples import can_view_sample, visible_samples_for_user
+from core.permissions.samples import can_edit_sample, can_view_sample, visible_samples_for_user
 from core.permissions.notebook import (
     can_edit_notebook_entry,
     can_view_notebook_entry,
     visible_notebook_entries_for_user,
+)
+
+from core.services.molecular_sequences import (
+    MolecularSequenceInputError,
+    normalize_molecular_sequence,
+    validate_molecular_feature,
 )
 
 
@@ -162,22 +168,80 @@ def build_sample_snapshot(sample):
     return snapshot
 
 
-def _get_molecular_sequence_for_user(sequence_id, user):
-    molecule = get_object_or_404(
-        MolecularSequence.objects.select_related("source_entry", "linked_sample", "owner"),
-        id=sequence_id,
+def _can_edit_molecular_sequence(user, molecule):
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    if molecule.owner_id == user.id:
+        return True
+
+    if (
+        molecule.source_entry_id
+        and can_edit_notebook_entry(
+            user,
+            molecule.source_entry,
+        )
+    ):
+        return True
+
+    if (
+        molecule.linked_sample_id
+        and can_edit_sample(
+            user,
+            molecule.linked_sample,
+        )
+    ):
+        return True
+
+    return False
+
+
+def _get_molecular_sequence_for_user(
+    sequence_id,
+    user,
+    *,
+    require_edit=False,
+):
+    molecules = MolecularSequence.objects.select_related(
+        "owner",
+        "source_entry",
+        "linked_sample",
     )
 
     if user.is_superuser:
-        return molecule
+        molecule = get_object_or_404(
+            molecules,
+            id=sequence_id,
+        )
+    else:
+        visible_entry_ids = (
+            visible_notebook_entries_for_user(user)
+            .values_list("id", flat=True)
+        )
+        visible_sample_ids = (
+            visible_samples_for_user(user)
+            .values_list("id", flat=True)
+        )
 
-    if molecule.owner_id == user.id:
-        return molecule
+        molecule = get_object_or_404(
+            molecules.filter(
+                Q(owner=user)
+                | Q(source_entry_id__in=visible_entry_ids)
+                | Q(linked_sample_id__in=visible_sample_ids)
+            ).distinct(),
+            id=sequence_id,
+        )
 
-    if molecule.source_entry and molecule.source_entry.author_id == user.id:
-        return molecule
+    if require_edit and not _can_edit_molecular_sequence(
+        user,
+        molecule,
+    ):
+        raise PermissionDenied
 
-    raise PermissionDenied
+    return molecule
 
 
 def _get_entry_for_user(entry_id, user, *, require_edit=False):
@@ -576,22 +640,6 @@ def notebook_delete_entry_api(request, entry_id):
     )
 
 
-def _get_molecule_for_user(molecule_id, user):
-    qs = MolecularSequence.objects.all()
-
-    if user.is_superuser:
-        return get_object_or_404(qs, id=molecule_id)
-
-    return get_object_or_404(
-        qs.filter(
-            Q(owner=user)
-            | Q(source_entry__author=user)
-            | Q(linked_sample__created_by=user)
-        ).distinct(),
-        id=molecule_id,
-    )
-
-
 def serialize_molecular_feature(feature):
     return {
         "id": feature.id,
@@ -618,14 +666,21 @@ def molecular_sequence_detail(request, sequence_id):
             "molecule": molecule,
             "sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "topologies": MolecularSequence.TOPOLOGY_CHOICES,
-            "features_json": json.dumps(molecule.features_json or [], ensure_ascii=False),
+            "feature_types": MolecularFeature.FEATURE_TYPES,
+            "can_edit_molecule": _can_edit_molecular_sequence(
+                request.user,
+                molecule,
+            ),
         },
     )
 
-
 @login_required
 def molecular_sequence_features_api(request, molecule_id):
-    molecule = _get_molecule_for_user(molecule_id, request.user)
+    molecule = _get_molecular_sequence_for_user(
+        molecule_id,
+        request.user,
+        require_edit=request.method == "POST",
+    )
 
     if request.method == "GET":
         return JsonResponse(
@@ -640,103 +695,186 @@ def molecular_sequence_features_api(request, molecule_id):
 
     if request.method != "POST":
         return JsonResponse(
-            {"status": "error", "message": "GET or POST required."},
+            {
+                "status": "error",
+                "message": "GET or POST required.",
+            },
             status=405,
         )
 
     try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
+        data = json.loads(
+            request.body.decode("utf-8") or "{}"
+        )
     except json.JSONDecodeError:
-        return JsonResponse({"status": "error", "message": "Invalid JSON."}, status=400)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Invalid JSON.",
+            },
+            status=400,
+        )
 
-    features = data.get("features", [])
-    if not isinstance(features, list):
-        return JsonResponse({"status": "error", "message": "features must be a list."}, status=400)
+    feature_payloads = data.get("features", [])
+    if not isinstance(feature_payloads, list):
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "features must be a list.",
+            },
+            status=400,
+        )
 
-    sequence_length = max(molecule.length or len(molecule.sequence or ""), 1)
+    try:
+        validated = [
+            validate_molecular_feature(item, molecule, order)
+            for order, item in enumerate(feature_payloads)
+        ]
+    except MolecularSequenceInputError as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": str(exc),
+            },
+            status=400,
+        )
 
     with transaction.atomic():
         molecule.features.all().delete()
 
-        created = []
-        for order, item in enumerate(features):
-            try:
-                start = int(item.get("start") or 1)
-                end = int(item.get("end") or start)
-            except (TypeError, ValueError):
-                start = 1
-                end = 1
-
-            start = max(1, min(start, sequence_length))
-            end = max(1, min(end, sequence_length))
-
-            if start > end:
-                start, end = end, start
-
-            feature = MolecularFeature.objects.create(
+        created = [
+            MolecularFeature.objects.create(
                 molecule=molecule,
-                name=(item.get("name") or "feature")[:255],
-                feature_type=item.get("type") or item.get("feature_type") or "custom",
-                start=start,
-                end=end,
-                strand=item.get("strand") if item.get("strand") in ["+", "-", "."] else "+",
-                color=item.get("color") or "#868e96",
-                notes=item.get("notes") or "",
-                qualifiers_json=item.get("qualifiers") or item.get("qualifiers_json") or {},
-                order=order,
+                **feature_data,
             )
-            created.append(feature)
+            for feature_data in validated
+        ]
 
     return JsonResponse(
         {
             "status": "success",
-            "features": [serialize_molecular_feature(feature) for feature in created],
+            "features": [
+                serialize_molecular_feature(feature)
+                for feature in created
+            ],
         }
     )
-
 
 @login_required
 def molecular_sequence_update_api(request, sequence_id):
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Method not allowed.",
+            },
+            status=405,
+        )
 
-    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+    molecule = _get_molecular_sequence_for_user(
+        sequence_id,
+        request.user,
+        require_edit=True,
+    )
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(
+            request.body.decode("utf-8") or "{}"
+        )
 
-        sequence_type = data.get("sequence_type", molecule.sequence_type)
-        topology = data.get("topology", molecule.topology)
+        sequence_type = data.get(
+            "sequence_type",
+            molecule.sequence_type,
+        )
+        topology = data.get(
+            "topology",
+            molecule.topology,
+        )
 
-        valid_sequence_types = {choice[0] for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES}
-        valid_topologies = {choice[0] for choice in MolecularSequence.TOPOLOGY_CHOICES}
+        valid_sequence_types = {
+            choice[0]
+            for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES
+        }
+        valid_topologies = {
+            choice[0]
+            for choice in MolecularSequence.TOPOLOGY_CHOICES
+        }
 
         if sequence_type not in valid_sequence_types:
-            return JsonResponse({"status": "error", "message": "Invalid sequence type"}, status=400)
+            raise MolecularSequenceInputError(
+                "Invalid sequence type."
+            )
 
         if topology not in valid_topologies:
-            return JsonResponse({"status": "error", "message": "Invalid topology"}, status=400)
+            raise MolecularSequenceInputError(
+                "Invalid topology."
+            )
 
-        name = (data.get("name") or "").strip()
+        name = str(data.get("name") or "").strip()
         if not name:
-            return JsonResponse({"status": "error", "message": "Name is required"}, status=400)
+            raise MolecularSequenceInputError(
+                "Name is required."
+            )
+
+        sequence = normalize_molecular_sequence(
+            data.get("sequence"),
+            sequence_type,
+        )
+
+        feature_payloads = data.get("features")
+
+        if (
+            feature_payloads is not None
+            and not isinstance(feature_payloads, list)
+        ):
+            raise MolecularSequenceInputError(
+                "features must be a list."
+            )
 
         molecule.name = name
         molecule.sequence_type = sequence_type
         molecule.topology = topology
-        molecule.description = data.get("description", "") or ""
-        molecule.sequence = data.get("sequence", "") or ""
+        molecule.description = str(
+            data.get("description") or ""
+        ).strip()
+        molecule.sequence = sequence
 
-        features_raw = data.get("features_json", "[]")
-        if isinstance(features_raw, str):
-            features_raw = features_raw.strip() or "[]"
-            molecule.features_json = json.loads(features_raw)
-        elif isinstance(features_raw, list):
-            molecule.features_json = features_raw
-        else:
-            return JsonResponse({"status": "error", "message": "Features must be a JSON list"}, status=400)
+        # Feature validation needs the proposed sequence length
+        # and topology before the model is persisted.
+        molecule.length = len(sequence)
 
-        molecule.save()
+        validated_features = None
+
+        if feature_payloads is not None:
+            validated_features = [
+                validate_molecular_feature(
+                    feature_payload,
+                    molecule,
+                    order,
+                )
+                for order, feature_payload
+                in enumerate(feature_payloads)
+            ]
+
+        with transaction.atomic():
+            molecule.save()
+
+            if validated_features is not None:
+                molecule.features.all().delete()
+
+                MolecularFeature.objects.bulk_create(
+                    [
+                        MolecularFeature(
+                            molecule=molecule,
+                            **feature_data,
+                        )
+                        for feature_data in validated_features
+                    ]
+                )
+
+            saved_features = list(
+                molecule.features.all()
+            )
 
         return JsonResponse(
             {
@@ -748,20 +886,35 @@ def molecular_sequence_update_api(request, sequence_id):
                 "length": molecule.length,
                 "gc_content": molecule.gc_content,
                 "checksum_sha256": molecule.checksum_sha256,
+                "features": [
+                    serialize_molecular_feature(feature)
+                    for feature in saved_features
+                ],
             }
         )
-    except json.JSONDecodeError as exc:
-        return JsonResponse({"status": "error", "message": f"Invalid JSON: {exc}"}, status=400)
-    except Exception as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
 
+    except (
+        json.JSONDecodeError,
+        MolecularSequenceInputError,
+    ) as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": str(exc),
+            },
+            status=400,
+        )
 
 @login_required
 def molecular_sequence_delete_api(request, sequence_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+    molecule = _get_molecular_sequence_for_user(
+        sequence_id,
+        request.user,
+        require_edit=True,
+    )
     redirect_url = reverse("notebook_index")
 
     if molecule.source_entry_id:
@@ -780,55 +933,81 @@ def molecular_sequence_delete_api(request, sequence_id):
 @login_required
 def notebook_create_molecular_sequence_api(request, entry_id):
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Method not allowed.",
+            },
+            status=405,
+        )
 
-    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
+    entry = _get_entry_for_user(
+        entry_id,
+        request.user,
+        require_edit=True,
+    )
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(
+            request.body.decode("utf-8") or "{}"
+        )
 
         sequence_type = data.get("sequence_type", "dna")
         topology = data.get("topology", "linear")
 
-        valid_sequence_types = {choice[0] for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES}
-        valid_topologies = {choice[0] for choice in MolecularSequence.TOPOLOGY_CHOICES}
+        valid_sequence_types = {
+            choice[0]
+            for choice in MolecularSequence.SEQUENCE_TYPE_CHOICES
+        }
+        valid_topologies = {
+            choice[0]
+            for choice in MolecularSequence.TOPOLOGY_CHOICES
+        }
 
         if sequence_type not in valid_sequence_types:
-            sequence_type = "dna"
+            raise MolecularSequenceInputError(
+                "Invalid sequence type."
+            )
 
         if topology not in valid_topologies:
-            topology = "linear"
+            raise MolecularSequenceInputError(
+                "Invalid topology."
+            )
 
-        name = (data.get("name") or "").strip()
+        name = str(data.get("name") or "").strip()
         if not name:
-            return JsonResponse({"status": "error", "message": "Name is required"}, status=400)
+            raise MolecularSequenceInputError(
+                "Name is required."
+            )
 
-        sequence = (data.get("sequence") or "").strip()
-        description = (data.get("description") or "").strip()
-
-        features_raw = data.get("features_json", [])
-        if isinstance(features_raw, str):
-            features_raw = features_raw.strip() or "[]"
-            features_json = json.loads(features_raw)
-        elif isinstance(features_raw, list):
-            features_json = features_raw
-        else:
-            features_json = []
+        sequence = normalize_molecular_sequence(
+            data.get("sequence"),
+            sequence_type,
+        )
 
         linked_sample = None
         linked_sample_id = data.get("linked_sample_id")
+
         if linked_sample_id:
-            linked_sample = get_object_or_404(Sample, id=linked_sample_id)
-            if not can_view_sample(request.user, linked_sample) and not request.user.is_superuser:
+            linked_sample = get_object_or_404(
+                Sample,
+                id=linked_sample_id,
+            )
+
+            if (
+                not can_view_sample(request.user, linked_sample)
+                and not request.user.is_superuser
+            ):
                 raise PermissionDenied
 
-        molecular_sequence = MolecularSequence.objects.create(
+        molecule = MolecularSequence.objects.create(
             name=name,
             sequence_type=sequence_type,
             topology=topology,
             sequence=sequence,
-            description=description,
-            features_json=features_json,
+            description=str(
+                data.get("description") or ""
+            ).strip(),
             linked_sample=linked_sample,
             source_entry=entry,
             owner=request.user,
@@ -837,16 +1016,26 @@ def notebook_create_molecular_sequence_api(request, entry_id):
         return JsonResponse(
             {
                 "status": "success",
-                "id": molecular_sequence.id,
-                "name": molecular_sequence.name,
-                "sequence_type": molecular_sequence.sequence_type,
-                "topology": molecular_sequence.topology,
-                "length": molecular_sequence.length,
+                "id": molecule.id,
+                "name": molecule.name,
+                "length": molecule.length,
+                "detail_url": reverse(
+                    "molecular_sequence_detail",
+                    args=[molecule.id],
+                ),
             }
         )
-    except Exception as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
-
+    except (
+        json.JSONDecodeError,
+        MolecularSequenceInputError,
+    ) as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": str(exc),
+            },
+            status=400,
+        )
 
 @login_required
 def notebook_create_block_api(request, entry_id):
