@@ -215,6 +215,11 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
     path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
     path('internal/lab-tools/notebook/attachments/<int:attachment_id>/download/', notebook_views.notebook_attachment_download, name='notebook_attachment_download'),
+    path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_document_api, name='notebook_jupyter_document_api'),
+    path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/submit/', notebook_views.notebook_jupyter_submit_api, name='notebook_jupyter_submit_api'),
+    path('internal/lab-tools/notebook/api/jupyter/executions/<int:execution_id>/', notebook_views.notebook_jupyter_execution_status_api, name='notebook_jupyter_execution_status_api'),
+    path('internal/lab-tools/notebook/api/jupyter/executions/<int:execution_id>/cancel/', notebook_views.notebook_jupyter_execution_cancel_api, name='notebook_jupyter_execution_cancel_api'),
+    path('internal/lab-tools/notebook/jupyter/<int:entry_id>/download/', notebook_views.notebook_jupyter_download, name='notebook_jupyter_download'),
 
 
     # ---------------- QR CODE (PAGE) --------------------------------

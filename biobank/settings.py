@@ -198,5 +198,22 @@ BIOBANK_JUPYTER_LAUNCH_URL = os.environ.get(
     ),
 )
 
+BIOBANK_JUPYTER_RUNNER = os.environ.get(
+    "BIOBANK_JUPYTER_RUNNER",
+    "/usr/local/sbin/biobank-notebook-runner",
+)
+BIOBANK_JUPYTER_SUDO = os.environ.get(
+    "BIOBANK_JUPYTER_SUDO",
+    "/usr/bin/sudo",
+)
+BIOBANK_JUPYTER_NOTEBOOK_ROOT = os.environ.get(
+    "BIOBANK_JUPYTER_NOTEBOOK_ROOT",
+    "/home/public/biobank/notebooks",
+)
+BIOBANK_JUPYTER_JOB_ROOT = os.environ.get(
+    "BIOBANK_JUPYTER_JOB_ROOT",
+    "/home/public/biobank/jobs",
+)
+
 FILE_UPLOAD_PERMISSIONS = 0o660
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o2770

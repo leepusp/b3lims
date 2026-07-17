@@ -22,7 +22,15 @@ from .shipments import (
     ShipmentDeclaration,
     ShipmentAccessToken,
     ShipmentEvent)
-from core.models.lab_tools.notebook import MolecularSequence, NotebookAttachment, NotebookBlock, NotebookEntry, NotebookSampleLink
+from core.models.lab_tools.notebook import (
+    MolecularSequence,
+    NotebookAttachment,
+    NotebookBlock,
+    NotebookEntry,
+    NotebookKernelDocument,
+    NotebookKernelExecution,
+    NotebookSampleLink,
+)
 
 from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole

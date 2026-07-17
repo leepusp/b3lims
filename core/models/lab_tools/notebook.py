@@ -15,6 +15,23 @@ def notebook_attachment_upload_to(instance, filename):
     return f"notebook/entries/{entry_id}/attachments/{uuid.uuid4().hex}_{safe_name}"
 
 
+def default_jupyter_notebook():
+    """Return a minimal, valid Jupyter notebook document."""
+    return {
+        "cells": [],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {"name": "python"},
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+
+
 class NotebookEntry(models.Model):
     """
     Electronic lab notebook entry.
@@ -321,6 +338,96 @@ class NotebookAttachment(models.Model):
 
     def __str__(self):
         return self.caption or Path(self.file.name).name
+
+class NotebookKernelDocument(models.Model):
+    """Jupyter-compatible document attached to one ELN entry."""
+
+    entry = models.OneToOneField(
+        NotebookEntry,
+        on_delete=models.CASCADE,
+        related_name="kernel_document",
+    )
+    title = models.CharField(max_length=255, default="ELN analysis")
+    notebook_json = models.JSONField(default=default_jupyter_notebook)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_kernel_documents_created",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_kernel_documents_updated",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "ELN Jupyter Notebook"
+        verbose_name_plural = "ELN Jupyter Notebooks"
+
+    def __str__(self):
+        return f"{self.entry_id}: {self.title}"
+
+
+class NotebookKernelExecution(models.Model):
+    """Audited Slurm execution of an ELN Jupyter notebook."""
+
+    STATUS_CHOICES = [
+        ("submitted", "Submitted"),
+        ("pending", "Pending"),
+        ("running", "Running"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+        ("cancelled", "Cancelled"),
+        ("unknown", "Unknown"),
+    ]
+
+    document = models.ForeignKey(
+        NotebookKernelDocument,
+        on_delete=models.CASCADE,
+        related_name="executions",
+    )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_kernel_executions_submitted",
+    )
+    job_id = models.CharField(max_length=64, blank=True, db_index=True)
+    run_id = models.CharField(max_length=128, unique=True)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default="submitted",
+        db_index=True,
+    )
+    requested_cell_index = models.PositiveIntegerField(null=True, blank=True)
+    cpus = models.PositiveSmallIntegerField(default=2)
+    memory_mb = models.PositiveIntegerField(default=8192)
+    time_minutes = models.PositiveIntegerField(default=60)
+    source_path = models.CharField(max_length=1024)
+    run_directory = models.CharField(max_length=1024)
+    result_path = models.CharField(max_length=1024, blank=True)
+    summary_json = models.JSONField(default=dict, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-submitted_at", "-id"]
+        verbose_name = "ELN Jupyter Execution"
+        verbose_name_plural = "ELN Jupyter Executions"
+
+    def __str__(self):
+        return f"{self.document_id}: {self.job_id or self.run_id} ({self.status})"
 
 class MolecularSequence(models.Model):
     """

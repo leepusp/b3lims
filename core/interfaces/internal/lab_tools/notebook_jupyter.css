@@ -1,0 +1,151 @@
+.eln-jupyter-workspace {
+    --eln-cell-border: #d8dee8;
+    --eln-cell-gutter: #f5f7fa;
+    min-height: 620px;
+}
+
+.eln-jupyter-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--eln-cell-border);
+    border-radius: .65rem;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+}
+
+.eln-jupyter-title {
+    width: min(340px, 100%);
+}
+
+.eln-jupyter-resource {
+    width: auto;
+    min-width: 105px;
+}
+
+.eln-jupyter-status {
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.eln-jupyter-cell {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    margin-bottom: .9rem;
+    border: 1px solid var(--eln-cell-border);
+    border-radius: .65rem;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
+}
+
+.eln-jupyter-cell.is-active {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, .12);
+}
+
+.eln-jupyter-gutter {
+    padding: .8rem .35rem;
+    color: #64748b;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .75rem;
+    background: var(--eln-cell-gutter);
+    border-right: 1px solid var(--eln-cell-border);
+}
+
+.eln-jupyter-cell-main {
+    min-width: 0;
+}
+
+.eln-jupyter-cell-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem;
+    padding: .45rem .65rem;
+    border-bottom: 1px solid #edf0f4;
+    background: #fbfcfe;
+}
+
+.eln-jupyter-cell-source {
+    width: 100%;
+    min-height: 118px;
+    padding: .8rem;
+    border: 0;
+    border-radius: 0;
+    resize: vertical;
+    outline: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: .87rem;
+    line-height: 1.55;
+    tab-size: 4;
+}
+
+.eln-jupyter-cell[data-cell-type="markdown"] .eln-jupyter-cell-source {
+    font-family: inherit;
+}
+
+.eln-jupyter-output {
+    padding: .65rem .8rem;
+    border-top: 1px solid #edf0f4;
+    background: #fcfdff;
+}
+
+.eln-jupyter-output pre {
+    margin: 0;
+    color: #1e293b;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: .82rem;
+}
+
+.eln-jupyter-output-error pre {
+    color: #b42318;
+}
+
+.eln-jupyter-output img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-top: .5rem;
+}
+
+.eln-jupyter-empty,
+.eln-jupyter-loading {
+    padding: 4rem 1rem;
+    border: 1px dashed var(--eln-cell-border);
+    border-radius: .65rem;
+    color: #64748b;
+    text-align: center;
+    background: #fbfcfe;
+}
+
+.eln-jupyter-history {
+    margin-top: 1.25rem;
+    padding: .75rem;
+    border: 1px solid var(--eln-cell-border);
+    border-radius: .65rem;
+    background: #f8fafc;
+}
+
+@media (max-width: 900px) {
+    .eln-jupyter-toolbar {
+        position: static;
+    }
+
+    .eln-jupyter-status {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .eln-jupyter-cell {
+        grid-template-columns: 42px minmax(0, 1fr);
+    }
+}

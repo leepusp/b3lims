@@ -19,3 +19,6 @@ PASSWORD_HASHERS = [
 ]
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+BIOBANK_JUPYTER_NOTEBOOK_ROOT = "/tmp/biobank-test-jupyter/notebooks"
+BIOBANK_JUPYTER_JOB_ROOT = "/tmp/biobank-test-jupyter/jobs"

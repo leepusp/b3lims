@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Q
 from django.db import transaction
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -17,6 +17,8 @@ from core.models.lab_tools.notebook import (
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
+    NotebookKernelDocument,
+    NotebookKernelExecution,
     NotebookSampleLink,
     NotebookChemicalLink,
 )
@@ -33,6 +35,15 @@ from core.services.molecular_sequences import (
     MolecularSequenceInputError,
     normalize_molecular_sequence,
     validate_molecular_feature,
+)
+from core.services.jupyter_notebooks import (
+    JupyterNotebookError,
+    cancel_execution,
+    get_or_create_document,
+    normalize_notebook,
+    persist_document,
+    refresh_execution,
+    submit_document,
 )
 
 
@@ -1176,3 +1187,281 @@ def notebook_upload_attachment_api(request, entry_id):
             "attachment_type": attachment.attachment_type,
         }
     )
+
+
+def _execution_payload(execution):
+    return {
+        "id": execution.id,
+        "job_id": execution.job_id,
+        "run_id": execution.run_id,
+        "status": execution.status,
+        "requested_cell_index": execution.requested_cell_index,
+        "cpus": execution.cpus,
+        "memory_mb": execution.memory_mb,
+        "time_minutes": execution.time_minutes,
+        "summary": execution.summary_json or {},
+        "submitted_by": (
+            execution.submitted_by.get_username()
+            if execution.submitted_by
+            else ""
+        ),
+        "submitted_at": execution.submitted_at.isoformat(),
+        "started_at": (
+            execution.started_at.isoformat()
+            if execution.started_at
+            else None
+        ),
+        "finished_at": (
+            execution.finished_at.isoformat()
+            if execution.finished_at
+            else None
+        ),
+    }
+
+
+def _document_payload(document, *, can_edit, can_execute):
+    latest_execution = document.executions.select_related(
+        "submitted_by"
+    ).first()
+    return {
+        "id": document.id,
+        "title": document.title,
+        "notebook": document.notebook_json,
+        "updated_at": document.updated_at.isoformat(),
+        "can_edit": can_edit,
+        "can_execute": can_execute,
+        "latest_execution": (
+            _execution_payload(latest_execution)
+            if latest_execution
+            else None
+        ),
+    }
+
+
+@login_required
+def notebook_jupyter_document_api(request, entry_id):
+    entry = _get_entry_for_user(entry_id, request.user)
+    can_edit = can_edit_notebook_entry(request.user, entry)
+
+    if request.method == "GET":
+        try:
+            document = entry.kernel_document
+        except NotebookKernelDocument.DoesNotExist:
+            if not can_edit:
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "document": None,
+                        "can_edit": False,
+                        "can_execute": False,
+                    }
+                )
+            document = get_or_create_document(entry, request.user)
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "document": _document_payload(
+                    document,
+                    can_edit=can_edit,
+                    can_execute=request.user.is_superuser,
+                ),
+            }
+        )
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "GET or POST required."},
+            status=405,
+        )
+
+    if not can_edit:
+        raise PermissionDenied
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+        notebook = normalize_notebook(data.get("notebook", {}))
+        title = str(data.get("title") or f"{entry.title} analysis").strip()
+        if not title:
+            raise JupyterNotebookError("Notebook title is required.")
+        if len(title) > 255:
+            raise JupyterNotebookError("Notebook title is too long.")
+
+        with transaction.atomic():
+            document = get_or_create_document(entry, request.user)
+            document.title = title
+            document.notebook_json = notebook
+            document.updated_by = request.user
+            document.save(
+                update_fields=[
+                    "title",
+                    "notebook_json",
+                    "updated_by",
+                    "updated_at",
+                ]
+            )
+            persist_document(document)
+    except (json.JSONDecodeError, JupyterNotebookError) as exc:
+        return JsonResponse(
+            {"status": "error", "message": str(exc)},
+            status=400,
+        )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "document": _document_payload(
+                document,
+                can_edit=True,
+                can_execute=request.user.is_superuser,
+            ),
+        }
+    )
+
+
+@login_required
+def notebook_jupyter_submit_api(request, entry_id):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "POST required."},
+            status=405,
+        )
+
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
+    if not request.user.is_superuser:
+        raise PermissionDenied(
+            "Managed notebook execution is currently restricted to administrators."
+        )
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+        document = get_or_create_document(entry, request.user)
+
+        active_execution = document.executions.filter(
+            status__in=["submitted", "pending", "running"]
+        ).first()
+        if active_execution:
+            active_execution = refresh_execution(active_execution)
+        if active_execution and active_execution.status in {
+            "submitted",
+            "pending",
+            "running",
+        }:
+            raise JupyterNotebookError(
+                "This notebook already has an active Slurm execution."
+            )
+
+        cell_index = data.get("cell_index")
+        if cell_index in {"", None}:
+            cell_index = None
+
+        execution = submit_document(
+            document,
+            request.user,
+            cpus=data.get("cpus", 2),
+            memory_mb=data.get("memory_mb", 8192),
+            time_minutes=data.get("time_minutes", 60),
+            cell_index=cell_index,
+        )
+    except (json.JSONDecodeError, JupyterNotebookError, TypeError, ValueError) as exc:
+        return JsonResponse(
+            {"status": "error", "message": str(exc)},
+            status=400,
+        )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "execution": _execution_payload(execution),
+        }
+    )
+
+
+@login_required
+def notebook_jupyter_execution_status_api(request, execution_id):
+    if request.method != "GET":
+        return JsonResponse(
+            {"status": "error", "message": "GET required."},
+            status=405,
+        )
+
+    execution = get_object_or_404(
+        NotebookKernelExecution.objects.select_related(
+            "document",
+            "document__entry",
+            "submitted_by",
+        ),
+        id=execution_id,
+    )
+    if not can_view_notebook_entry(request.user, execution.document.entry):
+        raise PermissionDenied
+
+    warning = ""
+    if execution.status in {"submitted", "pending", "running", "unknown"}:
+        try:
+            execution = refresh_execution(execution)
+        except JupyterNotebookError as exc:
+            warning = str(exc)
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "execution": _execution_payload(execution),
+            "document": (
+                execution.document.notebook_json
+                if execution.status == "completed"
+                else None
+            ),
+            "warning": warning,
+        }
+    )
+
+
+@login_required
+def notebook_jupyter_execution_cancel_api(request, execution_id):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "POST required."},
+            status=405,
+        )
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    execution = get_object_or_404(
+        NotebookKernelExecution.objects.select_related(
+            "document",
+            "document__entry",
+        ),
+        id=execution_id,
+    )
+    if not can_edit_notebook_entry(request.user, execution.document.entry):
+        raise PermissionDenied
+
+    try:
+        cancel_execution(execution)
+    except JupyterNotebookError as exc:
+        return JsonResponse(
+            {"status": "error", "message": str(exc)},
+            status=400,
+        )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "execution": _execution_payload(execution),
+        }
+    )
+
+
+@login_required
+def notebook_jupyter_download(request, entry_id):
+    entry = _get_entry_for_user(entry_id, request.user)
+    document = get_object_or_404(NotebookKernelDocument, entry=entry)
+    filename = f"eln-entry-{entry.id}.ipynb"
+    response = HttpResponse(
+        json.dumps(document.notebook_json, indent=1, ensure_ascii=False),
+        content_type="application/x-ipynb+json",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
