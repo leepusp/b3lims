@@ -85,7 +85,7 @@ class OfficialJupyterViewTests(TestCase):
                     "host": "gn03",
                     "port": 45679,
                     "base_url": (
-                        "/node/gn03/45679/"
+                        "/biobank/node/gn03/45679/"
                     ),
                 },
                 "token": (
@@ -100,7 +100,7 @@ class OfficialJupyterViewTests(TestCase):
         "core.views.internal.lab_tools.jupyter."
         "connection_redirect_path",
         return_value=(
-            "/node/gn03/45679/"
+            "/biobank/node/gn03/45679/"
             "tree/notebook.ipynb"
             "?token=protected-connect-token"
         ),
@@ -130,7 +130,7 @@ class OfficialJupyterViewTests(TestCase):
         self.assertEqual(
             response["Location"],
             (
-                "/node/gn03/45679/"
+                "/biobank/node/gn03/45679/"
                 "tree/notebook.ipynb"
                 "?token=protected-connect-token"
             ),
