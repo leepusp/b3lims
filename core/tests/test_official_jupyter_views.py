@@ -85,7 +85,7 @@ class OfficialJupyterViewTests(TestCase):
                     "host": "gn03",
                     "port": 45679,
                     "base_url": (
-                        "/biobank/internal/lab-tools/jupyter/node/gn03/45679/"
+                        f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
                     ),
                 },
                 "token": (
@@ -98,12 +98,7 @@ class OfficialJupyterViewTests(TestCase):
 
     @patch(
         "core.views.internal.lab_tools.jupyter."
-        "connection_redirect_path",
-        return_value=(
-            "/biobank/internal/lab-tools/jupyter/node/gn03/45679/"
-            "tree/notebook.ipynb"
-            "?token=protected-connect-token"
-        ),
+        "connection_redirect_path"
     )
     @patch(
         "core.views.internal.lab_tools.jupyter."
@@ -115,6 +110,11 @@ class OfficialJupyterViewTests(TestCase):
         mocked_connection,
     ):
         mocked_active.return_value = self.session
+        mocked_connection.return_value = (
+            f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
+            "tree/notebook.ipynb"
+            "?token=protected-connect-token"
+        )
 
         response = self.client.get(
             reverse(
@@ -130,7 +130,7 @@ class OfficialJupyterViewTests(TestCase):
         self.assertEqual(
             response["Location"],
             (
-                "/biobank/internal/lab-tools/jupyter/node/gn03/45679/"
+                f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
                 "tree/notebook.ipynb"
                 "?token=protected-connect-token"
             ),

@@ -38,7 +38,7 @@ TERMINAL_STATUSES = {
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 SAFE_USERNAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 SAFE_BASE_URL_RE = re.compile(
-    r"^/biobank/internal/lab-tools/jupyter/node/[A-Za-z0-9_.-]+/[0-9]{1,5}/$"
+    r"^/biobank/internal/lab-tools/jupyter/[0-9]+/node/[A-Za-z0-9_.-]+/[0-9]{1,5}/$"
 )
 
 
@@ -763,7 +763,7 @@ def connection_redirect_path(session):
             "The protected connection port is invalid."
         ) from exc
 
-    expected_base = f"/biobank/internal/lab-tools/jupyter/node/{host}/{port}/"
+    expected_base = f"/biobank/internal/lab-tools/jupyter/{session.notebook_id}/node/{host}/{port}/"
 
     if (
         not host
