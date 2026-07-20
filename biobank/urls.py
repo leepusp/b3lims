@@ -232,6 +232,11 @@ urlpatterns = [
         name='jupyter_workspace',
     ),
     path(
+        'internal/lab-tools/jupyter/<int:notebook_id>/connect/',
+        jupyter_views.jupyter_connect,
+        name='jupyter_connect',
+    ),
+    path(
         'internal/lab-tools/jupyter/api/<int:notebook_id>/',
         jupyter_views.jupyter_document_api,
         name='jupyter_document_api',

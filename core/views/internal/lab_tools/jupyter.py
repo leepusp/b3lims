@@ -5,7 +5,11 @@ import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
+from django.http import (
+    HttpResponse,
+    HttpResponseRedirect,
+    JsonResponse,
+)
 from django.shortcuts import (
     get_object_or_404,
     redirect,
@@ -21,11 +25,13 @@ from core.services.jupyter_notebooks import (
     JupyterNotebookError,
     normalize_notebook,
 )
-from core.services.jupyter_sessions import (
+from core.services.jupyter_server import (
     ACTIVE_STATUSES,
     active_session_for_notebook,
     can_edit_notebook,
-    execute_cell,
+    connection_redirect_path,
+    delete_notebook_workspace,
+    load_notebook_document,
     refresh_session,
     start_session,
     starter_notebook,
@@ -70,10 +76,13 @@ def _session_payload(session):
         "cpus": session.cpus,
         "memory_mb": session.memory_mb,
         "time_minutes": session.time_minutes,
-        "requested_cell_index": None,
+        "ready": bool(
+            session.status == "running"
+            and session.ready_at is not None
+        ),
         "summary": {
             "partition": session.partition,
-            "kernel": session.kernel_info or {},
+            "official_server": True,
             "error": session.last_error,
         },
         "submitted_by": (
@@ -216,23 +225,19 @@ def _validated_launch(request, defaults):
         raise JupyterNotebookError(
             "Invalid Slurm partition."
         )
-    if launch["cpus"] not in {1, 2, 4, 8}:
+    if not 1 <= launch["cpus"] <= 128:
         raise JupyterNotebookError(
-            "Invalid CPU selection."
+            "CPU cores must be between 1 and 128."
         )
-    if launch["memory_mb"] not in {
-        2048,
-        4096,
-        8192,
-        16384,
-        32768,
-    }:
+    if not 1024 <= launch["memory_mb"] <= 1048576:
         raise JupyterNotebookError(
-            "Invalid memory selection."
+            "Memory must be between 1024 and "
+            "1048576 MB."
         )
-    if launch["hours"] not in {1, 2, 4}:
+    if not 1 <= launch["hours"] <= 168:
         raise JupyterNotebookError(
-            "Invalid session duration."
+            "Session duration must be between "
+            "1 and 168 hours."
         )
 
     return launch
@@ -435,6 +440,63 @@ def jupyter_workspace(request, notebook_id):
 
 
 @login_required
+def jupyter_connect(request, notebook_id):
+    if request.method != "GET":
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "GET required.",
+            },
+            status=405,
+        )
+
+    notebook = _notebook_for_user(
+        notebook_id,
+        request.user,
+    )
+
+    try:
+        session = active_session_for_notebook(
+            notebook
+        )
+
+        if session is None:
+            raise JupyterNotebookError(
+                "This notebook has no active "
+                "Slurm session."
+            )
+
+        redirect_path = connection_redirect_path(
+            session
+        )
+    except JupyterNotebookError as exc:
+        response = HttpResponse(
+            str(exc),
+            content_type="text/plain; charset=utf-8",
+            status=409,
+        )
+        response["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, private"
+        )
+        response["Pragma"] = "no-cache"
+        response["Referrer-Policy"] = "no-referrer"
+        response["X-Robots-Tag"] = "noindex, nofollow"
+        return response
+
+    response = HttpResponseRedirect(
+        redirect_path
+    )
+    response["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, private"
+    )
+    response["Pragma"] = "no-cache"
+    response["Referrer-Policy"] = "no-referrer"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+
+    return response
+
+
+@login_required
 def jupyter_document_api(request, notebook_id):
     notebook = _notebook_for_user(
         notebook_id,
@@ -528,66 +590,20 @@ def jupyter_document_api(request, notebook_id):
 
 @login_required
 def jupyter_execute_api(request, notebook_id):
-    if request.method != "POST":
-        return JsonResponse(
-            {
-                "status": "error",
-                "message": "POST required.",
-            },
-            status=405,
-        )
-
-    notebook = _notebook_for_user(
+    _notebook_for_user(
         notebook_id,
         request.user,
     )
 
-    try:
-        data = json.loads(
-            request.body.decode("utf-8") or "{}"
-        )
-
-        session = (
-            notebook.sessions
-            .filter(status__in=ACTIVE_STATUSES)
-            .select_related("notebook", "started_by")
-            .first()
-        )
-
-        if session is None:
-            raise JupyterNotebookError(
-                "Start a Slurm session before "
-                "executing cells."
-            )
-
-        execute_cell(
-            session,
-            request.user,
-            data.get("cell_index"),
-        )
-
-        notebook.refresh_from_db()
-        session.refresh_from_db()
-    except (
-        json.JSONDecodeError,
-        JupyterNotebookError,
-        TypeError,
-        ValueError,
-    ) as exc:
-        return JsonResponse(
-            {
-                "status": "error",
-                "message": str(exc),
-            },
-            status=400,
-        )
-
     return JsonResponse(
         {
-            "status": "success",
-            "execution": _session_payload(session),
-            "document": notebook.notebook_json,
-        }
+            "status": "error",
+            "message": (
+                "Cell execution is handled by the "
+                "official Jupyter Notebook server."
+            ),
+        },
+        status=410,
     )
 
 
@@ -622,7 +638,6 @@ def jupyter_session_status_api(request, session_id):
         {
             "status": "success",
             "execution": _session_payload(session),
-            "document": session.notebook.notebook_json,
         }
     )
 
@@ -673,7 +688,7 @@ def jupyter_download(request, notebook_id):
     )
 
     payload = json.dumps(
-        normalize_notebook(notebook.notebook_json),
+        load_notebook_document(notebook),
         ensure_ascii=False,
         indent=2,
     )
@@ -745,6 +760,21 @@ def jupyter_delete(request, notebook_id):
             )
 
     deleted_title = notebook.title
+
+    try:
+        delete_notebook_workspace(notebook)
+    except JupyterNotebookError as exc:
+        messages.error(
+            request,
+            "The notebook record was preserved because "
+            "its protected workspace could not be "
+            f"removed: {exc}",
+        )
+        return redirect(
+            "jupyter_workspace",
+            notebook_id=notebook.id,
+        )
+
     notebook.delete()
 
     messages.success(

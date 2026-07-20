@@ -1,45 +1,82 @@
 {% extends "internal/common/base.html" %}
-{% load static %}
 
 {% block title %}Jupyter · {{ jupyter_notebook.title }}{% endblock %}
 
 {% block extra_css %}
-<link href="{% static 'internal/lab_tools/notebook_jupyter.css' %}"
-      rel="stylesheet">
+<style>
+    .biobank-notebook-page {
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - 4rem);
+    }
+
+    .biobank-notebook-frame-shell {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 680px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--bs-border-color);
+        border-radius: .5rem;
+        box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .08);
+    }
+
+    .biobank-notebook-frame {
+        display: block;
+        width: 100%;
+        height: calc(100vh - 245px);
+        min-height: 680px;
+        border: 0;
+        background: #fff;
+    }
+
+    .biobank-notebook-waiting {
+        display: flex;
+        min-height: 420px;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .biobank-notebook-frame[hidden],
+    .biobank-notebook-waiting[hidden] {
+        display: none !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-{% csrf_token %}
-
-<div class="eln-jupyter-page">
-    <header class="eln-jupyter-page-header">
+<div class="container-fluid py-3 biobank-notebook-page">
+    <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
-            <nav class="eln-jupyter-breadcrumb"
+            <nav class="small text-muted mb-1"
                  aria-label="Breadcrumb">
                 <a href="{% url 'jupyter_index' %}">
                     Jupyter Notebooks
                 </a>
-                <span>/</span>
-                <span>Workspace</span>
+                <span class="mx-1">/</span>
+                Workspace
             </nav>
 
-            <h1>{{ jupyter_notebook.title }}</h1>
-            <p>
-                Persistent Python kernel executed on the
+            <h1 class="h4 mb-1">
+                {{ jupyter_notebook.title }}
+            </h1>
+
+            <p class="text-muted mb-0">
+                Official Jupyter Notebook 7 running on the
                 DaVinci Slurm cluster.
             </p>
         </div>
 
-        <div class="eln-jupyter-page-actions">
-            <a class="btn btn-sm btn-outline-primary"
-               href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
-                <i class="bi bi-play-fill me-1"></i>
-                {% if active_session %}
-                    Session active
-                {% else %}
+        <div class="d-flex flex-wrap gap-2">
+            {% if not active_session %}
+                <a class="btn btn-sm btn-primary"
+                   href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
+                    <i class="bi bi-play-fill me-1"></i>
                     Start session
-                {% endif %}
-            </a>
+                </a>
+            {% endif %}
 
             <a class="btn btn-sm btn-outline-secondary"
                href="{% url 'jupyter_download' jupyter_notebook.id %}">
@@ -49,7 +86,7 @@
 
             <form method="post"
                   action="{% url 'jupyter_delete' jupyter_notebook.id %}"
-                  onsubmit="return window.confirm('Delete this Jupyter notebook? Its active Slurm session will be stopped.');">
+                  onsubmit="return window.confirm('Delete this notebook and its protected files? Any active Slurm session will be stopped.');">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger"
                         type="submit">
@@ -61,7 +98,7 @@
             <a class="btn btn-sm btn-outline-secondary"
                href="{% url 'jupyter_index' %}">
                 <i class="bi bi-arrow-left me-1"></i>
-                Jupyter list
+                Notebook list
             </a>
         </div>
     </header>
@@ -83,49 +120,291 @@
     {% endif %}
 
     {% if active_session %}
-        <div class="alert alert-success py-2"
+        <div id="jupyter-session-summary"
+             class="alert alert-info py-2"
              role="status">
             Slurm job {{ active_session.job_id }}
             · {{ active_session.partition }}
             · {{ active_session.cpus }} CPU
             · {{ active_session.memory_mb }} MB
-            · {{ active_session.get_status_display }}
+            ·
+            <span data-session-state>
+                {{ active_session.get_status_display }}
+            </span>
+
+            <button id="jupyter-stop-session"
+                    class="btn btn-sm btn-outline-danger ms-2"
+                    type="button">
+                Stop session
+            </button>
         </div>
     {% else %}
         <div class="alert alert-warning py-2"
              role="status">
-            This notebook has no active kernel.
-            Start a Slurm session to execute cells.
+            This notebook has no active server.
+            Start a Slurm session to open Notebook 7.
         </div>
     {% endif %}
 
-    <main class="eln-jupyter-page-body">
-        <div id="eln-jupyter-workspace"
-             class="eln-jupyter-workspace eln-jupyter-standalone"
-             data-entry-id="{{ jupyter_notebook.id }}"
-             data-document-url="{% url 'jupyter_document_api' jupyter_notebook.id %}"
-             data-submit-url="{% url 'jupyter_execute_api' jupyter_notebook.id %}"
-             data-status-url-template="{% url 'jupyter_session_status_api' 0 %}"
-             data-cancel-url-template="{% url 'jupyter_session_stop_api' 0 %}"
-             data-download-url="{% url 'jupyter_download' jupyter_notebook.id %}"
-             data-workspace-url="{% url 'jupyter_workspace' jupyter_notebook.id %}"
-             data-notebook-url="{% url 'jupyter_index' %}"
-             data-standalone="true"
-             data-can-edit="{% if can_edit_jupyter %}true{% else %}false{% endif %}"
-             data-can-execute="{% if can_execute_jupyter %}true{% else %}false{% endif %}">
-            <div class="eln-jupyter-loading">
-                <span class="spinner-border spinner-border-sm me-2"
-                      aria-hidden="true"></span>
-                Loading persistent Jupyter notebook…
+    <main class="biobank-notebook-frame-shell"
+          id="official-jupyter-workspace"
+          {% if active_session %}
+              data-session-id="{{ active_session.id }}"
+              data-session-status="{{ active_session.status }}"
+              data-status-url="{% url 'jupyter_session_status_api' active_session.id %}"
+              data-stop-url="{% url 'jupyter_session_stop_api' active_session.id %}"
+              data-connect-url="{% url 'jupyter_connect' jupyter_notebook.id %}"
+          {% endif %}>
+
+        {% if active_session %}
+            <div class="biobank-notebook-waiting"
+                 data-notebook-waiting
+                 {% if active_session.status == "running" %}hidden{% endif %}>
+                <div>
+                    <div class="spinner-border text-primary mb-3"
+                         role="status"
+                         aria-hidden="true"></div>
+
+                    <h2 class="h5">
+                        Waiting for Jupyter Notebook
+                    </h2>
+
+                    <p class="text-muted mb-0"
+                       data-notebook-message>
+                        The Slurm allocation is starting.
+                        This page will connect automatically.
+                    </p>
+                </div>
             </div>
-        </div>
+
+            <iframe class="biobank-notebook-frame"
+                    data-notebook-frame
+                    title="Official Jupyter Notebook"
+                    referrerpolicy="no-referrer"
+                    allow="clipboard-read; clipboard-write"
+                    {% if active_session.status != "running" %}hidden{% endif %}
+                    {% if active_session.status == "running" %}
+                        src="{% url 'jupyter_connect' jupyter_notebook.id %}"
+                    {% endif %}>
+            </iframe>
+        {% else %}
+            <div class="biobank-notebook-waiting">
+                <div>
+                    <i class="bi bi-journal-code display-4 text-primary"></i>
+
+                    <h2 class="h5 mt-3">
+                        Notebook server is stopped
+                    </h2>
+
+                    <p class="text-muted">
+                        Your saved notebook remains available.
+                    </p>
+
+                    <a class="btn btn-primary"
+                       href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
+                        <i class="bi bi-play-fill me-1"></i>
+                        Start session
+                    </a>
+                </div>
+            </div>
+        {% endif %}
     </main>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% if active_session %}
 <script>
-    const csrfToken = "{{ csrf_token }}";
+(() => {
+    "use strict";
+
+    const root = document.getElementById(
+        "official-jupyter-workspace"
+    );
+
+    if (!root) {
+        return;
+    }
+
+    const statusUrl = root.dataset.statusUrl;
+    const stopUrl = root.dataset.stopUrl;
+    const connectUrl = root.dataset.connectUrl;
+
+    const waiting = root.querySelector(
+        "[data-notebook-waiting]"
+    );
+    const message = root.querySelector(
+        "[data-notebook-message]"
+    );
+    const frame = root.querySelector(
+        "[data-notebook-frame]"
+    );
+    const stateLabel = document.querySelector(
+        "[data-session-state]"
+    );
+    const stopButton = document.getElementById(
+        "jupyter-stop-session"
+    );
+
+    const terminalStates = new Set([
+        "completed",
+        "failed",
+        "cancelled",
+        "timeout",
+        "unknown",
+    ]);
+
+    let pollingTimer = null;
+    let connecting = (
+        root.dataset.sessionStatus === "running"
+    );
+
+    function csrfToken() {
+        const input = document.querySelector(
+            'input[name="csrfmiddlewaretoken"]'
+        );
+
+        return input ? input.value : "";
+    }
+
+    function showMessage(value) {
+        if (message) {
+            message.textContent = value;
+        }
+    }
+
+    function connectNotebook() {
+        if (connecting || !frame || !connectUrl) {
+            return;
+        }
+
+        connecting = true;
+
+        if (waiting) {
+            waiting.hidden = true;
+        }
+
+        frame.hidden = false;
+        frame.src = connectUrl;
+
+        if (pollingTimer) {
+            window.clearTimeout(pollingTimer);
+            pollingTimer = null;
+        }
+    }
+
+    async function pollStatus() {
+        try {
+            const response = await fetch(
+                statusUrl,
+                {
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "Accept": "application/json",
+                    },
+                }
+            );
+
+            const payload = await response.json();
+
+            if (!response.ok || payload.status !== "success") {
+                throw new Error(
+                    payload.message
+                    || "Unable to refresh the session."
+                );
+            }
+
+            const execution = payload.execution;
+            const state = execution.status;
+
+            if (stateLabel) {
+                stateLabel.textContent = state;
+            }
+
+            if (state === "running" && execution.ready) {
+                connectNotebook();
+                return;
+            }
+
+            if (terminalStates.has(state)) {
+                showMessage(
+                    execution.summary.error
+                    || "The Slurm session ended before "
+                    + "Notebook became available."
+                );
+                return;
+            }
+
+            showMessage(
+                "Slurm state: "
+                + state
+                + ". Waiting for Notebook 7…"
+            );
+        } catch (error) {
+            showMessage(error.message);
+        }
+
+        pollingTimer = window.setTimeout(
+            pollStatus,
+            2000
+        );
+    }
+
+    if (!connecting && statusUrl) {
+        pollingTimer = window.setTimeout(
+            pollStatus,
+            500
+        );
+    }
+
+    if (stopButton && stopUrl) {
+        stopButton.addEventListener(
+            "click",
+            async () => {
+                if (!window.confirm(
+                    "Stop this Jupyter Slurm session?"
+                )) {
+                    return;
+                }
+
+                stopButton.disabled = true;
+
+                try {
+                    const response = await fetch(
+                        stopUrl,
+                        {
+                            method: "POST",
+                            credentials: "same-origin",
+                            cache: "no-store",
+                            headers: {
+                                "Accept": "application/json",
+                                "X-CSRFToken": csrfToken(),
+                            },
+                        }
+                    );
+
+                    const payload = await response.json();
+
+                    if (
+                        !response.ok
+                        || payload.status !== "success"
+                    ) {
+                        throw new Error(
+                            payload.message
+                            || "Unable to stop the session."
+                        );
+                    }
+
+                    window.location.reload();
+                } catch (error) {
+                    window.alert(error.message);
+                    stopButton.disabled = false;
+                }
+            }
+        );
+    }
+})();
 </script>
-<script src="{% static 'internal/lab_tools/notebook_jupyter.js' %}"></script>
+{% endif %}
 {% endblock %}

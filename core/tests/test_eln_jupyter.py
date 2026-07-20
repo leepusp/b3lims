@@ -6,7 +6,11 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.test import TestCase, override_settings
-from django.urls import reverse
+from django.urls import (
+    get_script_prefix,
+    reverse,
+    set_script_prefix,
+)
 
 from core.models.lab_tools.notebook import (
     NotebookEntry,
@@ -24,6 +28,10 @@ class ElnJupyterTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
+        cls._original_script_prefix = (
+            get_script_prefix()
+        )
         cls.workspace = tempfile.TemporaryDirectory()
         cls.settings_override = override_settings(
             FORCE_SCRIPT_NAME=None,
@@ -35,12 +43,18 @@ class ElnJupyterTests(TestCase):
             ),
         )
         cls.settings_override.enable()
+        set_script_prefix("/")
 
     @classmethod
     def tearDownClass(cls):
-        cls.settings_override.disable()
-        cls.workspace.cleanup()
-        super().tearDownClass()
+        try:
+            cls.settings_override.disable()
+            cls.workspace.cleanup()
+        finally:
+            set_script_prefix(
+                cls._original_script_prefix
+            )
+            super().tearDownClass()
 
     def setUp(self):
         self.owner = get_user_model().objects.create_user(

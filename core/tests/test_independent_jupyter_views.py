@@ -3,14 +3,18 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
-from django.urls import reverse
+from django.urls import (
+    get_script_prefix,
+    reverse,
+    set_script_prefix,
+)
 
 from core.models.lab_tools.notebook import (
     JupyterNotebook,
     NotebookEntry,
     NotebookKernelDocument,
 )
-from core.services.jupyter_sessions import (
+from core.services.jupyter_server import (
     starter_notebook,
 )
 
@@ -24,6 +28,20 @@ from core.services.jupyter_sessions import (
     BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES=60,
 )
 class IndependentJupyterViewTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls._original_script_prefix = (
+            get_script_prefix()
+        )
+        set_script_prefix("/")
+
+        cls.addClassCleanup(
+            set_script_prefix,
+            cls._original_script_prefix,
+        )
+
     def setUp(self):
         User = get_user_model()
 
