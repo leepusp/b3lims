@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 from datetime import timedelta
 from pathlib import Path
@@ -809,17 +808,24 @@ def connection_redirect_path(session):
 
 
 def delete_notebook_workspace(notebook):
-    workspace = workspace_for_notebook(
-        notebook
+    workspace_for_notebook(notebook)
+
+    payload = _run_server_runner(
+        "workspace-delete",
+        notebook.id,
+        notebook.owner_id,
+        _safe_username(
+            notebook.owner.get_username()
+        ),
     )
 
-    if not workspace.exists():
-        return False
-
-    _ensure_child(
-        storage_root(),
-        workspace,
+    removed = payload.get(
+        "workspace_removed"
     )
 
-    shutil.rmtree(workspace)
-    return True
+    if not isinstance(removed, bool):
+        raise JupyterNotebookError(
+            "The protected workspace deletion response is invalid."
+        )
+
+    return removed

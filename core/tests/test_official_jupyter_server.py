@@ -367,37 +367,27 @@ class OfficialJupyterServerTests(TestCase):
             database_payload,
         )
 
-    def test_delete_removes_only_exact_workspace(self):
-        workspace = workspace_for_notebook(
-            self.notebook
-        )
-        workspace.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-        (
-            workspace / "notebook.ipynb"
-        ).write_text("{}")
-
-        sibling = (
-            workspace.parent / "notebook_999999"
-        )
-        sibling.mkdir()
-        (
-            sibling / "private.ipynb"
-        ).write_text("{}")
+    @patch(
+        "core.services.jupyter_server._run_server_runner"
+    )
+    def test_delete_uses_protected_exact_workspace(
+        self,
+        runner_mock,
+    ):
+        runner_mock.return_value = {
+            "status": "ok",
+            "workspace_removed": True,
+        }
 
         removed = delete_notebook_workspace(
             self.notebook
         )
 
         self.assertTrue(removed)
-        self.assertFalse(
-            workspace.exists()
-        )
-        self.assertTrue(
-            sibling.exists()
-        )
-        self.assertTrue(
-            (sibling / "private.ipynb").exists()
+
+        runner_mock.assert_called_once_with(
+            "workspace-delete",
+            self.notebook.id,
+            self.notebook.owner_id,
+            self.notebook.owner.get_username(),
         )
