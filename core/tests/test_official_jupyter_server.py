@@ -299,7 +299,7 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        "/biobank/node/gn03/45678/"
+                        "/biobank/internal/lab-tools/jupyter/node/gn03/45678/"
                     ),
                     "default_url": (
                         "/tree/notebook.ipynb"
@@ -330,7 +330,7 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        "/biobank/node/gn03/45678/"
+                        "/biobank/internal/lab-tools/jupyter/node/gn03/45678/"
                     ),
                 },
             },
@@ -350,7 +350,7 @@ class OfficialJupyterServerTests(TestCase):
         self.assertEqual(
             redirect_path,
             (
-                "/biobank/node/gn03/45678/"
+                "/biobank/internal/lab-tools/jupyter/node/gn03/45678/"
                 "tree/notebook.ipynb"
                 "?token=protected-token-value"
             ),
