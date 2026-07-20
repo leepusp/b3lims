@@ -11,19 +11,19 @@
      class="mw-page"
      data-features-url="{% url 'molecular_sequence_features_api' molecule.id %}"
      data-update-url="{% url 'molecular_sequence_update_api' molecule.id %}"
-     data-delete-url="{% url 'molecular_sequence_delete_api' molecule.id %}"
-     data-back-url="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}"
+     data-delete-url="{% url 'molecular_sequence_delete_api' molecule.id %}{% if molecular_origin == 'registry' %}?from=registry{% endif %}"
+     data-back-url="{{ molecular_back_url }}"
      data-view-storage-key="biobank.molecular-workspace.preferred-view"
      data-can-edit="{% if can_edit_molecule %}true{% else %}false{% endif %}">
 
     <header class="mw-header">
         <div>
             <nav class="mw-breadcrumb" aria-label="Breadcrumb">
-                <a href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}">
-                    ELN Notebook
+                <a href="{{ molecular_back_url }}">
+                    {{ molecular_back_label }}
                 </a>
                 <span>/</span>
-                <span>Molecular Item</span>
+                <span>Molecular record</span>
             </nav>
 
             <div class="mw-title-row">
@@ -512,7 +512,7 @@
 
 <script src="{% static 'internal/lab_tools/vendor/seqviz-3.10.22.min.js' %}?v=3.10.22"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260717-unified"
+<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260720-registry-colors"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_seqviz.js' %}?v=20260717-unified"
         defer></script>

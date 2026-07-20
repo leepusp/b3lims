@@ -5,6 +5,9 @@
 
     const FEATURE_COLORS = {
         cds: "#4f8cff",
+        gene: "#4f8cff",
+        orf: "#4f8cff",
+        insert: "#4f8cff",
         promoter: "#f6a623",
         terminator: "#8e6cef",
         primer: "#00a896",
@@ -14,6 +17,7 @@
         antibiotic: "#d45087",
         domain: "#54a24b",
         rbs: "#72b7b2",
+        utr: "#b279a2",
         signal_peptide: "#ff9da6",
         custom: "#8f96a3",
     };
@@ -308,20 +312,55 @@
         }
 
         function normalizeFeature(feature, index) {
+            const type = String(
+                feature.type
+                || feature.feature_type
+                || "custom"
+            ).toLowerCase();
+            const qualifiers = feature.qualifiers || {};
+            const providedColor = String(
+                feature.color || ""
+            ).toLowerCase();
+            const defaultColor = fallbackColor(type);
+            const explicitAutomaticColor = (
+                qualifiers.biobank_auto_color
+            );
+
+            const automaticColor = (
+                explicitAutomaticColor === true
+                || (
+                    explicitAutomaticColor !== false
+                    && (
+                        !providedColor
+                        || providedColor === "#868e96"
+                        || providedColor === defaultColor.toLowerCase()
+                    )
+                )
+            );
+
+            const color = (
+                automaticColor
+                && (
+                    !providedColor
+                    || providedColor === "#868e96"
+                )
+            )
+                ? defaultColor
+                : (feature.color || defaultColor);
+
             return {
                 id: feature.id || `local-${Date.now()}-${index}`,
                 name: String(feature.name || "Feature"),
-                type: String(
-                    feature.type || feature.feature_type || "custom"
-                ).toLowerCase(),
+                type,
                 start: Number(feature.start) || 1,
                 end: Number(feature.end) || 1,
                 strand: ["+", "-", "."].includes(feature.strand)
                     ? feature.strand
                     : "+",
-                color: feature.color || fallbackColor(feature.type),
+                color,
+                automaticColor,
                 notes: String(feature.notes || ""),
-                qualifiers: feature.qualifiers || {},
+                qualifiers,
                 order: Number.isInteger(feature.order)
                     ? feature.order
                     : index,
@@ -1170,7 +1209,7 @@
             notifyWorkspaceChange("selection");
         }
 
-        function updateSelectedFeature() {
+        function updateSelectedFeature(options = {}) {
             if (
                 !canEdit
                 || state.selectedFeature < 0
@@ -1179,10 +1218,23 @@
             }
 
             const feature = state.features[state.selectedFeature];
+            const nextType = elements.featureType.value;
+
+            if (
+                options.typeChanged === true
+                && feature.automaticColor === true
+            ) {
+                feature.color = fallbackColor(nextType);
+                elements.featureColor.value = feature.color;
+            }
+
+            if (options.colorChanged === true) {
+                feature.automaticColor = false;
+            }
 
             feature.name = elements.featureName.value.trim()
                 || "Feature";
-            feature.type = elements.featureType.value;
+            feature.type = nextType;
             feature.start = Number(elements.featureStart.value) || 1;
             feature.end = Number(elements.featureEnd.value) || 1;
             feature.strand = elements.featureStrand.value;
@@ -1194,6 +1246,9 @@
             markDirty();
             renderFeatureList();
             renderMap();
+            renderConstructionTrack();
+            renderSequencePreview();
+            notifyWorkspaceChange("feature");
         }
 
         function addFeature() {
@@ -1236,6 +1291,9 @@
             markDirty();
             renderFeatureList();
             renderMap();
+            renderConstructionTrack();
+            renderSequencePreview();
+            notifyWorkspaceChange("feature-remove");
         }
 
         function searchMatches(sequence, query) {
@@ -1695,7 +1753,12 @@
                 strand: feature.strand,
                 color: feature.color,
                 notes: feature.notes,
-                qualifiers: feature.qualifiers || {},
+                qualifiers: {
+                    ...(feature.qualifiers || {}),
+                    biobank_auto_color: (
+                        feature.automaticColor === true
+                    ),
+                },
                 order,
             }));
         }
@@ -2291,22 +2354,40 @@
 
         [
             elements.featureName,
-            elements.featureType,
             elements.featureStart,
             elements.featureEnd,
             elements.featureStrand,
-            elements.featureColor,
             elements.featureNotes,
         ].forEach(element => {
             element.addEventListener(
                 "input",
-                updateSelectedFeature
+                () => updateSelectedFeature()
             );
             element.addEventListener(
                 "change",
-                updateSelectedFeature
+                () => updateSelectedFeature()
             );
         });
+
+        elements.featureType.addEventListener(
+            "change",
+            () => updateSelectedFeature({
+                typeChanged: true,
+            })
+        );
+
+        elements.featureColor.addEventListener(
+            "input",
+            () => updateSelectedFeature({
+                colorChanged: true,
+            })
+        );
+        elements.featureColor.addEventListener(
+            "change",
+            () => updateSelectedFeature({
+                colorChanged: true,
+            })
+        );
 
         elements.search.addEventListener(
             "input",

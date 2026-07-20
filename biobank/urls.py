@@ -206,6 +206,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/unlink-sample/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_sample_api, name='notebook_unlink_sample_api'),
     path('internal/lab-tools/notebook/api/link-chemical/<int:entry_id>/', notebook_views.notebook_link_chemical_api, name='notebook_link_chemical_api'),
     path('internal/lab-tools/notebook/api/unlink-chemical/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_chemical_api, name='notebook_unlink_chemical_api'),
+    path('internal/lab-tools/molecular-registry/', notebook_views.molecular_registry_index, name='molecular_registry_index'),
     path('internal/lab-tools/notebook/molecular-sequence/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
     path('internal/lab-tools/notebook/api/molecular-sequence/update/<int:sequence_id>/', notebook_views.molecular_sequence_update_api, name='molecular_sequence_update_api'),
     path('internal/lab-tools/notebook/api/molecular-sequence/features/<int:molecule_id>/', notebook_views.molecular_sequence_features_api, name='molecular_sequence_features_api'),

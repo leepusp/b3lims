@@ -84,9 +84,15 @@
         </a>
 
         <a href="{% url 'notebook_index' %}"
-           class="nav-link {% if 'notebook' in request.path %}active{% endif %}">
+           class="nav-link {% if '/lab-tools/notebook/' in request.path and '/molecular-sequence/' not in request.path %}active{% endif %}">
             <i class="bi bi-journal-bookmark"></i>
             <span class="nav-label">ELN Notebook</span>
+        </a>
+
+        <a href="{% url 'molecular_registry_index' %}"
+           class="nav-link {% if '/lab-tools/molecular-registry/' in request.path or '/molecular-sequence/' in request.path %}active{% endif %}">
+            <i class="bi bi-bezier2"></i>
+            <span class="nav-label">Molecular Registry</span>
         </a>
 
         <a href="{% url 'jupyter_index' %}"

@@ -1,0 +1,291 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Molecular Design & Registry{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+        <div>
+            <div class="small text-muted mb-1">
+                Laboratory / Molecular Registry
+            </div>
+
+            <h1 class="h3 mb-1">
+                <i class="bi bi-bezier2 me-2"></i>
+                Molecular Design & Registry
+            </h1>
+
+            <p class="text-muted mb-0">
+                Design, annotate and register DNA, RNA, plasmids,
+                primers, inserts and protein sequences.
+            </p>
+        </div>
+
+        <div>
+            <button class="btn btn-primary"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#new-molecular-record">
+                <i class="bi bi-plus-lg me-1"></i>
+                New molecular record
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse {% if form_data %}show{% endif %} mb-4"
+         id="new-molecular-record">
+        <form method="post"
+              class="card shadow-sm">
+            {% csrf_token %}
+
+            <div class="card-header">
+                <strong>Create molecular record</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <label class="form-label"
+                               for="molecule-name">
+                            Name
+                        </label>
+                        <input class="form-control"
+                               id="molecule-name"
+                               name="name"
+                               maxlength="255"
+                               value="{{ form_data.name|default:'' }}"
+                               required>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label"
+                               for="molecule-type">
+                            Record type
+                        </label>
+                        <select class="form-select"
+                                id="molecule-type"
+                                name="sequence_type">
+                            {% for value, label in sequence_types %}
+                                <option value="{{ value }}"
+                                        {% if form_data.sequence_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label"
+                               for="molecule-topology">
+                            Topology
+                        </label>
+                        <select class="form-select"
+                                id="molecule-topology"
+                                name="topology">
+                            {% for value, label in topologies %}
+                                <option value="{{ value }}"
+                                        {% if form_data.topology == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label"
+                               for="molecule-sequence">
+                            Sequence
+                        </label>
+                        <textarea class="form-control font-monospace"
+                                  id="molecule-sequence"
+                                  name="sequence"
+                                  rows="7"
+                                  spellcheck="false"
+                                  required>{{ form_data.sequence|default:'' }}</textarea>
+                        <div class="form-text">
+                            FASTA headers, spaces and line breaks are
+                            normalized during registration.
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label"
+                               for="molecule-description">
+                            Description
+                        </label>
+                        <textarea class="form-control"
+                                  id="molecule-description"
+                                  name="description"
+                                  rows="3">{{ form_data.description|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#new-molecular-record">
+                    Cancel
+                </button>
+
+                <button class="btn btn-primary"
+                        type="submit">
+                    <i class="bi bi-check2 me-1"></i>
+                    Create record
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <form method="get"
+                  class="row g-2 align-items-end">
+                <div class="col-lg-7">
+                    <label class="form-label"
+                           for="registry-search">
+                        Search registry
+                    </label>
+                    <input class="form-control"
+                           id="registry-search"
+                           name="q"
+                           value="{{ query }}"
+                           placeholder="Name, description, ELN entry or sample">
+                </div>
+
+                <div class="col-md-7 col-lg-3">
+                    <label class="form-label"
+                           for="registry-type">
+                        Record type
+                    </label>
+                    <select class="form-select"
+                            id="registry-type"
+                            name="type">
+                        <option value="">All types</option>
+                        {% for value, label in sequence_types %}
+                            <option value="{{ value }}"
+                                    {% if active_type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-5 col-lg-2 d-grid">
+                    <button class="btn btn-outline-primary"
+                            type="submit">
+                        <i class="bi bi-search me-1"></i>
+                        Search
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-header d-flex justify-content-between">
+            <strong>Molecular records</strong>
+            <span class="badge text-bg-light border">
+                {{ molecule_count }}
+            </span>
+        </div>
+
+        {% if molecules %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Topology</th>
+                            <th>Length</th>
+                            <th>Context</th>
+                            <th>Updated</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for molecule in molecules %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">
+                                        {{ molecule.name }}
+                                    </div>
+
+                                    {% if molecule.description %}
+                                        <div class="small text-muted text-truncate"
+                                             style="max-width: 28rem;">
+                                            {{ molecule.description }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <span class="badge text-bg-primary">
+                                        {{ molecule.get_sequence_type_display }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {{ molecule.get_topology_display }}
+                                </td>
+
+                                <td>
+                                    {{ molecule.length }}
+                                    {% if molecule.sequence_type == "protein" %}
+                                        aa
+                                    {% else %}
+                                        bp
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if molecule.source_entry %}
+                                        <span class="small">
+                                            <i class="bi bi-journal-bookmark me-1"></i>
+                                            {{ molecule.source_entry.title }}
+                                        </span>
+                                    {% elif molecule.linked_sample %}
+                                        <span class="small">
+                                            <i class="bi bi-box-seam me-1"></i>
+                                            {{ molecule.linked_sample.sample_id }}
+                                        </span>
+                                    {% else %}
+                                        <span class="small text-muted">
+                                            Standalone record
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ molecule.updated_at|date:"Y-m-d H:i" }}
+                                </td>
+
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="{% url 'molecular_sequence_detail' molecule.id %}?from=registry">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>
+                                        Open
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="card-body py-5 text-center">
+                <i class="bi bi-bezier2 display-5 text-primary"></i>
+
+                <h2 class="h5 mt-3">
+                    No molecular records found
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Create the first record or change the search filters.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -116,6 +116,80 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertNotIn("unpkg", adapter)
         self.assertNotIn("localStorage", adapter)
 
+    def test_feature_colors_refresh_all_molecular_views(self):
+        script = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_workspace.js",
+        ).read_text()
+
+        palette_start = script.index(
+            "const FEATURE_COLORS"
+        )
+        palette_end = script.index(
+            "const ENZYMES"
+        )
+        palette = script[
+            palette_start:palette_end
+        ]
+
+        for feature_type in (
+            "promoter",
+            "rbs",
+            "cds",
+            "terminator",
+            "ori",
+            "antibiotic",
+            "primer",
+            "domain",
+            "utr",
+            "custom",
+        ):
+            self.assertIn(
+                f"{feature_type}:",
+                palette,
+            )
+
+        self.assertIn(
+            "feature.type",
+            script,
+        )
+        self.assertIn(
+            "feature.feature_type",
+            script,
+        )
+        self.assertIn(
+            "biobank_auto_color",
+            script,
+        )
+        self.assertIn(
+            "options.typeChanged === true",
+            script,
+        )
+        self.assertIn(
+            "options.colorChanged === true",
+            script,
+        )
+        self.assertIn(
+            'notifyWorkspaceChange("feature")',
+            script,
+        )
+        self.assertIn(
+            'notifyWorkspaceChange("feature-remove")',
+            script,
+        )
+
+        adapter = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_seqviz.js",
+        ).read_text()
+
+        self.assertIn(
+            "biobank:molecular-workspace-change",
+            adapter,
+        )
+
     def test_notebook_exposes_one_linked_molecular_workspace_flow(self):
         self.client.force_login(self.owner)
 

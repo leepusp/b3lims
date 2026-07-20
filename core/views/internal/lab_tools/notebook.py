@@ -213,6 +213,32 @@ def _can_edit_molecular_sequence(user, molecule):
     return False
 
 
+def _visible_molecular_sequences_for_user(user):
+    molecules = MolecularSequence.objects.select_related(
+        "owner",
+        "source_entry",
+        "linked_sample",
+    )
+
+    if user.is_superuser:
+        return molecules
+
+    visible_entry_ids = (
+        visible_notebook_entries_for_user(user)
+        .values_list("id", flat=True)
+    )
+    visible_sample_ids = (
+        visible_samples_for_user(user)
+        .values_list("id", flat=True)
+    )
+
+    return molecules.filter(
+        Q(owner=user)
+        | Q(source_entry_id__in=visible_entry_ids)
+        | Q(linked_sample_id__in=visible_sample_ids)
+    ).distinct()
+
+
 def _get_molecular_sequence_for_user(
     sequence_id,
     user,
@@ -657,6 +683,137 @@ def notebook_delete_entry_api(request, entry_id):
     )
 
 
+@login_required
+def molecular_registry_index(request):
+    valid_sequence_types = {
+        value
+        for value, _label
+        in MolecularSequence.SEQUENCE_TYPE_CHOICES
+    }
+    valid_topologies = {
+        value
+        for value, _label
+        in MolecularSequence.TOPOLOGY_CHOICES
+    }
+
+    if request.method == "POST":
+        try:
+            name = str(
+                request.POST.get("name") or ""
+            ).strip()
+
+            if not name:
+                raise MolecularSequenceInputError(
+                    "Name is required."
+                )
+
+            sequence_type = str(
+                request.POST.get(
+                    "sequence_type",
+                    "dna",
+                )
+            ).strip()
+
+            topology = str(
+                request.POST.get(
+                    "topology",
+                    "linear",
+                )
+            ).strip()
+
+            if sequence_type not in valid_sequence_types:
+                raise MolecularSequenceInputError(
+                    "Invalid sequence type."
+                )
+
+            if topology not in valid_topologies:
+                raise MolecularSequenceInputError(
+                    "Invalid topology."
+                )
+
+            sequence = normalize_molecular_sequence(
+                request.POST.get("sequence"),
+                sequence_type,
+            )
+
+            molecule = MolecularSequence.objects.create(
+                name=name,
+                sequence_type=sequence_type,
+                topology=topology,
+                sequence=sequence,
+                description=str(
+                    request.POST.get("description") or ""
+                ).strip(),
+                owner=request.user,
+            )
+
+        except MolecularSequenceInputError as exc:
+            messages.error(
+                request,
+                str(exc),
+            )
+        else:
+            messages.success(
+                request,
+                (
+                    f"Molecular record “{molecule.name}” "
+                    "was created."
+                ),
+            )
+
+            return redirect(
+                "molecular_sequence_detail",
+                sequence_id=molecule.id,
+            )
+
+    molecules = (
+        _visible_molecular_sequences_for_user(
+            request.user
+        )
+        .order_by("-updated_at", "-id")
+    )
+
+    query = str(
+        request.GET.get("q") or ""
+    ).strip()
+    active_type = str(
+        request.GET.get("type") or ""
+    ).strip()
+
+    if query:
+        molecules = molecules.filter(
+            Q(name__icontains=query)
+            | Q(description__icontains=query)
+            | Q(source_entry__title__icontains=query)
+            | Q(linked_sample__sample_id__icontains=query)
+        ).distinct()
+
+    if active_type in valid_sequence_types:
+        molecules = molecules.filter(
+            sequence_type=active_type
+        )
+    else:
+        active_type = ""
+
+    return render(
+        request,
+        "internal/lab_tools/molecular_registry.html",
+        {
+            "molecules": molecules,
+            "molecule_count": molecules.count(),
+            "query": query,
+            "active_type": active_type,
+            "sequence_types": (
+                MolecularSequence.SEQUENCE_TYPE_CHOICES
+            ),
+            "topologies": (
+                MolecularSequence.TOPOLOGY_CHOICES
+            ),
+            "form_data": request.POST,
+        },
+    )
+
+
 def serialize_molecular_feature(feature):
     return {
         "id": feature.id,
@@ -674,7 +831,30 @@ def serialize_molecular_feature(feature):
 
 @login_required
 def molecular_sequence_detail(request, sequence_id):
-    molecule = _get_molecular_sequence_for_user(sequence_id, request.user)
+    molecule = _get_molecular_sequence_for_user(
+        sequence_id,
+        request.user,
+    )
+
+    registry_origin = (
+        request.GET.get("from") == "registry"
+        or not molecule.source_entry_id
+    )
+
+    if registry_origin:
+        molecular_back_url = reverse(
+            "molecular_registry_index"
+        )
+        molecular_back_label = "Molecular Registry"
+        molecular_origin = "registry"
+    else:
+        molecular_back_url = (
+            f"{reverse('notebook_index')}"
+            f"?entry_id={molecule.source_entry_id}"
+            "&tab=items#items-pane"
+        )
+        molecular_back_label = "ELN Notebook"
+        molecular_origin = "eln"
 
     return render(
         request,
@@ -684,6 +864,9 @@ def molecular_sequence_detail(request, sequence_id):
             "sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "feature_types": MolecularFeature.FEATURE_TYPES,
+            "molecular_back_url": molecular_back_url,
+            "molecular_back_label": molecular_back_label,
+            "molecular_origin": molecular_origin,
             "can_edit_molecule": _can_edit_molecular_sequence(
                 request.user,
                 molecule,
@@ -925,17 +1108,35 @@ def molecular_sequence_update_api(request, sequence_id):
 @login_required
 def molecular_sequence_delete_api(request, sequence_id):
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Method not allowed",
+            },
+            status=405,
+        )
 
     molecule = _get_molecular_sequence_for_user(
         sequence_id,
         request.user,
         require_edit=True,
     )
-    redirect_url = reverse("notebook_index")
 
-    if molecule.source_entry_id:
-        redirect_url = f"{reverse('notebook_index')}?entry_id={molecule.source_entry_id}"
+    registry_origin = (
+        request.GET.get("from") == "registry"
+        or not molecule.source_entry_id
+    )
+
+    if registry_origin:
+        redirect_url = reverse(
+            "molecular_registry_index"
+        )
+    else:
+        redirect_url = (
+            f"{reverse('notebook_index')}"
+            f"?entry_id={molecule.source_entry_id}"
+            "&tab=items#items-pane"
+        )
 
     molecule.delete()
 
