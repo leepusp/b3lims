@@ -1005,6 +1005,12 @@ def molecular_sequence_update_api(request, sequence_id):
                 "Invalid sequence type."
             )
 
+        if sequence_type != molecule.sequence_type:
+            raise MolecularSequenceInputError(
+                "Sequence classification is fixed after creation. "
+                "Create a derived molecular record to change type."
+            )
+
         if topology not in valid_topologies:
             raise MolecularSequenceInputError(
                 "Invalid topology."

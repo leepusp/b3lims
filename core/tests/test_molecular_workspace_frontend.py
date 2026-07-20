@@ -116,6 +116,71 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertNotIn("unpkg", adapter)
         self.assertNotIn("localStorage", adapter)
 
+    def test_classification_and_sequence_editor_are_explicit(self):
+        template = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_sequence_detail.html",
+        ).read_text()
+        workspace = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_workspace.js",
+        ).read_text()
+        adapter = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_seqviz.js",
+        ).read_text()
+
+        type_start = template.index(
+            'id="mw-type"'
+        )
+        type_end = template.index(
+            "</select>",
+            type_start,
+        )
+        type_control = template[
+            type_start:type_end
+        ]
+
+        self.assertIn(
+            "disabled",
+            type_control,
+        )
+        self.assertNotIn(
+            "data-edit-control",
+            type_control,
+        )
+        self.assertIn(
+            "Fixed after creation",
+            template,
+        )
+        self.assertIn(
+            "data-mw-open-sequence-editor",
+            template,
+        )
+        self.assertIn(
+            'id="mw-seqviz-colors"',
+            template,
+        )
+        self.assertIn(
+            'applyWorkspaceView("sequence")',
+            workspace,
+        )
+        self.assertIn(
+            "bpColors: symbolColorsFor(data)",
+            adapter,
+        )
+        self.assertIn(
+            "NUCLEOTIDE_COLORS",
+            adapter,
+        )
+        self.assertIn(
+            "AMINO_ACID_COLORS",
+            adapter,
+        )
+
     def test_feature_colors_refresh_all_molecular_views(self):
         script = Path(
             settings.BASE_DIR,

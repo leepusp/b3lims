@@ -202,6 +202,49 @@ class MolecularWorkspaceTests(TestCase):
             ).exists()
         )
 
+    def test_update_rejects_sequence_classification_change(self):
+        create_response = self.create_molecule(
+            sequence_type="dna",
+            topology="linear",
+            sequence="ATGCGT",
+        )
+        molecule = MolecularSequence.objects.get(
+            id=create_response.json()["id"]
+        )
+
+        response = self.client.post(
+            request_path(
+                "molecular_sequence_update_api",
+                [molecule.id],
+            ),
+            data=json.dumps(
+                {
+                    "name": molecule.name,
+                    "sequence_type": "protein",
+                    "topology": "linear",
+                    "sequence": molecule.sequence,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            "classification is fixed",
+            response.json()["message"],
+        )
+
+        molecule.refresh_from_db()
+
+        self.assertEqual(
+            molecule.sequence_type,
+            "dna",
+        )
+        self.assertEqual(
+            molecule.sequence,
+            "ATGCGT",
+        )
+
     def test_update_rejects_invalid_sequence_without_modifying_record(self):
         create_response = self.create_molecule(
             sequence_type="dna",

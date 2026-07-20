@@ -16,6 +16,39 @@
         "SacI",
     ];
 
+    const NUCLEOTIDE_COLORS = {
+        A: "#b7e4c7",
+        C: "#a9d6e5",
+        G: "#ffd166",
+        T: "#ffadad",
+        U: "#cdb4db",
+        N: "#e9ecef",
+    };
+
+    const AMINO_ACID_COLORS = {
+        A: "#ffd18a",
+        C: "#ffb4a2",
+        D: "#ff8787",
+        E: "#ff8787",
+        F: "#d8f3dc",
+        G: "#a9b8ff",
+        H: "#91a7ff",
+        I: "#d8f3dc",
+        K: "#91a7ff",
+        L: "#d8f3dc",
+        M: "#d8f3dc",
+        N: "#a8e6e6",
+        P: "#e9c46a",
+        Q: "#a8e6e6",
+        R: "#91a7ff",
+        S: "#a8e6e6",
+        T: "#a8e6e6",
+        V: "#d8f3dc",
+        W: "#d8f3dc",
+        Y: "#d8f3dc",
+        X: "#e9ecef",
+    };
+
     function ready(callback) {
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", callback);
@@ -29,6 +62,7 @@
         const viewerRoot = document.getElementById("mw-seqviz-viewer");
         const mode = document.getElementById("mw-seqviz-mode");
         const enzymeMode = document.getElementById("mw-seqviz-enzymes");
+        const colorMode = document.getElementById("mw-seqviz-colors");
         const search = document.getElementById("mw-seqviz-search");
         const selectionLabel = document.getElementById("mw-seqviz-selection");
         const legend = document.getElementById("mw-seqviz-legend");
@@ -132,6 +166,24 @@
                     name: annotation.name,
                     color: annotation.color,
                 }));
+        }
+
+        function symbolColorsFor(data) {
+            if (colorMode?.value === "monochrome") {
+                return Object.fromEntries(
+                    [...new Set(data.sequence)]
+                        .map(symbol => [
+                            symbol,
+                            "#f1f3f5",
+                        ])
+                );
+            }
+
+            if (data.sequenceType === "protein") {
+                return AMINO_ACID_COLORS;
+            }
+
+            return NUCLEOTIDE_COLORS;
         }
 
         function externalSelection(data) {
@@ -256,6 +308,7 @@
                     ? "aa"
                     : (data.sequenceType === "rna" ? "rna" : "dna"),
                 viewer: mode.value,
+                bpColors: symbolColorsFor(data),
                 annotations,
                 translations: translationsFor(data, annotations),
                 primers: primersFor(data, annotations),
@@ -296,8 +349,11 @@
                 scheduleRender(20);
             }
         });
-        [mode, enzymeMode].forEach(control => {
-            control.addEventListener("change", () => scheduleRender(20));
+        [mode, enzymeMode, colorMode].forEach(control => {
+            control?.addEventListener(
+                "change",
+                () => scheduleRender(20)
+            );
         });
         search.addEventListener("input", () => scheduleRender(180));
 

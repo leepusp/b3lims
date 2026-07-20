@@ -2068,6 +2068,19 @@
             });
         });
 
+        root.querySelector(
+            "[data-mw-open-sequence-editor]"
+        )?.addEventListener("click", () => {
+            applyWorkspaceView("sequence");
+            elements.sequence.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+            });
+            elements.sequence.focus({
+                preventScroll: true,
+            });
+        });
+
         elements.mapTool.addEventListener("change", () => {
             const guidance = {
                 navigate: "Drag the background to pan and use the mouse wheel to zoom.",

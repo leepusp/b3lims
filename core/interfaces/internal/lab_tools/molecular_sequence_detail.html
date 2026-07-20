@@ -49,7 +49,7 @@
             </span>
 
             <a class="btn btn-sm btn-outline-secondary"
-               href="{% url 'notebook_index' %}{% if molecule.source_entry_id %}?entry_id={{ molecule.source_entry_id }}&amp;tab=items#items-pane{% endif %}">
+               href="{{ molecular_back_url }}">
                 <i class="bi bi-arrow-left"></i>
                 Back
             </a>
@@ -117,7 +117,7 @@
             </button>
             <button type="button" class="mw-view-option" data-mw-view="sequence">
                 <i class="bi bi-body-text"></i>
-                Colored sequence
+                {% if can_edit_molecule %}Edit sequence{% else %}Sequence{% endif %}
             </button>
             <button type="button" class="mw-view-option" data-mw-view="split">
                 <i class="bi bi-layout-split"></i>
@@ -136,6 +136,15 @@
                 <h2>Record information</h2>
                 <p>Identity, molecule type, topology and description.</p>
             </div>
+
+            {% if can_edit_molecule %}
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        data-mw-open-sequence-editor>
+                    <i class="bi bi-pencil-square"></i>
+                    Edit sequence
+                </button>
+            {% endif %}
         </div>
 
         <div class="mw-metadata-grid">
@@ -150,11 +159,12 @@
             </label>
 
             <label>
-                <span>Sequence type</span>
+                <span>Sequence classification</span>
                 <select id="mw-type"
                         class="form-select form-select-sm"
-                        data-edit-control
-                        {% if not can_edit_molecule %}disabled{% endif %}>
+                        data-classification-control
+                        aria-describedby="mw-type-help"
+                        disabled>
                     {% for value, label in sequence_types %}
                         <option value="{{ value }}"
                                 {% if molecule.sequence_type == value %}selected{% endif %}>
@@ -162,6 +172,10 @@
                         </option>
                     {% endfor %}
                 </select>
+                <small id="mw-type-help" class="text-muted">
+                    Fixed after creation. Derive a new record to change
+                    between nucleotide and protein classifications.
+                </small>
             </label>
 
             <label>
@@ -212,6 +226,15 @@
                     <select id="mw-seqviz-enzymes" class="form-select form-select-sm">
                         <option value="none">None</option>
                         <option value="common">Common enzymes</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Symbols</span>
+                    <select id="mw-seqviz-colors"
+                            class="form-select form-select-sm">
+                        <option value="colored">Colored</option>
+                        <option value="monochrome">Monochrome</option>
                     </select>
                 </label>
 
@@ -498,7 +521,7 @@
                         Create feature from selection
                     </button>
                 {% endif %}
-                <span>60 residues per row</span>
+                <span>60 symbols per row</span>
             </div>
         </div>
 
@@ -512,8 +535,8 @@
 
 <script src="{% static 'internal/lab_tools/vendor/seqviz-3.10.22.min.js' %}?v=3.10.22"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260720-registry-colors"
+<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20260720-sequence-editor"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_seqviz.js' %}?v=20260717-unified"
+<script src="{% static 'internal/lab_tools/molecular_seqviz.js' %}?v=20260720-symbol-colors"
         defer></script>
 {% endblock %}
