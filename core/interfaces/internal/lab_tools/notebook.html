@@ -1209,15 +1209,33 @@
                                     linked samples, files, analysis outputs and molecular biology records.
                                 </p>
 
-                                <div class="d-flex justify-content-center gap-2 mb-4">
+                                <div class="d-flex flex-wrap justify-content-center gap-2 mb-4"
+                                     id="eln-start-shortcuts">
                                     {% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-primary" button_label="Create first notebook" %}
-                                    <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">
-                                        <i class="bi bi-box-seam me-1"></i>Browse samples
+
+                                    <a href="{% url 'samples_list' %}"
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-box-seam me-1"></i>
+                                        Browse samples
                                     </a>
+
+                                    <a href="{% url 'chemicals_list' %}"
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-flask me-1"></i>
+                                        Browse reagents
+                                    </a>
+
+                                    <a href="{% url 'molecular_registry_index' %}"
+                                       class="btn btn-outline-success">
+                                        <i class="bi bi-bezier2 me-1"></i>
+                                        Molecular Registry
+                                    </a>
+
                                     <a href="{% url 'jupyter_index' %}"
                                        class="btn btn-outline-primary"
                                        data-jupyter-launch>
-                                        <i class="bi bi-code-square me-1"></i>Launch Jupyter
+                                        <i class="bi bi-code-square me-1"></i>
+                                        Launch Jupyter
                                     </a>
                                 </div>
 

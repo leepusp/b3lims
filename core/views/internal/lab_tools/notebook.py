@@ -1034,12 +1034,23 @@ def molecular_registry_index(request):
     else:
         active_type = ""
 
+    molecule_count = molecules.count()
+    molecules = list(molecules)
+
+    for molecule in molecules:
+        molecule.can_delete_from_registry = (
+            _can_edit_molecular_sequence(
+                request.user,
+                molecule,
+            )
+        )
+
     return render(
         request,
         "internal/lab_tools/molecular_registry.html",
         {
             "molecules": molecules,
-            "molecule_count": molecules.count(),
+            "molecule_count": molecule_count,
             "query": query,
             "active_type": active_type,
             "sequence_types": (
