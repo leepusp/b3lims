@@ -191,6 +191,55 @@ class NotebookChemicalLink(models.Model):
         return f"{self.entry_id} -> chemical:{self.chemical_id}"
 
 
+
+class NotebookMolecularLink(models.Model):
+    """
+    Reusable link between an ELN entry and a molecular record.
+
+    MolecularSequence.source_entry remains the creation
+    provenance while this link allows reuse across experiments.
+    """
+
+    entry = models.ForeignKey(
+        NotebookEntry,
+        on_delete=models.CASCADE,
+        related_name="molecular_links",
+    )
+    molecule = models.ForeignKey(
+        "MolecularSequence",
+        on_delete=models.CASCADE,
+        related_name="notebook_links",
+    )
+    snapshot_json = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+    linked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_molecular_links_created",
+    )
+    linked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-linked_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entry", "molecule"],
+                name="unique_notebook_entry_molecular_link",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.entry_id} -> "
+            f"molecular:{self.molecule_id}"
+        )
+
+
 class MolecularFeature(models.Model):
     """
     Editable sequence feature linked to a MolecularSequence.

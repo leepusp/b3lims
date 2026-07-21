@@ -23,6 +23,7 @@ from core.models.lab_tools.notebook import (
     NotebookKernelExecution,
     NotebookSampleLink,
     NotebookChemicalLink,
+    NotebookMolecularLink,
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
@@ -105,6 +106,53 @@ def build_chemical_snapshot(chemical):
         "hazard_notes": _safe_str(getattr(chemical, "hazard_notes", "")),
         "detail_url": _chemical_detail_url(chemical),
     }
+
+
+
+def build_molecular_snapshot(molecule):
+    return {
+        "id": molecule.id,
+        "name": _safe_str(molecule.name),
+        "sequence_type": _safe_str(
+            molecule.sequence_type
+        ),
+        "sequence_type_display": (
+            molecule.get_sequence_type_display()
+        ),
+        "topology": _safe_str(molecule.topology),
+        "topology_display": (
+            molecule.get_topology_display()
+        ),
+        "length": molecule.length,
+        "description": _safe_str(
+            molecule.description
+        ),
+        "checksum_sha256": _safe_str(
+            molecule.checksum_sha256
+        ),
+        "detail_url": reverse(
+            "molecular_sequence_detail",
+            args=[molecule.id],
+        ),
+    }
+
+
+def serialize_notebook_molecular_link(link):
+    payload = build_molecular_snapshot(
+        link.molecule
+    )
+    payload.update(
+        {
+            "status": "success",
+            "link_id": link.id,
+            "linked_at": (
+                link.linked_at.isoformat()
+                if link.linked_at
+                else ""
+            ),
+        }
+    )
+    return payload
 
 
 def build_sample_snapshot(sample):
@@ -236,6 +284,7 @@ def _visible_molecular_sequences_for_user(user):
         Q(owner=user)
         | Q(source_entry_id__in=visible_entry_ids)
         | Q(linked_sample_id__in=visible_sample_ids)
+        | Q(notebook_links__entry_id__in=visible_entry_ids)
     ).distinct()
 
 
@@ -271,6 +320,7 @@ def _get_molecular_sequence_for_user(
                 Q(owner=user)
                 | Q(source_entry_id__in=visible_entry_ids)
                 | Q(linked_sample_id__in=visible_sample_ids)
+        | Q(notebook_links__entry_id__in=visible_entry_ids)
             ).distinct(),
             id=sequence_id,
         )
@@ -314,6 +364,7 @@ def notebook_index(request):
     active_entry = None
     linked_sample_links = []
     linked_chemical_links = []
+    linked_molecular_links = []
     blocks = []
     attachments = []
     protocol_chemicals = []
@@ -348,11 +399,20 @@ def notebook_index(request):
         attachments = active_entry.attachments.all()
 
         protocol_chemicals = Chemical.objects.all().order_by("name", "id")[:200]
-        molecular_sequences = (
-            active_entry.molecular_sequences
-            .all()
-            .order_by("-updated_at", "-id")
+        linked_molecular_links = (
+            active_entry.molecular_links
+            .select_related(
+                "molecule",
+                "molecule__owner",
+                "molecule__source_entry",
+                "molecule__linked_sample",
+            )
+            .order_by("-linked_at", "-id")
         )
+        molecular_sequences = [
+            link.molecule
+            for link in linked_molecular_links
+        ]
 
         try:
             eln_jupyter_document = (
@@ -364,7 +424,7 @@ def notebook_index(request):
         experiment_context_counts = {
             "samples": linked_sample_links.count(),
             "chemicals": linked_chemical_links.count(),
-            "molecules": molecular_sequences.count(),
+            "molecules": linked_molecular_links.count(),
             "attachments": attachments.count(),
             "jupyter": int(
                 eln_jupyter_document is not None
@@ -390,6 +450,7 @@ def notebook_index(request):
             "active_entry": active_entry,
             "linked_sample_links": linked_sample_links,
             "linked_chemical_links": linked_chemical_links,
+            "linked_molecular_links": linked_molecular_links,
             "linked_samples_json": linked_samples_json,
             "blocks": blocks,
             "attachments": attachments,
@@ -1333,6 +1394,172 @@ def molecular_sequence_delete_api(request, sequence_id):
 
 
 @login_required
+def search_molecular_sequences_api(request):
+    query = str(
+        request.GET.get("q") or ""
+    ).strip()
+    entry_id = request.GET.get("entry_id")
+
+    if len(query) < 1:
+        return JsonResponse({"results": []})
+
+    entry = None
+    if entry_id:
+        entry = _get_entry_for_user(
+            entry_id,
+            request.user,
+        )
+
+    molecules = (
+        _visible_molecular_sequences_for_user(
+            request.user
+        )
+        .filter(
+            Q(name__icontains=query)
+            | Q(description__icontains=query)
+            | Q(checksum_sha256__icontains=query)
+        )
+    )
+
+    if entry is not None:
+        molecules = molecules.exclude(
+            notebook_links__entry=entry
+        )
+
+    molecules = molecules.order_by(
+        "name",
+        "id",
+    )[:20]
+
+    return JsonResponse(
+        {
+            "results": [
+                build_molecular_snapshot(molecule)
+                for molecule in molecules
+            ]
+        }
+    )
+
+
+@login_required
+def notebook_link_molecular_sequence_api(
+    request,
+    entry_id,
+):
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Method not allowed.",
+            },
+            status=405,
+        )
+
+    entry = _get_entry_for_user(
+        entry_id,
+        request.user,
+        require_edit=True,
+    )
+
+    try:
+        data = json.loads(
+            request.body.decode("utf-8") or "{}"
+        )
+        molecule = _get_molecular_sequence_for_user(
+            data.get("molecule_id"),
+            request.user,
+        )
+
+        link, created = (
+            NotebookMolecularLink.objects
+            .get_or_create(
+                entry=entry,
+                molecule=molecule,
+                defaults={
+                    "snapshot_json": (
+                        build_molecular_snapshot(
+                            molecule
+                        )
+                    ),
+                    "linked_by": request.user,
+                },
+            )
+        )
+
+        if not created:
+            link.snapshot_json = (
+                build_molecular_snapshot(
+                    molecule
+                )
+            )
+            if link.linked_by_id is None:
+                link.linked_by = request.user
+            link.save(
+                update_fields=[
+                    "snapshot_json",
+                    "linked_by",
+                ]
+            )
+
+        return JsonResponse(
+            serialize_notebook_molecular_link(
+                link
+            )
+        )
+    except (
+        json.JSONDecodeError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": str(exc),
+            },
+            status=400,
+        )
+
+
+@login_required
+def notebook_unlink_molecular_sequence_api(
+    request,
+    entry_id,
+    link_id,
+):
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "Method not allowed.",
+            },
+            status=405,
+        )
+
+    entry = _get_entry_for_user(
+        entry_id,
+        request.user,
+        require_edit=True,
+    )
+
+    link = get_object_or_404(
+        NotebookMolecularLink.objects
+        .select_related("molecule"),
+        id=link_id,
+        entry=entry,
+    )
+
+    molecule_id = link.molecule_id
+    link.delete()
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "molecule_id": molecule_id,
+        }
+    )
+
+
+@login_required
 def notebook_create_molecular_sequence_api(request, entry_id):
     if request.method != "POST":
         return JsonResponse(
@@ -1413,6 +1640,15 @@ def notebook_create_molecular_sequence_api(request, entry_id):
             linked_sample=linked_sample,
             source_entry=entry,
             owner=request.user,
+        )
+
+        NotebookMolecularLink.objects.create(
+            entry=entry,
+            molecule=molecule,
+            snapshot_json=build_molecular_snapshot(
+                molecule
+            ),
+            linked_by=request.user,
         )
 
         return JsonResponse(

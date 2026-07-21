@@ -818,111 +818,291 @@
 
                                     <hr>
 
-                                    <section class="my-4">
-                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                                            <div class="fw-bold">
-                                                <i class="bi bi-dna me-2"></i>Molecular records
+                                    <section class="my-4"
+                                             id="molecular-records-section">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                            <div>
+                                                <div class="fw-bold">
+                                                    <i class="bi bi-dna me-2"></i>Molecular records
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Attach registry records to the experiment and insert references into the notes.
+                                                </div>
                                             </div>
 
-                                            <div class="d-flex gap-2">
+                                            <div class="d-flex flex-wrap gap-2">
                                                 <a href="{% url 'molecular_registry_index' %}"
                                                    class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-collection me-1"></i>
                                                     Open registry
                                                 </a>
 
                                                 <button type="button"
-                                                        class="btn btn-sm btn-success"
-                                                        onclick="openMolecularWorkspaceCreator()">
-                                                    <i class="bi bi-plus-lg me-1"></i>
-                                                    New record
+                                                        class="btn btn-sm btn-outline-success"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#molecular-record-tools"
+                                                        aria-expanded="false"
+                                                        aria-controls="molecular-record-tools">
+                                                    <i class="bi bi-link-45deg me-1"></i>
+                                                    Add molecular record
                                                 </button>
                                             </div>
                                         </div>
 
-                                        <div id="molecular-workspace-creator"
-                                             class="border rounded bg-light p-3 mb-3">
-                                            <div class="row g-2">
-                                                <div class="col-md-4">
-                                                    <label class="form-label small text-muted">Name</label>
-                                                    <input type="text"
-                                                           id="molecular-item-name"
-                                                           class="form-control form-control-sm"
-                                                           placeholder="pBR322_EGFR, primer_F, CDS...">
-                                                </div>
+                                        <div id="molecular-record-tools"
+                                             class="collapse mb-3">
+                                            <div class="border rounded bg-light p-3">
+                                                <ul class="nav nav-pills mb-3"
+                                                    id="molecular-record-tool-tabs"
+                                                    role="tablist">
+                                                    <li class="nav-item" role="presentation">
+                                                        <button id="molecular-link-existing-tab"
+                                                                type="button"
+                                                                class="nav-link active"
+                                                                data-bs-toggle="pill"
+                                                                data-bs-target="#molecular-link-existing-pane"
+                                                                role="tab"
+                                                                aria-controls="molecular-link-existing-pane"
+                                                                aria-selected="true">
+                                                            <i class="bi bi-search me-1"></i>
+                                                            Link existing
+                                                        </button>
+                                                    </li>
 
-                                                <div class="col-md-3">
-                                                    <label class="form-label small text-muted">Type</label>
-                                                    <select id="molecular-item-type"
-                                                            class="form-select form-select-sm">
-                                                        {% for value, label in molecular_sequence_types %}
-                                                            <option value="{{ value }}">{{ label }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
+                                                    <li class="nav-item" role="presentation">
+                                                        <button id="molecular-create-new-tab"
+                                                                type="button"
+                                                                class="nav-link"
+                                                                data-bs-toggle="pill"
+                                                                data-bs-target="#molecular-create-new-pane"
+                                                                role="tab"
+                                                                aria-controls="molecular-create-new-pane"
+                                                                aria-selected="false">
+                                                            <i class="bi bi-plus-lg me-1"></i>
+                                                            New record
+                                                        </button>
+                                                    </li>
+                                                </ul>
 
-                                                <div class="col-md-3">
-                                                    <label class="form-label small text-muted">Topology</label>
-                                                    <select id="molecular-item-topology"
-                                                            class="form-select form-select-sm">
-                                                        {% for value, label in molecular_topologies %}
-                                                            <option value="{{ value }}">{{ label }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
+                                                <div class="tab-content">
+                                                    <div id="molecular-link-existing-pane"
+                                                         class="tab-pane fade show active"
+                                                         role="tabpanel"
+                                                         aria-labelledby="molecular-link-existing-tab"
+                                                         tabindex="0">
+                                                        <label for="molecular-record-search"
+                                                               class="form-label small fw-bold">
+                                                            Search Molecular Registry
+                                                        </label>
 
-                                                <div class="col-md-2 d-flex align-items-end">
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-primary w-100"
-                                                            onclick="createMolecularItem()">
-                                                        Create
-                                                    </button>
-                                                </div>
+                                                        <div class="input-group input-group-sm">
+                                                            <input id="molecular-record-search"
+                                                                   type="search"
+                                                                   class="form-control"
+                                                                   placeholder="Name, description, type or sequence identifier"
+                                                                   autocomplete="off"
+                                                                   onkeydown="if (event.key === 'Enter') { event.preventDefault(); searchMolecularRecords(); }">
 
-                                                <div class="col-md-12">
-                                                    <label class="form-label small text-muted">Description</label>
-                                                    <input type="text"
-                                                           id="molecular-item-description"
-                                                           class="form-control form-control-sm"
-                                                           placeholder="Design rationale, source or purpose">
-                                                </div>
+                                                            <button type="button"
+                                                                    class="btn btn-outline-primary"
+                                                                    onclick="searchMolecularRecords()">
+                                                                <i class="bi bi-search me-1"></i>
+                                                                Search
+                                                            </button>
+                                                        </div>
 
-                                                <div class="col-md-12">
-                                                    <label class="form-label small text-muted">Sequence</label>
-                                                    <textarea id="molecular-item-sequence"
-                                                              class="form-control sequence-input"
-                                                              rows="5"
-                                                              placeholder="Paste FASTA or raw sequence"></textarea>
+                                                        <div class="form-text">
+                                                            Existing records can be linked to multiple ELN experiments without being duplicated.
+                                                        </div>
+
+                                                        <div id="molecular-record-search-status"
+                                                             class="small text-muted mt-3"
+                                                             aria-live="polite"></div>
+
+                                                        <div id="molecular-record-search-results"
+                                                             class="mt-2"></div>
+                                                    </div>
+
+                                                    <div id="molecular-create-new-pane"
+                                                         class="tab-pane fade"
+                                                         role="tabpanel"
+                                                         aria-labelledby="molecular-create-new-tab"
+                                                         tabindex="0">
+                                                        <div id="molecular-workspace-creator">
+                                                            <div class="row g-2">
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label small text-muted">Name</label>
+                                                                    <input type="text"
+                                                                           id="molecular-item-name"
+                                                                           class="form-control form-control-sm"
+                                                                           placeholder="pBR322_EGFR, primer_F, CDS...">
+                                                                </div>
+
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small text-muted">Type</label>
+                                                                    <select id="molecular-item-type"
+                                                                            class="form-select form-select-sm">
+                                                                        {% for value, label in molecular_sequence_types %}
+                                                                            <option value="{{ value }}">{{ label }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small text-muted">Topology</label>
+                                                                    <select id="molecular-item-topology"
+                                                                            class="form-select form-select-sm">
+                                                                        {% for value, label in molecular_topologies %}
+                                                                            <option value="{{ value }}">{{ label }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="col-md-2 d-flex align-items-end">
+                                                                    <button type="button"
+                                                                            class="btn btn-sm btn-primary w-100"
+                                                                            onclick="createMolecularItem()">
+                                                                        Create
+                                                                    </button>
+                                                                </div>
+
+                                                                <div class="col-md-12">
+                                                                    <label class="form-label small text-muted">Description</label>
+                                                                    <input type="text"
+                                                                           id="molecular-item-description"
+                                                                           class="form-control form-control-sm"
+                                                                           placeholder="Design rationale, source or purpose">
+                                                                </div>
+
+                                                                <div class="col-md-12">
+                                                                    <label class="form-label small text-muted">Sequence</label>
+                                                                    <textarea id="molecular-item-sequence"
+                                                                              class="form-control sequence-input"
+                                                                              rows="5"
+                                                                              placeholder="Paste FASTA or raw sequence"></textarea>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {% for molecule in molecular_sequences %}
-                                            <div class="border rounded p-3 mb-2 bg-white">
-                                                <div class="d-flex justify-content-between align-items-start gap-3">
-                                                    <div>
-                                                        <div class="fw-bold">{{ molecule.name }}</div>
-                                                        <div class="small text-muted">
-                                                            {{ molecule.get_sequence_type_display }}
-                                                            · {{ molecule.get_topology_display }}
-                                                            · {{ molecule.length }} bp/aa
+                                        <div id="linked-molecular-records">
+                                            {% for link in linked_molecular_links %}
+                                                {% with molecule=link.molecule %}
+                                                    <article class="border rounded mb-2 bg-white"
+                                                             id="molecular-link-card-{{ link.id }}"
+                                                             data-molecular-link-card>
+                                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3">
+                                                            <button type="button"
+                                                                    class="btn btn-link text-start text-decoration-none text-body p-0 flex-grow-1"
+                                                                    data-bs-toggle="collapse"
+                                                                    data-bs-target="#molecular-link-details-{{ link.id }}"
+                                                                    aria-expanded="false"
+                                                                    aria-controls="molecular-link-details-{{ link.id }}">
+                                                                <span class="d-flex align-items-start gap-2">
+                                                                    <i class="bi bi-chevron-right mt-1"
+                                                                       data-molecular-expand-icon></i>
+
+                                                                    <span>
+                                                                        <span class="fw-bold d-block">
+                                                                            {{ molecule.name }}
+                                                                        </span>
+
+                                                                        <span class="small text-muted d-block">
+                                                                            {{ molecule.get_sequence_type_display }}
+                                                                            · {{ molecule.get_topology_display }}
+                                                                            · {{ molecule.length }}
+                                                                            {% if molecule.sequence_type == "protein" %}aa{% else %}bp{% endif %}
+                                                                        </span>
+                                                                    </span>
+                                                                </span>
+                                                            </button>
+
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                                <button type="button"
+                                                                        class="btn btn-sm btn-outline-primary"
+                                                                        data-molecular-note-item
+                                                                        data-id="{{ molecule.id }}"
+                                                                        data-name="{{ molecule.name }}"
+                                                                        data-sequence-type="{{ molecule.sequence_type }}"
+                                                                        data-topology="{{ molecule.topology }}"
+                                                                        data-length="{{ molecule.length }}"
+                                                                        data-description="{{ molecule.description }}"
+                                                                        data-detail-url="{% url 'molecular_sequence_detail' molecule.id %}"
+                                                                        onclick="insertMolecularRecordIntoNotes(this)">
+                                                                    <i class="bi bi-journal-plus me-1"></i>
+                                                                    Insert into notes
+                                                                </button>
+
+                                                                <a href="{% url 'molecular_sequence_detail' molecule.id %}"
+                                                                   class="btn btn-sm btn-outline-success"
+                                                                   target="_blank"
+                                                                   rel="noopener">
+                                                                    Open
+                                                                </a>
+
+                                                                <button type="button"
+                                                                        class="btn btn-sm btn-outline-danger"
+                                                                        onclick="unlinkMolecularRecord({{ link.id }}, '{{ molecule.name|escapejs }}')">
+                                                                    Detach
+                                                                </button>
+                                                            </div>
                                                         </div>
 
-                                                        {% if molecule.description %}
-                                                            <div class="small mt-1">{{ molecule.description }}</div>
-                                                        {% endif %}
-                                                    </div>
+                                                        <div id="molecular-link-details-{{ link.id }}"
+                                                             class="collapse"
+                                                             data-molecular-link-details>
+                                                            <div class="border-top px-3 py-3 bg-light">
+                                                                <div class="row g-3 small">
+                                                                    <div class="col-md-3">
+                                                                        <div class="text-muted">Classification</div>
+                                                                        <div class="fw-semibold">
+                                                                            {{ molecule.get_sequence_type_display }}
+                                                                        </div>
+                                                                    </div>
 
-                                                    <a href="{% url 'molecular_sequence_detail' molecule.id %}"
-                                                       class="btn btn-sm btn-outline-success">
-                                                        Open
-                                                    </a>
+                                                                    <div class="col-md-3">
+                                                                        <div class="text-muted">Topology</div>
+                                                                        <div class="fw-semibold">
+                                                                            {{ molecule.get_topology_display }}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="col-md-3">
+                                                                        <div class="text-muted">Length</div>
+                                                                        <div class="fw-semibold">
+                                                                            {{ molecule.length }}
+                                                                            {% if molecule.sequence_type == "protein" %}aa{% else %}bp{% endif %}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="col-md-3">
+                                                                        <div class="text-muted">Linked</div>
+                                                                        <div class="fw-semibold">
+                                                                            {{ link.linked_at|date:"Y-m-d H:i" }}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {% if molecule.description %}
+                                                                        <div class="col-12">
+                                                                            <div class="text-muted">Description</div>
+                                                                            <div>{{ molecule.description }}</div>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </article>
+                                                {% endwith %}
+                                            {% empty %}
+                                                <div id="molecular-record-empty"
+                                                     class="text-muted small border rounded p-3 bg-light">
+                                                    No molecular records are linked to this experiment.
                                                 </div>
-                                            </div>
-                                        {% empty %}
-                                            <div class="text-muted small border rounded p-3 bg-light">
-                                                No molecular records are linked to this experiment.
-                                            </div>
-                                        {% endfor %}
+                                            {% endfor %}
+                                        </div>
                                     </section>
 
                                     <hr>
@@ -1546,19 +1726,372 @@ function insertRelevantItemIntoMainNote(item, autoSave = true) {
 }
 /* BIOBANK_RELEVANT_ITEM_NOTE_INSERT_END */
 
-function openMolecularWorkspaceCreator() {
+function showMolecularRecordTools(tabButtonId) {
     activateEntryTab("items-tab");
 
-    const creator = document.getElementById("molecular-workspace-creator");
-    const nameInput = document.getElementById("molecular-item-name");
+    const tools = document.getElementById("molecular-record-tools");
+    const tabButton = document.getElementById(tabButtonId);
+
+    if (tools && window.bootstrap?.Collapse) {
+        window.bootstrap.Collapse.getOrCreateInstance(
+            tools,
+            {toggle: false}
+        ).show();
+    } else {
+        tools?.classList.add("show");
+    }
+
+    if (tabButton && window.bootstrap?.Tab) {
+        window.bootstrap.Tab.getOrCreateInstance(
+            tabButton
+        ).show();
+    }
 
     window.setTimeout(() => {
-        creator?.scrollIntoView({behavior: "smooth", block: "center"});
-        creator?.classList.add("border-success");
-        nameInput?.focus();
-        window.setTimeout(() => creator?.classList.remove("border-success"), 1400);
+        tools?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
     }, 180);
 }
+
+function openMolecularWorkspaceCreator() {
+    showMolecularRecordTools("molecular-create-new-tab");
+
+    window.setTimeout(() => {
+        document.getElementById("molecular-item-name")?.focus();
+    }, 260);
+}
+
+function escapeMolecularHtml(value) {
+    const element = document.createElement("div");
+    element.textContent = String(value ?? "");
+    return element.innerHTML;
+}
+
+function molecularRecordReloadUrl() {
+    return "{% url 'notebook_index' %}?entry_id={{ active_entry.id }}&tab=items#items-pane";
+}
+
+function molecularRecordDisplayType(record) {
+    return (
+        record.sequence_type_display
+        || record.type_display
+        || record.sequence_type
+        || record.type
+        || "Molecular record"
+    );
+}
+
+function molecularRecordDisplayTopology(record) {
+    return (
+        record.topology_display
+        || record.topology
+        || ""
+    );
+}
+
+function renderMolecularSearchResults(records) {
+    const results = document.getElementById(
+        "molecular-record-search-results"
+    );
+    const status = document.getElementById(
+        "molecular-record-search-status"
+    );
+
+    if (!results || !status) {
+        return;
+    }
+
+    results.replaceChildren();
+
+    if (!records.length) {
+        status.textContent = (
+            "No available molecular records matched this search."
+        );
+        return;
+    }
+
+    status.textContent = (
+        `${records.length} available record`
+        + `${records.length === 1 ? "" : "s"} found.`
+    );
+
+    records.forEach(record => {
+        const card = document.createElement("div");
+        card.className = (
+            "border rounded bg-white p-3 mb-2 "
+            + "d-flex flex-wrap justify-content-between "
+            + "align-items-center gap-3"
+        );
+
+        const identity = document.createElement("div");
+        identity.className = "flex-grow-1";
+
+        const name = document.createElement("div");
+        name.className = "fw-bold";
+        name.textContent = record.name || "Unnamed molecular record";
+
+        const metadata = document.createElement("div");
+        metadata.className = "small text-muted";
+
+        const metadataParts = [
+            molecularRecordDisplayType(record),
+            molecularRecordDisplayTopology(record),
+        ].filter(Boolean);
+
+        if (record.length !== undefined && record.length !== null) {
+            const unit = (
+                record.sequence_type === "protein"
+                ? "aa"
+                : "bp"
+            );
+            metadataParts.push(`${record.length} ${unit}`);
+        }
+
+        metadata.textContent = metadataParts.join(" · ");
+
+        identity.append(name, metadata);
+
+        if (record.description) {
+            const description = document.createElement("div");
+            description.className = "small mt-1";
+            description.textContent = record.description;
+            identity.append(description);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "d-flex gap-2";
+
+        if (record.detail_url) {
+            const open = document.createElement("a");
+            open.className = "btn btn-sm btn-outline-secondary";
+            open.href = record.detail_url;
+            open.target = "_blank";
+            open.rel = "noopener";
+            open.textContent = "Open";
+            actions.append(open);
+        }
+
+        const attach = document.createElement("button");
+        attach.type = "button";
+        attach.className = "btn btn-sm btn-primary";
+        attach.textContent = "Attach";
+        attach.addEventListener("click", () => {
+            linkMolecularRecord(record.id, attach);
+        });
+
+        actions.append(attach);
+        card.append(identity, actions);
+        results.append(card);
+    });
+}
+
+function searchMolecularRecords() {
+    const input = document.getElementById(
+        "molecular-record-search"
+    );
+    const status = document.getElementById(
+        "molecular-record-search-status"
+    );
+    const results = document.getElementById(
+        "molecular-record-search-results"
+    );
+    const query = String(input?.value || "").trim();
+
+    if (query.length < 2) {
+        if (status) {
+            status.textContent = (
+                "Enter at least two characters to search."
+            );
+        }
+        results?.replaceChildren();
+        input?.focus();
+        return;
+    }
+
+    if (status) {
+        status.textContent = "Searching Molecular Registry...";
+    }
+    results?.replaceChildren();
+
+    const searchUrl = new URL(
+        "{% url 'search_molecular_sequences_api' %}",
+        window.location.origin
+    );
+
+    searchUrl.searchParams.set("q", query);
+    searchUrl.searchParams.set(
+        "entry_id",
+        "{{ active_entry.id }}"
+    );
+
+    fetch(searchUrl.toString(), {
+        headers: {
+            "Accept": "application/json"
+        }
+    })
+        .then(response => response.json().then(data => ({
+            ok: response.ok,
+            data
+        })))
+        .then(({ok, data}) => {
+            if (!ok || data.status === "error") {
+                throw new Error(
+                    data.message
+                    || "Could not search molecular records."
+                );
+            }
+
+            renderMolecularSearchResults(
+                Array.isArray(data.results)
+                    ? data.results
+                    : []
+            );
+        })
+        .catch(error => {
+            if (status) {
+                status.textContent = (
+                    error.message
+                    || "Could not search molecular records."
+                );
+            }
+        });
+}
+
+function linkMolecularRecord(moleculeId, button) {
+    if (!moleculeId) {
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Attaching...";
+    }
+
+    postJson(
+        "{% url 'notebook_link_molecular_sequence_api' active_entry.id %}",
+        {molecule_id: moleculeId}
+    )
+        .then(data => {
+            if (data.status !== "success") {
+                throw new Error(
+                    data.message
+                    || "Could not attach the molecular record."
+                );
+            }
+
+            window.location.href = molecularRecordReloadUrl();
+        })
+        .catch(error => {
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Attach";
+            }
+
+            alert(
+                error.message
+                || error
+                || "Could not attach the molecular record."
+            );
+        });
+}
+
+function unlinkMolecularRecord(linkId, moleculeName) {
+    const confirmed = window.confirm(
+        `Detach "${moleculeName}" from this experiment?\n\n`
+        + "The Molecular Registry record will be preserved."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    const urlTemplate = (
+        "{% url 'notebook_unlink_molecular_sequence_api' active_entry.id 0 %}"
+    );
+    const unlinkUrl = urlTemplate.replace(
+        /\/0\/$/,
+        `/${linkId}/`
+    );
+
+    postJson(unlinkUrl, {})
+        .then(data => {
+            if (data.status !== "success") {
+                throw new Error(
+                    data.message
+                    || "Could not detach the molecular record."
+                );
+            }
+
+            window.location.href = molecularRecordReloadUrl();
+        })
+        .catch(error => {
+            alert(
+                error.message
+                || error
+                || "Could not detach the molecular record."
+            );
+        });
+}
+
+function insertMolecularRecordIntoNotes(button) {
+    if (!button) {
+        return;
+    }
+
+    const item = {
+        id: Number(button.dataset.id || 0),
+        name: button.dataset.name || "Molecular record",
+        sequence_type: button.dataset.sequenceType || "dna",
+        topology: button.dataset.topology || "linear",
+        length: Number(button.dataset.length || 0),
+        description: button.dataset.description || "",
+        detail_url: button.dataset.detailUrl || ""
+    };
+
+    activateEntryTab("notes-tab");
+
+    window.setTimeout(() => {
+        insertRelevantItemIntoMainNote(item);
+    }, 100);
+}
+
+document.addEventListener("shown.bs.collapse", event => {
+    if (!event.target.matches("[data-molecular-link-details]")) {
+        return;
+    }
+
+    const card = event.target.closest(
+        "[data-molecular-link-card]"
+    );
+    const icon = card?.querySelector(
+        "[data-molecular-expand-icon]"
+    );
+
+    icon?.classList.replace(
+        "bi-chevron-right",
+        "bi-chevron-down"
+    );
+});
+
+document.addEventListener("hidden.bs.collapse", event => {
+    if (!event.target.matches("[data-molecular-link-details]")) {
+        return;
+    }
+
+    const card = event.target.closest(
+        "[data-molecular-link-card]"
+    );
+    const icon = card?.querySelector(
+        "[data-molecular-expand-icon]"
+    );
+
+    icon?.classList.replace(
+        "bi-chevron-down",
+        "bi-chevron-right"
+    );
+});
 
 function createMolecularItem() {
         const nameInput = document.getElementById("molecular-item-name");
