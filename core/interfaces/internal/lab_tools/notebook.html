@@ -13,6 +13,10 @@
         height: calc(100vh - 130px);
     }
 
+    .notebook-shell.notebook-shell-empty {
+        grid-template-columns: 280px minmax(0, 1fr);
+    }
+
     .notebook-panel {
         background: #fff;
         border: 1px solid #dee2e6;
@@ -323,7 +327,7 @@
 
     </div>
 
-    <div class="notebook-shell">
+    <div class="notebook-shell{% if not active_entry %} notebook-shell-empty{% endif %}">
 
         <aside class="notebook-panel">
             <div class="notebook-panel-header">Entries</div>
@@ -1290,10 +1294,11 @@
             {% endif %}
         </main>
 
-        <aside class="notebook-panel">
+        {% if active_entry %}
+        <aside class="notebook-panel"
+               id="linked-experiment-context">
             <div class="notebook-panel-header">Linked samples</div>
 
-            {% if active_entry %}
                 <div class="notebook-panel-body">
                     <label class="form-label small text-muted">Search sample</label>
                     <input type="text" id="sample-search" class="form-control form-control-sm" placeholder="Sample ID, organism, type..." oninput="searchSamples(this.value)">
@@ -1447,8 +1452,8 @@
                 </div>
             </div>
 
-            {% endif %}
         </aside>
+        {% endif %}
     </div>
 </div>
 
