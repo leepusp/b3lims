@@ -133,24 +133,25 @@ class MolecularWorkspaceFrontendTests(TestCase):
             "molecular_seqviz.js",
         ).read_text()
 
-        type_start = template.index(
-            'id="mw-type"'
-        )
-        type_end = template.index(
-            "</select>",
-            type_start,
-        )
-        type_control = template[
-            type_start:type_end
-        ]
-
         self.assertIn(
-            "disabled",
-            type_control,
+            'id="mw-type-display"',
+            template,
+        )
+        self.assertIn(
+            'id="mw-type"',
+            template,
+        )
+        self.assertIn(
+            'type="hidden"',
+            template,
         )
         self.assertNotIn(
-            "data-edit-control",
-            type_control,
+            '<select id="mw-type"',
+            template,
+        )
+        self.assertNotIn(
+            "data-classification-control",
+            template,
         )
         self.assertIn(
             "Fixed after creation",

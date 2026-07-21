@@ -160,18 +160,15 @@
 
             <label>
                 <span>Sequence classification</span>
-                <select id="mw-type"
-                        class="form-select form-select-sm"
-                        data-classification-control
-                        aria-describedby="mw-type-help"
-                        disabled>
-                    {% for value, label in sequence_types %}
-                        <option value="{{ value }}"
-                                {% if molecule.sequence_type == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
+                <span id="mw-type-display"
+                      class="form-control form-control-sm bg-light"
+                      role="textbox"
+                      aria-readonly="true">
+                    {{ molecule.get_sequence_type_display }}
+                </span>
+                <input id="mw-type"
+                       type="hidden"
+                       value="{{ molecule.sequence_type }}">
                 <small id="mw-type-help" class="text-muted">
                     Fixed after creation. Derive a new record to change
                     between nucleotide and protein classifications.
