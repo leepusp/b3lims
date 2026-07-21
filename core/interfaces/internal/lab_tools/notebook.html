@@ -17,6 +17,28 @@
         grid-template-columns: 280px minmax(0, 1fr);
     }
 
+    .notebook-shell.eln-entries-collapsed {
+        grid-template-columns: minmax(0, 1fr) 340px;
+    }
+
+    .notebook-shell.eln-context-collapsed {
+        grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    .notebook-shell.eln-entries-collapsed.eln-context-collapsed,
+    .notebook-shell.notebook-shell-empty.eln-entries-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .notebook-shell.eln-entries-collapsed #eln-entries-panel,
+    .notebook-shell.eln-context-collapsed #linked-experiment-context {
+        display: none;
+    }
+
+    .eln-layout-controls .btn {
+        white-space: nowrap;
+    }
+
     .notebook-panel {
         background: #fff;
         border: 1px solid #dee2e6;
@@ -319,17 +341,54 @@
 
 <div class="container-fluid py-3">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
             <h4 class="m-0"><i class="bi bi-journal-bookmark me-2"></i>ELN Notebook</h4>
             <div class="text-muted small">Structured notes, linked samples, tables, images, sequences and molecular records.</div>
         </div>
 
+        <div class="btn-group btn-group-sm eln-layout-controls"
+             role="group"
+             aria-label="ELN workspace layout">
+            <button type="button"
+                    id="eln-toggle-entries"
+                    class="btn btn-outline-secondary"
+                    aria-pressed="false"
+                    title="Hide the entries panel"
+                    onclick="toggleElnPanel('entries')">
+                <i class="bi bi-layout-sidebar-inset me-1"></i>
+                <span data-eln-entries-label>Entries</span>
+            </button>
+
+            <button type="button"
+                    id="eln-toggle-context"
+                    class="btn btn-outline-secondary"
+                    aria-pressed="false"
+                    title="Hide the linked context panel"
+                    onclick="toggleElnPanel('context')"
+                    {% if not active_entry %}disabled aria-disabled="true"{% endif %}>
+                <i class="bi bi-layout-sidebar-inset-reverse me-1"></i>
+                <span data-eln-context-label>Linked</span>
+            </button>
+
+            <button type="button"
+                    id="eln-toggle-focus"
+                    class="btn btn-outline-primary"
+                    aria-pressed="false"
+                    title="Expand the annotation workspace"
+                    onclick="toggleElnFocusMode()">
+                <i class="bi bi-arrows-fullscreen me-1"></i>
+                <span data-eln-focus-label>Focus</span>
+            </button>
+        </div>
     </div>
 
-    <div class="notebook-shell{% if not active_entry %} notebook-shell-empty{% endif %}">
+    <div id="eln-notebook-shell"
+         class="notebook-shell{% if not active_entry %} notebook-shell-empty{% endif %}"
+         data-has-active-entry="{% if active_entry %}true{% else %}false{% endif %}">
 
-        <aside class="notebook-panel">
+        <aside class="notebook-panel"
+               id="eln-entries-panel">
             <div class="notebook-panel-header">Entries</div>
             <div class="p-3 border-bottom">
                 <input type="text" class="form-control form-control-sm" placeholder="Search entries..." oninput="filterEntries(this.value)">
@@ -1534,6 +1593,208 @@ QC checked</textarea>
 {% block extra_js %}
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<script>
+(() => {
+    "use strict";
+
+    const storageKey = "biobank.eln.workspace-layout.v1";
+    const shell = document.getElementById(
+        "eln-notebook-shell"
+    );
+
+    if (!shell) {
+        return;
+    }
+
+    const hasActiveEntry = (
+        shell.dataset.hasActiveEntry === "true"
+    );
+    const entriesButton = document.getElementById(
+        "eln-toggle-entries"
+    );
+    const contextButton = document.getElementById(
+        "eln-toggle-context"
+    );
+    const focusButton = document.getElementById(
+        "eln-toggle-focus"
+    );
+
+    const state = {
+        entriesCollapsed: false,
+        contextCollapsed: false
+    };
+
+    try {
+        const saved = JSON.parse(
+            window.localStorage.getItem(storageKey)
+            || "{}"
+        );
+
+        state.entriesCollapsed = (
+            saved.entriesCollapsed === true
+        );
+        state.contextCollapsed = (
+            saved.contextCollapsed === true
+        );
+    } catch (error) {
+        console.warn(
+            "Could not restore the ELN workspace layout.",
+            error
+        );
+    }
+
+    function persistLayout() {
+        try {
+            window.localStorage.setItem(
+                storageKey,
+                JSON.stringify(state)
+            );
+        } catch (error) {
+            console.warn(
+                "Could not save the ELN workspace layout.",
+                error
+            );
+        }
+    }
+
+    function setButtonState(
+        button,
+        collapsed,
+        shownTitle,
+        hiddenTitle
+    ) {
+        if (!button) {
+            return;
+        }
+
+        button.setAttribute(
+            "aria-pressed",
+            collapsed ? "true" : "false"
+        );
+        button.title = (
+            collapsed
+            ? shownTitle
+            : hiddenTitle
+        );
+        button.classList.toggle(
+            "active",
+            collapsed
+        );
+    }
+
+    function applyLayout() {
+        shell.classList.toggle(
+            "eln-entries-collapsed",
+            state.entriesCollapsed
+        );
+        shell.classList.toggle(
+            "eln-context-collapsed",
+            hasActiveEntry
+                && state.contextCollapsed
+        );
+
+        setButtonState(
+            entriesButton,
+            state.entriesCollapsed,
+            "Show the entries panel",
+            "Hide the entries panel"
+        );
+        setButtonState(
+            contextButton,
+            hasActiveEntry
+                && state.contextCollapsed,
+            "Show the linked context panel",
+            "Hide the linked context panel"
+        );
+
+        const focusActive = (
+            state.entriesCollapsed
+            && (
+                !hasActiveEntry
+                || state.contextCollapsed
+            )
+        );
+
+        if (focusButton) {
+            focusButton.setAttribute(
+                "aria-pressed",
+                focusActive ? "true" : "false"
+            );
+            focusButton.classList.toggle(
+                "active",
+                focusActive
+            );
+            focusButton.title = (
+                focusActive
+                ? "Restore the ELN side panels"
+                : "Expand the annotation workspace"
+            );
+
+            const label = focusButton.querySelector(
+                "[data-eln-focus-label]"
+            );
+
+            if (label) {
+                label.textContent = (
+                    focusActive
+                    ? "Restore"
+                    : "Focus"
+                );
+            }
+        }
+    }
+
+    window.toggleElnPanel = function(panel) {
+        if (panel === "entries") {
+            state.entriesCollapsed = (
+                !state.entriesCollapsed
+            );
+        } else if (
+            panel === "context"
+            && hasActiveEntry
+        ) {
+            state.contextCollapsed = (
+                !state.contextCollapsed
+            );
+        } else {
+            return;
+        }
+
+        applyLayout();
+        persistLayout();
+    };
+
+    window.toggleElnFocusMode = function() {
+        const focusActive = (
+            state.entriesCollapsed
+            && (
+                !hasActiveEntry
+                || state.contextCollapsed
+            )
+        );
+
+        if (focusActive) {
+            state.entriesCollapsed = false;
+
+            if (hasActiveEntry) {
+                state.contextCollapsed = false;
+            }
+        } else {
+            state.entriesCollapsed = true;
+
+            if (hasActiveEntry) {
+                state.contextCollapsed = true;
+            }
+        }
+
+        applyLayout();
+        persistLayout();
+    };
+
+    applyLayout();
+})();
+</script>
 
 {% if active_entry %}
 <script>
