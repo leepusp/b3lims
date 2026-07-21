@@ -160,12 +160,13 @@
 
             <label>
                 <span>Sequence classification</span>
-                <span id="mw-type-display"
-                      class="form-control form-control-sm bg-light"
-                      role="textbox"
-                      aria-readonly="true">
-                    {{ molecule.get_sequence_type_display }}
-                </span>
+                <input id="mw-type-display"
+                       type="text"
+                       class="form-control form-control-sm bg-light"
+                       value="{{ molecule.get_sequence_type_display }}"
+                       readonly
+                       aria-readonly="true"
+                       tabindex="-1">
                 <input id="mw-type"
                        type="hidden"
                        value="{{ molecule.sequence_type }}">

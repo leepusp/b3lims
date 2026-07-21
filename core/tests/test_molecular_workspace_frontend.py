@@ -137,6 +137,26 @@ class MolecularWorkspaceFrontendTests(TestCase):
             'id="mw-type-display"',
             template,
         )
+
+        display_start = template.index(
+            'id="mw-type-display"'
+        )
+        display_end = template.index(
+            ">",
+            display_start,
+        )
+        display_control = template[
+            display_start:display_end
+        ]
+
+        self.assertIn(
+            'type="text"',
+            display_control,
+        )
+        self.assertIn(
+            "readonly",
+            display_control,
+        )
         self.assertIn(
             'id="mw-type"',
             template,
@@ -179,6 +199,18 @@ class MolecularWorkspaceFrontendTests(TestCase):
         )
         self.assertIn(
             "AMINO_ACID_COLORS",
+            adapter,
+        )
+        self.assertIn(
+            'data.sequenceType === "protein"',
+            adapter,
+        )
+        self.assertIn(
+            "return AMINO_ACID_COLORS;",
+            adapter,
+        )
+        self.assertIn(
+            "return NUCLEOTIDE_COLORS;",
             adapter,
         )
 
