@@ -305,7 +305,7 @@ class IndependentJupyterViewTests(TestCase):
             visibility="private",
         )
 
-        NotebookKernelDocument.objects.create(
+        document = NotebookKernelDocument.objects.create(
             entry=entry,
             title=entry.title,
             notebook_json=starter_notebook(
@@ -313,6 +313,13 @@ class IndependentJupyterViewTests(TestCase):
                 self.owner.get_username(),
             ),
             updated_by=self.owner,
+        )
+
+        JupyterNotebook.objects.create(
+            title=entry.title,
+            owner=self.owner,
+            notebook_json=document.notebook_json,
+            legacy_document=document,
         )
 
         response = self.client.get(

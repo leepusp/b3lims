@@ -441,7 +441,7 @@
 
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items-pane" type="button" role="tab">
-                                Relevant items
+                                Experiment context
                             </button>
                         </li>
                         
@@ -656,164 +656,303 @@
 
                         
 
-                        <div class="tab-pane fade" id="items-pane" role="tabpanel" aria-labelledby="items-tab">
-                            
-
+                        <div class="tab-pane fade"
+                             id="items-pane"
+                             role="tabpanel"
+                             aria-labelledby="items-tab">
                             <div class="card">
-                                <div class="card-header bg-white fw-bold">
-                                    <i class="bi bi-diagram-3 me-2"></i>Relevant items
+                                <div class="card-header bg-white">
+                                    <div class="d-flex justify-content-between align-items-center gap-3">
+                                        <div>
+                                            <div class="fw-bold">
+                                                <i class="bi bi-diagram-3 me-2"></i>Experiment context
+                                            </div>
+                                            <div class="small text-muted mt-1">
+                                                Samples, reagents, molecular records, files and analysis connected to this entry.
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="card-body">
-                                    {% for link in linked_sample_links %}
-                                        <div class="border rounded p-3 mb-3 bg-light">
-                                            <div class="d-flex justify-content-between align-items-start gap-3">
-                                                <div>
-                                                    <div class="fw-bold">{{ link.sample.sample_id }}</div>
-                                                    <div class="small">{{ link.sample.organism_name }}</div>
-                                                    <div class="small text-muted">{{ link.sample.sample_type }}</div>
-                                                </div>
-                                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'sample_edit' link.sample.id %}" target="_blank">
-                                                    Open sample
-                                                </a>
+                                    <div class="row g-2 mb-4">
+                                        <div class="col-6 col-xl">
+                                            <div class="border rounded bg-light p-3 h-100">
+                                                <div class="small text-muted">Samples</div>
+                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.samples }}</div>
                                             </div>
+                                        </div>
 
-                                            <div class="mt-3">
-                                                <div class="small fw-bold text-muted mb-1">
-                                                    <i class="bi bi-paperclip me-1"></i>Sample files
-                                                </div>
-                                                {% for sample_file in link.sample.files.all %}
-                                                    <div class="small border rounded bg-white p-2 mb-1">
-                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1">
-                                                            {{ sample_file.category }}
-                                                        </span>
-                                                        <span class="text-break">{{ sample_file.file.name }}</span>
-                                                        {% if sample_file.file %}
-                                                            <a href="{{ sample_file.file.url }}" target="_blank" class="ms-2">Open</a>
-                                                        {% endif %}
-                                                    </div>
-                                                {% empty %}
-                                                    <div class="small text-muted">No files linked to this sample.</div>
-                                                {% endfor %}
+                                        <div class="col-6 col-xl">
+                                            <div class="border rounded bg-light p-3 h-100">
+                                                <div class="small text-muted">Reagents</div>
+                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.chemicals }}</div>
                                             </div>
                                         </div>
-                                    {% empty %}
-                                        <div class="text-muted small border rounded p-3 bg-light">
-                                            No relevant items linked yet. Add a linked sample, chemical, attachment, Molecular Item, or Jupyter analysis.
+
+                                        <div class="col-6 col-xl">
+                                            <div class="border rounded bg-light p-3 h-100">
+                                                <div class="small text-muted">Molecular records</div>
+                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.molecules }}</div>
+                                            </div>
                                         </div>
-                                    {% endfor %}
+
+                                        <div class="col-6 col-xl">
+                                            <div class="border rounded bg-light p-3 h-100">
+                                                <div class="small text-muted">Files</div>
+                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.attachments }}</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-6 col-xl">
+                                            <div class="border rounded bg-light p-3 h-100">
+                                                <div class="small text-muted">Jupyter</div>
+                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.jupyter }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <section class="mb-4">
+                                        <div class="fw-bold mb-2">
+                                            <i class="bi bi-box-seam me-2"></i>Linked samples
+                                        </div>
+
+                                        {% for link in linked_sample_links %}
+                                            <div class="border rounded p-3 mb-2 bg-white">
+                                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="fw-bold">{{ link.sample.sample_id }}</div>
+                                                        <div class="small">{{ link.sample.organism_name }}</div>
+                                                        <div class="small text-muted">{{ link.sample.sample_type }}</div>
+                                                    </div>
+
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                       href="{% url 'sample_edit' link.sample.id %}"
+                                                       target="_blank">
+                                                        Open sample
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        {% empty %}
+                                            <div class="text-muted small border rounded p-3 bg-light">
+                                                No samples are linked to this experiment.
+                                            </div>
+                                        {% endfor %}
+                                    </section>
 
                                     <hr>
 
-                                    <div class="border rounded p-3 mb-3 bg-light">
-                                        <div class="d-flex justify-content-between align-items-start gap-3">
-                                            <div>
-                                                <div class="fw-bold">
-                                                    <i class="bi bi-code-square me-2"></i>Jupyter analysis
-                                                </div>
-                                                <div class="small text-muted mt-1">
-                                                    Open the integrated full-width cell workspace. Analyses are saved with this ELN entry and submitted to the DaVinci Slurm cluster.
-                                                </div>
-                                                <div class="small mt-2">
-                                                    Save the resulting <code>.ipynb</code> file and attach it to this ELN entry from the Files tab to preserve the analysis with the experiment.
+                                    <section class="my-4">
+                                        <div class="fw-bold mb-2">
+                                            <i class="bi bi-flask me-2"></i>Linked reagents
+                                        </div>
+
+                                        {% for link in linked_chemical_links %}
+                                            <div class="border rounded p-3 mb-2 bg-white">
+                                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="fw-bold">{{ link.chemical.name }}</div>
+
+                                                        <div class="small text-muted">
+                                                            {% if link.chemical.formula %}
+                                                                {{ link.chemical.formula }}
+                                                            {% endif %}
+                                                            {% if link.chemical.cas_number %}
+                                                                · CAS {{ link.chemical.cas_number }}
+                                                            {% endif %}
+                                                        </div>
+
+                                                        <div class="small mt-1">
+                                                            {{ link.chemical.quantity }}
+                                                            {% if link.chemical.location %}
+                                                                · {{ link.chemical.location }}
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                       href="{% url 'chemical_detail' link.chemical.id %}"
+                                                       target="_blank">
+                                                        Open reagent
+                                                    </a>
                                                 </div>
                                             </div>
-                                            <a href="{% url 'notebook_jupyter_workspace' active_entry.id %}"
-                                               class="btn btn-sm btn-outline-primary flex-shrink-0"
-                                               data-jupyter-launch>
-                                                <i class="bi bi-arrows-fullscreen me-1"></i>Open workspace
-                                            </a>
-                                        </div>
-                                    </div>
+                                        {% empty %}
+                                            <div class="text-muted small border rounded p-3 bg-light">
+                                                No reagents are linked to this experiment.
+                                            </div>
+                                        {% endfor %}
+                                    </section>
 
                                     <hr>
 
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div class="fw-bold">
-                                            <i class="bi bi-dna me-2"></i>Molecular items
-                                        </div>
-                                        <button type="button"
-                                                class="btn btn-sm btn-success"
-                                                onclick="openMolecularWorkspaceCreator()">
-                                            <i class="bi bi-bezier2 me-1"></i>
-                                            Molecular Workspace
-                                        </button>
-                                    </div>
-
-                                    <div id="molecular-workspace-creator" class="border rounded bg-light p-3 mb-3">
-                                        <div class="row g-2">
-                                            <div class="col-md-4">
-                                                <label class="form-label small text-muted">Name</label>
-                                                <input type="text" id="molecular-item-name" class="form-control form-control-sm" placeholder="pBR322_EGFR, primer_F, CDS...">
-                                            </div>
-
-                                            <div class="col-md-3">
-                                                <label class="form-label small text-muted">Type</label>
-                                                <select id="molecular-item-type" class="form-select form-select-sm">
-                                                    {% for value, label in molecular_sequence_types %}
-                                                        <option value="{{ value }}">{{ label }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-3">
-                                                <label class="form-label small text-muted">Topology</label>
-                                                <select id="molecular-item-topology" class="form-select form-select-sm">
-                                                    {% for value, label in molecular_topologies %}
-                                                        <option value="{{ value }}">{{ label }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-2 d-flex align-items-end">
-                                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="createMolecularItem()">
-                                                    Create and open
-                                                </button>
-                                            </div>
-
-                                            <div class="col-md-12">
-                                                <label class="form-label small text-muted">Description</label>
-                                                <input type="text" id="molecular-item-description" class="form-control form-control-sm" placeholder="Short description, design rationale, source, purpose...">
-                                            </div>
-
-                                            <div class="col-md-12">
-                                                <label class="form-label small text-muted">Sequence</label>
-                                                <textarea id="molecular-item-sequence" class="form-control sequence-input" rows="5" placeholder="Paste FASTA or raw sequence"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {% for molecule in molecular_sequences %}
-                                        <div class="border rounded p-3 mb-2 bg-white">
+                                    <section class="my-4">
+                                        <div class="border rounded p-3 bg-light">
                                             <div class="d-flex justify-content-between align-items-start gap-3">
                                                 <div>
-                                                    <div class="fw-bold">{{ molecule.name }}</div>
-                                                    <div class="small text-muted">
-                                                        {{ molecule.get_sequence_type_display }} · {{ molecule.get_topology_display }} · {{ molecule.length }} bp/aa
+                                                    <div class="fw-bold">
+                                                        <i class="bi bi-code-square me-2"></i>Jupyter analysis
                                                     </div>
-                                                    {% if molecule.description %}
-                                                        <div class="small mt-1">{{ molecule.description }}</div>
+
+                                                    {% if eln_jupyter_document %}
+                                                        <div class="small text-muted mt-1">
+                                                            Workspace ready · {{ eln_jupyter_document.title }}
+                                                        </div>
+                                                        <div class="small mt-1">
+                                                            Updated {{ eln_jupyter_document.updated_at|date:"Y-m-d H:i" }}
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="small text-muted mt-1">
+                                                            Create an analysis workspace linked directly to this ELN entry.
+                                                        </div>
                                                     {% endif %}
                                                 </div>
-                                                <div class="d-flex flex-column align-items-end gap-1">
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                        Molecular item
-                                                    </span>
-                                                    <a href="{% url 'molecular_sequence_detail' molecule.id %}" class="btn btn-sm btn-outline-success">
+
+                                                <a href="{% url 'notebook_jupyter_workspace' active_entry.id %}"
+                                                   class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                                   data-jupyter-launch>
+                                                    <i class="bi bi-arrows-fullscreen me-1"></i>
+                                                    {% if eln_jupyter_document %}Continue analysis{% else %}Create analysis{% endif %}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <hr>
+
+                                    <section class="my-4">
+                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                            <div class="fw-bold">
+                                                <i class="bi bi-dna me-2"></i>Molecular records
+                                            </div>
+
+                                            <div class="d-flex gap-2">
+                                                <a href="{% url 'molecular_registry_index' %}"
+                                                   class="btn btn-sm btn-outline-secondary">
+                                                    Open registry
+                                                </a>
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-success"
+                                                        onclick="openMolecularWorkspaceCreator()">
+                                                    <i class="bi bi-plus-lg me-1"></i>
+                                                    New record
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div id="molecular-workspace-creator"
+                                             class="border rounded bg-light p-3 mb-3">
+                                            <div class="row g-2">
+                                                <div class="col-md-4">
+                                                    <label class="form-label small text-muted">Name</label>
+                                                    <input type="text"
+                                                           id="molecular-item-name"
+                                                           class="form-control form-control-sm"
+                                                           placeholder="pBR322_EGFR, primer_F, CDS...">
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label small text-muted">Type</label>
+                                                    <select id="molecular-item-type"
+                                                            class="form-select form-select-sm">
+                                                        {% for value, label in molecular_sequence_types %}
+                                                            <option value="{{ value }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label small text-muted">Topology</label>
+                                                    <select id="molecular-item-topology"
+                                                            class="form-select form-select-sm">
+                                                        {% for value, label in molecular_topologies %}
+                                                            <option value="{{ value }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-2 d-flex align-items-end">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary w-100"
+                                                            onclick="createMolecularItem()">
+                                                        Create
+                                                    </button>
+                                                </div>
+
+                                                <div class="col-md-12">
+                                                    <label class="form-label small text-muted">Description</label>
+                                                    <input type="text"
+                                                           id="molecular-item-description"
+                                                           class="form-control form-control-sm"
+                                                           placeholder="Design rationale, source or purpose">
+                                                </div>
+
+                                                <div class="col-md-12">
+                                                    <label class="form-label small text-muted">Sequence</label>
+                                                    <textarea id="molecular-item-sequence"
+                                                              class="form-control sequence-input"
+                                                              rows="5"
+                                                              placeholder="Paste FASTA or raw sequence"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {% for molecule in molecular_sequences %}
+                                            <div class="border rounded p-3 mb-2 bg-white">
+                                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="fw-bold">{{ molecule.name }}</div>
+                                                        <div class="small text-muted">
+                                                            {{ molecule.get_sequence_type_display }}
+                                                            · {{ molecule.get_topology_display }}
+                                                            · {{ molecule.length }} bp/aa
+                                                        </div>
+
+                                                        {% if molecule.description %}
+                                                            <div class="small mt-1">{{ molecule.description }}</div>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <a href="{% url 'molecular_sequence_detail' molecule.id %}"
+                                                       class="btn btn-sm btn-outline-success">
                                                         Open
                                                     </a>
                                                 </div>
                                             </div>
+                                        {% empty %}
+                                            <div class="text-muted small border rounded p-3 bg-light">
+                                                No molecular records are linked to this experiment.
+                                            </div>
+                                        {% endfor %}
+                                    </section>
+
+                                    <hr>
+
+                                    <section class="mt-4">
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                                <div>
+                                                    <div class="fw-bold">
+                                                        <i class="bi bi-folder2-open me-2"></i>Files and results
+                                                    </div>
+                                                    <div class="small text-muted mt-1">
+                                                        {{ experiment_context_counts.attachments }} attachment{{ experiment_context_counts.attachments|pluralize }} stored with this entry.
+                                                    </div>
+                                                </div>
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                        onclick="document.getElementById('files-tab').click()">
+                                                    Manage files
+                                                </button>
+                                            </div>
                                         </div>
-                                    {% empty %}
-                                        <div class="text-muted small border rounded p-3 bg-white">
-                                            No molecular items linked to this notebook entry yet.
-                                        </div>
-                                    {% endfor %}
+                                    </section>
                                 </div>
                             </div>
                         </div>
 
-                        
 
                         <div class="tab-pane fade" id="files-pane" role="tabpanel" aria-labelledby="files-tab">
                             <div class="card">

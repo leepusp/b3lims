@@ -295,7 +295,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Molecular Workspace")
         self.assertContains(response, 'id="molecular-workspace-creator"')
-        self.assertContains(response, "Create and open")
+        self.assertContains(response, "New record")
         self.assertContains(response, "insertRelevantItemIntoMainNote(data, false)")
         self.assertContains(response, "window.location.href = data.detail_url")
         self.assertContains(response, "ql-biobank-molecular")
@@ -310,12 +310,11 @@ class MolecularWorkspaceFrontendTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Jupyter analysis")
-        self.assertContains(response, "Open workspace")
+        self.assertContains(response, "Create analysis")
         self.assertContains(
             response,
-            "integrated full-width cell workspace",
+            "linked directly to this ELN entry",
         )
-        self.assertContains(response, "Slurm cluster")
         self.assertContains(
             response,
             reverse(

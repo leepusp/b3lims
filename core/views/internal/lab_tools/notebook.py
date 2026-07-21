@@ -305,7 +305,9 @@ def _get_entry_for_user(entry_id, user, *, require_edit=False):
 def notebook_index(request):
     entries = (
         visible_notebook_entries_for_user(request.user)
-        .filter(kernel_document__isnull=True)
+        .exclude(
+            kernel_document__independent_notebook__isnull=False
+        )
     )
     active_entry_id = request.GET.get("entry_id")
 
@@ -316,6 +318,14 @@ def notebook_index(request):
     attachments = []
     protocol_chemicals = []
     molecular_sequences = []
+    eln_jupyter_document = None
+    experiment_context_counts = {
+        "samples": 0,
+        "chemicals": 0,
+        "molecules": 0,
+        "attachments": 0,
+        "jupyter": 0,
+    }
 
     if active_entry_id:
         active_entry = _get_entry_for_user(active_entry_id, request.user)
@@ -338,7 +348,28 @@ def notebook_index(request):
         attachments = active_entry.attachments.all()
 
         protocol_chemicals = Chemical.objects.all().order_by("name", "id")[:200]
-        molecular_sequences = active_entry.molecular_sequences.all().order_by("-updated_at", "-id")
+        molecular_sequences = (
+            active_entry.molecular_sequences
+            .all()
+            .order_by("-updated_at", "-id")
+        )
+
+        try:
+            eln_jupyter_document = (
+                active_entry.kernel_document
+            )
+        except NotebookKernelDocument.DoesNotExist:
+            eln_jupyter_document = None
+
+        experiment_context_counts = {
+            "samples": linked_sample_links.count(),
+            "chemicals": linked_chemical_links.count(),
+            "molecules": molecular_sequences.count(),
+            "attachments": attachments.count(),
+            "jupyter": int(
+                eln_jupyter_document is not None
+            ),
+        }
 
     linked_samples_json = json.dumps(
         [link.snapshot_json for link in linked_sample_links],
@@ -364,6 +395,8 @@ def notebook_index(request):
             "attachments": attachments,
             "protocol_chemicals": protocol_chemicals,
             "molecular_sequences": molecular_sequences,
+            "eln_jupyter_document": eln_jupyter_document,
+            "experiment_context_counts": experiment_context_counts,
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "entry_workspace_path": entry_workspace_path,
