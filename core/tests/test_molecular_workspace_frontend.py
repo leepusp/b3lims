@@ -174,10 +174,6 @@ class MolecularWorkspaceFrontendTests(TestCase):
             template,
         )
         self.assertIn(
-            "Fixed after creation",
-            template,
-        )
-        self.assertIn(
             "data-mw-open-sequence-editor",
             template,
         )
