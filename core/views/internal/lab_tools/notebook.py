@@ -397,6 +397,7 @@ def notebook_index(request):
             "molecular_sequences": molecular_sequences,
             "eln_jupyter_document": eln_jupyter_document,
             "experiment_context_counts": experiment_context_counts,
+            "notebook_entry_templates": _notebook_entry_templates(),
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "entry_workspace_path": entry_workspace_path,
@@ -439,39 +440,183 @@ def notebook_create_from_sample(request, sample_id):
     return redirect(f"{reverse('notebook_index')}?entry_id={entry.id}")
 
 
-def _notebook_entry_template(template_key):
-    templates = {
+def _sectioned_notebook_content(*sections):
+    return "".join(
+        f"<h2>{section}</h2><p><br></p>"
+        for section in sections
+    )
+
+
+def _notebook_entry_templates():
+    return {
         "blank": {
+            "label": "Blank entry",
+            "description": (
+                "Start with an empty note and add only "
+                "the sections needed."
+            ),
+            "icon": "bi-file-earmark",
             "title": "Untitled entry",
             "entry_type": "other",
+            "content": "",
+            "protocol_content": "",
         },
         "experiment": {
+            "label": "General experiment",
+            "description": (
+                "Objective, hypothesis, observations, "
+                "results and conclusion."
+            ),
+            "icon": "bi-flask",
             "title": "New experiment",
             "entry_type": "experiment",
+            "content": _sectioned_notebook_content(
+                "Objective",
+                "Hypothesis",
+                "Observations",
+                "Results",
+                "Conclusion",
+            ),
+            "protocol_content": (
+                "Materials\n\n"
+                "Method\n\n"
+                "Controls\n\n"
+                "Quality criteria\n"
+            ),
         },
         "protocol": {
+            "label": "Reusable protocol",
+            "description": (
+                "Materials, procedure, controls, safety "
+                "and acceptance criteria."
+            ),
+            "icon": "bi-list-check",
             "title": "New protocol",
             "entry_type": "protocol",
+            "content": _sectioned_notebook_content(
+                "Purpose",
+                "Scope",
+                "Safety and prerequisites",
+                "References",
+                "Change notes",
+            ),
+            "protocol_content": (
+                "Materials and equipment\n\n"
+                "Preparation\n\n"
+                "Procedure\n"
+                "1. \n"
+                "2. \n\n"
+                "Controls\n\n"
+                "Acceptance criteria\n"
+            ),
         },
         "analysis": {
+            "label": "Data analysis",
+            "description": (
+                "Data sources, analytical method, results "
+                "and interpretation."
+            ),
+            "icon": "bi-graph-up",
             "title": "New analysis",
             "entry_type": "analysis",
+            "content": _sectioned_notebook_content(
+                "Question",
+                "Data sources",
+                "Analysis plan",
+                "Results",
+                "Interpretation",
+                "Conclusion",
+            ),
+            "protocol_content": (
+                "Software and versions\n\n"
+                "Parameters\n\n"
+                "Reproducibility notes\n"
+            ),
         },
         "sample_characterization": {
+            "label": "Sample characterization",
+            "description": (
+                "Sample context, methods, measurements, "
+                "quality control and interpretation."
+            ),
+            "icon": "bi-droplet",
             "title": "Sample characterization",
             "entry_type": "experiment",
+            "content": _sectioned_notebook_content(
+                "Characterization objective",
+                "Sample context",
+                "Measurements",
+                "Quality control",
+                "Results",
+                "Interpretation",
+            ),
+            "protocol_content": (
+                "Sample preparation\n\n"
+                "Assay or instrument\n\n"
+                "Calibration and controls\n\n"
+                "Acceptance criteria\n"
+            ),
         },
         "plasmid_construction": {
+            "label": "Plasmid construction",
+            "description": (
+                "Design goal, assembly strategy, screening "
+                "and construct validation."
+            ),
+            "icon": "bi-bezier2",
             "title": "Plasmid construction",
             "entry_type": "experiment",
+            "content": _sectioned_notebook_content(
+                "Design objective",
+                "Vector and insert",
+                "Assembly strategy",
+                "Screening results",
+                "Sequence validation",
+                "Final construct",
+            ),
+            "protocol_content": (
+                "DNA inputs\n\n"
+                "Assembly method\n\n"
+                "Transformation and selection\n\n"
+                "Screening plan\n\n"
+                "Validation criteria\n"
+            ),
         },
         "sequencing_bioinformatics": {
+            "label": "Sequencing / bioinformatics",
+            "description": (
+                "Dataset, pipeline, quality control, "
+                "results and biological interpretation."
+            ),
+            "icon": "bi-code-square",
             "title": "Sequencing / bioinformatics analysis",
             "entry_type": "analysis",
+            "content": _sectioned_notebook_content(
+                "Analysis objective",
+                "Dataset",
+                "Pipeline",
+                "Quality control",
+                "Results",
+                "Biological interpretation",
+                "Conclusion",
+            ),
+            "protocol_content": (
+                "Input files and checksums\n\n"
+                "Software environment\n\n"
+                "Pipeline steps\n\n"
+                "Parameters\n\n"
+                "Output files\n"
+            ),
         },
     }
 
-    return templates.get(template_key, templates["experiment"])
+
+def _notebook_entry_template(template_key):
+    templates = _notebook_entry_templates()
+    return templates.get(
+        template_key,
+        templates["experiment"],
+    )
 
 
 @login_required
@@ -485,8 +630,8 @@ def notebook_create(request):
         entry_type=template["entry_type"],
         status="draft",
         visibility="private",
-        content="",
-        protocol_content="",
+        content=template["content"],
+        protocol_content=template["protocol_content"],
     )
 
     return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")

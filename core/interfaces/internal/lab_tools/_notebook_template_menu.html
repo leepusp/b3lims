@@ -1,0 +1,40 @@
+<div class="dropdown d-inline-block">
+    <button type="button"
+            class="{{ button_class }} dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false">
+        <i class="bi bi-plus-lg me-1"></i>{{ button_label }}
+    </button>
+
+    <ul class="dropdown-menu shadow"
+        style="min-width: 360px; max-width: 420px;">
+        <li class="px-3 pt-2 pb-1">
+            <div class="fw-bold">Choose a notebook template</div>
+            <div class="small text-muted">
+                Each template remains fully editable after creation.
+            </div>
+        </li>
+
+        <li><hr class="dropdown-divider"></li>
+
+        {% for template_key, entry_template in notebook_entry_templates.items %}
+            <li>
+                <a class="dropdown-item py-2"
+                   href="{% url 'notebook_create' %}?template={{ template_key }}">
+                    <div class="d-flex gap-2">
+                        <i class="bi {{ entry_template.icon }} mt-1"></i>
+
+                        <div class="text-wrap">
+                            <div class="fw-semibold">
+                                {{ entry_template.label }}
+                            </div>
+                            <div class="small text-muted">
+                                {{ entry_template.description }}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
