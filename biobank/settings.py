@@ -61,9 +61,48 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.pam_remote_user.PamRemoteUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# PAM authentication is supplied by the local Apache reverse proxy.
+# ModelBackend remains temporarily available for controlled migration
+# and local administrative recovery.
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "django.contrib.auth.backends.RemoteUserBackend",
+]
+
+BIOBANK_PAM_REMOTE_USER_META_KEY = os.environ.get(
+    "BIOBANK_PAM_REMOTE_USER_META_KEY",
+    "HTTP_X_BIOBANK_PAM_USER",
+)
+
+BIOBANK_PAM_TRUSTED_PROXIES = tuple(
+    value.strip()
+    for value in os.environ.get(
+        "BIOBANK_PAM_TRUSTED_PROXIES",
+        "127.0.0.1,::1",
+    ).split(",")
+    if value.strip()
+)
+
+BIOBANK_PAM_HOME_ROOTS = tuple(
+    value.strip()
+    for value in os.environ.get(
+        "BIOBANK_PAM_HOME_ROOTS",
+        "/home",
+    ).split(":")
+    if value.strip()
+)
+
+BIOBANK_PAM_MINIMUM_UID = int(
+    os.environ.get(
+        "BIOBANK_PAM_MINIMUM_UID",
+        "1000",
+    )
+)
 
 # =========================
 # URLS / WSGI
