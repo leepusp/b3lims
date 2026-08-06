@@ -19,11 +19,11 @@ from core.models.lab_tools.notebook import (
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
-    NotebookKernelDocument,
-    NotebookKernelExecution,
     NotebookSampleLink,
     NotebookChemicalLink,
     NotebookMolecularLink,
+    NotebookJupyterLink,
+    JupyterNotebook,
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
@@ -39,15 +39,7 @@ from core.services.molecular_sequences import (
     normalize_molecular_sequence,
     validate_molecular_feature,
 )
-from core.services.jupyter_notebooks import (
-    JupyterNotebookError,
-    cancel_execution,
-    get_or_create_document,
-    normalize_notebook,
-    persist_document,
-    refresh_execution,
-    submit_document,
-)
+from core.services.jupyter_documents import normalize_notebook
 
 
 def _sample_display_name(sample):
@@ -355,9 +347,6 @@ def _get_entry_for_user(entry_id, user, *, require_edit=False):
 def notebook_index(request):
     entries = (
         visible_notebook_entries_for_user(request.user)
-        .exclude(
-            kernel_document__independent_notebook__isnull=False
-        )
     )
     active_entry_id = request.GET.get("entry_id")
 
@@ -369,7 +358,6 @@ def notebook_index(request):
     attachments = []
     protocol_chemicals = []
     molecular_sequences = []
-    eln_jupyter_document = None
     experiment_context_counts = {
         "samples": 0,
         "chemicals": 0,
@@ -414,21 +402,12 @@ def notebook_index(request):
             for link in linked_molecular_links
         ]
 
-        try:
-            eln_jupyter_document = (
-                active_entry.kernel_document
-            )
-        except NotebookKernelDocument.DoesNotExist:
-            eln_jupyter_document = None
-
         experiment_context_counts = {
             "samples": linked_sample_links.count(),
             "chemicals": linked_chemical_links.count(),
             "molecules": linked_molecular_links.count(),
             "attachments": attachments.count(),
-            "jupyter": int(
-                eln_jupyter_document is not None
-            ),
+            "jupyter": active_entry.jupyter_links.count(),
         }
 
     linked_samples_json = json.dumps(
@@ -436,18 +415,19 @@ def notebook_index(request):
         ensure_ascii=False,
     )
 
-    entry_workspace_path = ""
-    if active_entry:
-        username = request.user.get_username()
-        if username:
-            entry_workspace_path = f"/home/{username}/biobank_notebooks/entry_{active_entry.id}"
-
     return render(
         request,
         "internal/lab_tools/notebook.html",
         {
             "entries": entries,
             "active_entry": active_entry,
+            "can_edit": bool(
+                active_entry
+                and (
+                    request.user.is_superuser
+                    or active_entry.author_id == request.user.id
+                )
+            ),
             "linked_sample_links": linked_sample_links,
             "linked_chemical_links": linked_chemical_links,
             "linked_molecular_links": linked_molecular_links,
@@ -456,12 +436,10 @@ def notebook_index(request):
             "attachments": attachments,
             "protocol_chemicals": protocol_chemicals,
             "molecular_sequences": molecular_sequences,
-            "eln_jupyter_document": eln_jupyter_document,
             "experiment_context_counts": experiment_context_counts,
             "notebook_entry_templates": _notebook_entry_templates(),
             "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
-            "entry_workspace_path": entry_workspace_path,
         },
     )
 
@@ -1947,446 +1925,101 @@ def _starter_jupyter_notebook(entry, user):
     )
 
 
-@login_required
-def notebook_jupyter_launch(request):
-    now = timezone.localtime()
-    partition_choices = tuple(
-        settings.BIOBANK_JUPYTER_PARTITIONS
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _notebook_entry_return_url(entry):
+    return (
+        f"{reverse('notebook_index')}"
+        f"?entry_id={entry.id}"
+        f"&tab=items#items-pane"
     )
 
-    defaults = {
-        "title": f"Jupyter analysis {now:%Y-%m-%d %H:%M}",
-        "partition": settings.BIOBANK_JUPYTER_PARTITION,
-        "cpus": settings.BIOBANK_JUPYTER_DEFAULT_CPUS,
-        "memory_mb": settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB,
-        "hours": max(
-            1,
-            settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES // 60,
-        ),
-    }
 
-    context = {
-        "launch": defaults,
-        "launch_partitions": partition_choices,
-    }
-
-    if request.method == "GET":
-        return render(
-            request,
-            "internal/lab_tools/notebook_jupyter_launch.html",
-            context,
-        )
-
+@login_required
+def notebook_link_jupyter(
+    request,
+    entry_id,
+):
     if request.method != "POST":
         return JsonResponse(
             {
                 "status": "error",
-                "message": "GET or POST required.",
+                "message": "POST required.",
             },
             status=405,
         )
 
-    launch = {
-        "title": str(
-            request.POST.get("title") or defaults["title"]
-        ).strip(),
-        "partition": str(
-            request.POST.get("partition")
-            or defaults["partition"]
-        ).strip(),
-        "cpus": request.POST.get(
-            "cpus",
-            defaults["cpus"],
-        ),
-        "memory_mb": request.POST.get(
-            "memory_mb",
-            defaults["memory_mb"],
-        ),
-        "hours": request.POST.get(
-            "hours",
-            defaults["hours"],
-        ),
-    }
-
-    try:
-        launch["cpus"] = int(launch["cpus"])
-        launch["memory_mb"] = int(launch["memory_mb"])
-        launch["hours"] = int(launch["hours"])
-
-        if not launch["title"]:
-            raise JupyterNotebookError(
-                "Notebook title is required."
-            )
-
-        if len(launch["title"]) > 255:
-            raise JupyterNotebookError(
-                "Notebook title is too long."
-            )
-
-        if launch["partition"] not in partition_choices:
-            raise JupyterNotebookError(
-                "Invalid Slurm partition."
-            )
-
-        if launch["cpus"] not in {1, 2, 4, 8}:
-            raise JupyterNotebookError(
-                "Invalid CPU selection."
-            )
-
-        if launch["memory_mb"] not in {
-            2048,
-            4096,
-            8192,
-            16384,
-            32768,
-        }:
-            raise JupyterNotebookError(
-                "Invalid memory selection."
-            )
-
-        if launch["hours"] not in {1, 2, 4}:
-            raise JupyterNotebookError(
-                "Invalid duration selection."
-            )
-    except (
-        TypeError,
-        ValueError,
-        JupyterNotebookError,
-    ) as exc:
-        return render(
-            request,
-            "internal/lab_tools/notebook_jupyter_launch.html",
-            {
-                "launch": launch,
-                "launch_partitions": partition_choices,
-                "launch_error": str(exc),
-            },
-            status=400,
-        )
-
-    entry = NotebookEntry.objects.create(
-        title=launch["title"],
-        author=request.user,
-        entry_type="analysis",
-        status="draft",
-        visibility="private",
-    )
-
-    document = get_or_create_document(entry, request.user)
-    document.title = entry.title
-    document.notebook_json = _starter_jupyter_notebook(
-        entry,
+    entry = _get_entry_for_user(
+        entry_id,
         request.user,
-    )
-    document.updated_by = request.user
-    document.save(
-        update_fields=[
-            "title",
-            "notebook_json",
-            "updated_by",
-            "updated_at",
-        ]
-    )
-    persist_document(document)
-
-    if _can_execute_managed_notebook(request.user, entry):
-        try:
-            submit_document(
-                document,
-                request.user,
-                cpus=launch["cpus"],
-                memory_mb=launch["memory_mb"],
-                time_minutes=launch["hours"] * 60,
-                partition=launch["partition"],
-                cell_index=None,
-            )
-            messages.success(
-                request,
-                (
-                    "The starter notebook was submitted "
-                    f"to Slurm partition {launch['partition']}."
-                ),
-            )
-        except JupyterNotebookError as exc:
-            messages.warning(
-                request,
-                (
-                    "The workspace was created, but "
-                    f"Slurm submission failed: {exc}"
-                ),
-            )
-
-    return redirect(
-        "notebook_jupyter_workspace",
-        entry_id=entry.id,
+        require_edit=True,
     )
 
-@login_required
-def notebook_jupyter_workspace(request, entry_id):
-    entry = _get_entry_for_user(entry_id, request.user)
-    return render(
-        request,
-        "internal/lab_tools/notebook_jupyter_workspace.html",
-        {
-            "entry": entry,
-            "can_edit_jupyter": can_edit_notebook_entry(request.user, entry),
-            "can_execute_jupyter": _can_execute_managed_notebook(
-                request.user,
-                entry,
-            ),
+    notebook_id = request.POST.get(
+        "notebook_id"
+    )
+
+    notebook = get_object_or_404(
+        JupyterNotebook.objects.filter(
+            owner_id=entry.author_id,
+            is_archived=False,
+        ),
+        pk=notebook_id,
+    )
+
+    NotebookJupyterLink.objects.get_or_create(
+        entry=entry,
+        notebook=notebook,
+        defaults={
+            "linked_by": request.user,
         },
     )
 
+    return redirect(
+        _notebook_entry_return_url(entry)
+    )
+
 
 @login_required
-def notebook_jupyter_document_api(request, entry_id):
-    entry = _get_entry_for_user(entry_id, request.user)
-    can_edit = can_edit_notebook_entry(request.user, entry)
-
-    if request.method == "GET":
-        try:
-            document = entry.kernel_document
-        except NotebookKernelDocument.DoesNotExist:
-            if not can_edit:
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "document": None,
-                        "can_edit": False,
-                        "can_execute": False,
-                    }
-                )
-            document = get_or_create_document(entry, request.user)
-
+def notebook_unlink_jupyter(
+    request,
+    entry_id,
+    link_id,
+):
+    if request.method != "POST":
         return JsonResponse(
             {
-                "status": "success",
-                "document": _document_payload(
-                    document,
-                    can_edit=can_edit,
-                    can_execute=_can_execute_managed_notebook(request.user, entry),
-                ),
-            }
-        )
-
-    if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "GET or POST required."},
+                "status": "error",
+                "message": "POST required.",
+            },
             status=405,
         )
 
-    if not can_edit:
-        raise PermissionDenied
-
-    try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
-        notebook = normalize_notebook(data.get("notebook", {}))
-        title = str(data.get("title") or f"{entry.title} analysis").strip()
-        if not title:
-            raise JupyterNotebookError("Notebook title is required.")
-        if len(title) > 255:
-            raise JupyterNotebookError("Notebook title is too long.")
-
-        with transaction.atomic():
-            document = get_or_create_document(entry, request.user)
-            document.title = title
-            document.notebook_json = notebook
-            document.updated_by = request.user
-            document.save(
-                update_fields=[
-                    "title",
-                    "notebook_json",
-                    "updated_by",
-                    "updated_at",
-                ]
-            )
-            persist_document(document)
-    except (json.JSONDecodeError, JupyterNotebookError) as exc:
-        return JsonResponse(
-            {"status": "error", "message": str(exc)},
-            status=400,
-        )
-
-    return JsonResponse(
-        {
-            "status": "success",
-            "document": _document_payload(
-                document,
-                can_edit=True,
-                can_execute=_can_execute_managed_notebook(request.user, entry),
-            ),
-        }
-    )
-
-
-@login_required
-def notebook_jupyter_submit_api(request, entry_id):
-    if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "POST required."},
-            status=405,
-        )
-
-    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
-    if not _can_execute_managed_notebook(request.user, entry):
-        raise PermissionDenied(
-            "You cannot execute this managed notebook."
-        )
-
-    try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
-        document = get_or_create_document(entry, request.user)
-        resource_execution = document.executions.first()
-
-        cpus = (
-            resource_execution.cpus
-            if resource_execution
-            else settings.BIOBANK_JUPYTER_DEFAULT_CPUS
-        )
-        memory_mb = (
-            resource_execution.memory_mb
-            if resource_execution
-            else settings.BIOBANK_JUPYTER_DEFAULT_MEMORY_MB
-        )
-        time_minutes = (
-            resource_execution.time_minutes
-            if resource_execution
-            else settings.BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES
-        )
-        partition = (
-            resource_execution.partition
-            if resource_execution
-            else settings.BIOBANK_JUPYTER_PARTITION
-        )
-
-        active_execution = document.executions.filter(
-            status__in=["submitted", "pending", "running"]
-        ).first()
-        if active_execution:
-            active_execution = refresh_execution(active_execution)
-        if active_execution and active_execution.status in {
-            "submitted",
-            "pending",
-            "running",
-        }:
-            raise JupyterNotebookError(
-                "This notebook already has an active Slurm execution."
-            )
-
-        cell_index = data.get("cell_index")
-        if cell_index in {"", None}:
-            cell_index = None
-
-        execution = submit_document(
-            document,
-            request.user,
-            cpus=cpus,
-            memory_mb=memory_mb,
-            time_minutes=time_minutes,
-            partition=partition,
-            cell_index=cell_index,
-        )
-    except (json.JSONDecodeError, JupyterNotebookError, TypeError, ValueError) as exc:
-        return JsonResponse(
-            {"status": "error", "message": str(exc)},
-            status=400,
-        )
-
-    return JsonResponse(
-        {
-            "status": "success",
-            "execution": _execution_payload(execution),
-        }
-    )
-
-
-@login_required
-def notebook_jupyter_execution_status_api(request, execution_id):
-    if request.method != "GET":
-        return JsonResponse(
-            {"status": "error", "message": "GET required."},
-            status=405,
-        )
-
-    execution = get_object_or_404(
-        NotebookKernelExecution.objects.select_related(
-            "document",
-            "document__entry",
-            "submitted_by",
-        ),
-        id=execution_id,
-    )
-    if not can_view_notebook_entry(request.user, execution.document.entry):
-        raise PermissionDenied
-
-    warning = ""
-    if execution.status in {"submitted", "pending", "running", "unknown"}:
-        try:
-            execution = refresh_execution(execution)
-        except JupyterNotebookError as exc:
-            warning = str(exc)
-
-    return JsonResponse(
-        {
-            "status": "success",
-            "execution": _execution_payload(execution),
-            "document": (
-                execution.document.notebook_json
-                if execution.status == "completed"
-                else None
-            ),
-            "warning": warning,
-        }
-    )
-
-
-@login_required
-def notebook_jupyter_execution_cancel_api(request, execution_id):
-    if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "POST required."},
-            status=405,
-        )
-    execution = get_object_or_404(
-        NotebookKernelExecution.objects.select_related(
-            "document",
-            "document__entry",
-        ),
-        id=execution_id,
-    )
-    if not can_edit_notebook_entry(request.user, execution.document.entry):
-        raise PermissionDenied
-    if not _can_execute_managed_notebook(
+    entry = _get_entry_for_user(
+        entry_id,
         request.user,
-        execution.document.entry,
-    ):
-        raise PermissionDenied
-
-    try:
-        cancel_execution(execution)
-    except JupyterNotebookError as exc:
-        return JsonResponse(
-            {"status": "error", "message": str(exc)},
-            status=400,
-        )
-
-    return JsonResponse(
-        {
-            "status": "success",
-            "execution": _execution_payload(execution),
-        }
+        require_edit=True,
     )
 
-
-@login_required
-def notebook_jupyter_download(request, entry_id):
-    entry = _get_entry_for_user(entry_id, request.user)
-    document = get_object_or_404(NotebookKernelDocument, entry=entry)
-    filename = f"eln-entry-{entry.id}.ipynb"
-    response = HttpResponse(
-        json.dumps(document.notebook_json, indent=1, ensure_ascii=False),
-        content_type="application/x-ipynb+json",
+    link = get_object_or_404(
+        NotebookJupyterLink,
+        pk=link_id,
+        entry=entry,
     )
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    response["X-Content-Type-Options"] = "nosniff"
-    return response
+
+    link.delete()
+
+    return redirect(
+        _notebook_entry_return_url(entry)
+    )

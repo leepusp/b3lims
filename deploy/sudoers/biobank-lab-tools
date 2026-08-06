@@ -1,0 +1,5 @@
+Defaults!/usr/local/sbin/biobank-user-storage !requiretty
+Defaults!/usr/local/sbin/biobank-jupyter-server-runner !requiretty
+
+ladmin ALL=(root) NOPASSWD: /usr/local/sbin/biobank-user-storage *
+ladmin ALL=(root) NOPASSWD: /usr/local/sbin/biobank-jupyter-server-runner *

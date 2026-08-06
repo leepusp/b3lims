@@ -237,49 +237,10 @@ class ShipmentAccessTokenAdmin(admin.ModelAdmin):
     ]
 
 from core.models.chemicals.chemical import Chemical, ChemicalStockMovement
-from core.models.lab_tools.notebook import (
-    NotebookKernelDocument,
-    NotebookKernelExecution,
-)
 
 
-@admin.register(NotebookKernelDocument)
-class NotebookKernelDocumentAdmin(admin.ModelAdmin):
-    list_display = ("entry", "title", "updated_by", "updated_at")
-    search_fields = ("title", "entry__title", "entry__author__username")
-    readonly_fields = ("created_at", "updated_at")
 
 
-@admin.register(NotebookKernelExecution)
-class NotebookKernelExecutionAdmin(admin.ModelAdmin):
-    list_display = (
-        "job_id",
-        "document",
-        "status",
-        "submitted_by",
-        "cpus",
-        "memory_mb",
-        "submitted_at",
-    )
-    list_filter = ("status", "submitted_at")
-    search_fields = (
-        "job_id",
-        "run_id",
-        "document__title",
-        "submitted_by__username",
-    )
-    readonly_fields = (
-        "job_id",
-        "run_id",
-        "source_path",
-        "run_directory",
-        "result_path",
-        "summary_json",
-        "submitted_at",
-        "started_at",
-        "finished_at",
-        "updated_at",
-    )
 
 
 
@@ -384,7 +345,6 @@ class JupyterNotebookAdmin(admin.ModelAdmin):
     raw_id_fields = (
         "owner",
         "updated_by",
-        "legacy_document",
     )
 
 

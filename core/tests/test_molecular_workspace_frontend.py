@@ -300,33 +300,6 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertContains(response, "window.location.href = data.detail_url")
         self.assertContains(response, "ql-biobank-molecular")
 
-    def test_notebook_exposes_integrated_jupyter_workspace(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.get(
-            request_path("notebook_index")
-            + f"?entry_id={self.entry.id}&tab=items"
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Jupyter analysis")
-        self.assertContains(response, "Create analysis")
-        self.assertContains(
-            response,
-            "linked directly to this ELN entry",
-        )
-        self.assertContains(
-            response,
-            reverse(
-                "notebook_jupyter_workspace",
-                args=[self.entry.id],
-            ),
-        )
-        self.assertContains(
-            response,
-            "data-jupyter-launch",
-        )
-
     def test_lab_viewer_receives_read_only_workspace(self):
         self.client.force_login(self.viewer)
 

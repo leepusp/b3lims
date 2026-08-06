@@ -21,7 +21,7 @@ from core.models.lab_tools.notebook import (
     JupyterKernelSession,
     JupyterNotebook,
 )
-from core.services.jupyter_notebooks import (
+from core.services.jupyter_documents import (
     JupyterNotebookError,
     normalize_notebook,
 )
@@ -152,6 +152,7 @@ def _launch_defaults():
             "BIOBANK_JUPYTER_PARTITION",
             "basic",
         ),
+        "node": "auto",
         "cpus": int(
             getattr(
                 settings,
@@ -179,6 +180,10 @@ def _validated_launch(request, defaults):
         "partition": str(
             request.POST.get("partition")
             or defaults["partition"]
+        ).strip(),
+        "node": str(
+            request.POST.get("node")
+            or defaults["node"]
         ).strip(),
         "cpus": request.POST.get(
             "cpus",
@@ -212,6 +217,20 @@ def _validated_launch(request, defaults):
             ("basic", "max50"),
         )
     )
+    allowed_nodes = set(
+        getattr(
+            settings,
+            "BIOBANK_JUPYTER_NODES",
+            ("n01", "gn01", "gn02", "gn03"),
+        )
+    )
+    partition_max_hours = dict(
+        getattr(
+            settings,
+            "BIOBANK_JUPYTER_PARTITION_MAX_HOURS",
+            {"basic": 72, "max50": 168},
+        )
+    )
 
     if not launch["title"]:
         raise JupyterNotebookError(
@@ -225,6 +244,13 @@ def _validated_launch(request, defaults):
         raise JupyterNotebookError(
             "Invalid Slurm partition."
         )
+    if (
+        launch["node"] != "auto"
+        and launch["node"] not in allowed_nodes
+    ):
+        raise JupyterNotebookError(
+            "Invalid compute node."
+        )
     if not 1 <= launch["cpus"] <= 128:
         raise JupyterNotebookError(
             "CPU cores must be between 1 and 128."
@@ -234,10 +260,17 @@ def _validated_launch(request, defaults):
             "Memory must be between 1024 and "
             "1048576 MB."
         )
-    if not 1 <= launch["hours"] <= 168:
+    maximum_hours = int(
+        partition_max_hours.get(
+            launch["partition"],
+            168,
+        )
+    )
+    if not 1 <= launch["hours"] <= maximum_hours:
         raise JupyterNotebookError(
             "Session duration must be between "
-            "1 and 168 hours."
+            f"1 and {maximum_hours} hours for "
+            f"{launch['partition']}."
         )
 
     return launch
@@ -288,6 +321,11 @@ def jupyter_launch(request):
                     "BIOBANK_JUPYTER_PARTITIONS",
                     ("basic", "max50"),
                 ),
+                "nodes": getattr(
+                    settings,
+                    "BIOBANK_JUPYTER_NODES",
+                    ("n01", "gn01", "gn02", "gn03"),
+                ),
             },
         )
 
@@ -319,6 +357,11 @@ def jupyter_launch(request):
                     settings,
                     "BIOBANK_JUPYTER_PARTITIONS",
                     ("basic", "max50"),
+                ),
+                "nodes": getattr(
+                    settings,
+                    "BIOBANK_JUPYTER_NODES",
+                    ("n01", "gn01", "gn02", "gn03"),
                 ),
                 "launch_error": str(exc),
             },
@@ -369,6 +412,7 @@ def jupyter_launch(request):
                 memory_mb=launch["memory_mb"],
                 time_minutes=launch["hours"] * 60,
                 partition=launch["partition"],
+                node=launch["node"],
             )
             messages.success(
                 request,
@@ -377,7 +421,14 @@ def jupyter_launch(request):
             )
     except JupyterNotebookError as exc:
         if created and not notebook.sessions.exists():
-            notebook.delete()
+            try:
+                delete_notebook_workspace(notebook)
+            except JupyterNotebookError:
+                # Preserve the database record when protected
+                # filesystem cleanup could not be confirmed.
+                created = False
+            else:
+                notebook.delete()
 
         return render(
             request,
@@ -391,6 +442,11 @@ def jupyter_launch(request):
                     settings,
                     "BIOBANK_JUPYTER_PARTITIONS",
                     ("basic", "max50"),
+                ),
+                "nodes": getattr(
+                    settings,
+                    "BIOBANK_JUPYTER_NODES",
+                    ("n01", "gn01", "gn02", "gn03"),
                 ),
                 "launch_error": str(exc),
             },
@@ -427,6 +483,11 @@ def jupyter_workspace(request, notebook_id):
             "jupyter_notebook": notebook,
             "active_session": active_session,
             "session_error": session_error,
+            "jupyterlab_ood_launch_url": getattr(
+                settings,
+                "BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL",
+                "",
+            ),
             "can_edit_jupyter": can_edit_notebook(
                 request.user,
                 notebook,
@@ -467,7 +528,11 @@ def jupyter_connect(request, notebook_id):
             )
 
         redirect_path = connection_redirect_path(
-            session
+            session,
+            interface=request.GET.get(
+                "interface",
+                "notebook",
+            ),
         )
     except JupyterNotebookError as exc:
         response = HttpResponse(

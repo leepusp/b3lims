@@ -149,7 +149,8 @@ class OfficialJupyterViewTests(TestCase):
         )
 
         mocked_connection.assert_called_once_with(
-            self.session
+            self.session,
+            interface="notebook",
         )
 
     def test_other_user_cannot_use_connect_route(self):

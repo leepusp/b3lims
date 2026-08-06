@@ -82,7 +82,7 @@ class ELNStartShortcutsAndRegistryDeleteTests(TestCase):
             "Browse samples",
             "Browse reagents",
             "Molecular Registry",
-            "Launch Jupyter",
+            "Jupyter notebooks",
         ]:
             with self.subTest(label=label):
                 self.assertContains(

@@ -70,6 +70,26 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
+            {% if active_session %}
+                {% if active_session.status == "running" %}
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{% url 'jupyter_connect' jupyter_notebook.id %}?interface=lab"
+                       target="_blank"
+                       rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>
+                        Open JupyterLab
+                    </a>
+                {% endif %}
+            {% elif jupyterlab_ood_launch_url %}
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{{ jupyterlab_ood_launch_url }}"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>
+                    Standalone JupyterLab
+                </a>
+            {% endif %}
+
             {% if not active_session %}
                 <a class="btn btn-sm btn-primary"
                    href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
@@ -141,8 +161,10 @@
     {% else %}
         <div class="alert alert-warning py-2"
              role="status">
-            This notebook has no active server.
+            This notebook has no active managed server.
             Start a Slurm session to open Notebook 7.
+            Standalone JupyterLab uses a separate Open OnDemand
+            allocation and workspace.
         </div>
     {% endif %}
 
@@ -200,11 +222,31 @@
                         Your saved notebook remains available.
                     </p>
 
-                    <a class="btn btn-primary"
-                       href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
-                        <i class="bi bi-play-fill me-1"></i>
-                        Start session
-                    </a>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a class="btn btn-primary"
+                           href="{% url 'jupyter_launch' %}?notebook_id={{ jupyter_notebook.id }}">
+                            <i class="bi bi-play-fill me-1"></i>
+                            Start managed session
+                        </a>
+
+                        {% if jupyterlab_ood_launch_url %}
+                            <a class="btn btn-outline-primary"
+                               href="{{ jupyterlab_ood_launch_url }}"
+                               target="_blank"
+                               rel="noopener">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>
+                                Launch standalone JupyterLab
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    {% if jupyterlab_ood_launch_url %}
+                        <p class="small text-muted mt-3 mb-0">
+                            Standalone JupyterLab is independent from
+                            this notebook and starts a separate
+                            Open OnDemand Slurm session.
+                        </p>
+                    {% endif %}
                 </div>
             </div>
         {% endif %}

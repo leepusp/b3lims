@@ -80,11 +80,16 @@ class PamRemoteUserMiddlewareTests(TestCase):
         )
 
     @patch(
+        "core.middleware.pam_remote_user."
+        "ensure_user_lab_tools_storage"
+    )
+    @patch(
         "core.middleware.pam_remote_user.pwd.getpwnam"
     )
     def test_pam_identity_creates_and_logs_in_django_user(
         self,
         mocked_getpwnam,
+        storage_mock,
     ):
         mocked_getpwnam.return_value = self._account(
             "pamuser"
@@ -106,6 +111,31 @@ class PamRemoteUserMiddlewareTests(TestCase):
             ),
             user.id,
         )
+        storage_mock.assert_not_called()
+
+    @override_settings(
+        BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN=True
+    )
+    @patch(
+        "core.middleware.pam_remote_user."
+        "ensure_user_lab_tools_storage"
+    )
+    @patch(
+        "core.middleware.pam_remote_user.pwd.getpwnam"
+    )
+    def test_first_pam_login_provisions_lab_tools_home(
+        self,
+        mocked_getpwnam,
+        storage_mock,
+    ):
+        mocked_getpwnam.return_value = self._account(
+            "pamuser"
+        )
+
+        response = self._request("pamuser")
+
+        self.assertEqual(response.status_code, 302)
+        storage_mock.assert_called_once_with("pamuser")
 
     def test_request_without_pam_header_preserves_session(self):
         user = get_user_model().objects.create_user(

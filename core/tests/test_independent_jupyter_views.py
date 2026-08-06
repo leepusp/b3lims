@@ -12,7 +12,9 @@ from django.urls import (
 from core.models.lab_tools.notebook import (
     JupyterNotebook,
     NotebookEntry,
-    NotebookKernelDocument,
+)
+from core.services.jupyter_documents import (
+    JupyterNotebookError,
 )
 from core.services.jupyter_server import (
     starter_notebook,
@@ -23,9 +25,18 @@ from core.services.jupyter_server import (
     FORCE_SCRIPT_NAME=None,
     BIOBANK_JUPYTER_PARTITION="basic",
     BIOBANK_JUPYTER_PARTITIONS=("basic", "max50"),
+    BIOBANK_JUPYTER_NODES=("n01", "gn01", "gn02", "gn03"),
+    BIOBANK_JUPYTER_PARTITION_MAX_HOURS={
+        "basic": 72,
+        "max50": 168,
+    },
     BIOBANK_JUPYTER_DEFAULT_CPUS=2,
     BIOBANK_JUPYTER_DEFAULT_MEMORY_MB=8192,
     BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES=60,
+    BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL=(
+        "https://davinci.example/pun/sys/dashboard/"
+        "batch_connect/sys/jupyterlab/session_contexts/new"
+    ),
 )
 class IndependentJupyterViewTests(TestCase):
     @classmethod
@@ -94,6 +105,7 @@ class IndependentJupyterViewTests(TestCase):
             {
                 "title": "Cluster analysis",
                 "partition": "basic",
+                "node": "gn03",
                 "cpus": "4",
                 "memory_mb": "16384",
                 "hours": "2",
@@ -127,7 +139,85 @@ class IndependentJupyterViewTests(TestCase):
             memory_mb=16384,
             time_minutes=120,
             partition="basic",
+            node="gn03",
         )
+
+    def test_launch_form_exposes_compute_node_selection(self):
+        response = self.client.get(
+            reverse("jupyter_launch")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Automatic (Slurm decides)",
+        )
+        for node in ("n01", "gn01", "gn02", "gn03"):
+            self.assertContains(
+                response,
+                f'value="{node}"',
+            )
+
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "start_session"
+    )
+    def test_launch_rejects_unknown_compute_node(
+        self,
+        mocked_start_session,
+    ):
+        response = self.client.post(
+            reverse("jupyter_launch"),
+            {
+                "title": "Invalid node",
+                "partition": "basic",
+                "node": "gn03;id",
+                "cpus": "2",
+                "memory_mb": "8192",
+                "hours": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(
+            response,
+            "Invalid compute node.",
+            status_code=400,
+        )
+        self.assertFalse(
+            JupyterNotebook.objects.filter(
+                title="Invalid node"
+            ).exists()
+        )
+        mocked_start_session.assert_not_called()
+
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "start_session"
+    )
+    def test_basic_partition_rejects_more_than_72_hours(
+        self,
+        mocked_start_session,
+    ):
+        response = self.client.post(
+            reverse("jupyter_launch"),
+            {
+                "title": "Too long",
+                "partition": "basic",
+                "node": "auto",
+                "cpus": "2",
+                "memory_mb": "8192",
+                "hours": "73",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(
+            response,
+            "1 and 72 hours for basic",
+            status_code=400,
+        )
+        mocked_start_session.assert_not_called()
 
     @patch(
         "core.views.internal.lab_tools.jupyter."
@@ -277,7 +367,11 @@ class IndependentJupyterViewTests(TestCase):
             "core.views.internal.lab_tools.jupyter."
             "stop_session",
             return_value=session,
-        ) as mocked_stop:
+        ) as mocked_stop, patch(
+            "core.views.internal.lab_tools.jupyter."
+            "delete_notebook_workspace",
+            return_value=True,
+        ) as mocked_delete_workspace:
             response = self.client.post(
                 reverse(
                     "jupyter_delete",
@@ -295,39 +389,186 @@ class IndependentJupyterViewTests(TestCase):
             ).exists()
         )
         mocked_stop.assert_called_once()
+        mocked_delete_workspace.assert_called_once()
 
-    def test_legacy_jupyter_entry_is_hidden_from_notes_list(self):
-        entry = NotebookEntry.objects.create(
-            title="Legacy Jupyter entry",
-            author=self.owner,
-            entry_type="analysis",
-            status="draft",
-            visibility="private",
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "delete_notebook_workspace",
+        return_value=True,
+    )
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "start_session",
+        side_effect=JupyterNotebookError(
+            "Submission failed."
+        ),
+    )
+    def test_failed_new_launch_removes_workspace_and_record(
+        self,
+        mocked_start_session,
+        mocked_delete_workspace,
+    ):
+        response = self.client.post(
+            reverse("jupyter_launch"),
+            {
+                "title": "Failed launch",
+                "partition": "basic",
+                "node": "",
+                "cpus": "2",
+                "memory_mb": "8192",
+                "hours": "1",
+            },
         )
 
-        document = NotebookKernelDocument.objects.create(
-            entry=entry,
-            title=entry.title,
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            JupyterNotebook.objects.filter(
+                title="Failed launch",
+            ).exists()
+        )
+        self.assertEqual(
+            mocked_delete_workspace.call_count,
+            1,
+        )
+        mocked_start_session.assert_called_once()
+
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "active_session_for_notebook",
+        return_value=None,
+    )
+    def test_stopped_workspace_offers_standalone_jupyterlab(
+        self,
+        mocked_active_session,
+    ):
+        notebook = JupyterNotebook.objects.create(
+            title="Stopped workspace",
+            owner=self.owner,
+            updated_by=self.owner,
             notebook_json=starter_notebook(
-                entry.title,
+                "Stopped workspace",
                 self.owner.get_username(),
             ),
-            updated_by=self.owner,
-        )
-
-        JupyterNotebook.objects.create(
-            title=entry.title,
-            owner=self.owner,
-            notebook_json=document.notebook_json,
-            legacy_document=document,
         )
 
         response = self.client.get(
-            reverse("notebook_index")
+            reverse(
+                "jupyter_workspace",
+                args=[notebook.id],
+            )
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Standalone JupyterLab",
+        )
+        self.assertContains(
+            response,
+            "batch_connect/sys/jupyterlab/"
+            "session_contexts/new",
+        )
+        mocked_active_session.assert_called_once()
+
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "active_session_for_notebook",
+    )
+    def test_running_workspace_offers_managed_jupyterlab(
+        self,
+        mocked_active_session,
+    ):
+        notebook = JupyterNotebook.objects.create(
+            title="Running workspace",
+            owner=self.owner,
+            updated_by=self.owner,
+            notebook_json=starter_notebook(
+                "Running workspace",
+                self.owner.get_username(),
+            ),
+        )
+
+        session = notebook.sessions.create(
+            started_by=self.owner,
+            job_id="99102",
+            run_id="managed_lab_session",
+            status="running",
+            partition="basic",
+            cpus=2,
+            memory_mb=8192,
+            time_minutes=60,
+            run_directory="/tmp/managed-lab-session",
+        )
+        mocked_active_session.return_value = session
+
+        response = self.client.get(
+            reverse(
+                "jupyter_workspace",
+                args=[notebook.id],
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Open JupyterLab",
+        )
+        self.assertContains(
+            response,
+            (
+                reverse(
+                    "jupyter_connect",
+                    args=[notebook.id],
+                )
+                + "?interface=lab"
+            ),
+        )
         self.assertNotContains(
             response,
-            entry.title,
+            "Standalone JupyterLab",
+        )
+
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "connection_redirect_path",
+        return_value="/managed-jupyterlab",
+    )
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "active_session_for_notebook",
+    )
+    def test_connect_forwards_managed_lab_interface(
+        self,
+        mocked_active_session,
+        mocked_redirect_path,
+    ):
+        notebook = JupyterNotebook.objects.create(
+            title="Managed lab redirect",
+            owner=self.owner,
+            updated_by=self.owner,
+            notebook_json=starter_notebook(
+                "Managed lab redirect",
+                self.owner.get_username(),
+            ),
+        )
+
+        session = object()
+        mocked_active_session.return_value = session
+
+        response = self.client.get(
+            reverse(
+                "jupyter_connect",
+                args=[notebook.id],
+            ),
+            {"interface": "lab"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            "/managed-jupyterlab",
+        )
+        mocked_redirect_path.assert_called_once_with(
+            session,
+            interface="lab",
         )

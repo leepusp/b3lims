@@ -768,7 +768,7 @@
                                         <div class="col-6 col-xl">
                                             <div class="border rounded bg-light p-3 h-100">
                                                 <div class="small text-muted">Jupyter</div>
-                                                <div class="fs-4 fw-bold">{{ experiment_context_counts.jupyter }}</div>
+                                                <div class="fs-4 fw-bold">{{ active_entry.jupyter_links.count }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -847,36 +847,129 @@
 
                                     <hr>
 
-                                    <section class="my-4">
-                                        <div class="border rounded p-3 bg-light">
-                                            <div class="d-flex justify-content-between align-items-start gap-3">
-                                                <div>
-                                                    <div class="fw-bold">
-                                                        <i class="bi bi-code-square me-2"></i>Jupyter analysis
-                                                    </div>
-
-                                                    {% if eln_jupyter_document %}
-                                                        <div class="small text-muted mt-1">
-                                                            Workspace ready · {{ eln_jupyter_document.title }}
-                                                        </div>
-                                                        <div class="small mt-1">
-                                                            Updated {{ eln_jupyter_document.updated_at|date:"Y-m-d H:i" }}
-                                                        </div>
-                                                    {% else %}
-                                                        <div class="small text-muted mt-1">
-                                                            Create an analysis workspace linked directly to this ELN entry.
-                                                        </div>
-                                                    {% endif %}
+                                    <section class="my-4"
+                                             id="linked-jupyter-notebooks">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                            <div>
+                                                <div class="fw-bold">
+                                                    <i class="bi bi-code-square me-2"></i>Jupyter notebooks
                                                 </div>
+                                                <div class="small text-muted mt-1">
+                                                    Attach an existing Jupyter notebook to this ELN entry.
+                                                </div>
+                                            </div>
 
-                                                <a href="{% url 'notebook_jupyter_workspace' active_entry.id %}"
-                                                   class="btn btn-sm btn-outline-primary flex-shrink-0"
-                                                   data-jupyter-launch>
-                                                    <i class="bi bi-arrows-fullscreen me-1"></i>
-                                                    {% if eln_jupyter_document %}Continue analysis{% else %}Create analysis{% endif %}
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <a href="{% url 'jupyter_index' %}"
+                                                   class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-code-square me-1"></i>
+                                                    Open Jupyter
                                                 </a>
+
+                                                {% if can_edit %}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#attach-jupyter-notebook"
+                                                            aria-expanded="false"
+                                                            aria-controls="attach-jupyter-notebook">
+                                                        <i class="bi bi-link-45deg me-1"></i>
+                                                        Attach notebook
+                                                    </button>
+                                                {% endif %}
                                             </div>
                                         </div>
+
+                                        {% if can_edit %}
+                                            <div id="attach-jupyter-notebook"
+                                                 class="collapse mb-3">
+                                                <form method="post"
+                                                      action="{% url 'notebook_link_jupyter' active_entry.id %}"
+                                                      class="border rounded bg-light p-3">
+                                                    {% csrf_token %}
+
+                                                    <label for="eln-jupyter-notebook"
+                                                           class="form-label small fw-bold">
+                                                        Select one of the entry author's notebooks
+                                                    </label>
+
+                                                    <div class="input-group input-group-sm">
+                                                        <select id="eln-jupyter-notebook"
+                                                                name="notebook_id"
+                                                                class="form-select"
+                                                                required>
+                                                            <option value="">Choose a notebook</option>
+
+                                                            {% for notebook in active_entry.available_jupyter_notebooks %}
+                                                                <option value="{{ notebook.id }}">
+                                                                    {{ notebook.title }}
+                                                                </option>
+                                                            {% endfor %}
+                                                        </select>
+
+                                                        <button type="submit"
+                                                                class="btn btn-primary">
+                                                            <i class="bi bi-link-45deg me-1"></i>
+                                                            Attach
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="small text-muted mt-2">
+                                                        Create notebooks from the Jupyter page, then attach them here.
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        {% endif %}
+
+                                        {% for link in active_entry.jupyter_links.all %}
+                                            <div class="border rounded p-3 mb-2 bg-white">
+                                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="fw-bold">
+                                                            {{ link.notebook.title }}
+                                                        </div>
+
+                                                        {% if link.notebook.description %}
+                                                            <div class="small text-muted mt-1">
+                                                                {{ link.notebook.description|truncatechars:180 }}
+                                                            </div>
+                                                        {% endif %}
+
+                                                        <div class="small text-muted mt-1">
+                                                            Owner:
+                                                            {{ link.notebook.owner.get_username|default:"Unavailable" }}
+                                                            · Linked:
+                                                            {{ link.linked_at|date:"Y-m-d H:i" }}
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        <a href="{% url 'jupyter_workspace' link.notebook.id %}"
+                                                           class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-box-arrow-up-right me-1"></i>
+                                                            Open
+                                                        </a>
+
+                                                        {% if can_edit %}
+                                                            <form method="post"
+                                                                  action="{% url 'notebook_unlink_jupyter' active_entry.id link.id %}"
+                                                                  onsubmit="return window.confirm('Detach this Jupyter notebook from the ELN entry? The notebook will not be deleted.');">
+                                                                {% csrf_token %}
+                                                                <button type="submit"
+                                                                        class="btn btn-sm btn-outline-danger">
+                                                                    <i class="bi bi-link-45deg me-1"></i>
+                                                                    Detach
+                                                                </button>
+                                                            </form>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% empty %}
+                                            <div class="text-muted small border rounded p-3 bg-light">
+                                                No Jupyter notebooks are attached to this experiment.
+                                            </div>
+                                        {% endfor %}
                                     </section>
 
                                     <hr>
@@ -1298,7 +1391,7 @@
                                        class="btn btn-outline-primary"
                                        data-jupyter-launch>
                                         <i class="bi bi-code-square me-1"></i>
-                                        Launch Jupyter
+                                        Jupyter notebooks
                                     </a>
                                 </div>
 
@@ -1342,7 +1435,7 @@
                                                 <i class="bi bi-code-square me-1"></i>Analyze
                                             </div>
                                             <div class="small text-muted">
-                                                Create an integrated notebook with starter cells and submit its default run to Slurm.
+                                                Create notebooks in Jupyter and attach them to the relevant ELN entries.
                                             </div>
                                         </div>
                                     </div>

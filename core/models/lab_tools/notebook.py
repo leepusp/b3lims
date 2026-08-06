@@ -4,15 +4,31 @@ from pathlib import Path
 
 from django.conf import settings
 from django.db import models
+from django.utils.text import get_valid_filename
 
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
+from core.services.lab_tools_storage import (
+    lab_tools_storage,
+    validate_username,
+)
 
 
 def notebook_attachment_upload_to(instance, filename):
+    if not instance.entry_id or not instance.entry.author_id:
+        raise ValueError(
+            "A notebook attachment requires an authored ELN entry."
+        )
+
+    username = validate_username(
+        instance.entry.author.get_username()
+    )
     entry_id = instance.entry_id or "unassigned"
-    safe_name = Path(filename).name
-    return f"notebook/entries/{entry_id}/attachments/{uuid.uuid4().hex}_{safe_name}"
+    safe_name = get_valid_filename(Path(filename).name)
+    return (
+        f"users/{username}/eln/entries/{entry_id}/"
+        f"attachments/{uuid.uuid4().hex}_{safe_name}"
+    )
 
 
 def default_jupyter_notebook():
@@ -104,6 +120,25 @@ class NotebookEntry(models.Model):
         ordering = ["-updated_at"]
         verbose_name = "Notebook Entry"
         verbose_name_plural = "Notebook Entries"
+
+    def available_jupyter_notebooks(self):
+        """
+        Return active notebooks owned by the entry author that have not
+        already been attached to this ELN entry.
+        """
+        if not self.pk or not self.author_id:
+            return JupyterNotebook.objects.none()
+
+        return (
+            JupyterNotebook.objects.filter(
+                owner_id=self.author_id,
+                is_archived=False,
+            )
+            .exclude(
+                eln_links__entry_id=self.pk
+            )
+            .order_by("-updated_at", "-id")
+        )
 
     def __str__(self):
         return f"{self.title} - {self.author.username}"
@@ -349,7 +384,11 @@ class NotebookAttachment(models.Model):
         null=True,
         blank=True,
     )
-    file = models.FileField(upload_to=notebook_attachment_upload_to)
+    file = models.FileField(
+        upload_to=notebook_attachment_upload_to,
+        storage=lab_tools_storage,
+        max_length=512,
+    )
     attachment_type = models.CharField(
         max_length=32,
         choices=ATTACHMENT_TYPE_CHOICES,
@@ -388,96 +427,8 @@ class NotebookAttachment(models.Model):
     def __str__(self):
         return self.caption or Path(self.file.name).name
 
-class NotebookKernelDocument(models.Model):
-    """Jupyter-compatible document attached to one ELN entry."""
-
-    entry = models.OneToOneField(
-        NotebookEntry,
-        on_delete=models.CASCADE,
-        related_name="kernel_document",
-    )
-    title = models.CharField(max_length=255, default="ELN analysis")
-    notebook_json = models.JSONField(default=default_jupyter_notebook)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notebook_kernel_documents_created",
-    )
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notebook_kernel_documents_updated",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-updated_at"]
-        verbose_name = "ELN Jupyter Notebook"
-        verbose_name_plural = "ELN Jupyter Notebooks"
-
-    def __str__(self):
-        return f"{self.entry_id}: {self.title}"
 
 
-class NotebookKernelExecution(models.Model):
-    """Audited Slurm execution of an ELN Jupyter notebook."""
-
-    STATUS_CHOICES = [
-        ("submitted", "Submitted"),
-        ("pending", "Pending"),
-        ("running", "Running"),
-        ("completed", "Completed"),
-        ("failed", "Failed"),
-        ("cancelled", "Cancelled"),
-        ("unknown", "Unknown"),
-    ]
-
-    document = models.ForeignKey(
-        NotebookKernelDocument,
-        on_delete=models.CASCADE,
-        related_name="executions",
-    )
-    submitted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notebook_kernel_executions_submitted",
-    )
-    job_id = models.CharField(max_length=64, blank=True, db_index=True)
-    run_id = models.CharField(max_length=128, unique=True)
-    status = models.CharField(
-        max_length=32,
-        choices=STATUS_CHOICES,
-        default="submitted",
-        db_index=True,
-    )
-    requested_cell_index = models.PositiveIntegerField(null=True, blank=True)
-    cpus = models.PositiveSmallIntegerField(default=2)
-    memory_mb = models.PositiveIntegerField(default=8192)
-    time_minutes = models.PositiveIntegerField(default=60)
-    partition = models.CharField(max_length=32, default="max50")
-    source_path = models.CharField(max_length=1024)
-    run_directory = models.CharField(max_length=1024)
-    result_path = models.CharField(max_length=1024, blank=True)
-    summary_json = models.JSONField(default=dict, blank=True)
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-submitted_at", "-id"]
-        verbose_name = "ELN Jupyter Execution"
-        verbose_name_plural = "ELN Jupyter Executions"
-
-    def __str__(self):
-        return f"{self.document_id}: {self.job_id or self.run_id} ({self.status})"
 
 class MolecularSequence(models.Model):
     """
@@ -610,13 +561,6 @@ class JupyterNotebook(models.Model):
     notebook_json = models.JSONField(default=dict, blank=True)
     is_archived = models.BooleanField(default=False, db_index=True)
 
-    legacy_document = models.OneToOneField(
-        "NotebookKernelDocument",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="independent_notebook",
-    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -628,6 +572,61 @@ class JupyterNotebook(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class NotebookJupyterLink(models.Model):
+    """
+    Reusable relationship between an ELN entry and an independent
+    Jupyter notebook.
+
+    Removing this relationship never removes the notebook or its
+    protected workspace.
+    """
+
+    entry = models.ForeignKey(
+        NotebookEntry,
+        on_delete=models.CASCADE,
+        related_name="jupyter_links",
+    )
+    notebook = models.ForeignKey(
+        JupyterNotebook,
+        on_delete=models.CASCADE,
+        related_name="eln_links",
+    )
+    linked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notebook_jupyter_links_created",
+    )
+    linked_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        ordering = [
+            "-linked_at",
+            "-id",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "entry",
+                    "notebook",
+                ],
+                name=(
+                    "unique_notebook_entry_"
+                    "jupyter_link"
+                ),
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.entry_id}: "
+            f"{self.notebook.title}"
+        )
 
 
 class JupyterKernelSession(models.Model):

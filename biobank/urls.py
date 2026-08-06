@@ -270,13 +270,16 @@ urlpatterns = [
         jupyter_views.jupyter_delete,
         name='jupyter_delete',
     ),
-    path('internal/lab-tools/notebook/jupyter/launch/', notebook_views.notebook_jupyter_launch, name='notebook_jupyter_launch'),
-    path('internal/lab-tools/notebook/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_workspace, name='notebook_jupyter_workspace'),
-    path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/', notebook_views.notebook_jupyter_document_api, name='notebook_jupyter_document_api'),
-    path('internal/lab-tools/notebook/api/jupyter/<int:entry_id>/submit/', notebook_views.notebook_jupyter_submit_api, name='notebook_jupyter_submit_api'),
-    path('internal/lab-tools/notebook/api/jupyter/executions/<int:execution_id>/', notebook_views.notebook_jupyter_execution_status_api, name='notebook_jupyter_execution_status_api'),
-    path('internal/lab-tools/notebook/api/jupyter/executions/<int:execution_id>/cancel/', notebook_views.notebook_jupyter_execution_cancel_api, name='notebook_jupyter_execution_cancel_api'),
-    path('internal/lab-tools/notebook/jupyter/<int:entry_id>/download/', notebook_views.notebook_jupyter_download, name='notebook_jupyter_download'),
+    path(
+        'internal/lab-tools/notebook/<int:entry_id>/link-jupyter/',
+        notebook_views.notebook_link_jupyter,
+        name='notebook_link_jupyter',
+    ),
+    path(
+        'internal/lab-tools/notebook/<int:entry_id>/unlink-jupyter/<int:link_id>/',
+        notebook_views.notebook_unlink_jupyter,
+        name='notebook_unlink_jupyter',
+    ),
 
 
     # ---------------- QR CODE (PAGE) --------------------------------

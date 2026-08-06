@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import grp
+import os
 import pwd
 import re
 from dataclasses import dataclass
@@ -9,7 +11,14 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
+
+from core.services.lab_tools_storage import (
+    LabToolsStorageError,
+    ensure_user_lab_tools_storage,
+)
 
 
 PAM_USERNAME_RE = re.compile(
@@ -162,6 +171,119 @@ def _validated_identity(raw_username):
     )
 
 
+def _resolved_unix_group_names(identity):
+    """
+    Resolve the PAM user's primary and supplementary Unix groups.
+
+    A temporary NSS failure leaves existing managed memberships
+    unchanged instead of removing access based on an incomplete
+    result.
+    """
+    try:
+        group_ids = os.getgrouplist(
+            identity.username,
+            identity.gid,
+        )
+    except (KeyError, OSError):
+        return None
+
+    names = set()
+
+    for group_id in set(group_ids):
+        try:
+            name = grp.getgrgid(group_id).gr_name
+        except KeyError:
+            continue
+
+        name = str(name).strip()
+
+        if name:
+            names.add(name)
+
+    return names
+
+
+def _synchronize_pam_groups(user, identity):
+    """
+    Synchronize only reserved PAM-managed Django groups.
+
+    Manual Django memberships and privilege flags are preserved.
+    Operational groups and the user's personal Unix group are not
+    imported.
+    """
+    prefix = str(
+        getattr(
+            settings,
+            "BIOBANK_PAM_GROUP_PREFIX",
+            "pam:",
+        )
+    ).strip()
+
+    if not prefix:
+        _permission_denied(
+            "The PAM group prefix is not configured."
+        )
+
+    unix_groups = _resolved_unix_group_names(
+        identity
+    )
+
+    if unix_groups is None:
+        return
+
+    excluded = {
+        str(value).strip()
+        for value in getattr(
+            settings,
+            "BIOBANK_PAM_EXCLUDED_GROUPS",
+            (),
+        )
+        if str(value).strip()
+    }
+    excluded.add(identity.username)
+
+    name_limit = Group._meta.get_field(
+        "name"
+    ).max_length
+
+    expected_names = {
+        f"{prefix}{name}"
+        for name in unix_groups
+        if name not in excluded
+        and len(f"{prefix}{name}") <= name_limit
+    }
+
+    with transaction.atomic():
+        current_names = set(
+            user.groups.filter(
+                name__startswith=prefix
+            ).values_list(
+                "name",
+                flat=True,
+            )
+        )
+
+        stale_names = (
+            current_names - expected_names
+        )
+        missing_names = (
+            expected_names - current_names
+        )
+
+        if stale_names:
+            user.groups.remove(
+                *Group.objects.filter(
+                    name__in=stale_names
+                )
+            )
+
+        for name in sorted(missing_names):
+            group, _ = Group.objects.get_or_create(
+                name=name
+            )
+            user.groups.add(group)
+
+
 class PamRemoteUserMiddleware:
     """
     Authenticate the Apache-verified PAM identity in Django.
@@ -188,6 +310,7 @@ class PamRemoteUserMiddleware:
         )
 
         raw_username = request.META.get(meta_key)
+        authenticated_now = False
 
         # During the controlled migration, requests without the PAM
         # header retain the existing Django session behavior.
@@ -231,9 +354,38 @@ class PamRemoteUserMiddleware:
                 )
 
             login(request, user)
+            authenticated_now = True
 
         request.pam_identity = identity
         request.pam_username = identity.username
         request.pam_home = identity.home
+
+        if getattr(
+            settings,
+            "BIOBANK_PAM_SYNC_GROUPS",
+            True,
+        ):
+            _synchronize_pam_groups(
+                request.user,
+                identity,
+            )
+
+        if (
+            authenticated_now
+            and getattr(
+                settings,
+                "BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN",
+                True,
+            )
+        ):
+            try:
+                ensure_user_lab_tools_storage(
+                    identity.username
+                )
+            except LabToolsStorageError:
+                _permission_denied(
+                    "The user's protected Lab Tools storage "
+                    "could not be provisioned."
+                )
 
         return self.get_response(request)

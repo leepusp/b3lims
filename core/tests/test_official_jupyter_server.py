@@ -11,12 +11,15 @@ from core.models.lab_tools.notebook import (
     JupyterNotebook,
 )
 from core.services.jupyter_server import (
+    _validate_resources,
     connection_redirect_path,
     delete_notebook_workspace,
     load_notebook_document,
     notebook_file_for_notebook,
+    refresh_session,
     start_session,
     starter_notebook,
+    stop_session,
     workspace_for_notebook,
 )
 
@@ -34,26 +37,44 @@ class OfficialJupyterServerTests(TestCase):
             self.temporary_directory.name
         )
 
-        self.storage_root = (
-            temporary_root / "notebooks"
-        )
-        self.job_root = temporary_root / "jobs"
+        self.owner_home = temporary_root / "owner-home"
+        self.other_home = temporary_root / "other-home"
+        self.owner_home.mkdir()
+        self.other_home.mkdir()
 
-        self.storage_root.mkdir()
-        self.job_root.mkdir()
+        def fake_user_home(username):
+            return {
+                "official-server-owner": self.owner_home,
+                "official-server-other": self.other_home,
+            }[username]
+
+        self.home_patch = patch(
+            "core.services.lab_tools_storage."
+            "user_home_for_username",
+            side_effect=fake_user_home,
+        )
+        self.home_patch.start()
+        self.addCleanup(self.home_patch.stop)
 
         self.settings_override = override_settings(
-            BIOBANK_JUPYTER_STORAGE_ROOT=str(
-                self.storage_root
-            ),
-            BIOBANK_JUPYTER_SERVER_JOB_ROOT=str(
-                self.job_root
+            BIOBANK_LAB_TOOLS_RELATIVE_ROOT=(
+                "biobank/lab_tools"
             ),
             BIOBANK_JUPYTER_PARTITION="basic",
             BIOBANK_JUPYTER_PARTITIONS=(
                 "basic",
                 "max50",
             ),
+            BIOBANK_JUPYTER_NODES=(
+                "n01",
+                "gn01",
+                "gn02",
+                "gn03",
+            ),
+            BIOBANK_JUPYTER_PARTITION_MAX_HOURS={
+                "basic": 72,
+                "max50": 168,
+            },
         )
         self.settings_override.enable()
         self.addCleanup(
@@ -80,6 +101,15 @@ class OfficialJupyterServerTests(TestCase):
                 self.user.get_username(),
             ),
         )
+        self.storage_root = (
+            self.owner_home
+            / "biobank/lab_tools/jupyter/notebooks"
+        )
+        self.job_root = (
+            self.owner_home
+            / "biobank/lab_tools/jupyter/jobs"
+            / f"notebook_{self.notebook.id}"
+        )
 
     def test_workspace_isolated_by_application_user(self):
         other_notebook = JupyterNotebook.objects.create(
@@ -105,16 +135,18 @@ class OfficialJupyterServerTests(TestCase):
         )
         self.assertTrue(
             str(owner_workspace).startswith(
-                str(self.storage_root)
+                str(self.owner_home)
             )
         )
-        self.assertIn(
-            f"user_{self.user.id}_official-server-owner",
-            str(owner_workspace),
+        self.assertEqual(
+            owner_workspace,
+            self.storage_root
+            / f"notebook_{self.notebook.id}",
         )
-        self.assertIn(
-            f"notebook_{self.notebook.id}",
-            str(owner_workspace),
+        self.assertTrue(
+            str(other_workspace).startswith(
+                str(self.other_home)
+            )
         )
 
     @patch(
@@ -135,7 +167,6 @@ class OfficialJupyterServerTests(TestCase):
 
         run_directory = (
             self.job_root
-            / f"jupyter_server_{self.notebook.id}"
             / "20260720T210000Z_1234_5678"
         )
         run_directory.mkdir(
@@ -169,6 +200,8 @@ class OfficialJupyterServerTests(TestCase):
             "workspace": str(workspace),
             "notebook_file": str(notebook_file),
             "partition": "basic",
+            "requested_node": "gn03",
+            "slurm_user": self.user.get_username(),
         }
 
         session = start_session(
@@ -178,6 +211,7 @@ class OfficialJupyterServerTests(TestCase):
             memory_mb=12288,
             time_minutes=180,
             partition="basic",
+            node="gn03",
         )
 
         self.assertEqual(
@@ -227,7 +261,52 @@ class OfficialJupyterServerTests(TestCase):
             12288,
             180,
             "basic",
+            "gn03",
         )
+
+        self.assertEqual(
+            session.kernel_info["requested_node"],
+            "gn03",
+        )
+
+    def test_resource_validation_accepts_interface_limits(self):
+        resources = _validate_resources(
+            cpus=128,
+            memory_mb=1048576,
+            time_minutes=10080,
+            partition="max50",
+            node="n01",
+        )
+
+        self.assertEqual(resources["cpus"], 128)
+        self.assertEqual(resources["memory_mb"], 1048576)
+        self.assertEqual(resources["node"], "n01")
+
+    def test_resource_validation_rejects_unknown_node(self):
+        with self.assertRaisesMessage(
+            ValueError,
+            "Invalid compute node.",
+        ):
+            _validate_resources(
+                cpus=2,
+                memory_mb=8192,
+                time_minutes=60,
+                partition="basic",
+                node="n01;id",
+            )
+
+    def test_basic_partition_enforces_72_hour_limit(self):
+        with self.assertRaisesMessage(
+            ValueError,
+            "60 and 4320 minutes for basic",
+        ):
+            _validate_resources(
+                cpus=2,
+                memory_mb=8192,
+                time_minutes=4380,
+                partition="basic",
+                node="auto",
+            )
 
     def test_disk_notebook_is_authoritative(self):
         notebook_file = notebook_file_for_notebook(
@@ -281,7 +360,6 @@ class OfficialJupyterServerTests(TestCase):
     ):
         run_directory = (
             self.job_root
-            / f"jupyter_server_{self.notebook.id}"
             / "20260720T211000Z_4321_8765"
         )
         run_directory.mkdir(
@@ -346,12 +424,27 @@ class OfficialJupyterServerTests(TestCase):
                     session
                 )
             )
+            lab_redirect_path = (
+                connection_redirect_path(
+                    session,
+                    interface="lab",
+                )
+            )
 
         self.assertEqual(
             redirect_path,
             (
                 f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
                 "tree/notebook.ipynb"
+                "?token=protected-token-value"
+            ),
+        )
+
+        self.assertEqual(
+            lab_redirect_path,
+            (
+                f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
+                "lab/tree/notebook.ipynb"
                 "?token=protected-token-value"
             ),
         )
@@ -390,4 +483,79 @@ class OfficialJupyterServerTests(TestCase):
             self.notebook.id,
             self.notebook.owner_id,
             self.notebook.owner.get_username(),
+        )
+
+    @patch(
+        "core.services.jupyter_server._run_server_runner"
+    )
+    def test_status_is_queried_for_real_unix_owner(
+        self,
+        runner_mock,
+    ):
+        session = self.notebook.sessions.create(
+            started_by=self.user,
+            job_id="50003",
+            run_id="owner_status_run",
+            status="submitted",
+            partition="basic",
+            cpus=2,
+            memory_mb=4096,
+            time_minutes=60,
+            run_directory=str(
+                self.job_root / "owner_status_run"
+            ),
+        )
+        runner_mock.return_value = {
+            "status": "ok",
+            "job_id": "50003",
+            "state": "PENDING",
+            "ready": False,
+            "slurm_user": self.user.get_username(),
+            "server": {},
+        }
+
+        refreshed = refresh_session(session)
+
+        self.assertEqual(refreshed.status, "pending")
+        runner_mock.assert_called_once_with(
+            "server-status",
+            self.notebook.id,
+            self.user.get_username(),
+            "owner_status_run",
+        )
+
+    @patch(
+        "core.services.jupyter_server._run_server_runner"
+    )
+    def test_stop_is_scoped_to_real_unix_owner(
+        self,
+        runner_mock,
+    ):
+        session = self.notebook.sessions.create(
+            started_by=self.user,
+            job_id="50004",
+            run_id="owner_stop_run",
+            status="running",
+            partition="basic",
+            cpus=2,
+            memory_mb=4096,
+            time_minutes=60,
+            run_directory=str(
+                self.job_root / "owner_stop_run"
+            ),
+        )
+        runner_mock.return_value = {
+            "status": "stopped",
+            "job_id": "50004",
+            "slurm_user": self.user.get_username(),
+        }
+
+        stopped = stop_session(session, self.user)
+
+        self.assertEqual(stopped.status, "cancelled")
+        runner_mock.assert_called_once_with(
+            "server-stop",
+            self.notebook.id,
+            self.user.get_username(),
+            "owner_stop_run",
         )

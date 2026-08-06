@@ -16,9 +16,15 @@ from core.models.lab_tools.notebook import (
     JupyterKernelSession,
     JupyterNotebook,
 )
-from core.services.jupyter_notebooks import (
+from core.services.jupyter_documents import (
     JupyterNotebookError,
     normalize_notebook,
+)
+from core.services.lab_tools_storage import (
+    LabToolsStorageError,
+    protected_user_path,
+    user_lab_tools_root,
+    validate_username,
 )
 
 
@@ -36,7 +42,6 @@ TERMINAL_STATUSES = {
 }
 
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
-SAFE_USERNAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 SAFE_BASE_URL_RE = re.compile(
     r"^/biobank/internal/lab-tools/jupyter/[0-9]+/node/[A-Za-z0-9_.-]+/[0-9]{1,5}/$"
 )
@@ -52,38 +57,31 @@ def server_runner():
     )
 
 
-def storage_root():
-    return Path(
-        getattr(
-            settings,
-            "BIOBANK_JUPYTER_STORAGE_ROOT",
-            "/home/public/biobank/notebooks/users",
-        )
-    )
-
-
-def server_job_root():
-    return Path(
-        getattr(
-            settings,
-            "BIOBANK_JUPYTER_SERVER_JOB_ROOT",
-            "/home/public/biobank/jobs",
-        )
-    )
-
-
 def _safe_username(value):
-    username = SAFE_USERNAME_RE.sub(
-        "_",
-        str(value or "").strip(),
-    ).strip("._-")
-
-    if not username:
+    try:
+        return validate_username(value)
+    except Exception as exc:
         raise JupyterNotebookError(
             "The application username is invalid."
-        )
+        ) from exc
 
-    return username[:100]
+
+def _user_lab_tools_root(username):
+    try:
+        return user_lab_tools_root(username)
+    except (LabToolsStorageError, OSError, ValueError) as exc:
+        raise JupyterNotebookError(
+            "The notebook owner's protected storage is unavailable."
+        ) from exc
+
+
+def _user_jupyter_path(username, relative_path):
+    try:
+        return protected_user_path(username, relative_path)
+    except (LabToolsStorageError, OSError, ValueError) as exc:
+        raise JupyterNotebookError(
+            "The notebook owner's protected storage is unavailable."
+        ) from exc
 
 
 def _ensure_child(root, candidate):
@@ -108,16 +106,29 @@ def workspace_for_notebook(notebook):
         notebook.owner.get_username()
     )
 
-    return _ensure_child(
-        storage_root(),
-        storage_root()
-        / f"user_{notebook.owner_id}_{username}"
-        / f"notebook_{notebook.id}",
+    return _user_jupyter_path(
+        username,
+        f"jupyter/notebooks/notebook_{notebook.id}",
     )
 
 
 def notebook_file_for_notebook(notebook):
     return workspace_for_notebook(notebook) / "notebook.ipynb"
+
+
+def job_root_for_notebook(notebook):
+    if notebook.owner_id is None:
+        raise JupyterNotebookError(
+            "The notebook does not have an owner."
+        )
+
+    username = _safe_username(
+        notebook.owner.get_username()
+    )
+    return _user_jupyter_path(
+        username,
+        f"jupyter/jobs/notebook_{notebook.id}",
+    )
 
 
 def starter_notebook(title, username):
@@ -179,8 +190,6 @@ def _runner_command(*arguments):
     return [
         "sudo",
         "-n",
-        "-u",
-        "biobank",
         str(runner),
         *[str(argument) for argument in arguments],
     ]
@@ -246,6 +255,7 @@ def _validate_resources(
     memory_mb,
     time_minutes,
     partition,
+    node,
 ):
     try:
         cpus = int(cpus)
@@ -263,10 +273,30 @@ def _validate_resources(
             ("basic", "max50"),
         )
     )
+    allowed_nodes = tuple(
+        getattr(
+            settings,
+            "BIOBANK_JUPYTER_NODES",
+            ("n01", "gn01", "gn02", "gn03"),
+        )
+    )
+    partition_max_hours = dict(
+        getattr(
+            settings,
+            "BIOBANK_JUPYTER_PARTITION_MAX_HOURS",
+            {"basic": 72, "max50": 168},
+        )
+    )
+    node = str(node or "auto")
 
     if str(partition) not in allowed_partitions:
         raise JupyterNotebookError(
             "Invalid Slurm partition."
+        )
+
+    if node != "auto" and node not in allowed_nodes:
+        raise JupyterNotebookError(
+            "Invalid compute node."
         )
 
     if not 1 <= cpus <= 128:
@@ -280,10 +310,17 @@ def _validate_resources(
             "1048576 MB."
         )
 
-    if not 5 <= time_minutes <= 10080:
+    maximum_minutes = int(
+        partition_max_hours.get(
+            str(partition),
+            168,
+        )
+    ) * 60
+    if not 60 <= time_minutes <= maximum_minutes:
         raise JupyterNotebookError(
             "Session duration must be between "
-            "5 minutes and 7 days."
+            f"60 and {maximum_minutes} minutes for "
+            f"{partition}."
         )
 
     return {
@@ -291,6 +328,7 @@ def _validate_resources(
         "memory_mb": memory_mb,
         "time_minutes": time_minutes,
         "partition": str(partition),
+        "node": node,
     }
 
 
@@ -357,8 +395,11 @@ def _safe_server_metadata(payload):
 
 
 def _write_initial_document(notebook, notebook_file):
+    owner_root = _user_lab_tools_root(
+        _safe_username(notebook.owner.get_username())
+    )
     notebook_file = _ensure_child(
-        storage_root(),
+        owner_root,
         notebook_file,
     )
 
@@ -464,10 +505,16 @@ def start_session(
     memory_mb,
     time_minutes,
     partition,
+    node="auto",
 ):
     if not can_edit_notebook(user, notebook):
         raise JupyterNotebookError(
             "Permission denied."
+        )
+
+    if notebook.owner_id is None:
+        raise JupyterNotebookError(
+            "The notebook does not have an owner."
         )
 
     existing = active_session_for_notebook(
@@ -482,17 +529,22 @@ def start_session(
         memory_mb=memory_mb,
         time_minutes=time_minutes,
         partition=partition,
+        node=node,
+    )
+    owner_username = _safe_username(
+        notebook.owner.get_username()
     )
 
     response = _run_server_runner(
         "server-start",
         notebook.id,
-        user.id,
-        user.get_username(),
+        notebook.owner_id,
+        owner_username,
         resources["cpus"],
         resources["memory_mb"],
         resources["time_minutes"],
         resources["partition"],
+        resources["node"],
     )
 
     run_id = str(
@@ -504,7 +556,6 @@ def start_session(
     run_directory = str(
         response.get("run_dir") or ""
     )
-
     if not RUN_ID_RE.fullmatch(run_id):
         raise JupyterNotebookError(
             "The runner returned an invalid run identifier."
@@ -515,10 +566,35 @@ def start_session(
             "The runner returned an invalid Slurm job ID."
         )
 
+    if response.get("slurm_user") != owner_username:
+        raise JupyterNotebookError(
+            "The runner returned an unexpected Slurm user."
+        )
+
+    if response.get("requested_node") != resources["node"]:
+        try:
+            _run_server_runner(
+                "server-stop",
+                notebook.id,
+                owner_username,
+                run_id,
+            )
+        except JupyterNotebookError:
+            pass
+
+        raise JupyterNotebookError(
+            "The runner returned an unexpected compute node."
+        )
+
+    owner_root = _user_lab_tools_root(owner_username)
     notebook_file = _ensure_child(
-        storage_root(),
+        owner_root,
         response.get("notebook_file")
         or notebook_file_for_notebook(notebook),
+    )
+    validated_run_directory = _ensure_child(
+        job_root_for_notebook(notebook),
+        run_directory,
     )
 
     expected_file = notebook_file_for_notebook(
@@ -530,6 +606,7 @@ def start_session(
             _run_server_runner(
                 "server-stop",
                 notebook.id,
+                owner_username,
                 run_id,
             )
         except JupyterNotebookError:
@@ -555,13 +632,14 @@ def start_session(
             cpus=resources["cpus"],
             memory_mb=resources["memory_mb"],
             time_minutes=resources["time_minutes"],
-            run_directory=run_directory,
+            run_directory=str(validated_run_directory),
             kernel_info={
                 "official_server": True,
                 "workspace": str(
                     workspace_for_notebook(notebook)
                 ),
                 "notebook_file": str(notebook_file),
+                "requested_node": resources["node"],
             },
             expires_at=(
                 timezone.now()
@@ -588,6 +666,7 @@ def start_session(
             _run_server_runner(
                 "server-stop",
                 notebook.id,
+                owner_username,
                 run_id,
             )
         except JupyterNotebookError:
@@ -603,8 +682,19 @@ def refresh_session(session):
     payload = _run_server_runner(
         "server-status",
         session.notebook_id,
+        _safe_username(
+            session.notebook.owner.get_username()
+        ),
         session.run_id,
     )
+    owner_username = _safe_username(
+        session.notebook.owner.get_username()
+    )
+
+    if payload.get("slurm_user") != owner_username:
+        raise JupyterNotebookError(
+            "The Jupyter session Slurm owner is invalid."
+        )
 
     ready = bool(payload.get("ready"))
     state = str(payload.get("state") or "")
@@ -689,11 +779,20 @@ def stop_session(session, user):
     except JupyterNotebookError:
         pass
 
-    _run_server_runner(
+    owner_username = _safe_username(
+        session.notebook.owner.get_username()
+    )
+    payload = _run_server_runner(
         "server-stop",
         session.notebook_id,
+        owner_username,
         session.run_id,
     )
+
+    if payload.get("slurm_user") != owner_username:
+        raise JupyterNotebookError(
+            "The stopped Slurm job owner is invalid."
+        )
 
     session.status = "cancelled"
     session.finished_at = (
@@ -717,7 +816,16 @@ def stop_session(session, user):
     return session
 
 
-def connection_redirect_path(session):
+def connection_redirect_path(
+    session,
+    *,
+    interface="notebook",
+):
+    if interface not in {"notebook", "lab"}:
+        raise JupyterNotebookError(
+            "Invalid Jupyter interface."
+        )
+
     session = refresh_session(session)
 
     if session.status != "running":
@@ -726,7 +834,7 @@ def connection_redirect_path(session):
         )
 
     connection_file = _ensure_child(
-        server_job_root(),
+        job_root_for_notebook(session.notebook),
         Path(session.run_directory)
         / "connection.json",
     )
@@ -800,9 +908,14 @@ def connection_redirect_path(session):
                 "The Jupyter connection metadata does not match."
             )
 
+    target_url = default_url
+
+    if interface == "lab":
+        target_url = "/lab/tree/notebook.ipynb"
+
     return (
         f"{base_url.rstrip('/')}"
-        f"{default_url}"
+        f"{target_url}"
         f"?token={quote(token, safe='')}"
     )
 

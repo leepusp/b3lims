@@ -69,7 +69,7 @@
             </div>
 
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold"
                            for="jupyter-partition">
                         Slurm partition
@@ -81,6 +81,7 @@
                             required>
                         {% for partition in partitions %}
                             <option value="{{ partition }}"
+                                data-max-hours="{% if partition == 'basic' %}72{% else %}168{% endif %}"
                                 {% if launch.partition == partition %}selected{% endif %}>
                                 {{ partition }}
                             </option>
@@ -88,7 +89,34 @@
                     </select>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold"
+                           for="jupyter-node">
+                        Compute node
+                    </label>
+
+                    <select class="form-select"
+                            id="jupyter-node"
+                            name="node"
+                            required>
+                        <option value="auto"
+                            {% if launch.node == "auto" %}selected{% endif %}>
+                            Automatic (Slurm decides)
+                        </option>
+                        {% for node in nodes %}
+                            <option value="{{ node }}"
+                                {% if launch.node == node %}selected{% endif %}>
+                                {{ node }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="form-text">
+                        Choose a node only when the workload requires it.
+                    </div>
+                </div>
+
+                <div class="col-md-4">
                     <label class="form-label fw-semibold"
                            for="jupyter-hours">
                         Session duration
@@ -111,7 +139,7 @@
                     </div>
 
                     <div class="form-text">
-                        Between 1 hour and 168 hours.
+                        Basic: up to 72 hours. Max50: up to 168 hours.
                     </div>
                 </div>
 
@@ -192,4 +220,32 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const partition = document.getElementById("jupyter-partition");
+    const hours = document.getElementById("jupyter-hours");
+
+    if (!partition || !hours) {
+        return;
+    }
+
+    const synchronizeDurationLimit = (clampValue) => {
+        const selected = partition.options[partition.selectedIndex];
+        const maximum = Number(selected.dataset.maxHours || 168);
+        hours.max = String(maximum);
+
+        if (clampValue && Number(hours.value) > maximum) {
+            hours.value = String(maximum);
+        }
+    };
+
+    synchronizeDurationLimit(false);
+    partition.addEventListener("change", () => {
+        synchronizeDurationLimit(true);
+    });
+})();
+</script>
 {% endblock %}

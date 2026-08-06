@@ -27,8 +27,6 @@ from core.models.lab_tools.notebook import (
     NotebookAttachment,
     NotebookBlock,
     NotebookEntry,
-    NotebookKernelDocument,
-    NotebookKernelExecution,
     NotebookSampleLink,
 )
 

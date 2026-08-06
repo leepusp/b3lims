@@ -104,6 +104,40 @@ BIOBANK_PAM_MINIMUM_UID = int(
     )
 )
 
+
+# Unix/NSS groups synchronized from authenticated PAM identities use a
+# reserved prefix. Manual Django groups are never modified by this
+# synchronization.
+BIOBANK_PAM_SYNC_GROUPS = os.environ.get(
+    "BIOBANK_PAM_SYNC_GROUPS",
+    "1",
+).strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+
+BIOBANK_PAM_GROUP_PREFIX = os.environ.get(
+    "BIOBANK_PAM_GROUP_PREFIX",
+    "pam:",
+).strip()
+
+# Operational cluster groups must not become application collaboration
+# groups. Personal primary groups matching the username are also
+# excluded automatically.
+BIOBANK_PAM_EXCLUDED_GROUPS = tuple(
+    value.strip()
+    for value in os.environ.get(
+        "BIOBANK_PAM_EXCLUDED_GROUPS",
+        (
+            "wheel,dbadmin,unrestricted,max90,"
+            "vglusers,cryosparc,biobank"
+        ),
+    ).split(",")
+    if value.strip()
+)
+
 # =========================
 # URLS / WSGI
 # =========================
@@ -201,62 +235,34 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # ---------------------------------------------------------------------
-# Default mode for DaVinci testing stores notebook artifacts in:
-# /home/<username>/biobank_notebooks/
-#
-# Future shared deployment can set:
-# BIOBANK_NOTEBOOK_STORAGE_MODE=public
-# BIOBANK_NOTEBOOK_ROOT=/home/public/biobank/users
-
-
-# ---------------------------------------------------------------------
 # Biobank persistent filesystem storage
 # ---------------------------------------------------------------------
-# Personal ELN/notebook artifacts are stored in the Linux user's home:
-# /home/<username>/biobank_notebooks/
-#
-# Shared institutional Biobank data are stored under:
-# /home/public/apps/biobank/storage/
-BIOBANK_NOTEBOOK_STORAGE_MODE = os.environ.get("BIOBANK_NOTEBOOK_STORAGE_MODE", "home")
+# Inventory and institutional documents remain in shared application
+# storage. Personal Lab Tools artifacts are isolated in the authenticated
+# Unix user's home under /home/<username>/biobank/lab_tools/.
 BIOBANK_STORAGE_ROOT = Path(os.environ.get("BIOBANK_STORAGE_ROOT", "/home/public/apps/biobank/storage"))
 
-BIOBANK_NOTEBOOK_ROOT = Path(os.environ.get("BIOBANK_NOTEBOOK_ROOT", str(BIOBANK_STORAGE_ROOT / "users")))
 BIOBANK_GROUP_ROOT = Path(os.environ.get("BIOBANK_GROUP_ROOT", str(BIOBANK_STORAGE_ROOT / "groups")))
 BIOBANK_INVENTORY_ROOT = Path(os.environ.get("BIOBANK_INVENTORY_ROOT", str(BIOBANK_STORAGE_ROOT / "inventory")))
 BIOBANK_SAMPLE_DOCS_ROOT = Path(os.environ.get("BIOBANK_SAMPLE_DOCS_ROOT", str(BIOBANK_STORAGE_ROOT / "sample_docs")))
 BIOBANK_MANIFESTS_ROOT = Path(os.environ.get("BIOBANK_MANIFESTS_ROOT", str(BIOBANK_STORAGE_ROOT / "manifests")))
 BIOBANK_SHARED_ROOT = Path(os.environ.get("BIOBANK_SHARED_ROOT", str(BIOBANK_STORAGE_ROOT / "shared")))
 
-# Jupyter sessions are launched through the authenticated Open OnDemand app.
-# The ELN never stores JupyterHub credentials or service tokens.
-BIOBANK_JUPYTER_LAUNCH_URL = os.environ.get(
-    "BIOBANK_JUPYTER_LAUNCH_URL",
-    (
-        "https://davinci.icb.usp.br/pun/sys/dashboard/"
-        "batch_connect/sys/jupyter/session_contexts/new"
-    ),
+BIOBANK_LAB_TOOLS_HOME_ROOTS = BIOBANK_PAM_HOME_ROOTS
+BIOBANK_LAB_TOOLS_RELATIVE_ROOT = "biobank/lab_tools"
+BIOBANK_LAB_TOOLS_STORAGE_RUNNER = os.environ.get(
+    "BIOBANK_LAB_TOOLS_STORAGE_RUNNER",
+    "/usr/local/sbin/biobank-user-storage",
+)
+BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN = os.environ.get(
+    "BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN",
+    "0",
+).strip().lower() not in {"0", "false", "no", "off"}
+BIOBANK_JUPYTER_SERVER_RUNNER = os.environ.get(
+    "BIOBANK_JUPYTER_SERVER_RUNNER",
+    "/usr/local/sbin/biobank-jupyter-server-runner",
 )
 
-BIOBANK_JUPYTER_RUNNER = os.environ.get(
-    "BIOBANK_JUPYTER_RUNNER",
-    "/usr/local/sbin/biobank-notebook-runner",
-)
-BIOBANK_JUPYTER_SUDO = os.environ.get(
-    "BIOBANK_JUPYTER_SUDO",
-    "/usr/bin/sudo",
-)
-BIOBANK_JUPYTER_NOTEBOOK_ROOT = os.environ.get(
-    "BIOBANK_JUPYTER_NOTEBOOK_ROOT",
-    "/home/public/biobank/notebooks",
-)
-BIOBANK_JUPYTER_JOB_ROOT = os.environ.get(
-    "BIOBANK_JUPYTER_JOB_ROOT",
-    "/home/public/biobank/jobs",
-)
-BIOBANK_JUPYTER_ALLOW_ENTRY_OWNERS = os.environ.get(
-    "BIOBANK_JUPYTER_ALLOW_ENTRY_OWNERS",
-    "true",
-).strip().lower() in {"1", "true", "yes", "on"}
 BIOBANK_JUPYTER_DEFAULT_CPUS = int(
     os.environ.get("BIOBANK_JUPYTER_DEFAULT_CPUS", "2")
 )
@@ -272,6 +278,19 @@ BIOBANK_JUPYTER_PARTITION = os.environ.get(
 )
 
 BIOBANK_JUPYTER_PARTITIONS = ("basic", "max50")
+BIOBANK_JUPYTER_NODES = ("n01", "gn01", "gn02", "gn03")
+BIOBANK_JUPYTER_PARTITION_MAX_HOURS = {
+    "basic": 72,
+    "max50": 168,
+}
+
+BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL = os.environ.get(
+    "BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL",
+    (
+        "https://davinci.icb.usp.br/pun/sys/dashboard/"
+        "batch_connect/sys/jupyterlab/session_contexts/new"
+    ),
+)
 
 FILE_UPLOAD_PERMISSIONS = 0o660
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o2770
