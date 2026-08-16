@@ -1,4 +1,7 @@
-from core.services.shipment_requirements_engine import evaluate_shipment_requirements
+from core.services.shipment_requirements_engine import (
+    OPERATIONAL_GUIDANCE_DOCUMENT_TYPES,
+    evaluate_shipment_requirements,
+)
 from core.services.shipment_document_generator import get_initial_values_from_shipment, render_document_html
 from core.services.shipment_document_form_schemas import get_document_form_schema, extract_form_values
 from core.models import ShipmentDocument, ShipmentDocumentFormData, ShipmentChecklistItem
@@ -96,6 +99,28 @@ CHECKLIST_TYPE_LABELS = {
     "label": "Label",
     "authorization": "Authorization",
 }
+
+
+def _can_update_transport_guidance(user, shipment):
+    return bool(
+        user
+        and user.is_authenticated
+        and (
+            user.is_superuser
+            or user.is_staff
+            or shipment.requested_by_id == user.id
+        )
+    )
+
+
+def _active_document_type_codes(shipment):
+    requirements = evaluate_shipment_requirements(shipment)
+
+    return [
+        getattr(requirement, "code", "")
+        for requirement in requirements.get("documents", [])
+        if getattr(requirement, "code", "")
+    ]
 
 
 def _choice_label(obj, field_name, fallback_map=None):
@@ -224,6 +249,67 @@ def shipment_detail_view(request, shipment_id):
     if request.method == "POST":
         action = request.POST.get("action")
 
+        if action == "toggle_transport_guidance":
+            if not _can_update_transport_guidance(request.user, shipment):
+                return HttpResponseForbidden(
+                    "You cannot update transport guidance for this shipment."
+                )
+
+            requirements = evaluate_shipment_requirements(shipment)
+            guidance_labels = {
+                getattr(requirement, "label", "")
+                for requirement in requirements.get("guidance", [])
+                if getattr(requirement, "label", "")
+            }
+
+            try:
+                guidance_item_id = int(
+                    request.POST.get("guidance_item_id", "")
+                )
+            except (TypeError, ValueError):
+                guidance_item_id = 0
+
+            item = shipment.checklist_items.filter(
+                id=guidance_item_id,
+                label__in=guidance_labels,
+            ).first()
+
+            if item is None:
+                messages.error(
+                    request,
+                    "The selected transport guidance item is not active for this shipment.",
+                )
+                return redirect(
+                    f"{reverse('shipment_detail', kwargs={'shipment_id': shipment.id})}"
+                    "#transport-guidance"
+                )
+
+            is_completed = request.POST.get("is_completed") == "1"
+            item.is_completed = is_completed
+            item.completed_by = request.user if is_completed else None
+            item.completed_at = timezone.now() if is_completed else None
+            item.save(update_fields=[
+                "is_completed",
+                "completed_by",
+                "completed_at",
+            ])
+
+            ShipmentEvent.objects.create(
+                shipment=shipment,
+                event_type="updated",
+                actor=request.user,
+                notes=(
+                    "Transport guidance updated: "
+                    f"{item.label} — "
+                    f"{'confirmed' if is_completed else 'confirmation removed'}."
+                ),
+            )
+
+            return redirect(
+                f"{reverse('shipment_detail', kwargs={'shipment_id': shipment.id})}"
+                "#transport-guidance"
+            )
+
         if action == "sync_requirements":
             result = sync_shipment_requirements(shipment, actor=request.user)
             messages.success(request, result["message"])
@@ -300,6 +386,26 @@ def shipment_detail_view(request, shipment_id):
     # shipment classification: Risk Class, NB level and OGM status.
     requirement_snapshot = evaluate_shipment_requirements(shipment)
     required_documents = list(requirement_snapshot.get("documents", []))
+    guidance_requirements = list(
+        requirement_snapshot.get("guidance", [])
+    )
+
+    checklist_by_label = {
+        item.label: item
+        for item in shipment.checklist_items.all()
+    }
+
+    transport_guidance_rows = [
+        {
+            "code": getattr(requirement, "code", ""),
+            "label": getattr(requirement, "label", ""),
+            "reason": getattr(requirement, "reason", ""),
+            "item": checklist_by_label.get(
+                getattr(requirement, "label", "")
+            ),
+        }
+        for requirement in guidance_requirements
+    ]
 
     existing_documents = {
         document.document_type: document
@@ -384,6 +490,10 @@ def shipment_detail_view(request, shipment_id):
         })
 
     ctx["document_rows"] = rebuilt_document_rows
+    ctx["transport_guidance_rows"] = transport_guidance_rows
+    ctx["can_update_transport_guidance"] = (
+        _can_update_transport_guidance(request.user, shipment)
+    )
 
     return render(request, "internal/shipments/detail.html", ctx)
 
@@ -479,13 +589,16 @@ def shipment_documents_review_view(request, shipment_id):
 
     pending_required_documents = get_pending_required_signed_documents(shipment)
     can_release_outputs = can_release_final_package_outputs(shipment)
+    active_document_types = _active_document_type_codes(shipment)
 
     return render(
         request,
         "internal/shipments/documents_review.html",
         {
             "shipment": shipment,
-            "documents": shipment.documents.all().order_by("document_type", "id"),
+            "documents": shipment.documents.filter(
+                document_type__in=active_document_types,
+            ).order_by("document_type", "id"),
             "pending_required_documents": pending_required_documents,
             "can_release_final_outputs": can_release_outputs,
         },
@@ -1072,7 +1185,13 @@ def shipments_dashboard_view(request):
 
     total_shipments = qs.count()
 
-    documents_qs = ShipmentDocument.objects.filter(shipment__in=qs)
+    documents_qs = (
+        ShipmentDocument.objects
+        .filter(shipment__in=qs)
+        .exclude(
+            document_type__in=OPERATIONAL_GUIDANCE_DOCUMENT_TYPES,
+        )
+    )
     checklist_qs = ShipmentChecklistItem.objects.filter(shipment__in=qs)
     events_qs = (
         ShipmentEvent.objects
@@ -1115,7 +1234,13 @@ def shipments_dashboard_view(request):
 
     ready_or_active = qs.exclude(status__in=["cancelled", "received", "completed"]).count()
     received_or_completed = qs.filter(status__in=["received", "completed"]).count()
-    document_pending = qs.filter(documents__status__in=document_pending_statuses).distinct().count()
+    document_pending = (
+        documents_qs
+        .filter(status__in=document_pending_statuses)
+        .values("shipment_id")
+        .distinct()
+        .count()
+    )
     ready_for_dispatch = qs.filter(status="ready_for_dispatch").count()
 
     document_total = documents_qs.count()

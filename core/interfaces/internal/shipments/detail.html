@@ -31,77 +31,185 @@
         </div>
     </div>
 
-    <!-- Documents and approvals -->
+    <!-- Documents and transport guidance -->
     <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-bold">
-                    <i class="bi bi-file-earmark-check me-2"></i>Documents & approvals
+        <div class="card-header bg-white pb-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <div class="fw-bold">
+                        <i class="bi bi-clipboard2-check me-2"></i>Shipment requirements
+                    </div>
+                    <div class="text-muted small">
+                        Signed documents and operational transport guidance are tracked separately.
+                    </div>
                 </div>
-                <div class="text-muted small">
-                    Required shipment documents
-                </div>
-            </div>
 
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'shipment_documents_review' shipment.id %}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-check2-square me-1"></i>Review documents
+                <a href="{% url 'shipment_documents_review' shipment.id %}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-check me-1"></i>Review documents
                 </a>
             </div>
+
+            <ul class="nav nav-tabs mt-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active"
+                            id="documents-approvals-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#documents-approvals"
+                            type="button"
+                            role="tab"
+                            aria-controls="documents-approvals"
+                            aria-selected="true">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Documents & approvals
+                        <span class="badge bg-secondary ms-1">{{ document_rows|length }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link"
+                            id="transport-guidance-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#transport-guidance"
+                            type="button"
+                            role="tab"
+                            aria-controls="transport-guidance"
+                            aria-selected="false">
+                        <i class="bi bi-box-seam me-1"></i>
+                        Transport guidance
+                        <span class="badge bg-secondary ms-1">{{ transport_guidance_rows|length }}</span>
+                    </button>
+                </li>
+            </ul>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 45%;">Document</th>
-                        <th style="width: 18%;">Status</th>
-                        <th style="width: 18%;">Signature</th>
-                        <th class="text-end" style="width: 19%;">Action</th>
-                    </tr>
-                </thead>
+        <div class="tab-content">
+            <div class="tab-pane fade show active"
+                 id="documents-approvals"
+                 role="tabpanel"
+                 aria-labelledby="documents-approvals-tab"
+                 tabindex="0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 45%;">Document</th>
+                                <th style="width: 18%;">Status</th>
+                                <th style="width: 18%;">Signature</th>
+                                <th class="text-end" style="width: 19%;">Action</th>
+                            </tr>
+                        </thead>
 
-                <tbody>
-                    {% for row in document_rows %}
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">
-                                    {{ row.label|default:row.document.document_type }}
-                                </div>
-                                <div class="text-muted small">
-                                    {{ row.document.document_type }}
-                                </div>
-                            </td>
+                        <tbody>
+                            {% for row in document_rows %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            {{ row.label|default:row.document.document_type }}
+                                        </div>
+                                        <div class="text-muted small">
+                                            {{ row.document.document_type }}
+                                        </div>
+                                    </td>
 
-                            <td>
-                                <span class="badge {{ row.status_badge_class|default:'bg-secondary' }}">
-                                    {{ row.status_label|default:row.document.status }}
-                                </span>
-                            </td>
+                                    <td>
+                                        <span class="badge {{ row.status_badge_class|default:'bg-secondary' }}">
+                                            {{ row.status_label|default:row.document.status }}
+                                        </span>
+                                    </td>
 
-                            <td>
-                                {% if row.requires_signature %}
-                                    <span class="badge bg-warning text-dark">Requires signature</span>
-                                {% else %}
-                                    <span class="badge bg-light text-dark border">No signature required</span>
+                                    <td>
+                                        {% if row.requires_signature %}
+                                            <span class="badge bg-warning text-dark">Requires signature</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark border">No signature required</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="text-end">
+                                        <a href="{% url 'shipment_document_workspace' shipment.id row.document.id %}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            Open
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-muted py-3">
+                                        No required documents were generated for this shipment yet.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade"
+                 id="transport-guidance"
+                 role="tabpanel"
+                 aria-labelledby="transport-guidance-tab"
+                 tabindex="0">
+                <div class="p-3 border-bottom bg-light">
+                    <div class="fw-semibold">Operational preparation checklist</div>
+                    <div class="text-muted small">
+                        These confirmations guide package preparation. They do not generate a document and do not require a signature.
+                    </div>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    {% for row in transport_guidance_rows %}
+                        <div class="list-group-item py-3">
+                            <form method="post" class="d-flex align-items-start gap-3">
+                                {% csrf_token %}
+                                <input type="hidden"
+                                       name="action"
+                                       value="toggle_transport_guidance">
+                                {% if row.item %}
+                                    <input type="hidden"
+                                           name="guidance_item_id"
+                                           value="{{ row.item.id }}">
                                 {% endif %}
-                            </td>
 
-                            <td class="text-end">
-                                <a href="{% url 'shipment_document_workspace' shipment.id row.document.id %}" class="btn btn-sm btn-outline-primary">
-                                    Open
-                                </a>
-                            </td>
-                        </tr>
+                                <input class="form-check-input mt-1 flex-shrink-0"
+                                       type="checkbox"
+                                       name="is_completed"
+                                       value="1"
+                                       aria-label="Confirm {{ row.label }}"
+                                       {% if row.item.is_completed %}checked{% endif %}
+                                       {% if not row.item or not can_update_transport_guidance %}disabled{% endif %}
+                                       onchange="this.form.submit()">
+
+                                <div class="flex-grow-1">
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="fw-semibold">{{ row.label }}</span>
+                                        {% if row.item.is_completed %}
+                                            <span class="badge bg-success">Confirmed</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark border">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted small mt-1">{{ row.reason }}</div>
+                                    <div class="text-muted small font-monospace mt-1">{{ row.code }}</div>
+
+                                    {% if not row.item %}
+                                        <div class="text-warning small mt-2">
+                                            Save the shipment setup once to synchronize this guidance item.
+                                        </div>
+                                    {% elif not can_update_transport_guidance %}
+                                        <div class="text-muted small mt-2">
+                                            Only the shipment requester or an administrator can change this confirmation.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
                     {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-muted">
-                                No required documents were generated for this shipment yet.
-                            </td>
-                        </tr>
+                        <div class="list-group-item text-muted py-3">
+                            No additional transport guidance applies to this shipment.
+                        </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -198,4 +306,18 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    if (window.location.hash !== "#transport-guidance") {
+        return;
+    }
+
+    const trigger = document.getElementById("transport-guidance-tab");
+
+    if (trigger && window.bootstrap && window.bootstrap.Tab) {
+        window.bootstrap.Tab.getOrCreateInstance(trigger).show();
+    }
+});
+</script>
 {% endblock %}

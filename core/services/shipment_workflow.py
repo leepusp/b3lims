@@ -215,6 +215,12 @@ def _sync_checklist(shipment, requirements):
         reason = _requirement_value(requirement, "reason", "")
         create_item(category, label, reason)
 
+    for requirement in requirements.get("guidance", []):
+        category = _requirement_value(requirement, "category", "packaging")
+        label = _requirement_value(requirement, "label", _requirement_value(requirement, "code", "Transport guidance"))
+        reason = _requirement_value(requirement, "reason", "")
+        create_item(category, label, reason)
+
     for requirement in requirements.get("documents", []):
         label = _requirement_value(requirement, "label", _requirement_value(requirement, "code", "Document"))
         reason = _requirement_value(requirement, "reason", "")

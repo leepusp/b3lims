@@ -23,12 +23,6 @@ DOCUMENTS = {
         "reason": "Required sender responsibility declaration.",
         "requires_signature": True,
     },
-    "external_package_identification": {
-        "label": "External package identification",
-        "category": "document",
-        "reason": "Required for external package identification.",
-        "requires_signature": False,
-    },
     "mta_ttm": {
         "label": "MTA / TTM",
         "category": "document",
@@ -41,17 +35,38 @@ DOCUMENTS = {
         "reason": "Required when the shipment contains OGM material.",
         "requires_signature": True,
     },
-    "triple_packaging_checklist": {
-        "label": "Triple packaging checklist",
-        "category": "document",
-        "reason": "Required for Risk Class 2 or NB2 shipments.",
-        "requires_signature": False,
-    },
     "traceability_report": {
         "label": "Legacy traceability record",
         "category": "document",
         "reason": "Internal traceability record for controlled biological shipments.",
         "requires_signature": False,
+    },
+}
+
+
+OPERATIONAL_GUIDANCE_DOCUMENT_TYPES = frozenset({
+    "external_package_identification",
+    "triple_packaging_checklist",
+})
+
+
+GUIDANCE = {
+    "external_package_identification": {
+        "label": "External package identification applied",
+        "category": "packaging",
+        "reason": (
+            "Confirm that sender, recipient and shipment identification "
+            "are visible on the outer package. The printable identification "
+            "is available under Package outputs."
+        ),
+    },
+    "triple_packaging_checklist": {
+        "label": "Triple packaging assembled and checked",
+        "category": "packaging",
+        "reason": (
+            "Confirm primary receptacle, leakproof secondary packaging, "
+            "absorbent material and rigid outer packaging before dispatch."
+        ),
     },
 }
 
@@ -120,11 +135,6 @@ CHECKLIST = {
         "label": "Required labels printed",
         "category": "label",
         "reason": "Required labels must be printed before shipment.",
-    },
-    "triple_packaging": {
-        "label": "Package tripla conferida",
-        "category": "data",
-        "reason": "Triple packaging must be checked for Risk Class 2 or NB2 shipments.",
     },
 }
 
@@ -305,17 +315,25 @@ def evaluate_shipment_requirements(shipment):
     documents = []
     labels = []
     checklist = []
+    guidance = []
 
     seen_documents = set()
     seen_labels = set()
     seen_checklist = set()
+    seen_guidance = set()
 
     for code in [
         "content_declaration",
-        "external_package_identification",
         "mta_ttm",
     ]:
         _add_requirement(documents, seen_documents, DOCUMENTS, code)
+
+    _add_requirement(
+        guidance,
+        seen_guidance,
+        GUIDANCE,
+        "external_package_identification",
+    )
 
     for code in [
         "fragile",
@@ -345,11 +363,14 @@ def evaluate_shipment_requirements(shipment):
 
     if needs_un3373:
         _add_requirement(
-            documents,
-            seen_documents,
-            DOCUMENTS,
+            guidance,
+            seen_guidance,
+            GUIDANCE,
             "triple_packaging_checklist",
-            reason="Risk Class 2 or NB2 shipment requires triple packaging checklist.",
+            reason=(
+                "Risk Class 2 or NB2 shipment requires triple packaging. "
+                "Confirm all packaging layers before dispatch."
+            ),
         )
         _add_requirement(
             labels,
@@ -358,7 +379,6 @@ def evaluate_shipment_requirements(shipment):
             "un3373",
             reason="Risk Class 2 or NB2 shipment requires UN 3373 label.",
         )
-        _add_requirement(checklist, seen_checklist, CHECKLIST, "triple_packaging")
 
     if needs_controlled_biohazard_label:
         _add_requirement(labels, seen_labels, LABELS, "biohazard")
@@ -379,4 +399,5 @@ def evaluate_shipment_requirements(shipment):
         "documents": documents,
         "labels": labels,
         "checklist": checklist,
+        "guidance": guidance,
     }

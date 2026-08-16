@@ -284,11 +284,7 @@ class TransportClassification(models.Model):
     def required_document_types(self):
         documents = [
             "content_declaration",
-            "external_package_identification",
         ]
-
-        if self.is_category_b_un3373 or self.is_ogm:
-            documents.append("triple_packaging_checklist")
 
         if self.is_ogm:
             documents.append("ogm_transport_notification")
@@ -300,6 +296,14 @@ class TransportClassification(models.Model):
             ])
 
         return list(dict.fromkeys(documents))
+
+    def required_transport_guidance_types(self):
+        guidance = ["external_package_identification"]
+
+        if self.is_category_b_un3373 or self.is_ogm:
+            guidance.append("triple_packaging_checklist")
+
+        return guidance
 
 
 class ShipmentDocument(models.Model):
