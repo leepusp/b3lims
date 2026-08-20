@@ -1292,13 +1292,11 @@ def shipments_dashboard_view(request):
 
 def _shipment_document_workspace_template(request):
     """
-    Use the structured wizard workspace by default.
+    Use the structured dynamic wizard as the only document workspace.
 
-    The previous classic layout remains available through ?ui=classic
-    as a temporary compatibility and diagnostic fallback.
+    The request argument is retained because the helper is part of the
+    existing view contract. Legacy classic-layout requests now resolve
+    to the same dynamic wizard instead of exposing a second form.
     """
-    if request.GET.get("ui") == "classic":
-        return "internal/shipments/document_workspace.html"
-
     return "internal/shipments/document_workspace_wizard.html"
 

@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 
 from core.models import Shipment, ShipmentItem, TransportClassification
@@ -23,18 +25,45 @@ def _style_fields(form):
             widget.attrs.setdefault("class", "form-control")
 
 
+class CompactDecimalInput(forms.NumberInput):
+    """
+    Render stored Decimal values without insignificant trailing zeroes.
+
+    ShipmentItem keeps three-decimal precision in the database, while the
+    browser presents the default value as 1 instead of 1.000.
+    """
+
+    def format_value(self, value):
+        rendered = super().format_value(value)
+
+        if rendered in [None, ""]:
+            return rendered
+
+        try:
+            decimal_value = Decimal(str(rendered))
+        except (InvalidOperation, TypeError, ValueError):
+            return rendered
+
+        if not decimal_value.is_finite():
+            return rendered
+
+        return format(decimal_value.normalize(), "f")
+
+
 SHIPMENT_FIELDS = [
     "flow_type",
     "status",
     "origin_biobank",
     "destination_biobank",
     "sender_institution",
-    "sender_name",
+    "sender_responsible_name",
+    "sender_group_researcher",
     "sender_email",
     "sender_phone",
     "sender_address",
     "recipient_institution",
-    "recipient_name",
+    "recipient_responsible_name",
+    "recipient_group_researcher",
     "recipient_email",
     "recipient_phone",
     "recipient_address",
@@ -82,15 +111,48 @@ class ShipmentSetupForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         _style_fields(self)
 
+        field_labels = {
+            "sender_responsible_name": "Sender Responsible Person",
+            "sender_group_researcher": (
+                "Sender Group / Laboratory / Researcher"
+            ),
+            "recipient_responsible_name": (
+                "Recipient Responsible Person"
+            ),
+            "recipient_group_researcher": (
+                "Recipient Group / Laboratory / Researcher"
+            ),
+        }
+
+        for field_name, label in field_labels.items():
+            if field_name in self.fields:
+                self.fields[field_name].label = label
+
 
 class ShipmentItemSetupForm(forms.ModelForm):
     class Meta:
         model = ShipmentItem
         fields = _existing_model_fields(ShipmentItem, SHIPMENT_ITEM_FIELDS)
+        widgets = {
+            "quantity": CompactDecimalInput(
+                attrs={
+                    "step": "0.001",
+                    "min": "0.001",
+                    "inputmode": "decimal",
+                }
+            ),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _style_fields(self)
+
+        if "quantity" in self.fields:
+            self.fields["quantity"].label = "Quantity / Volume"
+            self.fields["quantity"].help_text = (
+                "Enter the numeric amount. The initial value is 1; "
+                "decimals remain supported."
+            )
 
 
 class TransportClassificationSetupForm(forms.ModelForm):

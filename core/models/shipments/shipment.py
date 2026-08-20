@@ -78,6 +78,11 @@ class Shipment(models.Model):
 
     recipient_institution = models.CharField(max_length=255, blank=True)
     recipient_responsible_name = models.CharField(max_length=255, blank=True)
+    recipient_group_researcher = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Recipient group / laboratory / researcher",
+    )
     recipient_email = models.EmailField(blank=True)
     recipient_phone = models.CharField(max_length=100, blank=True)
     recipient_address = models.TextField(blank=True)

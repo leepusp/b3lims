@@ -644,7 +644,9 @@ def get_initial_values_from_shipment(shipment, document_type):
 
         "recipient_name": recipient_name,
         "recipient_institution": recipient_institution,
-        "recipient_lab_cqb": "",
+        "recipient_lab_cqb": str(
+            getattr(shipment, "recipient_group_researcher", "") or ""
+        ),
         "recipient_address": recipient_address,
         "recipient_contact": recipient_contact,
 
