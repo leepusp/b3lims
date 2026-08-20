@@ -3,7 +3,10 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils.text import get_valid_filename
 
 from core.models.samples.sample import Sample
@@ -28,6 +31,58 @@ def notebook_attachment_upload_to(instance, filename):
     return (
         f"users/{username}/eln/entries/{entry_id}/"
         f"attachments/{uuid.uuid4().hex}_{safe_name}"
+    )
+
+
+
+
+def molecular_alignment_upload_to(
+    instance,
+    filename,
+):
+    """
+    Store a protein alignment under its Molecular Registry
+    record, without coupling it to an ELN attachment.
+    """
+
+    if not instance.molecule_id:
+        raise ValueError(
+            "A molecular alignment requires a saved molecular sequence."
+        )
+
+    user = None
+
+    if instance.uploaded_by_id:
+        user = instance.uploaded_by
+
+    elif instance.molecule.owner_id:
+        user = instance.molecule.owner
+
+    if user is None:
+        raise ValueError(
+            (
+                "A molecular alignment requires either an uploader "
+                "or a molecular-sequence owner."
+            )
+        )
+
+    username = validate_username(
+        user.get_username()
+    )
+
+    safe_name = get_valid_filename(
+        Path(
+            filename
+        ).name
+    )
+
+    if not safe_name:
+        safe_name = "alignment.txt"
+
+    return (
+        f"users/{username}/molecular/records/"
+        f"{instance.molecule_id}/alignments/"
+        f"{uuid.uuid4().hex}_{safe_name}"
     )
 
 
@@ -430,6 +485,34 @@ class NotebookAttachment(models.Model):
 
 
 
+
+def molecular_structure_upload_to(
+    instance,
+    filename,
+):
+    """
+    Store tertiary-structure files beside the molecular
+    record using the same ownership and filename contract
+    as persisted alignments.
+    """
+    alignment_path = molecular_alignment_upload_to(
+        instance,
+        filename,
+    )
+
+    marker = "/alignments/"
+
+    if marker not in alignment_path:
+        raise ValueError(
+            "Unexpected molecular alignment storage path."
+        )
+
+    return alignment_path.replace(
+        marker,
+        "/structures/",
+        1,
+    )
+
 class MolecularSequence(models.Model):
     """
     Molecular sequence asset used by the ELN, samples, plasmid workspace and
@@ -536,6 +619,504 @@ class MolecularSequence(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.sequence_type}, {self.length} bp/aa)"
+
+
+class MolecularAlignment(models.Model):
+    """
+    Persisted multiple-sequence alignment owned directly by a
+    MolecularSequence.
+
+    The original source file remains authoritative. Parsed rows
+    are generated on demand for the Protein workspace renderer.
+    """
+
+    SOURCE_FORMAT_CHOICES = [
+        (
+            "aligned_fasta",
+            "Aligned FASTA",
+        ),
+        (
+            "clustal",
+            "CLUSTAL",
+        ),
+        (
+            "stockholm",
+            "Stockholm",
+        ),
+    ]
+
+    molecule = models.ForeignKey(
+        MolecularSequence,
+        on_delete=models.CASCADE,
+        related_name="alignments",
+    )
+
+    file = models.FileField(
+        upload_to=molecular_alignment_upload_to,
+        storage=lab_tools_storage,
+        max_length=512,
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+    )
+
+    source_format = models.CharField(
+        max_length=32,
+        choices=SOURCE_FORMAT_CHOICES,
+    )
+
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+
+    sequence_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    alignment_length = models.PositiveIntegerField(
+        default=0,
+    )
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="molecular_alignments_uploaded",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
+
+        verbose_name = (
+            "Molecular Alignment"
+        )
+
+        verbose_name_plural = (
+            "Molecular Alignments"
+        )
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+        if (
+            self.molecule_id
+            and self.molecule.sequence_type
+            != "protein"
+        ):
+            raise ValidationError(
+                (
+                    "Molecular alignments are currently "
+                    "supported only for Protein records."
+                )
+            )
+
+        if (
+            self.file
+            and not self.checksum_sha256
+        ):
+            try:
+                hasher = hashlib.sha256()
+
+                for chunk in self.file.chunks():
+                    hasher.update(
+                        chunk
+                    )
+
+                self.checksum_sha256 = (
+                    hasher.hexdigest()
+                )
+
+                self.file.seek(0)
+
+            except Exception:
+                pass
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+        return (
+            f"{self.molecule_id}:"
+            f"{self.original_filename}"
+        )
+
+
+@receiver(
+    post_delete,
+    sender=MolecularAlignment,
+)
+def delete_molecular_alignment_file(
+    sender,
+    instance,
+    **kwargs,
+):
+    """
+    Avoid leaving alignment files behind when a molecular
+    record is deleted through a cascading relation.
+    """
+
+    if (
+        instance.file
+        and instance.file.name
+    ):
+        instance.file.storage.delete(
+            instance.file.name
+        )
+
+
+
+class MolecularStructure(models.Model):
+    """
+    Persisted tertiary molecular structure attached directly
+    to a MolecularSequence.
+
+    The stored PDB or mmCIF file remains authoritative. The
+    Protein workspace may render it without copying structure
+    content into the database.
+    """
+
+    SOURCE_FORMAT_CHOICES = [
+        (
+            "pdb",
+            "PDB",
+        ),
+        (
+            "mmcif",
+            "mmCIF",
+        ),
+    ]
+
+    molecule = models.ForeignKey(
+        MolecularSequence,
+        on_delete=models.CASCADE,
+        related_name="structures",
+    )
+
+    file = models.FileField(
+        upload_to=molecular_structure_upload_to,
+        storage=lab_tools_storage,
+        max_length=512,
+    )
+
+    label = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+    )
+
+    source_format = models.CharField(
+        max_length=32,
+        choices=SOURCE_FORMAT_CHOICES,
+    )
+
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="molecular_structures_uploaded",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
+
+        verbose_name = (
+            "Molecular Structure"
+        )
+
+        verbose_name_plural = (
+            "Molecular Structures"
+        )
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "molecule",
+                    "checksum_sha256",
+                ],
+                name="core_molstr_mol_sha_idx",
+            ),
+        ]
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+        if (
+            self.file
+            and not self.checksum_sha256
+        ):
+            try:
+                hasher = hashlib.sha256()
+
+                for chunk in self.file.chunks():
+                    hasher.update(
+                        chunk
+                    )
+
+                self.checksum_sha256 = (
+                    hasher.hexdigest()
+                )
+
+                self.file.seek(0)
+
+            except Exception:
+                pass
+
+        super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+        return (
+            self.label
+            or self.original_filename
+            or f"Structure {self.pk or 'unsaved'}"
+        )
+
+
+@receiver(
+    post_delete,
+    sender=MolecularStructure,
+)
+def delete_molecular_structure_file(
+    sender,
+    instance,
+    **kwargs,
+):
+    if not instance.file:
+        return
+
+    try:
+        instance.file.delete(
+            save=False
+        )
+    except Exception:
+        pass
+
+class MolecularSecondaryStructure(models.Model):
+    """
+    User/source-supplied RNA secondary structure associated
+    with a MolecularSequence whose sequence_type is RNA.
+
+    MolecularSequence.sequence remains authoritative.
+    No structure prediction is performed by this model.
+    """
+
+    SOURCE_FORMAT_CHOICES = [
+        (
+            "dot_bracket",
+            "Dot-bracket",
+        ),
+        (
+            "sequence_dot_bracket",
+            "Sequence + dot-bracket",
+        ),
+        (
+            "dbn",
+            "DBN",
+        ),
+        (
+            "rnafold",
+            "RNAfold-style text",
+        ),
+    ]
+
+    molecule = models.ForeignKey(
+        MolecularSequence,
+        on_delete=models.CASCADE,
+        related_name="secondary_structures",
+    )
+
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    structure = models.TextField()
+
+    source_format = models.CharField(
+        max_length=32,
+        choices=SOURCE_FORMAT_CHOICES,
+    )
+
+    source_text = models.TextField(
+        blank=True,
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    checksum_sha256 = models.CharField(
+        max_length=64,
+    )
+
+    minimum_free_energy = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+
+    source_method = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    source_note = models.TextField(
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name=(
+            "molecular_secondary_structures_created"
+        ),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
+
+        verbose_name = (
+            "Molecular Secondary Structure"
+        )
+
+        verbose_name_plural = (
+            "Molecular Secondary Structures"
+        )
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "molecule",
+                    "checksum_sha256",
+                ],
+                name="core_molsec_mol_sha_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if not self.molecule_id:
+            return
+
+        if self.molecule.sequence_type != "rna":
+            raise ValidationError(
+                {
+                    "molecule": (
+                        "Secondary structures are currently "
+                        "supported only for RNA records."
+                    )
+                }
+            )
+
+        from core.services.molecular_secondary_structure import (
+            MolecularSecondaryStructureImportError,
+            normalize_rna_sequence,
+            validate_dot_bracket,
+        )
+
+        sequence = normalize_rna_sequence(
+            self.molecule.sequence
+        )
+
+        try:
+            validated = validate_dot_bracket(
+                self.structure,
+                expected_length=len(sequence),
+            )
+        except MolecularSecondaryStructureImportError as exc:
+            raise ValidationError(
+                {
+                    "structure": str(exc)
+                }
+            ) from exc
+
+        self.structure = validated[
+            "structure"
+        ]
+
+    def save(
+        self,
+        *args,
+        **kwargs,
+    ):
+        self.full_clean()
+
+        return super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self):
+        label = (
+            self.name
+            or "Secondary structure"
+        )
+
+        return (
+            f"{self.molecule_id}: {label}"
+        )
+
+
+
+
 
 
 class JupyterNotebook(models.Model):

@@ -1,0 +1,180 @@
+/*
+ * BIOBANK PROTEIN OVERVIEW SPLITTER V1
+ *
+ * User-adjustable horizontal allocation between:
+ *   - Protein sequence / annotations
+ *   - Mol* Protein structure viewer
+ */
+
+.mps-overview-grid.mps-resizable-grid {
+    --mps-sequence-panel-width: 60%;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(320px, var(--mps-sequence-panel-width))
+        14px
+        minmax(360px, 1fr);
+
+    gap: 0;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.mps-resizable-grid > .mw-protein-overview-sequence,
+.mps-resizable-grid > .mps-card {
+    min-width: 0;
+}
+
+.mps-panel-splitter {
+    position: relative;
+
+    width: 14px;
+    min-width: 14px;
+    height: 100%;
+
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+
+    outline: none;
+    z-index: 10;
+}
+
+.mps-panel-splitter::before {
+    content: "";
+
+    position: absolute;
+
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+
+    width: 2px;
+
+    transform: translateX(-50%);
+
+    border-radius: 999px;
+
+    background:
+        var(
+            --bs-border-color,
+            #ced4da
+        );
+
+    transition:
+        width 120ms ease,
+        background-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.mps-panel-splitter::after {
+    content: "⋮";
+
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform:
+        translate(
+            -50%,
+            -50%
+        );
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 12px;
+    height: 40px;
+
+    border-radius: 999px;
+
+    background:
+        var(
+            --bs-body-bg,
+            #ffffff
+        );
+
+    color:
+        var(
+            --bs-secondary-color,
+            #6c757d
+        );
+
+    font-size: 17px;
+    line-height: 1;
+    font-weight: 700;
+
+    pointer-events: none;
+}
+
+.mps-panel-splitter:hover::before,
+.mps-panel-splitter:focus-visible::before,
+.mps-resizable-grid.is-resizing
+.mps-panel-splitter::before {
+    width: 5px;
+
+    background:
+        var(
+            --bs-primary,
+            #0d6efd
+        );
+
+    box-shadow:
+        0 0 0 2px
+        rgba(
+            13,
+            110,
+            253,
+            0.12
+        );
+}
+
+.mps-panel-splitter:hover::after,
+.mps-panel-splitter:focus-visible::after {
+    color:
+        var(
+            --bs-primary,
+            #0d6efd
+        );
+}
+
+html.mps-resizing,
+html.mps-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+.mps-resizable-grid.is-resizing {
+    user-select: none;
+}
+
+/*
+ * MOLSTAR EXPANDED/FULLSCREEN EXTERNAL PANEL GUARD V3 20260817
+ *
+ * Mol* owns the expanded viewport. Preserve the normal grid
+ * geometry and persisted split ratio, but suppress both the
+ * external synchronized Sequence panel and its separator while
+ * the viewer is expanded/fullscreen.
+ */
+.mps-resizable-grid.is-molstar-expanded
+> .mw-protein-overview-sequence,
+.mps-resizable-grid.is-molstar-expanded
+> .mps-panel-splitter {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+@media (max-width: 1180px) {
+    .mps-overview-grid.mps-resizable-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .mps-panel-splitter {
+        display: none;
+    }
+}

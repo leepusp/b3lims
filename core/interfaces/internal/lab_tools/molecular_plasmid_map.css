@@ -1,0 +1,526 @@
+.mpm-view-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .2rem;
+    margin-right: .6rem;
+    border: 1px solid #d0d5dd;
+    border-radius: .55rem;
+    background: #f2f4f7;
+}
+
+.mpm-view-button {
+    min-height: 2rem;
+    padding: .35rem .7rem;
+    border: 0;
+    border-radius: .4rem;
+    background: transparent;
+    color: #475467;
+    font-size: .76rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mpm-view-button:hover,
+.mpm-view-button:focus-visible {
+    color: #175cd3;
+}
+
+.mpm-view-button.is-active {
+    background: #fff;
+    color: #175cd3;
+    box-shadow: 0 1px 3px rgb(16 24 40 / 14%);
+}
+
+.mpm-shell {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #d0d5dd;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.mpm-shell[hidden] {
+    display: none !important;
+}
+
+.mpm-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: .8rem;
+    flex-wrap: wrap;
+    padding: .75rem .85rem;
+    border-bottom: 1px solid #eaecf0;
+    background: #f8fafc;
+}
+
+.mpm-toolbar-group {
+    display: flex;
+    align-items: flex-end;
+    gap: .55rem;
+    flex-wrap: wrap;
+}
+
+.mpm-toolbar label,
+.mpm-selected-enzymes label,
+.mpm-search {
+    display: grid;
+    gap: .25rem;
+    margin: 0;
+    color: #475467;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+.mpm-toolbar select {
+    min-width: 118px;
+    font-size: .75rem;
+}
+
+.mpm-check {
+    display: inline-flex !important;
+    align-items: center;
+    gap: .35rem !important;
+    padding-bottom: .35rem;
+    white-space: nowrap;
+}
+
+.mpm-selected-enzymes {
+    padding: .6rem .85rem 0;
+}
+
+.mpm-selected-enzymes input {
+    width: min(520px, 100%);
+}
+
+.mpm-secondary-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .6rem .85rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mpm-search {
+    width: min(330px, 100%);
+}
+
+.mpm-status {
+    min-height: 1.25rem;
+    color: #667085;
+    font-size: .72rem;
+    text-align: right;
+}
+
+.mpm-status.is-loading {
+    color: #175cd3;
+}
+
+.mpm-status.is-success {
+    color: #067647;
+}
+
+.mpm-status.is-error {
+    color: #b42318;
+}
+
+.mpm-stage {
+    position: relative;
+    min-height: 640px;
+    overflow: hidden;
+    background: #fff;
+}
+
+#mpm-svg {
+    display: block;
+    width: 100%;
+    min-height: 640px;
+    max-height: 78vh;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+#mpm-svg:active {
+    cursor: grabbing;
+}
+
+.mpm-map-background {
+    fill: #fff;
+    pointer-events: all;
+}
+
+.mpm-backbone {
+    fill: none;
+    stroke: #344054;
+    stroke-width: 2.25;
+}
+
+.mpm-linear-backbone {
+    stroke: #344054;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.mpm-coordinate-tick {
+    stroke: #98a2b3;
+    stroke-width: 1;
+}
+
+.mpm-coordinate-label {
+    fill: #667085;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.mpm-center-title {
+    fill: #101828;
+    font-size: 19px;
+    font-weight: 800;
+}
+
+.mpm-center-length {
+    fill: #344054;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.mpm-center-topology {
+    fill: #667085;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.mpm-feature {
+    cursor: pointer;
+    outline: none;
+}
+
+.mpm-feature-arc {
+    stroke-linecap: round;
+    opacity: .92;
+    transition:
+        opacity .12s ease,
+        stroke-width .12s ease;
+}
+
+.mpm-feature:hover .mpm-feature-arc,
+.mpm-feature:focus-visible .mpm-feature-arc,
+.mpm-feature.is-selected .mpm-feature-arc {
+    opacity: 1;
+}
+
+.mpm-feature-label {
+    fill: #344054;
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.mpm-feature-label.is-selected {
+    fill: #101828;
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+.mpm-linear-feature {
+    cursor: pointer;
+    opacity: .92;
+}
+
+.mpm-restriction-tick {
+    stroke: #344054;
+    stroke-width: 1.45;
+    cursor: pointer;
+}
+
+.mpm-restriction-tick:hover,
+.mpm-restriction-tick.is-selected {
+    stroke: #b42318;
+    stroke-width: 2.5;
+}
+
+.mpm-restriction-leader {
+    fill: none;
+    stroke: #98a2b3;
+    stroke-width: .8;
+    pointer-events: none;
+}
+
+.mpm-restriction-leader.is-selected {
+    stroke: #b42318;
+    stroke-width: 1.4;
+}
+
+.mpm-restriction-label {
+    fill: #344054;
+    font-size: 9.5px;
+    font-weight: 650;
+    cursor: pointer;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.mpm-restriction-label:hover,
+.mpm-restriction-label.is-selected {
+    fill: #b42318;
+    font-weight: 800;
+}
+
+.mpm-label-limit-note {
+    fill: #667085;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.mpm-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    color: #667085;
+    font-size: .8rem;
+    text-align: center;
+}
+
+.mpm-footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .65rem .85rem;
+    border-top: 1px solid #eaecf0;
+    background: #f8fafc;
+}
+
+.mpm-summary {
+    color: #475467;
+    font-size: .72rem;
+}
+
+.mpm-site-details {
+    display: grid;
+    gap: .15rem;
+    max-width: 440px;
+    color: #344054;
+    font-size: .72rem;
+    text-align: right;
+}
+
+.mpm-site-details strong {
+    color: #101828;
+}
+
+.mpm-shell[data-detail-mode="compact"] .mpm-coordinate-label,
+.mpm-shell[data-detail-mode="compact"] .mpm-feature-label {
+    font-size: 9px;
+}
+
+.mpm-shell[data-detail-mode="publication"] {
+    border-color: #b8c0cc;
+}
+
+.mpm-shell[data-detail-mode="publication"] .mpm-toolbar,
+.mpm-shell[data-detail-mode="publication"] .mpm-secondary-row,
+.mpm-shell[data-detail-mode="publication"] .mpm-footer {
+    background: #fff;
+}
+
+.mpm-shell[data-detail-mode="publication"] .mpm-backbone {
+    stroke-width: 1.7;
+}
+
+@media (max-width: 1100px) {
+    .mpm-toolbar {
+        align-items: stretch;
+    }
+
+    .mpm-toolbar-group {
+        width: 100%;
+    }
+
+    .mpm-toolbar-actions {
+        width: auto;
+    }
+
+    .mpm-stage,
+    #mpm-svg {
+        min-height: 560px;
+    }
+}
+
+@media (max-width: 760px) {
+    .mpm-view-switcher {
+        width: 100%;
+    }
+
+    .mpm-view-button {
+        flex: 1 1 50%;
+    }
+
+    .mpm-toolbar-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mpm-toolbar label,
+    .mpm-toolbar select {
+        width: 100%;
+    }
+
+    .mpm-secondary-row,
+    .mpm-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .mpm-search {
+        width: 100%;
+    }
+
+    .mpm-status,
+    .mpm-site-details {
+        text-align: left;
+    }
+
+    .mpm-stage,
+    #mpm-svg {
+        min-height: 500px;
+    }
+}
+
+/* ============================================================
+   Delivery C1 — smart density without information loss
+   ============================================================ */
+
+.mpm-density-note {
+    flex: 1 1 100%;
+    color: #667085;
+    font-size: .7rem;
+    line-height: 1.35;
+    text-align: right;
+}
+
+.mpm-site-list-panel {
+    max-height: 320px;
+    overflow: hidden;
+    border-bottom: 1px solid #eaecf0;
+    background: #fff;
+}
+
+.mpm-site-list-panel[hidden] {
+    display: none !important;
+}
+
+.mpm-site-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .55rem .85rem;
+    border-bottom: 1px solid #eaecf0;
+    background: #f8fafc;
+    color: #344054;
+    font-size: .72rem;
+}
+
+.mpm-site-list-header span {
+    color: #667085;
+    font-weight: 600;
+}
+
+.mpm-site-list-items {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fill,
+            minmax(190px, 1fr)
+        );
+    gap: .35rem;
+    max-height: 260px;
+    padding: .55rem .65rem;
+    overflow-y: auto;
+}
+
+.mpm-site-list-item {
+    display: grid;
+    gap: .1rem;
+    min-width: 0;
+    padding: .42rem .52rem;
+    border: 1px solid #eaecf0;
+    border-radius: .42rem;
+    background: #fff;
+    color: #344054;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mpm-site-list-item:hover,
+.mpm-site-list-item:focus-visible {
+    border-color: #84adff;
+    background: #f5f8ff;
+    outline: none;
+}
+
+.mpm-site-list-item.is-selected {
+    border-color: #f04438;
+    background: #fff6f5;
+}
+
+.mpm-site-list-item strong {
+    overflow: hidden;
+    color: #101828;
+    font-size: .72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpm-site-list-item span {
+    overflow: hidden;
+    color: #667085;
+    font-size: .65rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpm-site-list-empty {
+    grid-column: 1 / -1;
+    padding: .75rem;
+    color: #667085;
+    font-size: .72rem;
+    text-align: center;
+}
+
+@media (max-width: 760px) {
+    .mpm-density-note {
+        text-align: left;
+    }
+
+    .mpm-site-list-items {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ============================================================
+ * FINAL MOLECULAR UX REFINEMENT V2 20260810
+ * ============================================================ */
+
+.mpm-feature-label {
+    paint-order: stroke fill;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}

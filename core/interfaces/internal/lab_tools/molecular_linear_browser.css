@@ -1,0 +1,254 @@
+/* ============================================================
+   Molecular linear browser
+   ============================================================ */
+
+.mlb-shell {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #d0d5dd;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.mlb-shell[hidden] {
+    display: none !important;
+}
+
+.mlb-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: .65rem;
+    flex-wrap: wrap;
+    padding: .75rem .85rem;
+    border-bottom: 1px solid #eaecf0;
+    background: #f8fafc;
+}
+
+.mlb-toolbar label {
+    display: grid;
+    gap: .25rem;
+    margin: 0;
+    color: #475467;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+.mlb-toolbar select {
+    min-width: 128px;
+}
+
+.mlb-check {
+    display: inline-flex !important;
+    align-items: center;
+    gap: .35rem !important;
+    padding-bottom: .38rem;
+    white-space: nowrap;
+}
+
+.mlb-search {
+    flex: 1 1 210px;
+    min-width: 180px;
+    max-width: 320px;
+}
+
+.mlb-overview-wrap {
+    padding: .65rem .85rem .35rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mlb-section-title {
+    margin-bottom: .2rem;
+    color: #475467;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+#mlb-overview {
+    display: block;
+    width: 100%;
+    height: 86px;
+    cursor: pointer;
+}
+
+.mlb-overview-backbone {
+    stroke: #344054;
+    stroke-width: 2;
+}
+
+.mlb-overview-feature {
+    cursor: pointer;
+    opacity: .84;
+}
+
+.mlb-overview-feature:hover,
+.mlb-overview-feature.is-selected {
+    opacity: 1;
+    stroke: #101828;
+    stroke-width: 1.5;
+}
+
+.mlb-overview-boundary {
+    stroke: #d0d5dd;
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.mlb-overview-coordinate {
+    fill: #667085;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.mlb-status {
+    min-height: 2rem;
+    padding: .5rem .85rem;
+    border-bottom: 1px solid #eaecf0;
+    color: #667085;
+    font-size: .72rem;
+}
+
+.mlb-status.is-loading {
+    color: #175cd3;
+}
+
+.mlb-status.is-success {
+    color: #067647;
+}
+
+.mlb-status.is-error {
+    color: #b42318;
+}
+
+.mlb-stage {
+    max-height: 720px;
+    overflow: auto;
+    background: #fff;
+}
+
+#mlb-svg {
+    display: block;
+    width: 100%;
+    min-width: 900px;
+}
+
+.mlb-row-background {
+    fill: #fff;
+}
+
+.mlb-row-background.is-alternate {
+    fill: #fbfcfe;
+}
+
+.mlb-row-title {
+    fill: #475467;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.mlb-axis {
+    stroke: #667085;
+    stroke-width: 1.4;
+}
+
+.mlb-axis-tick {
+    stroke: #98a2b3;
+    stroke-width: 1;
+}
+
+.mlb-axis-label {
+    fill: #667085;
+    font-size: 9.5px;
+    font-weight: 600;
+}
+
+.mlb-feature {
+    cursor: pointer;
+    opacity: .9;
+    stroke: rgb(16 24 40 / 22%);
+    stroke-width: .7;
+}
+
+.mlb-feature:hover {
+    opacity: 1;
+    stroke: #344054;
+    stroke-width: 1.4;
+}
+
+.mlb-feature.is-selected {
+    opacity: 1;
+    stroke: #101828;
+    stroke-width: 2.2;
+}
+
+.mlb-feature.is-search-match {
+    stroke: #f04438;
+    stroke-width: 2;
+}
+
+.mlb-feature-label {
+    fill: #344054;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.mlb-feature-label.is-selected {
+    fill: #101828;
+    font-weight: 800;
+}
+
+.mlb-feature-label.is-search-match {
+    fill: #b42318;
+    font-weight: 800;
+}
+
+.mlb-restriction-tick {
+    stroke: #344054;
+    stroke-width: 1.2;
+    cursor: pointer;
+}
+
+.mlb-restriction-tick:hover {
+    stroke: #b42318;
+    stroke-width: 2.3;
+}
+
+.mlb-empty {
+    fill: #667085;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .mlb-toolbar {
+        align-items: stretch;
+    }
+
+    .mlb-toolbar label,
+    .mlb-toolbar select,
+    .mlb-search {
+        width: 100%;
+        max-width: none;
+    }
+
+    .mlb-stage {
+        max-height: 620px;
+    }
+}
+
+
+/* ============================================================
+ * FINAL MOLECULAR UX REFINEMENT V2 20260810
+ * ============================================================ */
+
+.mlb-feature-label {
+    paint-order: stroke fill;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}

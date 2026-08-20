@@ -6,6 +6,7 @@ from core.views.internal.shipments.views import shipments_list_view, shipments_d
 # core/urls.py
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic.base import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
@@ -99,6 +100,11 @@ from core.views.internal.samples.views import sample_qr_scan_view
 # ================= ROTAS (URLPATTERNS) =================
 
 urlpatterns = [
+    path(
+        "internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/import/",
+        notebook_views.molecular_sequence_import_api,
+        name="molecular_sequence_import_api",
+    ),
     path("public/shipments/", public_shipments_portal_view, name="public_shipments_portal"),
     path("public/shipments/new/", public_shipment_new_view, name="public_shipment_new"),
     path("public/shipments/submitted/<uuid:token>/", public_shipment_submitted_view, name="public_shipment_submitted"),
@@ -209,11 +215,72 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/unlink-chemical/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_chemical_api, name='notebook_unlink_chemical_api'),
     path('internal/lab-tools/notebook/api/link-molecular/<int:entry_id>/', notebook_views.notebook_link_molecular_sequence_api, name='notebook_link_molecular_sequence_api'),
     path('internal/lab-tools/notebook/api/unlink-molecular/<int:entry_id>/<int:link_id>/', notebook_views.notebook_unlink_molecular_sequence_api, name='notebook_unlink_molecular_sequence_api'),
+    path(
+        "internal/lab-tools/molecular-registry/api/import-preview/",
+        notebook_views.molecular_registry_import_preview_api,
+        name="molecular_registry_import_preview_api",
+    ),
     path('internal/lab-tools/molecular-registry/', notebook_views.molecular_registry_index, name='molecular_registry_index'),
-    path('internal/lab-tools/notebook/molecular-sequence/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
-    path('internal/lab-tools/notebook/api/molecular-sequence/update/<int:sequence_id>/', notebook_views.molecular_sequence_update_api, name='molecular_sequence_update_api'),
-    path('internal/lab-tools/notebook/api/molecular-sequence/features/<int:molecule_id>/', notebook_views.molecular_sequence_features_api, name='molecular_sequence_features_api'),
-    path('internal/lab-tools/notebook/api/molecular-sequence/delete/<int:sequence_id>/', notebook_views.molecular_sequence_delete_api, name='molecular_sequence_delete_api'),
+    path('internal/lab-tools/molecular-registry/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/update/', notebook_views.molecular_sequence_update_api, name='molecular_sequence_update_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/alignments/', notebook_views.molecular_sequence_alignments_api, name='molecular_sequence_alignments_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/structures/', notebook_views.molecular_sequence_structures_api, name='molecular_sequence_structures_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/structure-search/', notebook_views.molecular_sequence_structure_search_api, name='molecular_sequence_structure_search_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/structure-preview/', notebook_views.molecular_sequence_structure_preview_api, name='molecular_sequence_structure_preview_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/pdb-search/', notebook_views.molecular_sequence_pdb_search_api, name='molecular_sequence_pdb_search_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/pdb-preview/', notebook_views.molecular_sequence_pdb_preview_api, name='molecular_sequence_pdb_preview_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/pdb-mapping/', notebook_views.molecular_sequence_pdb_mapping_api, name='molecular_sequence_pdb_mapping_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/secondary-structures/', notebook_views.molecular_sequence_secondary_structures_api, name='molecular_sequence_secondary_structures_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/restriction-sites/', notebook_views.molecular_sequence_restriction_sites_api, name='molecular_sequence_restriction_sites_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:molecule_id>/features/', notebook_views.molecular_sequence_features_api, name='molecular_sequence_features_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/delete/', notebook_views.molecular_sequence_delete_api, name='molecular_sequence_delete_api'),
+
+    # Compatibility aliases for pre-Registry molecular URLs.
+    # reverse() uses the canonical routes above.
+    path(
+        'internal/lab-tools/notebook/molecular-sequence/<int:sequence_id>/',
+        RedirectView.as_view(
+            pattern_name='molecular_sequence_detail',
+            permanent=False,
+            query_string=True,
+        ),
+        name='legacy_molecular_sequence_detail',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/import/<int:sequence_id>/',
+        notebook_views.molecular_sequence_import_api,
+        name='legacy_molecular_sequence_import_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/update/<int:sequence_id>/',
+        notebook_views.molecular_sequence_update_api,
+        name='legacy_molecular_sequence_update_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/alignments/<int:sequence_id>/',
+        notebook_views.molecular_sequence_alignments_api,
+        name='legacy_molecular_sequence_alignments_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/secondary-structures/<int:sequence_id>/',
+        notebook_views.molecular_sequence_secondary_structures_api,
+        name='legacy_molecular_sequence_secondary_structures_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/restriction-sites/<int:sequence_id>/',
+        notebook_views.molecular_sequence_restriction_sites_api,
+        name='legacy_molecular_sequence_restriction_sites_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/features/<int:molecule_id>/',
+        notebook_views.molecular_sequence_features_api,
+        name='legacy_molecular_sequence_features_api',
+    ),
+    path(
+        'internal/lab-tools/notebook/api/molecular-sequence/delete/<int:sequence_id>/',
+        notebook_views.molecular_sequence_delete_api,
+        name='legacy_molecular_sequence_delete_api',
+    ),
     path('internal/lab-tools/notebook/api/molecular-sequence/create/<int:entry_id>/', notebook_views.notebook_create_molecular_sequence_api, name='notebook_create_molecular_sequence_api'),
     path('internal/lab-tools/notebook/api/block/create/<int:entry_id>/', notebook_views.notebook_create_block_api, name='notebook_create_block_api'),
     path('internal/lab-tools/notebook/api/block/update/<int:block_id>/', notebook_views.notebook_update_block_api, name='notebook_update_block_api'),

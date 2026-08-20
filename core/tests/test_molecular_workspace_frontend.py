@@ -57,12 +57,28 @@ class MolecularWorkspaceFrontendTests(TestCase):
         )
         self.assertContains(
             response,
+            "internal/lab_tools/molecular_sequence_track.js",
+        )
+        self.assertContains(
+            response,
+            "internal/lab_tools/molecular_sequence_track.css",
+        )
+        self.assertContains(
+            response,
             'data-can-edit="true"',
+        )
+        self.assertNotContains(
+            response,
+            "molecular_sequence_track.css}",
+        )
+        self.assertNotContains(
+            response,
+            "molecular_sequence_track.js}",
         )
         self.assertNotContains(response, "unpkg.com")
         self.assertNotContains(response, "localStorage")
         self.assertNotContains(response, "buildDemoFeatures")
-        self.assertContains(response, "SeqViz interactive viewer")
+        self.assertContains(response, "Sequence viewer")
         self.assertContains(
             response,
             "internal/lab_tools/vendor/seqviz-3.10.22.min.js",
@@ -71,8 +87,16 @@ class MolecularWorkspaceFrontendTests(TestCase):
             response,
             "internal/lab_tools/molecular_seqviz.js",
         )
+        self.assertContains(
+            response,
+            'id="mw-seqviz-create-feature"',
+        )
+        self.assertContains(
+            response,
+            'id="mw-seqviz-feature-form"',
+        )
 
-    def test_workspace_offers_synchronized_visualization_modes(self):
+    def test_seqviz_is_primary_and_secondary_tools_are_separate(self):
         self.client.force_login(self.owner)
 
         response = self.client.get(
@@ -85,8 +109,10 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertContains(response, 'data-mw-view="seqviz"')
         self.assertContains(response, 'data-mw-view="construction"')
         self.assertContains(response, 'data-mw-view="sequence"')
-        self.assertContains(response, 'data-mw-view="split"')
-        self.assertContains(response, 'data-mw-view="all"')
+        self.assertNotContains(response, 'data-mw-view="split"')
+        self.assertNotContains(response, 'data-mw-view="all"')
+        self.assertContains(response, 'id="mw-seqviz-viewer"')
+        self.assertContains(response, 'class="mw-seqviz-inspector"')
         self.assertContains(response, 'id="mw-map-tool"')
         self.assertContains(response, 'id="mw-construction-track"')
         self.assertContains(response, 'id="mw-selection-summary"')
@@ -100,12 +126,43 @@ class MolecularWorkspaceFrontendTests(TestCase):
             "applyWorkspaceView",
             "renderConstructionTrack",
             "moveFeatureFromDrag",
-            "appendInteractiveSequence",
+            "restrictionSitesForTrack",
             "createFeatureFromSelection",
         ):
             self.assertIn(f"function {function_name}(", script)
 
         self.assertNotIn("localStorage", script)
+        self.assertIn(
+            "window.BiobankSequenceTrack.render",
+            script,
+        )
+        self.assertNotIn(
+            "function appendInteractiveSequence(",
+            script,
+        )
+
+        track = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_sequence_track.js",
+        ).read_text()
+        track_styles = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_sequence_track.css",
+        ).read_text()
+        self.assertIn(
+            "window.BiobankSequenceTrack",
+            track,
+        )
+        self.assertIn(
+            "data-feature-bar",
+            track,
+        )
+        self.assertIn(
+            ".mw-seq-track",
+            track_styles,
+        )
 
         adapter = Path(
             settings.BASE_DIR,
@@ -113,8 +170,33 @@ class MolecularWorkspaceFrontendTests(TestCase):
         ).read_text()
         self.assertIn("window.seqviz.Viewer", adapter)
         self.assertIn("BiobankMolecularWorkspace", adapter)
+        self.assertIn('zoom: {linear: Number(zoom.value || 50)}', adapter)
+        self.assertIn("mismatch: Number(mismatch.value || 0)", adapter)
+        self.assertIn("showComplement.checked", adapter)
+        self.assertIn("showIndex.checked", adapter)
+        self.assertIn('{source: "seqviz"}', adapter)
+        self.assertIn(
+            'event.detail?.source === "seqviz"',
+            adapter,
+        )
+        self.assertIn(
+            "createFeatureFromSelection?.({",
+            adapter,
+        )
         self.assertNotIn("unpkg", adapter)
         self.assertNotIn("localStorage", adapter)
+
+        self.assertIn(
+            "createFeatureFromSelection,",
+            script,
+        )
+        self.assertIn(
+            'options.source === "seqviz"',
+            script,
+        )
+
+        self.assertIn(': "seqviz";', script)
+        self.assertIn('? view : "seqviz";', script)
 
     def test_classification_and_sequence_editor_are_explicit(self):
         template = Path(
@@ -181,6 +263,20 @@ class MolecularWorkspaceFrontendTests(TestCase):
             'id="mw-seqviz-colors"',
             template,
         )
+        for control_id in (
+            "mw-seqviz-mode",
+            "mw-seqviz-zoom",
+            "mw-seqviz-enzymes",
+            "mw-seqviz-search",
+            "mw-seqviz-mismatch",
+            "mw-seqviz-show-complement",
+            "mw-seqviz-show-index",
+            "mw-seqviz-reset",
+        ):
+            self.assertIn(
+                f'id="{control_id}"',
+                template,
+            )
         self.assertIn(
             'applyWorkspaceView("sequence")',
             workspace,
@@ -208,6 +304,153 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertIn(
             "return NUCLEOTIDE_COLORS;",
             adapter,
+        )
+
+    def test_statistics_supports_readonly_classification_control(self):
+        script = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_workspace.js",
+        ).read_text()
+
+        start = script.index(
+            "function syncStatistics()"
+        )
+        end = script.index(
+            "\n        function ",
+            start + 1,
+        )
+        statistics = script[start:end]
+
+        self.assertIn(
+            "elements.type?.selectedOptions?.[0]?.text",
+            statistics,
+        )
+        self.assertIn(
+            "elements.type?.value",
+            statistics,
+        )
+        self.assertIn(
+            "elements.topology?.selectedOptions?.[0]?.text",
+            statistics,
+        )
+        self.assertIn(
+            "elements.topology?.value",
+            statistics,
+        )
+        self.assertNotIn(
+            "elements.type.options[",
+            statistics,
+        )
+        self.assertNotIn(
+            "elements.topology.options[",
+            statistics,
+        )
+
+    def test_unified_molecular_workspace_layout(self):
+        template = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_sequence_detail.html",
+        ).read_text()
+
+        workspace = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_workspace.js",
+        ).read_text()
+
+        adapter = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_seqviz.js",
+        ).read_text()
+
+        stylesheet = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/"
+            "molecular_workspace.css",
+        ).read_text()
+
+        self.assertIn(
+            "function initializeUnifiedWorkspace()",
+            workspace,
+        )
+        self.assertIn(
+            'root.classList.add("mw-unified-workspace")',
+            workspace,
+        )
+        self.assertIn(
+            'featureEditor.id = "mw-unified-feature-editor"',
+            workspace,
+        )
+        self.assertIn(
+            "featureEditor.appendChild(elements.featureForm)",
+            workspace,
+        )
+        self.assertIn(
+            'sequenceDetails.id = "mw-unified-sequence-details"',
+            workspace,
+        )
+        self.assertIn(
+            'labelMode.id = "mw-unified-label-mode"',
+            workspace,
+        )
+        self.assertIn(
+            '["selected", "Selected"]',
+            workspace,
+        )
+        self.assertIn(
+            "mw-unified-color-swatch",
+            workspace,
+        )
+        self.assertIn(
+            'event.target.closest(',
+            workspace,
+        )
+        self.assertIn(
+            '"[data-coordinate]"',
+            workspace,
+        )
+        self.assertNotIn(
+            "initializeUnifiedWorkspace();",
+            workspace,
+        )
+        self.assertIn(
+            "applyWorkspaceView(preferredView());",
+            workspace,
+        )
+        self.assertNotIn(
+            'applyWorkspaceView("seqviz");',
+            workspace,
+        )
+        self.assertIn(
+            'const labelMode = document.getElementById(',
+            adapter,
+        )
+        self.assertIn(
+            '(labelMode?.value || "selected")',
+            adapter,
+        )
+        self.assertIn(
+            "featureIndex === data.selectedFeature",
+            adapter,
+        )
+        self.assertIn(
+            "UNIFIED MOLECULAR WORKSPACE 20260806",
+            stylesheet,
+        )
+        self.assertRegex(
+            template,
+            r"molecular_workspace\.css' %}\?v=[A-Za-z0-9._-]+",
+        )
+        self.assertRegex(
+            template,
+            r"molecular_workspace\.js' %}\?v=[A-Za-z0-9._-]+",
+        )
+        self.assertRegex(
+            template,
+            r"molecular_seqviz\.js' %}\?v=[A-Za-z0-9._-]+",
         )
 
     def test_feature_colors_refresh_all_molecular_views(self):
@@ -323,4 +566,12 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertNotContains(
             response,
             'id="mw-delete"',
+        )
+        self.assertNotContains(
+            response,
+            'id="mw-seqviz-create-feature"',
+        )
+        self.assertNotContains(
+            response,
+            'id="mw-seqviz-feature-form"',
         )

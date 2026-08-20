@@ -1,0 +1,60 @@
+/* ============================================================
+   Molecular detailed-map layout enhancer
+   ============================================================ */
+
+.mpl-layout-controls {
+    align-items: flex-end;
+}
+
+.mpl-layout-controls label:not(.mpm-check) {
+    min-width: 132px;
+}
+
+.mpm-shell {
+    --mpl-map-height: 640px;
+}
+
+.mpm-shell .mpm-stage {
+    min-height: var(--mpl-map-height);
+    transition: min-height .18s ease;
+}
+
+.mpm-shell #mpm-svg {
+    min-height: var(--mpl-map-height);
+    max-height: none;
+    transition: min-height .18s ease;
+}
+
+.mpm-shell[data-map-size="large"] .mpm-stage,
+.mpm-shell[data-map-size="large"] #mpm-svg {
+    min-height: 820px;
+}
+
+.mpm-shell[data-map-size="xl"] .mpm-stage,
+.mpm-shell[data-map-size="xl"] #mpm-svg {
+    min-height: 980px;
+}
+
+.mpm-shell[data-map-size="fit"] .mpm-stage,
+.mpm-shell[data-map-size="fit"] #mpm-svg {
+    min-height: var(--mpl-map-height);
+}
+
+.mpl-feature-label-spaced {
+    font-weight: 700;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.mpl-feature-label-leader {
+    opacity: .85;
+}
+
+@media (max-width: 900px) {
+    .mpm-shell[data-map-size="xl"] .mpm-stage,
+    .mpm-shell[data-map-size="xl"] #mpm-svg {
+        min-height: 820px;
+    }
+}

@@ -1,0 +1,320 @@
+/*
+ * Biobank — shared molecular sequence tracks.
+ * Loaded after molecular_workspace.css so this file can standardize the
+ * colored coordinate preview without changing the rest of the workspace.
+ */
+
+.mw-page {
+    --mw-seq-ink: #253041;
+    --mw-seq-muted: #8f99a8;
+    --mw-seq-rule: #98a2b3;
+    --mw-seq-paper: #fff;
+    --mw-seq-selection: #dbe8ff;
+    --mw-seq-selection-edge: #1769ff;
+    --mw-seq-match: #ffe58f;
+    --mw-codon-a: #f6c7c7;
+    --mw-codon-b: #d5d8dc;
+    --mw-codon-stop: #d93a3a;
+    --mw-enzyme: #e8543f;
+    --mw-base-width: .72rem;
+    --mw-track-gap: .12rem;
+    --mw-track-gutter: 4.75rem;
+}
+
+.mw-sequence-preview.mw-seq-track {
+    max-height: 520px;
+    padding: .85rem 1rem 1.1rem;
+    overflow: auto;
+    background: #fbfcfe;
+    color: var(--mw-seq-ink);
+    font-family: var(--mw-mono);
+    font-size: .75rem;
+    line-height: 1.25;
+    touch-action: none;
+    user-select: none;
+}
+
+.mw-seq-row {
+    display: grid;
+    grid-template-columns:
+        var(--mw-track-gutter)
+        minmax(0, max-content)
+        var(--mw-track-gutter);
+    gap: .7rem;
+    align-items: start;
+    min-width: max-content;
+    padding-bottom: .65rem;
+}
+
+.mw-seq-row:last-child {
+    padding-bottom: 0;
+}
+
+.mw-seq-gutter {
+    padding-top: 1.18rem;
+    color: var(--mw-seq-rule);
+    font-size: .66rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1rem;
+    text-align: right;
+}
+
+.mw-seq-gutter-end {
+    text-align: left;
+}
+
+.mw-seq-tracks {
+    display: grid;
+    gap: var(--mw-track-gap);
+    min-width: 0;
+}
+
+.mw-track {
+    display: grid;
+    grid-template-columns:
+        repeat(var(--mw-row-bases), var(--mw-base-width));
+    align-items: center;
+    min-height: .58rem;
+}
+
+.mw-track-strand {
+    min-height: 1.2rem;
+}
+
+.mw-base {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 1.2rem;
+    border-bottom: 2px solid transparent;
+    border-radius: 2px;
+    color: var(--mw-symbol-color, var(--mw-seq-ink));
+    font-weight: 600;
+    line-height: 1.2rem;
+    cursor: crosshair;
+}
+
+.mw-track-complement .mw-base {
+    opacity: .72;
+    font-weight: 500;
+    cursor: default;
+}
+
+.mw-base.has-feature {
+    border-bottom-color:
+        var(--mw-base-feature-color, #8f96a3);
+    background: color-mix(
+        in srgb,
+        var(--mw-base-feature-color, #8f96a3) 13%,
+        transparent
+    );
+}
+
+.mw-base.is-match {
+    background: var(--mw-seq-match);
+    color: #4a3b00;
+}
+
+.mw-base.is-selected {
+    z-index: 1;
+    background: var(--mw-seq-selection);
+    color: #102a56;
+    box-shadow:
+        0 -1px 0 var(--mw-seq-selection-edge),
+        0 1px 0 var(--mw-seq-selection-edge);
+}
+
+.mw-base.is-selection-start {
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    box-shadow:
+        0 -1px 0 var(--mw-seq-selection-edge),
+        0 1px 0 var(--mw-seq-selection-edge),
+        -1px 0 0 var(--mw-seq-selection-edge);
+}
+
+.mw-base.is-selection-end {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    box-shadow:
+        0 -1px 0 var(--mw-seq-selection-edge),
+        0 1px 0 var(--mw-seq-selection-edge),
+        1px 0 0 var(--mw-seq-selection-edge);
+}
+
+.mw-track-ruler {
+    min-height: 1rem;
+    color: var(--mw-seq-rule);
+    font-size: .62rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.mw-tick {
+    grid-column: var(--mw-col);
+    position: relative;
+    padding-top: .2rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.mw-tick::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: .22rem;
+    background: currentcolor;
+}
+
+.mw-track-codons {
+    min-height: 1.08rem;
+}
+
+.mw-codon {
+    grid-column: var(--mw-col) / span var(--mw-span);
+    overflow: hidden;
+    height: 1.05rem;
+    border-radius: 2px;
+    color: #33383f;
+    font-size: .68rem;
+    line-height: 1.05rem;
+    text-align: center;
+}
+
+.mw-codon.is-shade-a {
+    background: var(--mw-codon-a);
+}
+
+.mw-codon.is-shade-b {
+    background: var(--mw-codon-b);
+}
+
+.mw-codon.is-stop {
+    background: var(--mw-codon-stop);
+    color: #fff;
+    font-weight: 700;
+}
+
+.mw-track-enzymes {
+    min-height: 1.25rem;
+    color: var(--mw-enzyme);
+    font-size: .61rem;
+}
+
+.mw-enzyme-label {
+    grid-column: var(--mw-col);
+    position: relative;
+    top: calc(var(--mw-enzyme-lane, 0) * .12rem);
+    padding-left: .12rem;
+    white-space: nowrap;
+}
+
+.mw-enzyme-label::before {
+    content: "";
+    position: absolute;
+    top: .72rem;
+    left: 0;
+    width: 1px;
+    height: .35rem;
+    background: currentcolor;
+}
+
+.mw-track-features {
+    align-items: stretch;
+    gap: 0;
+    min-height: 0;
+}
+
+.mw-feature-bar {
+    grid-column: var(--mw-col) / span var(--mw-span);
+    grid-row: var(--mw-lane);
+    overflow: hidden;
+    min-width: 0;
+    height: 1rem;
+    margin-top: .12rem;
+    padding: 0 .2rem;
+    border: 0;
+    border-radius: 2px;
+    outline: none;
+    background:
+        var(--mw-feature-color, #8f96a3);
+    color: #fff;
+    font-size: .62rem;
+    font-weight: 650;
+    line-height: 1rem;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mw-feature-bar:hover {
+    filter: brightness(1.05);
+}
+
+.mw-feature-bar:focus-visible {
+    outline: 2px solid #1769ff;
+    outline-offset: 1px;
+}
+
+.mw-feature-bar.is-selected {
+    outline: 2px solid #172033;
+    outline-offset: -1px;
+}
+
+.mw-feature-bar.is-forward {
+    clip-path: polygon(
+        0 0,
+        calc(100% - 5px) 0,
+        100% 50%,
+        calc(100% - 5px) 100%,
+        0 100%
+    );
+}
+
+.mw-feature-bar.is-reverse {
+    clip-path: polygon(
+        5px 0,
+        100% 0,
+        100% 100%,
+        5px 100%,
+        0 50%
+    );
+}
+
+.mw-feature-bar.is-continued-left {
+    border-radius: 0 2px 2px 0;
+    clip-path: none;
+}
+
+.mw-feature-bar.is-continued-right {
+    border-radius: 2px 0 0 2px;
+    clip-path: none;
+}
+
+@media (max-width: 760px) {
+    .mw-page {
+        --mw-base-width: .68rem;
+        --mw-track-gutter: 3.4rem;
+    }
+
+    .mw-sequence-preview.mw-seq-track {
+        max-height: 460px;
+        padding-right: .65rem;
+        padding-left: .65rem;
+    }
+
+    .mw-seq-row {
+        grid-template-columns:
+            var(--mw-track-gutter)
+            minmax(0, max-content);
+        gap: .5rem;
+    }
+
+    .mw-seq-gutter-end {
+        display: none;
+    }
+}

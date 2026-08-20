@@ -1,0 +1,870 @@
+/* ============================================================
+   Protein Alignment / MSA — P2B
+   ============================================================ */
+
+.mpa-card {
+    margin-top: 1rem;
+}
+
+.mpa-header {
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.mpa-heading p {
+    max-width: 72rem;
+    margin-bottom: 0;
+}
+
+.mpa-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.mpa-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    color: #6c757d;
+    font-size: .85rem;
+}
+
+.mpa-status[data-kind="ready"] {
+    color: #198754;
+}
+
+.mpa-status[data-kind="error"] {
+    color: #dc3545;
+}
+
+.mpa-body {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 280px)
+        minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.mpa-sidebar {
+    min-width: 0;
+    padding-right: .9rem;
+    border-right:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+}
+
+.mpa-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .6rem;
+}
+
+.mpa-count {
+    display: inline-flex;
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0 .4rem;
+    border-radius: 999px;
+    background: rgba(108, 117, 125, .12);
+    font-size: .78rem;
+}
+
+.mpa-list {
+    display: grid;
+    gap: .45rem;
+}
+
+.mpa-list-item {
+    display: grid;
+    gap: .18rem;
+    width: 100%;
+    padding: .55rem .65rem;
+    border:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+    border-radius: .45rem;
+    background: transparent;
+    text-align: left;
+}
+
+.mpa-list-item:hover,
+.mpa-list-item:focus-visible {
+    border-color: rgba(13, 110, 253, .55);
+}
+
+.mpa-list-item.is-active {
+    border-color: rgba(13, 110, 253, .75);
+    background: rgba(13, 110, 253, .06);
+}
+
+.mpa-list-item strong {
+    overflow-wrap: anywhere;
+    font-size: .86rem;
+}
+
+.mpa-list-item span {
+    color: #6c757d;
+    font-size: .75rem;
+}
+
+.mpa-empty {
+    margin-top: .6rem;
+}
+
+.mpa-main {
+    min-width: 0;
+}
+
+.mpa-metadata {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(130px, 1fr)
+        );
+    gap: .5rem;
+    margin-bottom: .65rem;
+}
+
+.mpa-metadata-item {
+    min-width: 0;
+    padding: .45rem .55rem;
+    border-radius: .4rem;
+    background: rgba(108, 117, 125, .06);
+}
+
+.mpa-metadata-item > span {
+    display: block;
+    margin-bottom: .1rem;
+    color: #6c757d;
+    font-size: .69rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .035em;
+}
+
+.mpa-metadata-item strong,
+.mpa-metadata-item code {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: .8rem;
+}
+
+.mpa-query-match {
+    min-height: 1.4rem;
+    margin-bottom: .55rem;
+    color: #6c757d;
+    font-size: .8rem;
+}
+
+.mpa-query-match[data-match="exact"] {
+    color: #198754;
+}
+
+.mpa-toolbar {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: .65rem;
+}
+
+.mpa-control {
+    display: grid;
+    gap: .2rem;
+}
+
+.mpa-control > span {
+    color: #6c757d;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.mpa-viewer-shell {
+    min-width: 0;
+    overflow: auto;
+    border:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.mpa-viewer-shell > .mw-empty {
+    min-height: 180px;
+}
+
+.mpa-viewer {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+}
+
+@media (max-width: 900px) {
+    .mpa-body {
+        grid-template-columns: 1fr;
+    }
+
+    .mpa-sidebar {
+        padding-right: 0;
+        padding-bottom: .8rem;
+        border-right: 0;
+        border-bottom:
+            1px solid
+            var(--bs-border-color, #dee2e6);
+    }
+}
+
+
+/* ============================================================
+ * PROTEIN FINAL WORKSPACE V1 20260812
+ *
+ * Canonical Protein views:
+ *   Overview
+ *   Alignment
+ * ============================================================ */
+
+
+/* ------------------------------------------------------------
+ * Final navigation
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-protein-final-tabs {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .55rem .75rem;
+    overflow-x: auto;
+    border-bottom: 1px solid #e4e7ec;
+    background: #fff;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-tab {
+    flex: 0 0 auto;
+    padding: .44rem .78rem;
+    border: 1px solid transparent;
+    border-radius: .45rem;
+    background: transparent;
+    color: #475467;
+    font-size: .82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-tab:hover {
+    border-color: #d0d5dd;
+    background: #f9fafb;
+    color: #101828;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-tab.is-active {
+    border-color: #b2ccff;
+    background: #eff4ff;
+    color: #175cd3;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-tab:focus-visible {
+    outline: 2px solid #84adff;
+    outline-offset: 2px;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-stage,
+.mw-protein-final-workspace
+.mw-protein-final-pane {
+    width: 100%;
+    min-width: 0;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-pane[hidden] {
+    display: none !important;
+}
+
+
+/* ------------------------------------------------------------
+ * Remove duplicate generic Protein navigation
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-view-switcher,
+.mw-protein-final-workspace
+.mw-seqviz-controls {
+    display: none !important;
+}
+
+.mw-protein-final-workspace
+.mw-checksum-stat {
+    display: none !important;
+}
+
+
+/* ------------------------------------------------------------
+ * Overview = former full Sequence panel
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-protein-overview-sequence {
+    display: block !important;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.mw-protein-final-workspace
+.mw-protein-overview-sequence
+.mw-panel-focus-toggle {
+    display: none !important;
+}
+
+.mw-protein-final-workspace
+.mw-protein-overview-sequence
+#mw-sequence {
+    min-height: 9rem;
+    max-height: 22rem;
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        monospace;
+}
+
+.mw-protein-final-workspace
+.mw-protein-overview-sequence
+.mw-sequence-preview {
+    max-height: none;
+}
+
+
+/* ------------------------------------------------------------
+ * Integrated annotation editor
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-protein-annotation-details {
+    margin: .75rem;
+    border: 1px solid #d0d5dd;
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.mw-protein-final-workspace
+.mw-protein-annotation-details > summary {
+    padding: .7rem .8rem;
+    cursor: pointer;
+    color: #344054;
+    font-size: .82rem;
+    font-weight: 600;
+    user-select: none;
+}
+
+.mw-protein-final-workspace
+.mw-protein-annotation-details[open] > summary {
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.mw-protein-final-workspace
+.mw-protein-annotation-help {
+    margin: .7rem .8rem 0;
+    color: #667085;
+    font-size: .76rem;
+}
+
+.mw-protein-final-workspace
+.mw-protein-annotation-details
+#mw-unified-feature-editor {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+    padding: .8rem;
+    border: 0;
+}
+
+.mw-protein-final-workspace
+.mw-protein-annotation-details
+.mw-unified-feature-filter,
+.mw-protein-final-workspace
+.mw-protein-annotation-details
+.mw-unified-feature-list-shell {
+    display: block !important;
+}
+
+
+/* ------------------------------------------------------------
+ * Alignment card embedded in main workspace
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-protein-final-alignment
+.mpa-card {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.mw-protein-final-workspace
+.mw-protein-final-alignment
+.mpa-card
+.mw-panel-focus-toggle {
+    display: none !important;
+}
+
+.mw-protein-final-workspace
+.mpa-body,
+.mw-protein-final-workspace
+.mpa-main,
+.mw-protein-final-workspace
+.mpa-viewer-shell {
+    min-width: 0;
+}
+
+
+/* ============================================================
+ * Readable amino-acid MSA
+ * ============================================================ */
+
+.mw-protein-final-workspace
+.mpa-text-msa {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #d0d5dd;
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block-header {
+    padding: .42rem .65rem;
+    border-bottom: 1px solid #e4e7ec;
+    background: #f9fafb;
+    color: #475467;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-matrix {
+    --msa-cell-width: 1.05rem;
+    --msa-row-height: 1.55rem;
+
+    display: grid;
+    width: max-content;
+    min-width: 100%;
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        monospace;
+    font-size: .78rem;
+    line-height: 1;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-row {
+    display: grid;
+    grid-template-columns:
+        185px
+        max-content;
+    width: max-content;
+    min-width: 100%;
+    border-bottom: 1px solid #f2f4f7;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-row:last-child {
+    border-bottom: 0;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-row.is-query {
+    background: #f8faff;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-label {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    height: var(--msa-row-height);
+    padding: 0 .55rem;
+    overflow: hidden;
+    border-right: 1px solid #e4e7ec;
+    background: #fff;
+    color: #175cd3;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-row.is-query
+.mpa-alignment-label {
+    background: #f8faff;
+}
+
+.mw-protein-final-workspace
+.mpa-sequence-run {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--msa-cell-width);
+    width: max-content;
+}
+
+.mw-protein-final-workspace
+.mpa-residue,
+.mw-protein-final-workspace
+.mpa-consensus-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--msa-cell-width);
+    height: var(--msa-row-height);
+    box-sizing: border-box;
+    font-weight: 700;
+    user-select: text;
+}
+
+.mw-protein-final-workspace
+.mpa-residue {
+    color: #101828;
+    border-right: 1px solid rgba(16, 24, 40, .04);
+}
+
+.mw-protein-final-workspace
+.mpa-residue:hover {
+    position: relative;
+    z-index: 4;
+    outline: 1px solid #344054;
+    outline-offset: -1px;
+}
+
+.mw-protein-final-workspace
+.mpa-consensus-row {
+    background: #fcfcfd;
+}
+
+.mw-protein-final-workspace
+.mpa-consensus-row
+.mpa-alignment-label {
+    background: #fcfcfd;
+    color: #667085;
+    font-weight: 500;
+}
+
+.mw-protein-final-workspace
+.mpa-consensus-cell {
+    color: #475467;
+}
+
+
+/* ------------------------------------------------------------
+ * Clustal-like mode
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-hydrophobic {
+    background: #dbeafe;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-positive {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-negative {
+    background: #fee2e2;
+    color: #b42318;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-polar {
+    background: #dcfce7;
+    color: #067647;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-aromatic {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-special {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="clustal"]
+.mpa-aa-gap {
+    background: #f2f4f7;
+    color: #98a2b3;
+}
+
+
+/* ------------------------------------------------------------
+ * Hydrophobicity mode
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="hydrophobicity"]
+.mpa-residue {
+    background: #fff;
+    color: #344054;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="hydrophobicity"]
+.mpa-aa-hydrophobic {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+
+/* ------------------------------------------------------------
+ * Conservation mode
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="conservation"]
+.mpa-residue {
+    background: #fff;
+    color: #344054;
+}
+
+.mw-protein-final-workspace
+.mpa-alignment-block[data-scheme="conservation"]
+.mpa-residue.is-conserved {
+    background: #dcfae6;
+    color: #067647;
+}
+
+
+/* ------------------------------------------------------------
+ * Existing outer Expand/Restore expands active final view.
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-seqviz-card.is-workspace-maximized
+.mw-protein-final-stage {
+    min-height: calc(100vh - 11rem);
+}
+
+.mw-protein-final-workspace
+.mw-seqviz-card.is-workspace-maximized
+.mpa-text-msa {
+    padding-bottom: 1rem;
+}
+
+
+/* ------------------------------------------------------------
+ * Responsive
+ * ------------------------------------------------------------ */
+
+@media (max-width: 1000px) {
+    .mw-protein-final-workspace
+    .mpa-body {
+        grid-template-columns: 1fr;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid #e4e7ec;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-metadata {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(100px, 1fr)
+            );
+    }
+}
+
+@media (max-width: 640px) {
+    .mw-protein-final-workspace
+    .mpa-header {
+        display: grid;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-actions {
+        justify-content: flex-start;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-metadata {
+        grid-template-columns: 1fr;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-alignment-row {
+        grid-template-columns:
+            145px
+            max-content;
+    }
+
+    .mw-protein-final-workspace
+    .mpa-alignment-matrix {
+        --msa-cell-width: 1rem;
+    }
+}
+
+
+/* ============================================================
+ * PROTEIN FULL-WIDTH SHELL V2 20260813
+ *
+ * Final Protein Overview/Alignment use the complete SeqViz
+ * shell. The legacy viewer/inspector are not part of the final
+ * Protein presentation.
+ * ============================================================ */
+
+.mw-protein-final-workspace
+.mw-seqviz-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+}
+
+.mw-protein-final-workspace
+.mw-seqviz-viewer,
+.mw-protein-final-workspace
+.mw-seqviz-inspector {
+    display: none !important;
+}
+
+
+/* ------------------------------------------------------------
+ * PROTEIN RESIDUE PALETTE V1 20260814
+ * Overview residue contrast / palette controls.
+ * ------------------------------------------------------------ */
+
+.mw-protein-final-workspace
+.mw-protein-palette-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.75rem;
+    vertical-align: middle;
+}
+
+.mw-protein-final-workspace
+.mw-protein-palette-label {
+    color: #475467;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mw-protein-final-workspace
+.mw-protein-palette-select {
+    min-width: 10rem;
+}
+
+.mw-protein-final-workspace
+#mw-sequence-preview .mw-base {
+    transition:
+        color 120ms ease,
+        opacity 120ms ease,
+        filter 120ms ease,
+        text-shadow 120ms ease,
+        font-weight 120ms ease;
+}
+
+.mw-protein-final-workspace[data-residue-palette="soft"]
+#mw-sequence-preview .mw-base {
+    opacity: 0.72;
+    font-weight: 500;
+}
+
+.mw-protein-final-workspace[data-residue-palette="contrast"]
+#mw-sequence-preview .mw-base {
+    opacity: 1;
+    font-weight: 700;
+    text-shadow: 0 0 0 currentColor;
+    filter: saturate(1.35) contrast(1.12);
+}
+
+.mw-protein-final-workspace[data-residue-palette="mono"]
+#mw-sequence-preview .mw-base {
+    color: #344054 !important;
+    opacity: 1;
+    font-weight: 700;
+    text-shadow: none;
+    filter: none;
+}
+
+.mw-protein-final-workspace[data-residue-palette="mono"]
+#mw-sequence-preview .mw-base.is-selected {
+    color: #101828 !important;
+}
+
+@media (max-width: 900px) {
+    .mw-protein-final-workspace
+    .mw-protein-palette-control {
+        display: flex;
+        width: 100%;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .mw-protein-final-workspace
+    .mw-protein-palette-select {
+        width: 100%;
+    }
+}

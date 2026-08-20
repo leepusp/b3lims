@@ -61,14 +61,73 @@
         const root = document.getElementById("molecular-workspace");
         const viewerRoot = document.getElementById("mw-seqviz-viewer");
         const mode = document.getElementById("mw-seqviz-mode");
+        const zoom = document.getElementById("mw-seqviz-zoom");
+        const zoomValue = document.getElementById("mw-seqviz-zoom-value");
         const enzymeMode = document.getElementById("mw-seqviz-enzymes");
         const colorMode = document.getElementById("mw-seqviz-colors");
         const search = document.getElementById("mw-seqviz-search");
+        const mismatch = document.getElementById("mw-seqviz-mismatch");
+        const showComplement = document.getElementById(
+            "mw-seqviz-show-complement"
+        );
+        const showIndex = document.getElementById("mw-seqviz-show-index");
+        const reset = document.getElementById("mw-seqviz-reset");
         const selectionLabel = document.getElementById("mw-seqviz-selection");
         const legend = document.getElementById("mw-seqviz-legend");
+        const labelMode = document.getElementById(
+            "mw-unified-label-mode"
+        );
+        const createFeature = document.getElementById(
+            "mw-seqviz-create-feature"
+        );
+        const featureForm = document.getElementById(
+            "mw-seqviz-feature-form"
+        );
+        const featureName = document.getElementById(
+            "mw-seqviz-feature-name"
+        );
+        const featureType = document.getElementById(
+            "mw-seqviz-feature-type"
+        );
+        const featureStrand = document.getElementById(
+            "mw-seqviz-feature-strand"
+        );
+        const featureColor = document.getElementById(
+            "mw-seqviz-feature-color"
+        );
+        const featureNotes = document.getElementById(
+            "mw-seqviz-feature-notes"
+        );
+        const featureCancel = document.getElementById(
+            "mw-seqviz-feature-cancel"
+        );
 
         if (!root || !viewerRoot) {
             return;
+        }
+
+        const isRnaWorkspace = (
+            root.dataset.sequenceType === "rna"
+        );
+
+        if (isRnaWorkspace) {
+            const enzymeControl = (
+                enzymeMode?.closest("label")
+            );
+            const complementControl = (
+                showComplement?.closest("label")
+            );
+
+            if (enzymeControl) {
+                enzymeControl.hidden = true;
+            }
+
+            if (complementControl) {
+                complementControl.hidden = true;
+            }
+
+            enzymeMode.value = "none";
+            showComplement.checked = false;
         }
 
         let viewer = null;
@@ -113,7 +172,16 @@
                     data.topology === "circular"
                 ).map((segment, segmentIndex) => ({
                     id: `feature-${featureIndex}-${segmentIndex}`,
-                    name: feature.name || "Feature",
+                    name: (
+                        (labelMode?.value || "selected") === "all"
+                        || (
+                            (labelMode?.value || "selected")
+                            === "selected"
+                            && featureIndex === data.selectedFeature
+                        )
+                    )
+                        ? (feature.name || "Feature")
+                        : "",
                     start: segment.start - 1,
                     end: segment.end,
                     direction: feature.strand === "-" ? -1 : 1,
@@ -204,6 +272,15 @@
 
         function renderLegend(data) {
             legend.replaceChildren();
+
+            if (!data.features.length) {
+                const empty = document.createElement("p");
+                empty.className = "mw-seqviz-help";
+                empty.textContent = "No annotations are registered for this sequence.";
+                legend.appendChild(empty);
+                return;
+            }
+
             data.features.forEach((feature, index) => {
                 const button = document.createElement("button");
                 const dot = document.createElement("span");
@@ -221,6 +298,32 @@
             });
         }
 
+        function selectionUnit() {
+            const type = String(
+                document
+                    .getElementById("mw-type")
+                    ?.value
+                || ""
+            ).toLowerCase();
+
+            if (type === "protein") {
+                return "aa";
+            }
+
+            if (
+                type === "rna"
+                || type === "primer"
+            ) {
+                return "nt";
+            }
+
+            if (type === "other") {
+                return "symbols";
+            }
+
+            return "bp";
+        }
+
         function selectionText(selection) {
             if (!selection || selection.start === undefined || selection.end === undefined) {
                 return "Select a feature or sequence region in any representation.";
@@ -229,9 +332,53 @@
             return [
                 selection.name,
                 `${Number(selection.start) + 1}..${Number(selection.end)}`,
-                selection.length ? `${selection.length} residues` : null,
+                selection.length ? `${selection.length} ${selectionUnit()}` : null,
                 selection.type,
             ].filter(Boolean).join(" · ");
+        }
+
+        function syncFeatureCreator(data = snapshot()) {
+            if (!createFeature || !data) {
+                return;
+            }
+
+            const selection = data.sequenceSelection;
+            const canCreate = Boolean(
+                data.canEdit
+                && selection
+                && !Number.isInteger(selection.featureIndex)
+            );
+
+            createFeature.disabled = !canCreate;
+
+            if (!canCreate && featureForm) {
+                featureForm.hidden = true;
+            }
+        }
+
+        function openFeatureCreator() {
+            const data = snapshot();
+            const selection = data?.sequenceSelection;
+
+            if (
+                !featureForm
+                || !data?.canEdit
+                || !selection
+                || Number.isInteger(selection.featureIndex)
+            ) {
+                return;
+            }
+
+            featureName.value = "Selected region";
+            featureType.value = "custom";
+            featureStrand.value = data.sequenceType === "protein"
+                ? "."
+                : "+";
+            featureColor.value = "#8f96a3";
+            featureNotes.value = "";
+            featureForm.hidden = false;
+            featureName.focus();
+            featureName.select();
         }
 
         function handleSelection(selection, data) {
@@ -263,8 +410,10 @@
 
             workspace()?.selectSequenceRange?.(
                 Number(selection.start) + 1,
-                Number(selection.end)
+                Number(selection.end),
+                {source: "seqviz"}
             );
+            syncFeatureCreator();
         }
 
         function renderSeqViz() {
@@ -277,6 +426,7 @@
             }
 
             renderLegend(data);
+            syncFeatureCreator(data);
 
             if (!data.sequence.length) {
                 showMessage("Add a sequence to render SeqViz.");
@@ -301,22 +451,50 @@
                 console.warn("Could not destroy the previous SeqViz instance.", error);
             }
 
+            if (
+                data.sequenceType === "rna"
+                && data.topology === "linear"
+            ) {
+                mode.value = "linear";
+            }
+
             const props = {
                 name: data.name || "Molecular item",
                 seq: data.sequence,
                 seqType: data.sequenceType === "protein"
                     ? "aa"
                     : (data.sequenceType === "rna" ? "rna" : "dna"),
-                viewer: mode.value,
+                viewer: (
+                    data.sequenceType === "rna"
+                    && data.topology === "linear"
+                        ? "linear"
+                        : mode.value
+                ),
+                zoom: {linear: Number(zoom.value || 50)},
                 bpColors: symbolColorsFor(data),
                 annotations,
                 translations: translationsFor(data, annotations),
                 primers: primersFor(data, annotations),
-                enzymes: enzymeMode.value === "common" ? COMMON_ENZYMES : [],
-                search: query ? {query, mismatch: 0} : undefined,
+                enzymes: (
+                    data.sequenceType === "rna"
+                        ? []
+                        : (
+                            enzymeMode.value === "common"
+                                ? COMMON_ENZYMES
+                                : []
+                        )
+                ),
+                search: query ? {
+                    query,
+                    mismatch: Number(mismatch.value || 0),
+                } : undefined,
                 selection: selected,
-                showComplement: data.sequenceType !== "protein",
-                showIndex: true,
+                showComplement: (
+                    data.sequenceType !== "protein"
+                    && data.sequenceType !== "rna"
+                    && showComplement.checked
+                ),
+                showIndex: showIndex.checked,
                 rotateOnScroll: true,
                 disableExternalFonts: true,
                 style: {height: "680px", width: "100%"},
@@ -338,6 +516,14 @@
         }
 
         root.addEventListener("biobank:molecular-workspace-change", event => {
+            if (
+                event.detail?.reason === "selection"
+                && event.detail?.source === "seqviz"
+            ) {
+                syncFeatureCreator(event.detail.snapshot);
+                return;
+            }
+
             if (event.detail?.reason === "selection") {
                 scheduleRender(40);
             } else {
@@ -349,13 +535,59 @@
                 scheduleRender(20);
             }
         });
-        [mode, enzymeMode, colorMode].forEach(control => {
+        [
+            mode,
+            enzymeMode,
+            colorMode,
+            mismatch,
+            showComplement,
+            showIndex,
+        ].forEach(control => {
             control?.addEventListener(
                 "change",
                 () => scheduleRender(20)
             );
         });
+        zoom?.addEventListener("input", () => {
+            zoomValue.value = `${zoom.value}%`;
+            scheduleRender(60);
+        });
         search.addEventListener("input", () => scheduleRender(180));
+        createFeature?.addEventListener("click", openFeatureCreator);
+        featureCancel?.addEventListener("click", () => {
+            featureForm.hidden = true;
+        });
+        featureForm?.addEventListener("submit", event => {
+            event.preventDefault();
+
+            const featureIndex = workspace()
+                ?.createFeatureFromSelection?.({
+                    name: featureName.value,
+                    type: featureType.value,
+                    strand: featureStrand.value,
+                    color: featureColor.value,
+                    notes: featureNotes.value,
+                    focusEditor: false,
+                });
+
+            if (Number.isInteger(featureIndex)) {
+                featureForm.hidden = true;
+            }
+        });
+        reset?.addEventListener("click", () => {
+            mode.value = isRnaWorkspace
+                ? "linear"
+                : "both";
+            zoom.value = "50";
+            zoomValue.value = "50%";
+            enzymeMode.value = "none";
+            colorMode.value = "colored";
+            search.value = "";
+            mismatch.value = "0";
+            showComplement.checked = !isRnaWorkspace;
+            showIndex.checked = true;
+            scheduleRender(20);
+        });
 
         scheduleRender(20);
     });

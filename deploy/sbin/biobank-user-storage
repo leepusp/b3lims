@@ -90,7 +90,7 @@ ensure_storage() {
 validate_relative_directory() {
     local value="$1"
 
-    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments|jupyter/notebooks/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+|molecular/records/[0-9]+|exports(/[A-Za-z0-9_.-]+)?|tmp(/[A-Za-z0-9_.-]+)?)$ ]] ||
+    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments|jupyter/notebooks/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+|molecular/records/[0-9]+|molecular/records/[0-9]+/alignments|exports(/[A-Za-z0-9_.-]+)?|tmp(/[A-Za-z0-9_.-]+)?)$ ]] ||
         fail "Storage directory is outside the managed layout."
 
     [[ "$value" != *".."* && "$value" != *//* ]] ||
@@ -100,7 +100,7 @@ validate_relative_directory() {
 validate_relative_file() {
     local value="$1"
 
-    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/[A-Za-z0-9_.-]+|exports/[A-Za-z0-9_.-]+|tmp/[A-Za-z0-9_.-]+)$ ]] ||
+    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+|exports/[A-Za-z0-9_.-]+|tmp/[A-Za-z0-9_.-]+)$ ]] ||
         fail "Storage file is outside the managed layout."
 
     [[ "$value" != *".."* && "$value" != *//* ]] ||

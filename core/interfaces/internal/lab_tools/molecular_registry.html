@@ -1,8 +1,13 @@
 {% extends "internal/common/base.html" %}
 
+{% load static %}
 {% block title %}Molecular Design & Registry{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v2">
+<link rel="stylesheet"
+      href="{% static 'internal/lab_tools/molecular_type_profiles.css' %}?v=20260808-molecular-type-profiles-v2-protein">
+
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
         <div>
@@ -35,7 +40,10 @@
     <div class="collapse {% if form_data %}show{% endif %} mb-4"
          id="new-molecular-record">
         <form method="post"
-              class="card shadow-sm">
+              id="molecular-registry-create-form"
+              class="card shadow-sm"
+              enctype="multipart/form-data"
+              data-import-preview-url="{% url 'molecular_registry_import_preview_api' %}">
             {% csrf_token %}
 
             <div class="card-header">
@@ -206,7 +214,7 @@
 
                     <tbody>
                         {% for molecule in molecules %}
-                            <tr>
+                            <tr data-molecular-record-type="{{ molecule.sequence_type }}">
                                 <td>
                                     <div class="fw-semibold">
                                         {{ molecule.name }}
@@ -224,6 +232,10 @@
                                     <span class="badge text-bg-primary">
                                         {{ molecule.get_sequence_type_display }}
                                     </span>
+
+                                    <div class="mtr-registry-flow"
+                                         data-molecular-workspace-summary
+                                         aria-label="Workspace capabilities"></div>
                                 </td>
 
                                 <td>
@@ -379,4 +391,8 @@
 })();
 </script>
 
+
+<script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v2" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
+        defer></script>
 {% endblock %}

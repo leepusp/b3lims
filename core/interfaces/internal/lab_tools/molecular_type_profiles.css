@@ -1,0 +1,49 @@
+/* ============================================================
+   Molecular type-aware workspace profiles
+   ============================================================ */
+
+.mtr-registry-flow {
+    display: grid;
+    gap: .08rem;
+    margin-top: .22rem;
+    line-height: 1.2;
+}
+
+.mtr-registry-workspace-label {
+    color: #475467;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+.mtr-registry-workspace-detail {
+    color: #98a2b3;
+    font-size: .63rem;
+    font-weight: 500;
+}
+
+.mtr-workspace-label {
+    border-color: #d0d5dd;
+    background: #f8fafc;
+    color: #475467;
+}
+
+.mtr-semantic-secondary {
+    opacity: .62;
+}
+
+.mw-page[data-molecular-workspace-profile="protein"]
+.mtr-workspace-label,
+.mw-page[data-molecular-workspace-profile="rna"]
+.mtr-workspace-label,
+.mw-page[data-molecular-workspace-profile="primer"]
+.mtr-workspace-label,
+.mw-page[data-molecular-workspace-profile="insert"]
+.mtr-workspace-label {
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .mtr-registry-workspace-detail {
+        white-space: normal;
+    }
+}

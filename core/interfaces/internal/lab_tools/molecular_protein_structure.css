@@ -1,0 +1,122 @@
+/*
+ * BIOBANK PROTEIN STRUCTURE VIEWER V1
+ * Mol* 5.11.0 integration.
+ */
+
+.mps-overview-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.2fr)
+        minmax(420px, 0.8fr);
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+}
+
+.mps-card {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.mps-card .mw-card-header {
+    align-items: flex-start;
+}
+
+.mps-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.mps-toolbar select {
+    min-width: 180px;
+    max-width: 100%;
+}
+
+.mps-status {
+    min-height: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.mps-status[data-kind="error"] {
+    font-weight: 600;
+}
+
+.mps-status[data-kind="success"] {
+    font-weight: 600;
+}
+
+.mps-viewer-shell {
+    position: relative;
+    width: 100%;
+    min-height: 620px;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    background: #111318;
+}
+
+.mps-viewer {
+    position: absolute;
+    inset: 0;
+}
+
+.mps-viewer > div {
+    width: 100%;
+    height: 100%;
+}
+
+.mps-empty {
+    display: flex;
+    min-height: 620px;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+}
+
+.mps-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+}
+
+.mps-footer p {
+    margin: 0;
+}
+
+.mps-file-input {
+    max-width: 240px;
+}
+
+@media (max-width: 1180px) {
+    .mps-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mps-viewer-shell,
+    .mps-empty {
+        min-height: 560px;
+    }
+}
+
+@media (max-width: 720px) {
+    .mps-viewer-shell,
+    .mps-empty {
+        min-height: 480px;
+    }
+
+    .mps-toolbar {
+        align-items: stretch;
+    }
+
+    .mps-toolbar > * {
+        width: 100%;
+    }
+}

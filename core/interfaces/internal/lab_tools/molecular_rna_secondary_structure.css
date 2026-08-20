@@ -1,0 +1,426 @@
+/* ============================================================
+   RNA Secondary Structure — R1C V2 / Forna
+   ============================================================ */
+
+.mrss-card {
+    margin-top: 1rem;
+}
+
+.mrss-header {
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.mrss-heading {
+    min-width: 0;
+}
+
+.mrss-heading p {
+    max-width: 72rem;
+    margin-bottom: 0;
+}
+
+.mrss-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.mrss-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    color: #6c757d;
+    font-size: .85rem;
+}
+
+.mrss-status[data-kind="ready"] {
+    color: #198754;
+}
+
+.mrss-status[data-kind="warning"] {
+    color: #997404;
+}
+
+.mrss-status[data-kind="error"] {
+    color: #dc3545;
+}
+
+.mrss-body {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 280px)
+        minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.mrss-sidebar {
+    min-width: 0;
+    padding-right: .9rem;
+    border-right:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+}
+
+.mrss-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .6rem;
+}
+
+.mrss-count {
+    display: inline-flex;
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0 .4rem;
+    border-radius: 999px;
+    background: rgba(108, 117, 125, .12);
+    font-size: .78rem;
+}
+
+.mrss-list {
+    display: grid;
+    gap: .45rem;
+}
+
+.mrss-list-item {
+    display: grid;
+    gap: .18rem;
+    width: 100%;
+    padding: .55rem .65rem;
+    border:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+    border-radius: .45rem;
+    background: transparent;
+    text-align: left;
+}
+
+.mrss-list-item:hover,
+.mrss-list-item:focus-visible {
+    border-color: rgba(13, 110, 253, .55);
+}
+
+.mrss-list-item.is-active {
+    border-color: rgba(13, 110, 253, .75);
+    background: rgba(13, 110, 253, .06);
+}
+
+.mrss-list-item strong {
+    overflow-wrap: anywhere;
+    font-size: .86rem;
+}
+
+.mrss-list-item span {
+    color: #6c757d;
+    font-size: .75rem;
+}
+
+.mrss-list-empty {
+    margin-top: .6rem;
+}
+
+.mrss-main {
+    min-width: 0;
+}
+
+.mrss-sequence-warning {
+    margin-bottom: .7rem;
+    padding: .6rem .7rem;
+    border:
+        1px solid
+        rgba(255, 193, 7, .45);
+    border-radius: .45rem;
+    background: rgba(255, 193, 7, .08);
+    color: #664d03;
+    font-size: .82rem;
+}
+
+.mrss-metadata {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(130px, 1fr)
+        );
+    gap: .5rem;
+    margin-bottom: .65rem;
+}
+
+.mrss-metadata-item {
+    min-width: 0;
+    padding: .45rem .55rem;
+    border-radius: .4rem;
+    background: rgba(108, 117, 125, .06);
+}
+
+.mrss-metadata-item > span {
+    display: block;
+    margin-bottom: .1rem;
+    color: #6c757d;
+    font-size: .69rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .035em;
+}
+
+.mrss-metadata-item strong {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: .8rem;
+}
+
+.mrss-toolbar {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: .65rem;
+}
+
+.mrss-control {
+    display: grid;
+    gap: .2rem;
+}
+
+.mrss-control > span,
+.mrss-field-label {
+    color: #6c757d;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.mrss-structure-code-wrap {
+    margin-bottom: .65rem;
+}
+
+.mrss-structure-code {
+    display: block;
+    width: 100%;
+    margin-top: .2rem;
+    padding: .5rem .6rem;
+    overflow-x: auto;
+    border-radius: .4rem;
+    background: rgba(108, 117, 125, .07);
+    font-size: .79rem;
+    white-space: pre;
+}
+
+.mrss-viewer-shell {
+    position: relative;
+    min-width: 0;
+    min-height: 360px;
+    overflow: hidden;
+    border:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.mrss-viewer-shell > .mw-empty {
+    min-height: 360px;
+}
+
+.mrss-forna-mount {
+    width: 100%;
+    height: 520px;
+    min-height: 360px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.mrss-forna-mount > svg {
+    width: 100%;
+    height: 100%;
+}
+
+.mrss-provenance {
+    margin-top: .7rem;
+    border:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+    border-radius: .45rem;
+}
+
+.mrss-provenance > summary {
+    padding: .5rem .65rem;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.mrss-provenance-body {
+    padding: 0 .65rem .65rem;
+}
+
+.mrss-source-text {
+    max-height: 260px;
+    margin: 0;
+    padding: .55rem .6rem;
+    overflow: auto;
+    border-radius: .35rem;
+    background: rgba(108, 117, 125, .06);
+    font-size: .76rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mrss-editor {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top:
+        1px solid
+        var(--bs-border-color, #dee2e6);
+}
+
+.mrss-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .7rem;
+    margin-bottom: .7rem;
+    font-weight: 600;
+}
+
+.mrss-form {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+    gap: .7rem;
+}
+
+.mrss-form label {
+    display: grid;
+    gap: .25rem;
+}
+
+.mrss-form label > span {
+    color: #495057;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.mrss-form-wide {
+    grid-column: 1 / -1;
+}
+
+.mrss-source-input {
+    min-height: 9rem;
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        monospace;
+}
+
+.mrss-form-guidance {
+    color: #6c757d;
+    font-size: .76rem;
+}
+
+.mrss-form-status {
+    min-height: 1.2rem;
+    color: #6c757d;
+    font-size: .78rem;
+}
+
+.mrss-form-status[data-kind="error"] {
+    color: #dc3545;
+}
+
+.mrss-form-status[data-kind="busy"] {
+    color: #0d6efd;
+}
+
+.mrss-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+@media (max-width: 900px) {
+    .mrss-body {
+        grid-template-columns: 1fr;
+    }
+
+    .mrss-sidebar {
+        padding-right: 0;
+        padding-bottom: .8rem;
+        border-right: 0;
+        border-bottom:
+            1px solid
+            var(--bs-border-color, #dee2e6);
+    }
+}
+
+@media (max-width: 680px) {
+    .mrss-form {
+        grid-template-columns: 1fr;
+    }
+
+    .mrss-form-wide {
+        grid-column: auto;
+    }
+
+    .mrss-forna-mount {
+        height: 420px;
+    }
+}
+
+/* ============================================================
+   RNA WORKSPACE R1D V3 — PRIMARY SECONDARY-STRUCTURE VIEW
+   ============================================================ */
+
+.mw-rna-secondary-view {
+    width: 100%;
+    min-width: 0;
+}
+
+.mw-rna-secondary-view .mrss-body {
+    align-items: stretch;
+}
+
+.mw-rna-secondary-view .mrss-main {
+    min-width: 0;
+}
+
+.mw-rna-secondary-view .mrss-viewer-shell {
+    min-height: 520px;
+}
+
+.mw-rna-secondary-view .mrss-viewer-shell > .mw-empty {
+    min-height: 520px;
+}
+
+.mw-rna-secondary-view .mrss-forna-mount {
+    height: min(68vh, 760px);
+    min-height: 520px;
+}
+
+@media (max-width: 900px) {
+    .mw-rna-secondary-view .mrss-viewer-shell,
+    .mw-rna-secondary-view .mrss-viewer-shell > .mw-empty,
+    .mw-rna-secondary-view .mrss-forna-mount {
+        min-height: 420px;
+    }
+
+    .mw-rna-secondary-view .mrss-forna-mount {
+        height: 520px;
+    }
+}
