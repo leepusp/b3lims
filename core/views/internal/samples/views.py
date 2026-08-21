@@ -12,6 +12,8 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count
 from django.core.exceptions import PermissionDenied
+from django.http import FileResponse, Http404
+from pathlib import PurePosixPath
 from django.contrib.auth.decorators import login_required
 
 from core.context import base_context
@@ -957,6 +959,64 @@ def sample_edit_view(request, sample_id):
 
 
 
+
+
+@login_required
+def sample_file_download_view(
+    request,
+    sample_file_id,
+):
+    sample_file = get_object_or_404(
+        SampleFile.objects.select_related(
+            "sample",
+            "sample__owner",
+            "sample__research_group",
+        ).prefetch_related(
+            "sample__collections",
+            "sample__collections__research_group",
+        ),
+        pk=sample_file_id,
+    )
+
+    if not can_view_sample(
+        request.user,
+        sample_file.sample,
+    ):
+        raise PermissionDenied
+
+    if not sample_file.file:
+        raise Http404(
+            "Sample file is not available."
+        )
+
+    try:
+        handle = sample_file.file.open("rb")
+    except (FileNotFoundError, OSError) as exc:
+        raise Http404(
+            "Sample file was not found in storage."
+        ) from exc
+
+    filename = (
+        PurePosixPath(
+            sample_file.file.name
+        ).name
+        or f"sample-file-{sample_file.pk}"
+    )
+
+    response_kwargs = {
+        "as_attachment": False,
+        "filename": filename,
+    }
+
+    if sample_file.mime_type:
+        response_kwargs["content_type"] = (
+            sample_file.mime_type
+        )
+
+    return FileResponse(
+        handle,
+        **response_kwargs,
+    )
 
 
 @login_required

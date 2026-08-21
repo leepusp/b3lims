@@ -1480,7 +1480,7 @@
                                                     {{ sample_file.file.name }}
                                                 </div>
                                                 {% if sample_file.file %}
-                                                    <a href="{{ sample_file.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: .7rem;">
+                                                    <a href="{% url 'sample_file_download' sample_file.pk %}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: .7rem;">
                                                         Open
                                                     </a>
                                                 {% endif %}

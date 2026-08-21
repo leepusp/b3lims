@@ -225,7 +225,14 @@ def build_sample_snapshot(sample):
             file_name = _safe_str(getattr(sample_file.file, "name", ""))
             file_url = ""
             try:
-                file_url = sample_file.file.url if sample_file.file else ""
+                file_url = (
+                    reverse(
+                        "sample_file_download",
+                        args=[sample_file.pk],
+                    )
+                    if sample_file.file
+                    else ""
+                )
             except Exception:
                 file_url = ""
 

@@ -240,7 +240,7 @@
                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">{{ anexo.file_size }} bytes</span>
                                             {% endif %}
                                         </div>
-                                        <a href="{{ anexo.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <a href="{% url 'sample_file_download' anexo.pk %}" target="_blank" class="btn btn-sm btn-outline-primary">
                                             Open
                                         </a>
                                     </div>

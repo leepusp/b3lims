@@ -175,7 +175,7 @@
                     {% for file in sample_files %}
                     <tr>
                         <td>
-                            <a href="{{ file.file.url }}" target="_blank" rel="noopener">
+                            <a href="{% url 'sample_file_download' file.pk %}" target="_blank" rel="noopener">
                                 {{ file.file.name }}
                             </a>
                         </td>

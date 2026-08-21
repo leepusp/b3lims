@@ -102,7 +102,14 @@ from core.views.internal.samples.views import sample_qr_scan_view
 
 # ================= ROTAS (URLPATTERNS) =================
 
+from core.views.internal.samples.views import sample_file_download_view
+
 urlpatterns = [
+    path(
+        "samples/files/<int:sample_file_id>/download/",
+        sample_file_download_view,
+        name="sample_file_download",
+    ),
     path(
         "internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/import/",
         notebook_views.molecular_sequence_import_api,
