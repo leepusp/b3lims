@@ -4,7 +4,8 @@ from .collections.collection import Collection
 from .tags.model import Tag
 from .keywords.model import Keyword, KeywordValue
 
-from .samples.sample import Sample
+from .samples.sample import Sample, SampleDeletionAudit
+from .samples.origin import SampleOrigin
 from .samples.sample_files import SampleFile
 from .samples.subtypes import Bacteria, Phage, Plasmid, HostRange
 from .samples.relationship import SampleRelationship

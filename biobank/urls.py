@@ -103,6 +103,14 @@ from core.views.internal.samples.views import sample_qr_scan_view
 # ================= ROTAS (URLPATTERNS) =================
 
 from core.views.internal.samples.views import sample_file_download_view
+from core.views.internal.samples.views import (
+    sample_activate_view,
+    sample_deactivate_view,
+    sample_lifecycle_view,
+    sample_move_to_trash_view,
+    sample_purge_view,
+    sample_restore_view,
+)
 
 urlpatterns = [
     path(
@@ -176,6 +184,36 @@ urlpatterns = [
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
+    path(
+        "samples/lifecycle/",
+        sample_lifecycle_view,
+        name="samples_lifecycle",
+    ),
+    path(
+        "samples/<int:sample_id>/deactivate/",
+        sample_deactivate_view,
+        name="sample_deactivate",
+    ),
+    path(
+        "samples/<int:sample_id>/activate/",
+        sample_activate_view,
+        name="sample_activate",
+    ),
+    path(
+        "samples/<int:sample_id>/trash/",
+        sample_move_to_trash_view,
+        name="sample_move_to_trash",
+    ),
+    path(
+        "samples/<int:sample_id>/restore/",
+        sample_restore_view,
+        name="sample_restore",
+    ),
+    path(
+        "samples/<int:sample_id>/purge/",
+        sample_purge_view,
+        name="sample_purge",
+    ),
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),

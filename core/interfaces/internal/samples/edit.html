@@ -4,6 +4,8 @@
 {% block title %}Edit Sample - {{ sample.sample_id }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
@@ -75,6 +77,29 @@
                         {{ form.status }}
                     </div>
 
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            {{ form.biosafety_level.label }}
+                        </label>
+                        {{ form.biosafety_level }}
+                        {% if form.biosafety_level.errors %}
+                            <div class="text-danger small mt-1">{{ form.biosafety_level.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            {{ form.aliquot_count.label }}
+                        </label>
+                        {{ form.aliquot_count }}
+                        <div class="form-text small">
+                            Editable physical aliquot quantity for this Sample record.
+                        </div>
+                        {% if form.aliquot_count.errors %}
+                            <div class="text-danger small mt-1">{{ form.aliquot_count.errors }}</div>
+                        {% endif %}
+                    </div>
+
                     <div class="col-md-12 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Physical Location</label>
                         <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
@@ -87,6 +112,29 @@
                     <div class="col-md-12 mt-2 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase"><i class="bi bi-person-badge me-1"></i>Collaborator / Provider</label>
                         <input type="text" name="collaborator" class="form-control bg-light" value="{{ sample.collaborator|default:'' }}" placeholder="Who isolated, donated or provided this sample?">
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            {{ form.owner.label }}
+                        </label>
+                        {{ form.owner }}
+                        {% if form.owner.errors %}
+                            <div class="text-danger small mt-1">{{ form.owner.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            {{ form.research_group.label }}
+                        </label>
+                        {{ form.research_group }}
+                        <div class="form-text small">
+                            Independent from the Biobank and Collections.
+                        </div>
+                        {% if form.research_group.errors %}
+                            <div class="text-danger small mt-1">{{ form.research_group.errors }}</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6 mb-2">
@@ -105,6 +153,18 @@
                                 {{ form.is_public.label }}
                             </label>
                             <div class="form-text ms-4 ps-2">Check to allow external researchers to view metadata.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mb-2">
+                        <div class="form-check form-switch bg-warning-subtle p-3 rounded border border-warning">
+                            {{ form.is_embargoed }}
+                            <label class="form-check-label fw-bold ms-2" for="{{ form.is_embargoed.id_for_label }}">
+                                Sample Embargo
+                            </label>
+                            <div class="form-text ms-4 ps-2">
+                                Embargo overrides Public Availability for external access.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -144,7 +204,7 @@
 
                 {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
                 {% for field in form %}
-                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,is_public,storage_location,biobank,collections,scientific_notes,collaborator" %}
+                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,aliquot_count,is_public,is_embargoed,owner,research_group,storage_location,biobank,collections,scientific_notes,collaborator" %}
                         {% if forloop.first or forloop.counter0 == 0 %}
                             <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
                                 <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
@@ -218,6 +278,18 @@
                 </div>
 
                 <div class="mt-5 mb-4">
+                    <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Sample Origin & Collection Site
+                    </h5>
+
+                    <p class="text-muted small">
+                        Geographic and environmental provenance is independent
+                        from the Sample's current Physical Storage.
+                    </p>
+
+                    {% include "internal/samples/_origin_fields.html" %}
+
                     <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Scientific Notes (ELN)</h5>
                     <div id="eln-editor" class="bg-white" style="height: 250px;">{{ sample.scientific_notes|safe }}</div>
                 </div>
@@ -245,7 +317,7 @@
                                         </a>
                                     </div>
 
-                                    <div class="small fw-bold text-break">{{ anexo.file.name }}</div>
+                                    <div class="small fw-bold text-break">{{ anexo.filename }}</div>
 
                                     {% if anexo.description %}
                                         <div class="small text-muted mt-1">{{ anexo.description }}</div>
@@ -304,6 +376,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260712-relationship-fix"></script>
 

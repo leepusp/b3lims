@@ -1,4 +1,10 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
+{% endblock %}
 
 {% block content %}
 <style>
@@ -221,7 +227,163 @@
         </div>
     </div>
 
-    <div class="sample-dashboard-layout">
+    <div class="sample-dashboard-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <div class="sample-dashboard-card-title mb-1">
+                    <i class="bi bi-globe-americas me-2 text-primary"></i>
+                    Sample Geographic Origins
+                </div>
+
+                <div class="text-muted small">
+                    Internal map of collection sites for Samples visible to
+                    your account. Oceanic and offshore coordinates are shown
+                    directly.
+                </div>
+            </div>
+
+            <div class="text-end">
+                <div class="fw-bold">
+                    {{ sample_dashboard_stats.with_coordinates }}
+                    mapped
+                </div>
+                <div class="small text-muted">
+                    {{ sample_dashboard_stats.without_coordinates }}
+                    without coordinates
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-origin-dashboard-controls">
+
+            <div>
+                <label class="sample-filter-label">
+                    Sample Type
+                </label>
+                <select
+                    id="sample-origin-filter-type"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All types</option>
+                    {% for value in sample_origin_filter_types %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="sample-filter-label">
+                    Status
+                </label>
+                <select
+                    id="sample-origin-filter-status"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All statuses</option>
+                    {% for value, label in sample_origin_filter_statuses %}
+                        <option value="{{ value }}">
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="sample-filter-label">
+                    Biobank
+                </label>
+                <select
+                    id="sample-origin-filter-biobank"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All Biobanks</option>
+                    {% for value in sample_origin_filter_biobanks %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="sample-filter-label">
+                    Research Group
+                </label>
+                <select
+                    id="sample-origin-filter-group"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All groups</option>
+                    {% for value in sample_origin_filter_groups %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="sample-filter-label">
+                    Country / Ocean
+                </label>
+                <select
+                    id="sample-origin-filter-location"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All locations</option>
+                    {% for value in sample_origin_filter_locations %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="sample-filter-label">
+                    Environment
+                </label>
+                <select
+                    id="sample-origin-filter-environment"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All environments</option>
+                    {% for value in sample_origin_filter_environments %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+        </div>
+
+        {{ sample_origin_points|json_script:"sample-origin-dashboard-points" }}
+
+        {% if sample_dashboard_stats.with_coordinates %}
+            <div
+                id="sample-origin-dashboard-map"
+                class="sample-origin-map sample-origin-map-dashboard"
+                data-sample-origin-dashboard
+                data-points-script="sample-origin-dashboard-points"
+            ></div>
+
+            <div
+                id="sample-origin-map-summary"
+                class="sample-origin-dashboard-summary mt-2"
+            ></div>
+        {% else %}
+            <div class="alert alert-light border mb-0">
+                None of the Samples visible to your account currently has
+                a complete latitude / longitude collection-site pair.
+            </div>
+        {% endif %}
+    </div>
+
+
+<div class="sample-dashboard-layout">
         <div>
             <div class="sample-dashboard-card">
                 <div class="sample-dashboard-card-title">Samples by type</div>
@@ -372,4 +534,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
 {% endblock %}

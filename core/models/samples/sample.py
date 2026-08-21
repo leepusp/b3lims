@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 
 # Imports retained for model integrity
 from core.models.collections.collection import Collection
@@ -63,10 +64,77 @@ class Sample(models.Model):
         help_text="Research group or laboratory associated with this sample."
     )
 
-    # Status and governance
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    is_public = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
+    # Status, governance and lifecycle
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+    is_public = models.BooleanField(
+        default=False,
+        help_text=(
+            "Allows public metadata access when the Sample is active "
+            "and not embargoed."
+        ),
+    )
+    is_embargoed = models.BooleanField(
+        default=False,
+        help_text=(
+            "Restricts public access while preserving authorized "
+            "internal access."
+        ),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text=(
+            "Controls whether the Sample is part of the active inventory."
+        ),
+    )
+    aliquot_count = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text=(
+            "Number of physical aliquots represented by this Sample record."
+        ),
+    )
+
+    deactivated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    deactivated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="deactivated_samples",
+    )
+
+    deletion_requested_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    deletion_requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="sample_deletion_requests",
+    )
+    purge_after = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        db_index=True,
+        help_text=(
+            "Earliest time at which a Sample in Trash may be "
+            "permanently deleted."
+        ),
+    )
 
     # ELN and technical metadata
     scientific_notes = models.TextField(blank=True, null=True)
@@ -101,6 +169,65 @@ class Sample(models.Model):
 
     def __str__(self):
         return f"{self.sample_id} - {self.organism_name or 'No organism'}"
+
+
+class SampleDeletionAudit(models.Model):
+    """
+    Durable audit record created immediately before permanent Sample deletion.
+
+    This record deliberately has no ForeignKey to Sample so the audit survives
+    deletion of the original inventory record and its CASCADE dependents.
+    """
+
+    original_sample_pk = models.PositiveBigIntegerField(
+        db_index=True,
+    )
+    original_sample_uuid = models.UUIDField(
+        db_index=True,
+    )
+    original_sample_id = models.CharField(
+        max_length=100,
+        db_index=True,
+    )
+    original_sample_type = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+    original_organism_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    deleted_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+    deleted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sample_deletion_audits",
+    )
+
+    snapshot = models.JSONField(
+        default=dict,
+    )
+    storage_cleanup_errors = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-deleted_at", "-pk"]
+        verbose_name = "Sample Deletion Audit"
+        verbose_name_plural = "Sample Deletion Audits"
+
+    def __str__(self):
+        return (
+            f"{self.original_sample_id} "
+            f"(deleted {self.deleted_at:%Y-%m-%d %H:%M})"
+        )
 
 
 # ========================================================================

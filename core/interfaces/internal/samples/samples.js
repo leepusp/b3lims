@@ -52,15 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if(notesInput) notesInput.value = quill.root.innerHTML;
             }
 
-            const usesPhysicalBiobankDistribution = Boolean(document.getElementById("selectedBiobanksContainer"));
-            if (usesPhysicalBiobankDistribution) {
-                const biobankInputs = document.querySelectorAll('input[name="dist_biobank_id[]"]');
-                if (biobankInputs.length === 0) {
-                    e.preventDefault();
-                    alert("Please add at least one physical Biobank location for storage.");
-                    return false;
-                }
-            }
+            // A physical Biobank is optional.
+            // aliquot_count remains valid even when no Biobank is selected.
         });
     }
 
@@ -264,8 +257,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (container.querySelector(`[data-bb-id="${bbId}"]`)) return;
                 if (noMsg) noMsg.style.display = 'none';
 
-                const selectedColId = document.querySelector('select[name="collection"]')?.value || "";
-
                 const row = document.createElement('div');
                 row.className = "d-flex align-items-center justify-content-between bg-white border rounded p-3 mb-2 bb-row shadow-sm";
                 row.dataset.bbId = bbId;
@@ -275,10 +266,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="flex-grow-1">
                             <span class="fw-bold d-block mb-1">${bbName}</span>
                             <input type="hidden" name="dist_biobank_id[]" value="${bbId}">
-                            <input type="hidden" name="dist_collection_id[]" value="${selectedColId}">
                             <div class="d-flex gap-2 align-items-center">
-                                <span class="text-muted small">Aliquots Qty:</span>
-                                <input type="number" name="dist_quantity[]" class="form-control form-control-sm" value="1" min="1" style="width: 80px;">
+                                <span class="text-muted small">Aliquot Count in this Biobank:</span>
+                                <input type="number" name="dist_quantity[]" class="form-control form-control-sm" value="${document.getElementById('aliquotCountInput')?.value || '1'}" min="1" step="1" style="width: 80px;">
                             </div>
                         </div>
                     </div>
@@ -571,8 +561,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setField("custom_organism_name", data.organism_name);
         setField("collaborator", data.provider);
         setField("is_public", data.is_public);
+        setField("biosafety_level", data.biosafety_level);
 
-        const collectionSelect = document.getElementsByName("collection")[0];
+        const collectionSelect = document.getElementsByName("collections")[0];
         if (collectionSelect && data.matched_collection_id) {
             collectionSelect.value = String(data.matched_collection_id);
             collectionSelect.dispatchEvent(new Event("change", { bubbles: true }));

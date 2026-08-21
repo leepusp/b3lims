@@ -1,3 +1,4 @@
+from core.services.sample_origin import save_sample_origin
 from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
 import qrcode
@@ -11,10 +12,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import FileResponse, Http404
 from pathlib import PurePosixPath
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.utils import timezone
 
 from core.context import base_context
 from core.models import (
@@ -35,14 +38,31 @@ from core.models import (
 from core.models.events.model import Event
 from core.models.samples.relationship import SampleRelationship
 
+from core.forms import SampleOriginForm
 from core.forms import SampleForm, get_form_class_for_sample
-from core.permissions.samples import can_view_sample, can_edit_sample, can_delete_sample, visible_samples_for_user
+from core.models.samples.origin import SampleOrigin
+from core.permissions.samples import (
+    assignable_sample_owners_for_user,
+    can_delete_sample,
+    can_edit_sample,
+    can_view_sample,
+    editable_sample_collections_for_user,
+    sample_research_groups_for_user,
+    visible_samples_for_user,
+)
 from core.permissions.collections import can_edit_collection
-from core.permissions.biobanks import visible_biobanks_for_user
+from core.permissions.biobanks import editable_biobanks_for_user
 from core.services.sample_intake import import_sample_table
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
 from core.services.shipment_factory import create_shipment_from_sample
+from core.services.sample_lifecycle import (
+    activate_sample,
+    deactivate_sample,
+    move_sample_to_trash,
+    purge_sample,
+    restore_sample,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -605,68 +625,391 @@ def samples_list_view(request):
 @login_required
 def samples_dashboard_view(request):
     """
-    Aggregated sample dashboard restricted by visible_samples_for_user().
-    Includes operational KPIs for storage assignment and sample status.
+    Aggregated Sample dashboard restricted by visible_samples_for_user().
+
+    Geographic points use the exact internal coordinates only for Samples
+    already visible to the authenticated user.
     """
+    from django.urls import reverse
+
     user = request.user
 
-    qs = visible_samples_for_user(user).select_related(
-        "biobank",
-        "owner",
-        "research_group",
+    qs = (
+        visible_samples_for_user(
+            user
+        )
+        .select_related(
+            "biobank",
+            "owner",
+            "research_group",
+            "origin",
+        )
     )
 
     total = qs.count()
-    missing_storage_q = Q(storage_location__isnull=True) | Q(storage_location="")
 
-    ctx = base_context(request)
-    ctx.update({
-        "sample_dashboard_stats": {
-            "total": total,
-            "available": qs.filter(status="available").count(),
-            "pending": qs.filter(status="pending").count(),
-            "qc": qs.filter(status="qc").count(),
-            "depleted": qs.filter(status="depleted").count(),
-            "rejected": qs.filter(status="rejected").count(),
-            "active": qs.filter(is_active=True).count(),
-            "inactive": qs.filter(is_active=False).count(),
-            "public": qs.filter(is_public=True).count(),
-            "private": qs.filter(is_public=False).count(),
-            "biobanks": qs.exclude(biobank__isnull=True).values("biobank_id").distinct().count(),
-            "groups": qs.exclude(research_group__isnull=True).values("research_group_id").distinct().count(),
-            "missing_storage": qs.filter(missing_storage_q).count(),
-            "with_storage": qs.exclude(missing_storage_q).count(),
-        },
-        "sample_dashboard_by_type": list(
-            qs.values("sample_type")
-            .annotate(total=Count("id"))
-            .order_by("sample_type")
-        ),
-        "sample_dashboard_by_status": list(
-            qs.values("status")
-            .annotate(total=Count("id"))
-            .order_by("status")
-        ),
-        "sample_dashboard_by_biobank": list(
-            qs.values("biobank__name")
-            .annotate(total=Count("id"))
-            .order_by("biobank__name")
-        ),
-        "sample_dashboard_by_group": list(
-            qs.values("research_group__name")
-            .annotate(total=Count("id"))
-            .order_by("research_group__name")
-        ),
-        "sample_dashboard_by_storage": list(
-            qs.values("storage_location")
-            .annotate(total=Count("id"))
-            .order_by("-total", "storage_location")[:10]
-        ),
-        "storage_missing_samples": qs.filter(missing_storage_q).order_by("-created_at")[:10],
-        "recent_samples": qs.order_by("-created_at")[:10],
-    })
+    missing_storage_q = (
+        Q(
+            storage_location__isnull=True
+        )
+        | Q(
+            storage_location=""
+        )
+    )
 
-    return render(request, "internal/samples/dashboard.html", ctx)
+    origin_qs = (
+        qs
+        .filter(
+            origin__isnull=False,
+        )
+        .select_related(
+            "origin",
+        )
+    )
+
+    coordinate_qs = (
+        origin_qs
+        .exclude(
+            origin__latitude__isnull=True,
+        )
+        .exclude(
+            origin__longitude__isnull=True,
+        )
+    )
+
+    sample_origin_points = []
+
+    for sample in coordinate_qs:
+        origin = sample.origin
+
+        sample_origin_points.append(
+            {
+                "id": sample.pk,
+                "sample_id": sample.sample_id,
+                "sample_type": (
+                    sample.sample_type
+                    or ""
+                ),
+                "organism_name": (
+                    sample.organism_name
+                    or ""
+                ),
+                "status": sample.status,
+                "status_label": (
+                    sample.get_status_display()
+                ),
+                "owner": (
+                    sample.owner.username
+                    if sample.owner_id
+                    else ""
+                ),
+                "research_group": (
+                    sample.research_group.name
+                    if sample.research_group_id
+                    else ""
+                ),
+                "biobank": (
+                    sample.biobank.name
+                    if sample.biobank_id
+                    else ""
+                ),
+                "is_public": bool(
+                    sample.is_public
+                ),
+                "is_embargoed": bool(
+                    sample.is_embargoed
+                ),
+                "collection_site_name": (
+                    origin.collection_site_name
+                    or ""
+                ),
+                "collection_date": (
+                    origin.collection_date.isoformat()
+                    if origin.collection_date
+                    else ""
+                ),
+                "geo_loc_name": (
+                    origin.geo_loc_name
+                    or ""
+                ),
+                "country_or_ocean": (
+                    origin.country_or_ocean
+                    or ""
+                ),
+                "latitude": float(
+                    origin.latitude
+                ),
+                "longitude": float(
+                    origin.longitude
+                ),
+                "depth_m": (
+                    float(
+                        origin.depth_m
+                    )
+                    if origin.depth_m is not None
+                    else None
+                ),
+                "elevation_m": (
+                    float(
+                        origin.elevation_m
+                    )
+                    if origin.elevation_m is not None
+                    else None
+                ),
+                "habitat": (
+                    origin.habitat
+                    or ""
+                ),
+                "environmental_medium": (
+                    origin.environmental_medium
+                    or ""
+                ),
+                "env_broad_scale": (
+                    origin.env_broad_scale
+                    or ""
+                ),
+                "env_local_scale": (
+                    origin.env_local_scale
+                    or ""
+                ),
+                "location_visibility": (
+                    origin.location_visibility
+                ),
+                "detail_url": reverse(
+                    "sample_detail",
+                    args=[
+                        sample.pk,
+                    ],
+                ),
+            }
+        )
+
+    def unique_point_values(key):
+        return sorted(
+            {
+                str(
+                    point.get(
+                        key,
+                        ""
+                    )
+                    or ""
+                )
+                for point in sample_origin_points
+                if point.get(
+                    key
+                )
+            },
+            key=str.casefold,
+        )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx.update(
+        {
+            "sample_dashboard_stats": {
+                "total": total,
+                "available": qs.filter(
+                    status="available"
+                ).count(),
+                "pending": qs.filter(
+                    status="pending"
+                ).count(),
+                "qc": qs.filter(
+                    status="qc"
+                ).count(),
+                "depleted": qs.filter(
+                    status="depleted"
+                ).count(),
+                "rejected": qs.filter(
+                    status="rejected"
+                ).count(),
+                "active": qs.filter(
+                    is_active=True
+                ).count(),
+                "inactive": qs.filter(
+                    is_active=False
+                ).count(),
+                "public": qs.filter(
+                    is_public=True,
+                    is_embargoed=False,
+                ).count(),
+                "private": qs.filter(
+                    is_public=False
+                ).count(),
+                "embargoed": qs.filter(
+                    is_embargoed=True
+                ).count(),
+                "biobanks": (
+                    qs
+                    .exclude(
+                        biobank__isnull=True
+                    )
+                    .values(
+                        "biobank_id"
+                    )
+                    .distinct()
+                    .count()
+                ),
+                "groups": (
+                    qs
+                    .exclude(
+                        research_group__isnull=True
+                    )
+                    .values(
+                        "research_group_id"
+                    )
+                    .distinct()
+                    .count()
+                ),
+                "missing_storage": qs.filter(
+                    missing_storage_q
+                ).count(),
+                "with_storage": qs.exclude(
+                    missing_storage_q
+                ).count(),
+                "with_origin": origin_qs.count(),
+                "with_coordinates": (
+                    coordinate_qs.count()
+                ),
+                "without_coordinates": (
+                    total
+                    - coordinate_qs.count()
+                ),
+            },
+            "sample_dashboard_by_type": list(
+                qs
+                .values(
+                    "sample_type"
+                )
+                .annotate(
+                    total=Count("id")
+                )
+                .order_by(
+                    "sample_type"
+                )
+            ),
+            "sample_dashboard_by_status": list(
+                qs
+                .values(
+                    "status"
+                )
+                .annotate(
+                    total=Count("id")
+                )
+                .order_by(
+                    "status"
+                )
+            ),
+            "sample_dashboard_by_biobank": list(
+                qs
+                .values(
+                    "biobank__name"
+                )
+                .annotate(
+                    total=Count("id")
+                )
+                .order_by(
+                    "biobank__name"
+                )
+            ),
+            "sample_dashboard_by_group": list(
+                qs
+                .values(
+                    "research_group__name"
+                )
+                .annotate(
+                    total=Count("id")
+                )
+                .order_by(
+                    "research_group__name"
+                )
+            ),
+            "sample_dashboard_by_storage": list(
+                qs
+                .values(
+                    "storage_location"
+                )
+                .annotate(
+                    total=Count("id")
+                )
+                .order_by(
+                    "-total",
+                    "storage_location",
+                )[
+                    :10
+                ]
+            ),
+            "storage_missing_samples": (
+                qs
+                .filter(
+                    missing_storage_q
+                )
+                .order_by(
+                    "-created_at"
+                )[
+                    :10
+                ]
+            ),
+            "recent_samples": (
+                qs
+                .order_by(
+                    "-created_at"
+                )[
+                    :10
+                ]
+            ),
+            "sample_origin_points": (
+                sample_origin_points
+            ),
+            "sample_origin_filter_types": (
+                unique_point_values(
+                    "sample_type"
+                )
+            ),
+            "sample_origin_filter_statuses": (
+                sorted(
+                    {
+                        (
+                            point["status"],
+                            point["status_label"],
+                        )
+                        for point in sample_origin_points
+                    },
+                    key=lambda item: (
+                        item[1].casefold()
+                    ),
+                )
+            ),
+            "sample_origin_filter_biobanks": (
+                unique_point_values(
+                    "biobank"
+                )
+            ),
+            "sample_origin_filter_groups": (
+                unique_point_values(
+                    "research_group"
+                )
+            ),
+            "sample_origin_filter_locations": (
+                unique_point_values(
+                    "country_or_ocean"
+                )
+            ),
+            "sample_origin_filter_environments": (
+                unique_point_values(
+                    "environmental_medium"
+                )
+            ),
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/dashboard.html",
+        ctx,
+    )
 
 
 # =========================================================
@@ -675,14 +1018,59 @@ def samples_dashboard_view(request):
 @login_required
 def sample_create_view(request):
     user = request.user
-    allowed_biobanks = visible_biobanks_for_user(user)
+    allowed_biobanks = editable_biobanks_for_user(user)
+    allowed_owners = assignable_sample_owners_for_user(user)
+    allowed_research_groups = sample_research_groups_for_user(user)
+    allowed_collections = editable_sample_collections_for_user(user)
+
+    origin_form = SampleOriginForm(
+        request.POST or None,
+        prefix="origin",
+    )
 
     if request.method == "POST":
         action = request.POST.get("action")
 
         if action == "add_sample":
             try:
-                sample_id_base = request.POST.get("sample_id")
+                if not origin_form.is_valid():
+                    origin_errors = []
+
+                    for field_name, field_errors in (
+                        origin_form.errors.items()
+                    ):
+                        for error in field_errors:
+                            origin_errors.append(
+                                f"{field_name}: {error}"
+                            )
+
+                    raise ValueError(
+                        (
+                            "Sample Origin validation failed"
+                            + (
+                                ": "
+                                + "; ".join(
+                                    origin_errors
+                                )
+                                if origin_errors
+                                else "."
+                            )
+                        )
+                    )
+
+                origin_data = dict(
+                    origin_form.cleaned_data
+                )
+
+                sample_id_base = (
+                    request.POST.get("sample_id")
+                    or ""
+                ).strip()
+
+                if not sample_id_base:
+                    raise ValueError(
+                        "Sample ID is required."
+                    )
                 sample_type = request.POST.get("sample_type")
                 biosafety_level = request.POST.get("biosafety_level") or None
                 scientific_notes = request.POST.get("scientific_notes")
@@ -713,229 +1101,451 @@ def sample_create_view(request):
                 else:
                     organism_name = "Undefined"
 
-                collection_id = request.POST.get("collection")
-                collection_obj = Collection.objects.filter(id=collection_id).first() if collection_id else None
+                owner_id = (
+                    request.POST.get("owner")
+                    or str(user.pk)
+                )
 
-                if collection_obj and not can_edit_collection(user, collection_obj):
-                    raise PermissionDenied(f"No permission to add samples to collection {collection_obj.name}")
+                if not str(owner_id).isdigit():
+                    raise ValueError(
+                        "Invalid Sample owner."
+                    )
+
+                selected_owner = (
+                    allowed_owners
+                    .filter(
+                        pk=int(owner_id)
+                    )
+                    .first()
+                )
+
+                if selected_owner is None:
+                    raise PermissionDenied(
+                        "You may not assign this Sample to the selected owner."
+                    )
+
+                research_group_id = (
+                    request.POST.get(
+                        "research_group",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                selected_research_group = None
+
+                if research_group_id:
+                    if not research_group_id.isdigit():
+                        raise ValueError(
+                            "Invalid Research Group."
+                        )
+
+                    selected_research_group = (
+                        allowed_research_groups
+                        .filter(
+                            pk=int(
+                                research_group_id
+                            )
+                        )
+                        .first()
+                    )
+
+                    if selected_research_group is None:
+                        raise PermissionDenied(
+                            "You may not assign this Sample to the selected Research Group."
+                        )
+
+                collection_ids = [
+                    value.strip()
+                    for value in request.POST.getlist(
+                        "collections"
+                    )
+                    if value.strip()
+                ]
+
+                # Backward-compatible support for a single legacy field.
+                legacy_collection_id = (
+                    request.POST.get(
+                        "collection",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if (
+                    not collection_ids
+                    and legacy_collection_id
+                ):
+                    collection_ids = [
+                        legacy_collection_id
+                    ]
+
+                collection_ids = list(
+                    dict.fromkeys(
+                        collection_ids
+                    )
+                )
+
+                if any(
+                    not value.isdigit()
+                    for value in collection_ids
+                ):
+                    raise ValueError(
+                        "Invalid Collection selection."
+                    )
+
+                selected_collections = list(
+                    allowed_collections.filter(
+                        pk__in=[
+                            int(value)
+                            for value in collection_ids
+                        ]
+                    )
+                )
+
+                if (
+                    len(selected_collections)
+                    != len(collection_ids)
+                ):
+                    raise PermissionDenied(
+                        "One or more selected Collections are not editable by this user."
+                    )
+
+                aliquot_raw = (
+                    request.POST.get(
+                        "aliquot_count",
+                        "1",
+                    )
+                    or "1"
+                ).strip()
+
+                try:
+                    default_aliquot_count = int(
+                        aliquot_raw
+                    )
+                except ValueError as exc:
+                    raise ValueError(
+                        "Aliquot Count must be a positive integer."
+                    ) from exc
+
+                if default_aliquot_count < 1:
+                    raise ValueError(
+                        "Aliquot Count must be at least 1."
+                    )
+
+                is_embargoed = (
+                    request.POST.get(
+                        "is_embargoed"
+                    )
+                    in {
+                        "true",
+                        "on",
+                        "1",
+                        "yes",
+                    }
+                )
 
                 parent_sample_id_input = request.POST.get("parent_sample_id", "").strip()
                 parent_rel_type = request.POST.get("parent_relationship_type", "aliquot")
                 parent_sample_obj = None
 
                 if parent_sample_id_input:
-                    parent_sample_obj = Sample.objects.filter(sample_id=parent_sample_id_input).first()
+                    parent_sample_obj = visible_samples_for_user(user).filter(sample_id=parent_sample_id_input).first()
                     if not parent_sample_obj:
                         raise ValueError(f"Source sample '{parent_sample_id_input}' not found.")
 
-                biobank_ids = request.POST.getlist("dist_biobank_id[]")
-                quantities = request.POST.getlist("dist_quantity[]")
+                biobank_ids = [
+                    value.strip()
+                    for value in request.POST.getlist(
+                        "dist_biobank_id[]"
+                    )
+                    if value.strip()
+                ]
 
-                if not biobank_ids:
-                    raise ValueError("No biobank selected.")
+                quantities = request.POST.getlist(
+                    "dist_quantity[]"
+                )
+
+                if len(set(biobank_ids)) != len(biobank_ids):
+                    raise ValueError(
+                        "The same Biobank cannot be selected more than once."
+                    )
+
+                distribution_rows = []
+
+                for index, biobank_id in enumerate(
+                    biobank_ids
+                ):
+                    if not biobank_id.isdigit():
+                        raise ValueError(
+                            "Invalid Biobank selection."
+                        )
+
+                    biobank = (
+                        allowed_biobanks
+                        .filter(
+                            pk=int(
+                                biobank_id
+                            )
+                        )
+                        .first()
+                    )
+
+                    if biobank is None:
+                        raise PermissionDenied(
+                            "You may not deposit Samples in the selected Biobank."
+                        )
+
+                    quantity_raw = (
+                        quantities[index]
+                        if index < len(quantities)
+                        and quantities[index]
+                        else str(
+                            default_aliquot_count
+                        )
+                    )
+
+                    try:
+                        quantity = int(
+                            quantity_raw
+                        )
+                    except ValueError as exc:
+                        raise ValueError(
+                            "Aliquot Count must be a positive integer."
+                        ) from exc
+
+                    if quantity < 1:
+                        raise ValueError(
+                            "Aliquot Count must be at least 1."
+                        )
+
+                    distribution_rows.append(
+                        (
+                            biobank,
+                            quantity,
+                        )
+                    )
+
+                # A Biobank is optional. Without physical distribution,
+                # one Sample record is created with the default aliquot count.
+                if not distribution_rows:
+                    distribution_rows = [
+                        (
+                            None,
+                            default_aliquot_count,
+                        )
+                    ]
 
                 created_samples = []
 
                 with transaction.atomic():
-                    for i in range(len(biobank_ids)):
-                        bb_id = biobank_ids[i]
-                        qty = int(quantities[i]) if quantities[i] else 1
-                        biobank = get_object_or_404(allowed_biobanks, id=bb_id)
+                    for i, (biobank, qty) in enumerate(
+                        distribution_rows
+                    ):
+                        final_id = (
+                            sample_id_base
+                            if len(distribution_rows) == 1
+                            else f"{sample_id_base}_{i + 1}"
+                        )
 
-                        for j in range(qty):
-                            final_id = sample_id_base if qty == 1 and len(biobank_ids) == 1 else f"{sample_id_base}_{i+1}.{j+1}"
+                        if Sample.objects.filter(sample_id=final_id).exists():
+                            raise ValueError(f"The ID '{final_id}' already exists in the system.")
 
-                            if Sample.objects.filter(sample_id=final_id).exists():
-                                raise ValueError(f"The ID '{final_id}' already exists in the system.")
+                        collaborator_input = request.POST.get("collaborator", "").strip()
+                        final_notes = scientific_notes
+                        if collaborator_input:
+                            final_notes = f"<p><strong>Collaborator / Provider:</strong> {collaborator_input}</p>" + (final_notes or "")
 
-                            collaborator_input = request.POST.get("collaborator", "").strip()
-                            final_notes = scientific_notes
-                            if collaborator_input:
-                                final_notes = f"<p><strong>Collaborator / Provider:</strong> {collaborator_input}</p>" + (final_notes or "")
+                        base_data = {
+                            "sample_id": final_id,
+                            "organism_name": organism_name,
+                            "sample_type": sample_type,
+                            "biosafety_level": biosafety_level,
+                            "biobank": biobank,
+                            "research_group": selected_research_group,
+                            "scientific_notes": final_notes,
+                            "is_public": is_public,
+                            "is_embargoed": is_embargoed,
+                            "aliquot_count": qty,
+                            "owner": selected_owner,
+                            "is_active": True,
+                            "status": "pending",
+                            "storage_location": storage_location,
+                        }
 
-                            base_data = {
-                                "sample_id": final_id,
-                                "organism_name": organism_name,
-                                "sample_type": sample_type,
-                                "biosafety_level": biosafety_level,
-                                "biobank": biobank,
-                                "research_group": biobank.research_group,
-                                "scientific_notes": final_notes,
-                                "is_public": is_public,
-                                "owner": user,
-                                "is_active": True,
-                                "status": "pending",
-                                "storage_location": storage_location,
-                            }
-
-                            # BACTERIA
-                            if sample_type == "Bacterium (Host)":
-                                r_markers = request.POST.get("resistance_markers", "")
-                                r_list = [r.strip() for r in r_markers.split(",") if r.strip()]
-                                sample = Bacteria.objects.create(
-                                    **base_data,
-                                    official_name=request.POST.get("official_name", ""),
-                                    aliases=request.POST.get("aliases", ""),
-                                    genus=request.POST.get("genus", ""),
-                                    species=request.POST.get("species", ""),
-                                    strain=request.POST.get("strain", ""),
-                                    genotype=request.POST.get("genotype", ""),
-                                    isolation_source=request.POST.get("isolation_source", ""),
-                                    resistance_markers=r_list
-                                )
-
-                            # PHAGE
-                            elif sample_type == "Phage (Virus)":
-                                sample = Phage.objects.create(
-                                    **base_data,
-                                    official_name=request.POST.get("official_name", ""),
-                                    aliases=request.POST.get("aliases", ""),
-                                    phage_name=request.POST.get("phage_name", ""),
-                                    genus=request.POST.get("genus", ""),
-                                    morphotype=request.POST.get("morphotype"),
-                                    taxonomy=request.POST.get("taxonomy"),
-                                    lifestyle=request.POST.get("lifestyle"),
-                                    isolation_source=request.POST.get("isolation_source"),
-                                    isolation_method=request.POST.get("isolation_method"),
-                                    genome_type=request.POST.get("genome_type"),
-                                    genome_size_bp=request.POST.get("genome_size_bp") or None,
-                                    ncbi_accession=request.POST.get("ncbi_accession"),
-                                    temp_C=request.POST.get("temp_C") or None
-                                )
-
-                            # PLASMID
-                            elif sample_type == "Plasmid":
-                                r_b_markers = request.POST.get("backbone_resistance_markers", "")
-                                r_b_list = [r.strip() for r in r_b_markers.split(",") if r.strip()]
-
-                                r_i_markers = request.POST.get("insert_resistance_markers", "")
-                                r_i_list = [r.strip() for r in r_i_markers.split(",") if r.strip()]
-
-                                is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
-
-                                b_size_raw = request.POST.get("backbone_size_bp", "")
-                                b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
-
-                                i_size_raw = request.POST.get("insert_size_bp", "")
-                                i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
-
-                                sample = Plasmid.objects.create(
-                                    **base_data,
-                                    backbone_name=request.POST.get("backbone_name", ""),
-                                    backbone_aliases=request.POST.get("backbone_aliases", ""),
-                                    vector_type=request.POST.get("vector_type", ""),
-                                    induction_system=request.POST.get("induction_system", ""),
-                                    origin_of_replication=request.POST.get("origin_of_replication", ""),
-                                    backbone_size_bp=b_size,
-                                    backbone_resistance_markers=r_b_list,
-                                    is_empty_vector=is_empty,
-                                    insert_name=request.POST.get("insert_name", ""),
-                                    purpose=request.POST.get("purpose", ""),
-                                    insert_size_bp=i_size,
-                                    insert_resistance_markers=r_i_list,
-                                    construction_name=request.POST.get("construction_name", "")
-                                )
-
-                            else:
-                                sample = Sample.objects.create(**base_data)
-
-                            # Collections & Parents
-                            if collection_obj:
-                                sample.collections.add(collection_obj)
-
-                            if parent_sample_obj:
-                                SampleRelationship.objects.create(
-                                    source_sample=parent_sample_obj,
-                                    target_sample=sample,
-                                    relationship_type=parent_rel_type,
-                                    created_by=user,
-                                    notes="Relationship generated automatically during registration."
-                                )
-
-                            # Tags & Keywords
-                            tag_ids = request.POST.getlist("tags")
-                            sample.tags.set(
-                                active_tags_from_ids(tag_ids)
+                        # BACTERIA
+                        if sample_type == "Bacterium (Host)":
+                            r_markers = request.POST.get("resistance_markers", "")
+                            r_list = [r.strip() for r in r_markers.split(",") if r.strip()]
+                            sample = Bacteria.objects.create(
+                                **base_data,
+                                official_name=request.POST.get("official_name", ""),
+                                aliases=request.POST.get("aliases", ""),
+                                genus=request.POST.get("genus", ""),
+                                species=request.POST.get("species", ""),
+                                strain=request.POST.get("strain", ""),
+                                genotype=request.POST.get("genotype", ""),
+                                isolation_source=request.POST.get("isolation_source", ""),
+                                resistance_markers=r_list
                             )
 
-                            for raw in request.POST.getlist("keyword_pairs"):
-                                if ":::" in raw:
-                                    key, value = raw.split(":::")
-                                    keyword_value, _ = (
-                                        get_or_create_active_keyword_value(
-                                            key,
-                                            value,
-                                        )
+                        # PHAGE
+                        elif sample_type == "Phage (Virus)":
+                            sample = Phage.objects.create(
+                                **base_data,
+                                official_name=request.POST.get("official_name", ""),
+                                aliases=request.POST.get("aliases", ""),
+                                phage_name=request.POST.get("phage_name", ""),
+                                genus=request.POST.get("genus", ""),
+                                morphotype=request.POST.get("morphotype"),
+                                taxonomy=request.POST.get("taxonomy"),
+                                lifestyle=request.POST.get("lifestyle"),
+                                isolation_source=request.POST.get("isolation_source"),
+                                isolation_method=request.POST.get("isolation_method"),
+                                genome_type=request.POST.get("genome_type"),
+                                genome_size_bp=request.POST.get("genome_size_bp") or None,
+                                ncbi_accession=request.POST.get("ncbi_accession"),
+                                temp_C=request.POST.get("temp_C") or None
+                            )
+
+                        # PLASMID
+                        elif sample_type == "Plasmid":
+                            r_b_markers = request.POST.get("backbone_resistance_markers", "")
+                            r_b_list = [r.strip() for r in r_b_markers.split(",") if r.strip()]
+
+                            r_i_markers = request.POST.get("insert_resistance_markers", "")
+                            r_i_list = [r.strip() for r in r_i_markers.split(",") if r.strip()]
+
+                            is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
+
+                            b_size_raw = request.POST.get("backbone_size_bp", "")
+                            b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
+
+                            i_size_raw = request.POST.get("insert_size_bp", "")
+                            i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
+
+                            sample = Plasmid.objects.create(
+                                **base_data,
+                                backbone_name=request.POST.get("backbone_name", ""),
+                                backbone_aliases=request.POST.get("backbone_aliases", ""),
+                                vector_type=request.POST.get("vector_type", ""),
+                                induction_system=request.POST.get("induction_system", ""),
+                                origin_of_replication=request.POST.get("origin_of_replication", ""),
+                                backbone_size_bp=b_size,
+                                backbone_resistance_markers=r_b_list,
+                                is_empty_vector=is_empty,
+                                insert_name=request.POST.get("insert_name", ""),
+                                purpose=request.POST.get("purpose", ""),
+                                insert_size_bp=i_size,
+                                insert_resistance_markers=r_i_list,
+                                construction_name=request.POST.get("construction_name", "")
+                            )
+
+                        else:
+                            sample = Sample.objects.create(**base_data)
+
+                        # Collections & Parents
+                        if selected_collections:
+                            sample.collections.add(*selected_collections)
+
+                        if parent_sample_obj:
+                            SampleRelationship.objects.create(
+                                source_sample=parent_sample_obj,
+                                target_sample=sample,
+                                relationship_type=parent_rel_type,
+                                created_by=user,
+                                notes="Relationship generated automatically during registration."
+                            )
+
+                        # Tags & Keywords
+                        tag_ids = request.POST.getlist("tags")
+                        sample.tags.set(
+                            active_tags_from_ids(tag_ids)
+                        )
+
+                        for raw in request.POST.getlist("keyword_pairs"):
+                            if ":::" in raw:
+                                key, value = raw.split(":::")
+                                keyword_value, _ = (
+                                    get_or_create_active_keyword_value(
+                                        key,
+                                        value,
                                     )
-                                    sample.keywords.add(keyword_value)
+                                )
+                                sample.keywords.add(keyword_value)
 
-                            # =========================================================
-                            # BIOLOGICAL RELATIONSHIPS (DYNAMIC ROWS)
-                            # =========================================================
-                            host_bacterium_ids = request.POST.getlist("host_bacterium[]")
-                            host_bacterium_notes = request.POST.getlist("host_bacterium_notes[]")
+                        # =========================================================
+                        # BIOLOGICAL RELATIONSHIPS (DYNAMIC ROWS)
+                        # =========================================================
+                        host_bacterium_ids = request.POST.getlist("host_bacterium[]")
+                        host_bacterium_notes = request.POST.getlist("host_bacterium_notes[]")
 
-                            stored_plasmids_ids = request.POST.getlist("stored_plasmids[]")
-                            stored_plasmids_notes = request.POST.getlist("stored_plasmids_notes[]")
+                        stored_plasmids_ids = request.POST.getlist("stored_plasmids[]")
+                        stored_plasmids_notes = request.POST.getlist("stored_plasmids_notes[]")
 
-                            infecting_phages_ids = request.POST.getlist("infecting_phages[]")
-                            infecting_phages_notes = request.POST.getlist("infecting_phages_notes[]")
+                        infecting_phages_ids = request.POST.getlist("infecting_phages[]")
+                        infecting_phages_notes = request.POST.getlist("infecting_phages_notes[]")
 
-                            if "Bacterium" in sample_type:
-                                for idx, p_id in enumerate(stored_plasmids_ids):
-                                    if not p_id.strip(): continue
-                                    notes = stored_plasmids_notes[idx] if idx < len(stored_plasmids_notes) else ""
-                                    plasmid_obj = Sample.objects.filter(sample_id=p_id.strip()).first()
-                                    if plasmid_obj:
-                                        SampleRelationship.objects.create(
-                                            source_sample=sample, target_sample=plasmid_obj,
-                                            relationship_type="STORAGE", created_by=user,
-                                            notes=f"Linked during Bacterium registration. Details: {notes}"
-                                        )
+                        if "Bacterium" in sample_type:
+                            for idx, p_id in enumerate(stored_plasmids_ids):
+                                if not p_id.strip(): continue
+                                notes = stored_plasmids_notes[idx] if idx < len(stored_plasmids_notes) else ""
+                                plasmid_obj = Sample.objects.filter(sample_id=p_id.strip()).first()
+                                if plasmid_obj:
+                                    SampleRelationship.objects.create(
+                                        source_sample=sample, target_sample=plasmid_obj,
+                                        relationship_type="STORAGE", created_by=user,
+                                        notes=f"Linked during Bacterium registration. Details: {notes}"
+                                    )
 
-                                for idx, ph_id in enumerate(infecting_phages_ids):
-                                    if not ph_id.strip(): continue
-                                    notes = infecting_phages_notes[idx] if idx < len(infecting_phages_notes) else ""
-                                    phage_obj = Phage.objects.filter(sample_id=ph_id.strip()).first()
-                                    if phage_obj and hasattr(sample, 'bacteria'):
-                                        HostRange.objects.update_or_create(
-                                            phage=phage_obj, bacteria=sample.bacteria,
-                                            defaults={'notes': notes}
-                                        )
+                            for idx, ph_id in enumerate(infecting_phages_ids):
+                                if not ph_id.strip(): continue
+                                notes = infecting_phages_notes[idx] if idx < len(infecting_phages_notes) else ""
+                                phage_obj = Phage.objects.filter(sample_id=ph_id.strip()).first()
+                                if phage_obj and hasattr(sample, 'bacteria'):
+                                    HostRange.objects.update_or_create(
+                                        phage=phage_obj, bacteria=sample.bacteria,
+                                        defaults={'notes': notes}
+                                    )
 
-                            elif "Phage" in sample_type:
-                                for idx, h_id in enumerate(host_bacterium_ids):
-                                    if not h_id.strip(): continue
-                                    notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
-                                    bacterium_obj = Bacteria.objects.filter(sample_id=h_id.strip()).first()
-                                    if bacterium_obj and hasattr(sample, 'phage'):
-                                        HostRange.objects.update_or_create(
-                                            phage=sample.phage, bacteria=bacterium_obj,
-                                            defaults={'notes': notes}
-                                        )
+                        elif "Phage" in sample_type:
+                            for idx, h_id in enumerate(host_bacterium_ids):
+                                if not h_id.strip(): continue
+                                notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
+                                bacterium_obj = Bacteria.objects.filter(sample_id=h_id.strip()).first()
+                                if bacterium_obj and hasattr(sample, 'phage'):
+                                    HostRange.objects.update_or_create(
+                                        phage=sample.phage, bacteria=bacterium_obj,
+                                        defaults={'notes': notes}
+                                    )
 
-                            elif "Plasmid" in sample_type:
-                                for idx, h_id in enumerate(host_bacterium_ids):
-                                    if not h_id.strip(): continue
-                                    notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
-                                    bacterium_obj = Sample.objects.filter(sample_id=h_id.strip()).first()
-                                    if bacterium_obj:
-                                        SampleRelationship.objects.create(
-                                            source_sample=bacterium_obj, target_sample=sample,
-                                            relationship_type="STORAGE", created_by=user,
-                                            notes=f"Linked during Plasmid registration. Details: {notes}"
-                                        )
+                        elif "Plasmid" in sample_type:
+                            for idx, h_id in enumerate(host_bacterium_ids):
+                                if not h_id.strip(): continue
+                                notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
+                                bacterium_obj = Sample.objects.filter(sample_id=h_id.strip()).first()
+                                if bacterium_obj:
+                                    SampleRelationship.objects.create(
+                                        source_sample=bacterium_obj, target_sample=sample,
+                                        relationship_type="STORAGE", created_by=user,
+                                        notes=f"Linked during Plasmid registration. Details: {notes}"
+                                    )
 
-                            # Log Creation Event
-                            Event.objects.create(
-                                sample=sample,
-                                performed_by=user,
-                                event_type="entry",
-                                location_snapshot=storage_location,
-                                notes=f"Sample registered: {sample.organism_name}."
-                            )
+                        # Log Creation Event
+                        Event.objects.create(
+                            sample=sample,
+                            performed_by=user,
+                            event_type="entry",
+                            location_snapshot=storage_location,
+                            notes=f"Sample registered: {sample.organism_name}."
+                        )
 
-                            created_samples.append(sample)
+                        save_sample_origin(
+                            sample,
+                            origin_data,
+                        )
+
+                        created_samples.append(sample)
 
                     # Attachments
                     files = request.FILES.getlist("file")
@@ -1014,7 +1624,19 @@ def sample_create_view(request):
                         status="used_for_sample",
                     )
 
-                messages.success(request, f"{len(created_samples)} sample(s) registered successfully!")
+                total_aliquots = sum(
+                    sample.aliquot_count
+                    for sample in created_samples
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"{len(created_samples)} Sample record(s) "
+                        f"registered successfully with "
+                        f"{total_aliquots} total aliquot(s)."
+                    ),
+                )
                 return redirect("samples_list")
 
             except ValueError as ve:
@@ -1059,14 +1681,18 @@ def sample_create_view(request):
 
     ctx = base_context(request)
     ctx.update({
-        "collections": Collection.objects.all(),
+        "collections": allowed_collections,
         "all_tags": Tag.objects.filter(
             is_active=True,
         ).order_by("name"),
+        "sample_owner_options": allowed_owners,
+        "sample_research_groups": allowed_research_groups,
+        "default_owner_id": user.pk,
         "biobanks": user_biobanks,
-        "all_samples": Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
+        "all_samples": visible_samples_for_user(user).values('sample_id', 'organism_name', 'sample_type'),
         "empty_plasmids_json": json.dumps(empty_plasmids),
         "intake_prefill": intake_prefill,
+        "origin_form": origin_form,
     })
     return render(request, "internal/samples/samples.html", ctx)
 
@@ -1102,7 +1728,14 @@ def sample_qr_scan_view(request, uuid):
     sample = get_object_or_404(Sample, uuid=uuid)
 
     # Validação de Segurança e Redirecionamento Dinâmico (Usa o reverse para não perder o prefixo /biobank/)
-    if not sample.is_public:
+    sample_is_publicly_accessible = (
+        sample.is_active
+        and sample.is_public
+        and not sample.is_embargoed
+        and sample.deletion_requested_at is None
+    )
+
+    if not sample_is_publicly_accessible:
         if not request.user.is_authenticated:
             login_url = reverse('login')
             next_url = reverse('sample_qr_scan', args=[sample.uuid])
@@ -1399,12 +2032,36 @@ def sample_edit_view(request, sample_id):
 
     FormClass = get_form_class_for_sample(real_sample)
 
-    if request.method == "POST":
-        form = FormClass(request.POST, request.FILES, instance=real_sample)
+    origin_instance = (
+        SampleOrigin.objects
+        .filter(
+            sample=base_sample,
+        )
+        .first()
+    )
 
-        if form.is_valid():
+    if request.method == "POST":
+        form = FormClass(
+            request.POST,
+            request.FILES,
+            instance=real_sample,
+            user=request.user,
+        )
+
+        origin_form = SampleOriginForm(
+            request.POST,
+            instance=origin_instance,
+            prefix="origin",
+        )
+
+        if form.is_valid() and origin_form.is_valid():
             identity_before = _safe_sample_text(getattr(base_sample, "organism_name", ""))
             real_sample = form.save()
+
+            save_sample_origin(
+                base_sample,
+                origin_form.cleaned_data,
+            )
 
             _sync_sample_after_successful_edit(
                 base_sample=base_sample,
@@ -1501,7 +2158,15 @@ def sample_edit_view(request, sample_id):
 
         messages.error(request, "Error updating. Please check the fields.")
     else:
-        form = FormClass(instance=real_sample)
+        form = FormClass(
+            instance=real_sample,
+            user=request.user,
+        )
+
+        origin_form = SampleOriginForm(
+            instance=origin_instance,
+            prefix="origin",
+        )
 
     parents = base_sample.incoming_relationships.all()
     children = base_sample.outgoing_relationships.all()
@@ -1536,12 +2201,13 @@ def sample_edit_view(request, sample_id):
         'parents': parents,
         'children': children,
         'sample_files': sample_files,
+        "origin_form": origin_form,
         'current_host_id': current_host_id,
         'current_plasmids_string': current_plasmids_string,
         'current_phages_string': current_phages_string,
         'current_storage_location': current_storage_location,
         'current_storage_paths': current_storage_paths,
-        'all_samples': Sample.objects.filter(is_active=True).values('sample_id', 'organism_name', 'sample_type'),
+        'all_samples': visible_samples_for_user(request.user).values('sample_id', 'organism_name', 'sample_type'),
     })
     return render(request, "internal/samples/edit.html", ctx)
 
@@ -1643,10 +2309,381 @@ def sample_detail_view(request, sample_id):
         "children": children,
         "sample_files": sample_files,
         "current_storage_paths": current_storage_paths,
-        "can_edit_current_sample": can_edit_sample(request.user, real_sample) or request.user.is_superuser,
+        "sample_origin": (
+            SampleOrigin.objects
+            .filter(
+                sample=base_sample,
+            )
+            .first()
+        ),
+        "can_edit_current_sample": (
+            can_edit_sample(
+                request.user,
+                base_sample,
+            )
+        ),
+        "can_delete_current_sample": (
+            can_delete_sample(
+                request.user,
+                base_sample,
+            )
+        ),
+        "purge_is_due": bool(
+            base_sample.purge_after
+            and base_sample.purge_after
+            <= timezone.now()
+        ),
     })
 
     return render(request, "internal/samples/detail.html", ctx)
+
+
+
+# =========================================================
+# SAMPLE LIFECYCLE
+# =========================================================
+
+@login_required
+def sample_lifecycle_view(request):
+    """
+    Display deactivated Samples and the 30-day Sample Trash.
+    """
+    candidates = (
+        Sample.objects
+        .filter(
+            is_active=False,
+        )
+        .select_related(
+            "owner",
+            "research_group",
+            "biobank",
+            "deactivated_by",
+            "deletion_requested_by",
+        )
+        .prefetch_related(
+            "collections",
+            "collections__research_group",
+        )
+        .order_by(
+            "purge_after",
+            "-updated_at",
+        )
+    )
+
+    now = timezone.now()
+
+    deactivated_samples = []
+    trash_samples = []
+
+    for sample in candidates:
+        if sample.deletion_requested_at is None:
+            if can_edit_sample(
+                request.user,
+                sample,
+            ):
+                deactivated_samples.append(
+                    sample
+                )
+            continue
+
+        if not can_delete_sample(
+            request.user,
+            sample,
+        ):
+            continue
+
+        sample.purge_is_due = bool(
+            sample.purge_after
+            and sample.purge_after <= now
+        )
+
+        if (
+            sample.purge_after
+            and sample.purge_after > now
+        ):
+            delta = sample.purge_after - now
+            sample.days_until_purge = (
+                delta.days
+                + (
+                    1
+                    if delta.seconds
+                    or delta.microseconds
+                    else 0
+                )
+            )
+        else:
+            sample.days_until_purge = 0
+
+        trash_samples.append(
+            sample
+        )
+
+    ctx = base_context(request)
+    ctx.update(
+        {
+            "deactivated_samples": deactivated_samples,
+            "trash_samples": trash_samples,
+            "trash_retention_days": 30,
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/lifecycle.html",
+        ctx,
+    )
+
+
+@login_required
+@require_POST
+def sample_deactivate_view(
+    request,
+    sample_id,
+):
+    sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if not can_edit_sample(
+        request.user,
+        sample,
+    ):
+        raise PermissionDenied
+
+    try:
+        deactivate_sample(
+            sample,
+            request.user,
+        )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"Sample {sample.sample_id} "
+                "was deactivated."
+            ),
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=sample.pk,
+    )
+
+
+@login_required
+@require_POST
+def sample_activate_view(
+    request,
+    sample_id,
+):
+    sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if not can_edit_sample(
+        request.user,
+        sample,
+    ):
+        raise PermissionDenied
+
+    try:
+        activate_sample(
+            sample,
+            request.user,
+        )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"Sample {sample.sample_id} "
+                "was reactivated."
+            ),
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=sample.pk,
+    )
+
+
+@login_required
+@require_POST
+def sample_move_to_trash_view(
+    request,
+    sample_id,
+):
+    sample = get_object_or_404(
+        Sample.objects.prefetch_related(
+            "collections",
+            "collections__research_group",
+        ),
+        pk=sample_id,
+    )
+
+    if not can_delete_sample(
+        request.user,
+        sample,
+    ):
+        raise PermissionDenied
+
+    try:
+        move_sample_to_trash(
+            sample,
+            request.user,
+        )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+    else:
+        messages.warning(
+            request,
+            (
+                f"Sample {sample.sample_id} was moved to Trash. "
+                "Permanent deletion is blocked for 30 days."
+            ),
+        )
+
+    return redirect(
+        "samples_lifecycle",
+    )
+
+
+@login_required
+@require_POST
+def sample_restore_view(
+    request,
+    sample_id,
+):
+    sample = get_object_or_404(
+        Sample.objects.prefetch_related(
+            "collections",
+            "collections__research_group",
+        ),
+        pk=sample_id,
+    )
+
+    if not can_delete_sample(
+        request.user,
+        sample,
+    ):
+        raise PermissionDenied
+
+    try:
+        restore_sample(
+            sample,
+            request.user,
+        )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"Sample {sample.sample_id} "
+                "was restored from Trash."
+            ),
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=sample.pk,
+    )
+
+
+@login_required
+@require_POST
+def sample_purge_view(
+    request,
+    sample_id,
+):
+    sample = get_object_or_404(
+        Sample.objects.prefetch_related(
+            "collections",
+            "collections__research_group",
+            "files",
+            "events",
+            "outgoing_relationships",
+            "incoming_relationships",
+            "storage_levels",
+            "storage_assignments",
+            "intake_records",
+            "shipment_items",
+            "notebook_mentions",
+            "notebook_sample_links",
+            "molecular_sequences",
+            "tags",
+            "keywords",
+        ),
+        pk=sample_id,
+    )
+
+    if not can_delete_sample(
+        request.user,
+        sample,
+    ):
+        raise PermissionDenied
+
+    sample_label = sample.sample_id
+
+    try:
+        audit, cleanup_errors = purge_sample(
+            sample,
+            request.user,
+        )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"Sample {sample_label} was permanently deleted. "
+                f"Audit record #{audit.pk} was preserved."
+            ),
+        )
+
+        if cleanup_errors:
+            messages.warning(
+                request,
+                (
+                    "The database deletion completed, but one or more "
+                    "physical files require administrator cleanup."
+                ),
+            )
+
+    return redirect(
+        "samples_lifecycle",
+    )
+
 
 # =========================================================
 # 5. RELATIONSHIPS

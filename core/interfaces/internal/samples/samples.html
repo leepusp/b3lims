@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 {% endblock %}
@@ -68,6 +70,23 @@
                                 <option value="NB-3">NB-3</option>
                                 <option value="NB-4">NB-4</option>
                             </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="section-label">Aliquot Count</label>
+                            <input
+                                type="number"
+                                name="aliquot_count"
+                                id="aliquotCountInput"
+                                class="form-control"
+                                value="1"
+                                min="1"
+                                step="1"
+                                required
+                            >
+                            <div class="form-text small">
+                                Number of physical aliquots represented by this Sample.
+                            </div>
                         </div>
 
                         <div class="col-md-3">
@@ -164,13 +183,59 @@
                     <div class="row g-4 mb-4">
                         <div class="col-md-6">
                             <div class="p-3 border rounded bg-white h-100 shadow-sm">
-                                <label class="section-label"><i class="bi bi-shield-lock me-1"></i>Linked Collection</label>
-                                <p class="small text-muted mb-2">Link this sample to a collection to share it with your group.</p>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="section-label">
+                                            <i class="bi bi-person-check me-1"></i>Owner
+                                        </label>
+                                        <select name="owner" class="form-select" required>
+                                            {% for option_user in sample_owner_options %}
+                                                <option
+                                                    value="{{ option_user.id }}"
+                                                    {% if option_user.id == default_owner_id %}selected{% endif %}
+                                                >
+                                                    {{ option_user.get_full_name|default:option_user.username }} ({{ option_user.username }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
 
-                                <select name="collection" class="form-select border-primary-subtle mb-3">
-                                    <option value="" {% if not intake_prefill.matched_collection_id %}selected{% endif %}>None (Keep Sample Isolated)</option>
+                                    <div class="col-md-6">
+                                        <label class="section-label">
+                                            <i class="bi bi-people me-1"></i>Research Group
+                                        </label>
+                                        <select name="research_group" class="form-select">
+                                            <option value="">Not assigned</option>
+                                            {% for group in sample_research_groups %}
+                                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text small">
+                                            Independent from the selected Biobank and Collections.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <label class="section-label">
+                                    <i class="bi bi-shield-lock me-1"></i>Linked Collections
+                                </label>
+                                <p class="small text-muted mb-2">
+                                    Optional logical Collections. Hold Ctrl/Cmd to select more than one.
+                                </p>
+
+                                <select
+                                    name="collections"
+                                    class="form-select border-primary-subtle mb-3"
+                                    multiple
+                                    size="5"
+                                >
                                     {% for col in collections %}
-                                    <option value="{{ col.id }}" {% if intake_prefill.matched_collection_id == col.id %}selected{% endif %}>{{ col.name }}</option>
+                                    <option
+                                        value="{{ col.id }}"
+                                        {% if intake_prefill.matched_collection_id == col.id %}selected{% endif %}
+                                    >
+                                        {{ col.name }}
+                                    </option>
                                     {% endfor %}
                                 </select>
 
@@ -179,6 +244,22 @@
                                     <label class="form-check-label" for="is_public">
                                         <span class="fw-bold text-dark">Public Availability</span>
                                         <span class="d-block small text-muted" style="line-height: 1.1;">Allow external researchers to view basic metadata.</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check form-switch custom-switch-lg d-flex align-items-center bg-warning-subtle p-2 rounded border border-warning mt-3">
+                                    <input
+                                        class="form-check-input ms-0 mt-0 me-3"
+                                        type="checkbox"
+                                        role="switch"
+                                        id="is_embargoed"
+                                        name="is_embargoed"
+                                    >
+                                    <label class="form-check-label" for="is_embargoed">
+                                        <span class="fw-bold text-dark">Sample Embargo</span>
+                                        <span class="d-block small text-muted" style="line-height: 1.1;">
+                                            When enabled, public access is blocked even if Public Availability is enabled.
+                                        </span>
                                     </label>
                                 </div>
                             </div>
@@ -223,10 +304,9 @@
                                             <div class="flex-grow-1">
                                                 <span class="fw-bold d-block mb-1">{{ intake_prefill.matched_biobank_name }}</span>
                                                 <input type="hidden" name="dist_biobank_id[]" value="{{ intake_prefill.matched_biobank_id }}">
-                                                <input type="hidden" name="dist_collection_id[]" value="{{ intake_prefill.matched_collection_id|default:'' }}">
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    <span class="text-muted small">Aliquots Qty:</span>
-                                                    <input type="number" name="dist_quantity[]" class="form-control form-control-sm" value="1" min="1" style="width: 80px;">
+                                                                                                <div class="d-flex gap-2 align-items-center">
+                                                    <span class="text-muted small">Aliquot Count in this Biobank:</span>
+                                                    <input type="number" name="dist_quantity[]" class="form-control form-control-sm" value="1" min="1" step="1" style="width: 80px;">
                                                 </div>
                                             </div>
                                         </div>
@@ -288,7 +368,21 @@
                 </div>
 
                 <div class="mb-5">
-                    <h5 class="form-section-title">4. Scientific Notes (ELN) and Attachments</h5>
+                    <h5 class="form-section-title">
+                        4. Sample Origin & Collection Site
+                    </h5>
+
+                    <p class="text-muted small">
+                        Record where the biological material originally came
+                        from. This is independent from Physical Storage in the
+                        laboratory.
+                    </p>
+
+                    {% include "internal/samples/_origin_fields.html" %}
+
+                    <h5 class="form-section-title">
+                        5. Scientific Notes (ELN) and Attachments
+                    </h5>
                     <div class="row g-4">
                         <div class="col-md-8">
                             <div id="eln-editor" style="height: 250px;"></div>
@@ -325,6 +419,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
 
@@ -368,6 +464,7 @@
             setField("sample_id", data.sample_id);
             setField("collaborator", data.provider);
             setField("is_public", data.is_public);
+            setField("biosafety_level", data.biosafety_level);
 
             const intakeInput = document.getElementById("intake_record_id_input");
             if (intakeInput && data.intake_record_id) {
@@ -380,7 +477,7 @@
                 typeInput.dispatchEvent(new Event("change", { bubbles: true }));
             }
 
-            const collectionSelect = document.getElementsByName("collection")[0];
+            const collectionSelect = document.getElementsByName("collections")[0];
             if (collectionSelect && data.matched_collection_id) {
                 collectionSelect.value = String(data.matched_collection_id);
                 collectionSelect.dispatchEvent(new Event("change", { bubbles: true }));

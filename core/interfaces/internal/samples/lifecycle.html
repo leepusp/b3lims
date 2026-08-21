@@ -1,0 +1,226 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Sample Lifecycle · Biobank LIMS{% endblock %}
+{% block page_title %}Sample Lifecycle{% endblock %}
+{% block page_subtitle %}Deactivation, Trash, restoration and controlled permanent deletion{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h4 fw-bold mb-1">
+                <i class="bi bi-archive me-2 text-warning"></i>
+                Sample Lifecycle & Trash
+            </h1>
+            <p class="text-muted mb-0">
+                Trash retention is {{ trash_retention_days }} days.
+                Physical Sample files are preserved until permanent deletion.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'samples_list' %}"
+            class="btn btn-sm btn-outline-secondary"
+        >
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Samples
+        </a>
+    </div>
+
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-bold">
+            <i class="bi bi-pause-circle me-2 text-secondary"></i>
+            Deactivated Samples
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sample</th>
+                            <th>Type</th>
+                            <th>Owner</th>
+                            <th>Aliquots</th>
+                            <th>Deactivated</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for sample in deactivated_samples %}
+                        <tr>
+                            <td>
+                                <a
+                                    href="{% url 'sample_detail' sample.pk %}"
+                                    class="fw-bold text-decoration-none"
+                                >
+                                    {{ sample.sample_id }}
+                                </a>
+                                <div class="small text-muted">
+                                    {{ sample.organism_name|default:"No organism" }}
+                                </div>
+                            </td>
+                            <td>{{ sample.sample_type|default:"Not assigned" }}</td>
+                            <td>{{ sample.owner.username }}</td>
+                            <td>{{ sample.aliquot_count }}</td>
+                            <td>
+                                {% if sample.deactivated_at %}
+                                    {{ sample.deactivated_at|date:"Y-m-d H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap gap-1">
+                                    <form
+                                        method="post"
+                                        action="{% url 'sample_activate' sample.pk %}"
+                                    >
+                                        {% csrf_token %}
+                                        <button
+                                            class="btn btn-sm btn-outline-success"
+                                            type="submit"
+                                        >
+                                            Restore to Active
+                                        </button>
+                                    </form>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'sample_move_to_trash' sample.pk %}"
+                                        onsubmit="return confirm('Move this Sample to Trash for 30 days?');"
+                                    >
+                                        {% csrf_token %}
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            type="submit"
+                                        >
+                                            Move to Trash
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No deactivated Samples are available to you.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="card shadow-sm border-danger">
+        <div class="card-header fw-bold bg-danger-subtle">
+            <i class="bi bi-trash3 me-2 text-danger"></i>
+            Trash
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-warning small">
+                Samples in Trash are hidden from the active inventory and
+                public access. They remain restorable during the retention
+                period. Permanent deletion first preserves an independent
+                audit snapshot and only then removes the Sample and its
+                physical Sample files.
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sample</th>
+                            <th>Owner</th>
+                            <th>Aliquots</th>
+                            <th>Moved to Trash</th>
+                            <th>Purge After</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for sample in trash_samples %}
+                        <tr>
+                            <td>
+                                <a
+                                    href="{% url 'sample_detail' sample.pk %}"
+                                    class="fw-bold text-decoration-none"
+                                >
+                                    {{ sample.sample_id }}
+                                </a>
+                                <div class="small text-muted">
+                                    {{ sample.organism_name|default:"No organism" }}
+                                </div>
+                            </td>
+                            <td>{{ sample.owner.username }}</td>
+                            <td>{{ sample.aliquot_count }}</td>
+                            <td>{{ sample.deletion_requested_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ sample.purge_after|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if sample.purge_is_due %}
+                                    <span class="badge bg-danger">
+                                        Eligible for deletion
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        {{ sample.days_until_purge }} day{{ sample.days_until_purge|pluralize }} remaining
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap gap-1">
+                                    <form
+                                        method="post"
+                                        action="{% url 'sample_restore' sample.pk %}"
+                                    >
+                                        {% csrf_token %}
+                                        <button
+                                            class="btn btn-sm btn-outline-success"
+                                            type="submit"
+                                        >
+                                            Restore
+                                        </button>
+                                    </form>
+
+                                    {% if sample.purge_is_due %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'sample_purge' sample.pk %}"
+                                        onsubmit="return confirm('Permanently delete this Sample and its physical Sample files? This cannot be undone.');"
+                                    >
+                                        {% csrf_token %}
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            type="submit"
+                                        >
+                                            Delete Permanently
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                Trash is empty.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -2,6 +2,16 @@
 from django import forms
 from core.models import Biobank, Collection, Tag, Sample
 from core.models import Bacteria, Phage, Plasmid
+from core.models.samples.origin import SampleOrigin
+from core.models.research_groups.model import ResearchGroup
+from django.contrib.auth.models import User
+
+from core.permissions.biobanks import editable_biobanks_for_user
+from core.permissions.samples import (
+    assignable_sample_owners_for_user,
+    editable_sample_collections_for_user,
+    sample_research_groups_for_user,
+)
 
 # ----------------------------------------------------------
 # BIOBANK, COLLECTION & TAG FORMS
@@ -49,26 +59,383 @@ class SampleForm(forms.ModelForm):
     class Meta:
         model = Sample
         fields = [
-            "sample_id", "sample_type",
-            "biosafety_level", "organism_name", 
-            "status", "is_public", "storage_location",
-            "biobank", "collections", "scientific_notes"
+            "sample_id",
+            "sample_type",
+            "biosafety_level",
+            "organism_name",
+            "status",
+            "aliquot_count",
+            "is_public",
+            "is_embargoed",
+            "owner",
+            "research_group",
+            "biobank",
+            "collections",
+            "storage_location",
+            "scientific_notes",
         ]
         labels = {
             "biosafety_level": "Biosafety Level",
+            "aliquot_count": "Aliquot Count",
+            "is_embargoed": "Sample Embargo",
+            "research_group": "Research Group",
         }
         widgets = {
-            "sample_id": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}), 
-            "biosafety_level": forms.Select(attrs={"class": "form-select"}),
-            "sample_type": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}),
-            "organism_name": forms.TextInput(attrs={"class": "form-control"}),
-            "status": forms.Select(attrs={"class": "form-select"}),
-            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "storage_location": forms.TextInput(attrs={"class": "form-control"}),
-            "biobank": forms.Select(attrs={"class": "form-select"}),
-            "collections": forms.SelectMultiple(attrs={"class": "form-select"}),
-            "scientific_notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "sample_id": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "readonly": "readonly",
+                }
+            ),
+            "sample_type": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "readonly": "readonly",
+                }
+            ),
+            "biosafety_level": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "organism_name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "status": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "aliquot_count": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "1",
+                    "step": "1",
+                }
+            ),
+            "is_public": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+            "is_embargoed": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+            "owner": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "research_group": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "biobank": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "collections": forms.SelectMultiple(
+                attrs={
+                    "class": "form-select",
+                    "size": "5",
+                }
+            ),
+            "storage_location": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "scientific_notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                }
+            ),
         }
+
+    def __init__(
+        self,
+        *args,
+        user=None,
+        **kwargs,
+    ):
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+
+        if user is None:
+            return
+
+        owner_qs = assignable_sample_owners_for_user(
+            user
+        )
+
+        group_qs = sample_research_groups_for_user(
+            user
+        )
+
+        biobank_qs = editable_biobanks_for_user(
+            user
+        )
+
+        collection_qs = editable_sample_collections_for_user(
+            user
+        )
+
+        if self.instance and self.instance.pk:
+            if self.instance.owner_id:
+                owner_ids = list(
+                    owner_qs.values_list(
+                        "pk",
+                        flat=True,
+                    )
+                )
+
+                if self.instance.owner_id not in owner_ids:
+                    owner_ids.append(
+                        self.instance.owner_id
+                    )
+
+                owner_qs = User.objects.filter(
+                    pk__in=owner_ids
+                )
+
+            if self.instance.research_group_id:
+                group_ids = list(
+                    group_qs.values_list(
+                        "pk",
+                        flat=True,
+                    )
+                )
+
+                if self.instance.research_group_id not in group_ids:
+                    group_ids.append(
+                        self.instance.research_group_id
+                    )
+
+                group_qs = ResearchGroup.objects.filter(
+                    pk__in=group_ids
+                )
+
+            if self.instance.biobank_id:
+                biobank_ids = list(
+                    biobank_qs.values_list(
+                        "pk",
+                        flat=True,
+                    )
+                )
+
+                if self.instance.biobank_id not in biobank_ids:
+                    biobank_ids.append(
+                        self.instance.biobank_id
+                    )
+
+                biobank_qs = Biobank.objects.filter(
+                    pk__in=biobank_ids
+                )
+
+            current_collection_ids = list(
+                self.instance.collections.values_list(
+                    "pk",
+                    flat=True,
+                )
+            )
+
+            if current_collection_ids:
+                editable_collection_ids = list(
+                    collection_qs.values_list(
+                        "pk",
+                        flat=True,
+                    )
+                )
+
+                collection_ids = list(
+                    dict.fromkeys(
+                        editable_collection_ids
+                        + current_collection_ids
+                    )
+                )
+
+                collection_qs = Collection.objects.filter(
+                    pk__in=collection_ids
+                )
+
+        self.fields["owner"].queryset = owner_qs.order_by(
+            "username"
+        )
+        self.fields["research_group"].queryset = group_qs.order_by(
+            "name"
+        )
+        self.fields["biobank"].queryset = biobank_qs.order_by(
+            "name"
+        )
+        self.fields["collections"].queryset = collection_qs.order_by(
+            "name"
+        )
+
+
+class SampleOriginForm(forms.ModelForm):
+    class Meta:
+        model = SampleOrigin
+        fields = [
+            "collection_site_name",
+            "collection_date",
+            "geo_loc_name",
+            "country_or_ocean",
+            "latitude",
+            "longitude",
+            "depth_m",
+            "elevation_m",
+            "habitat",
+            "environmental_medium",
+            "env_broad_scale",
+            "env_local_scale",
+            "collection_method",
+            "notes",
+            "location_visibility",
+        ]
+        widgets = {
+            "collection_site_name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Collection site or station"
+                    ),
+                }
+            ),
+            "collection_date": forms.DateInput(
+                attrs={
+                    "class": "form-control",
+                    "type": "date",
+                }
+            ),
+            "geo_loc_name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Geographic region or locality"
+                    ),
+                }
+            ),
+            "country_or_ocean": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Brazil, Atlantic Ocean, Pacific Ocean..."
+                    ),
+                }
+            ),
+            "latitude": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.000001",
+                    "min": "-90",
+                    "max": "90",
+                    "placeholder": "-23.550520",
+                }
+            ),
+            "longitude": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.000001",
+                    "min": "-180",
+                    "max": "180",
+                    "placeholder": "-46.633308",
+                }
+            ),
+            "depth_m": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.001",
+                    "min": "0",
+                    "placeholder": "Depth in metres",
+                }
+            ),
+            "elevation_m": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.001",
+                    "placeholder": (
+                        "Elevation relative to sea level"
+                    ),
+                }
+            ),
+            "habitat": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Marine water, sediment, soil, host..."
+                    ),
+                }
+            ),
+            "environmental_medium": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Ocean water, sediment, tissue..."
+                    ),
+                }
+            ),
+            "env_broad_scale": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "env_local_scale": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                }
+            ),
+            "collection_method": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                }
+            ),
+            "location_visibility": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+        }
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Geographic provenance itself is optional.
+        # Do not make location visibility force creation of an empty
+        # SampleOrigin record.
+        self.fields["location_visibility"].required = False
+
+        if not self.is_bound:
+            self.fields[
+                "location_visibility"
+            ].initial = (
+                SampleOrigin.LOCATION_INTERNAL
+            )
+
+    def clean_location_visibility(self):
+        return (
+            self.cleaned_data.get(
+                "location_visibility"
+            )
+            or SampleOrigin.LOCATION_INTERNAL
+        )
+
 
 # ----------------------------------------------------------
 # 2. BACTERIA FORM

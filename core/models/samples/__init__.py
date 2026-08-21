@@ -1,3 +1,4 @@
+from .origin import SampleOrigin
 from core.models.samples.storage import StorageLocation, SampleStorageAssignment
 from .sample import Sample
 from .sample_files import SampleFile
@@ -6,6 +7,7 @@ from .relationship import SampleRelationship
 from .intake import SampleImportBatch, SampleIntakeRecord
 
 __all__ = [
+    "SampleOrigin",
     "Sample",
     "SampleFile",
     "Bacteria",

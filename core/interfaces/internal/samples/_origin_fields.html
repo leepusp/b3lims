@@ -1,0 +1,200 @@
+<div
+    class="sample-origin-editor"
+    data-sample-origin-editor
+>
+    {% if origin_form.non_field_errors %}
+        <div class="alert alert-danger py-2">
+            {{ origin_form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Collection Site
+            </label>
+            {{ origin_form.collection_site_name }}
+            {% if origin_form.collection_site_name.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.collection_site_name.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Collection Date
+            </label>
+            {{ origin_form.collection_date }}
+            {% if origin_form.collection_date.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.collection_date.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Location Visibility
+            </label>
+            {{ origin_form.location_visibility }}
+            <div class="sample-origin-help mt-1">
+                Internal only is the safest default.
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Geographic Location
+            </label>
+            {{ origin_form.geo_loc_name }}
+            {% if origin_form.geo_loc_name.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.geo_loc_name.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Country / Ocean
+            </label>
+            {{ origin_form.country_or_ocean }}
+            {% if origin_form.country_or_ocean.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.country_or_ocean.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Latitude
+            </label>
+            {{ origin_form.latitude }}
+            {% if origin_form.latitude.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.latitude.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Longitude
+            </label>
+            {{ origin_form.longitude }}
+            {% if origin_form.longitude.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.longitude.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Depth (m)
+            </label>
+            {{ origin_form.depth_m }}
+            {% if origin_form.depth_m.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.depth_m.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold small">
+                Elevation / Altitude (m)
+            </label>
+            {{ origin_form.elevation_m }}
+            {% if origin_form.elevation_m.errors %}
+                <div class="text-danger small">
+                    {{ origin_form.elevation_m.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Habitat
+            </label>
+            {{ origin_form.habitat }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Environmental Medium
+            </label>
+            {{ origin_form.environmental_medium }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Broad-scale Environmental Context
+            </label>
+            {{ origin_form.env_broad_scale }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Local Environmental Context
+            </label>
+            {{ origin_form.env_local_scale }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Collection Method
+            </label>
+            {{ origin_form.collection_method }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold small">
+                Origin Notes
+            </label>
+            {{ origin_form.notes }}
+        </div>
+
+    </div>
+
+    <hr>
+
+    <div class="sample-origin-map-toolbar">
+        <strong>
+            <i class="bi bi-geo-alt me-1 text-primary"></i>
+            Interactive Collection Map
+        </strong>
+
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary ms-auto"
+            data-origin-clear-coordinates
+        >
+            <i class="bi bi-x-circle me-1"></i>
+            Clear Coordinates
+        </button>
+    </div>
+
+    <div
+        class="sample-origin-map"
+        data-sample-origin-map
+    ></div>
+
+    <div class="d-flex flex-wrap justify-content-between gap-2 mt-2">
+        <span class="sample-origin-help">
+            Click anywhere on the map to set the collection point.
+            The marker can also be dragged. Marine and offshore
+            coordinates are valid.
+        </span>
+
+        <span
+            class="sample-origin-coordinate-status"
+            data-origin-coordinate-status
+        >
+            No collection coordinates selected.
+        </span>
+    </div>
+</div>

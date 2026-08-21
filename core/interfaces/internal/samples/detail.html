@@ -1,4 +1,10 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
+{% endblock %}
 
 {% block title %}{{ sample.sample_id }} · Samples · Biobank LIMS{% endblock %}
 {% block page_title %}Samples{% endblock %}
@@ -278,6 +284,327 @@
     </div>
 
 
+        <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+            <i class="bi bi-geo-alt me-2 text-primary"></i>
+            Sample Origin & Collection Site
+        </div>
+
+        <div class="card-body">
+            {% if sample_origin %}
+                <div class="sample-origin-readout mb-3">
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Collection Site
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.collection_site_name|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Geographic Location
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.geo_loc_name|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Country / Ocean
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.country_or_ocean|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Collection Date
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {% if sample_origin.collection_date %}
+                                {{ sample_origin.collection_date|date:"Y-m-d" }}
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Coordinates
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {% if sample_origin.has_coordinates %}
+                                {{ sample_origin.coordinate_text }}
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Depth
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {% if sample_origin.depth_m != None %}
+                                {{ sample_origin.depth_m }} m
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Elevation / Altitude
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {% if sample_origin.elevation_m != None %}
+                                {{ sample_origin.elevation_m }} m
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Habitat
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.habitat|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Environmental Medium
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.environmental_medium|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <div class="sample-origin-readout-item">
+                        <div class="sample-origin-readout-label">
+                            Location Visibility
+                        </div>
+                        <div class="sample-origin-readout-value">
+                            {{ sample_origin.get_location_visibility_display }}
+                        </div>
+                    </div>
+
+                </div>
+
+                {% if sample_origin.has_coordinates %}
+                    <div
+                        class="sample-origin-map sample-origin-map-sm"
+                        data-sample-origin-readonly-map
+                        data-latitude="{{ sample_origin.latitude }}"
+                        data-longitude="{{ sample_origin.longitude }}"
+                    ></div>
+                {% else %}
+                    <div class="alert alert-light border mb-0">
+                        Geographic provenance is recorded, but no latitude /
+                        longitude pair has been assigned.
+                    </div>
+                {% endif %}
+
+                {% if sample_origin.collection_method or sample_origin.notes %}
+                    <hr>
+
+                    {% if sample_origin.collection_method %}
+                        <div class="mb-2">
+                            <strong>Collection Method</strong>
+                            <div class="text-muted">
+                                {{ sample_origin.collection_method|linebreaksbr }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if sample_origin.notes %}
+                        <div>
+                            <strong>Origin Notes</strong>
+                            <div class="text-muted">
+                                {{ sample_origin.notes|linebreaksbr }}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+            {% else %}
+                <div class="text-muted">
+                    No geographic origin or collection-site metadata has
+                    been recorded for this Sample.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+<div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+            <i class="bi bi-shield-lock me-2 text-warning"></i>
+            Inventory Controls
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="small text-muted text-uppercase fw-bold">
+                        Aliquot Count
+                    </div>
+                    <div class="fs-5 fw-bold">
+                        {{ sample.aliquot_count }}
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="small text-muted text-uppercase fw-bold">
+                        Embargo
+                    </div>
+                    {% if sample.is_embargoed %}
+                        <span class="badge bg-warning text-dark">Yes</span>
+                    {% else %}
+                        <span class="badge bg-success">No</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <div class="small text-muted text-uppercase fw-bold">
+                        Inventory State
+                    </div>
+                    {% if sample.deletion_requested_at %}
+                        <span class="badge bg-danger">In Trash</span>
+                    {% elif sample.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Deactivated</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <div class="small text-muted text-uppercase fw-bold">
+                        Purge Eligibility
+                    </div>
+                    {% if sample.purge_after %}
+                        {{ sample.purge_after|date:"Y-m-d H:i" }}
+                    {% else %}
+                        <span class="text-muted">Not scheduled</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if can_edit_current_sample or can_delete_current_sample %}
+            <hr>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a
+                    href="{% url 'samples_lifecycle' %}"
+                    class="btn btn-sm btn-outline-secondary"
+                >
+                    <i class="bi bi-archive me-1"></i>
+                    Lifecycle & Trash
+                </a>
+
+                {% if can_edit_current_sample and not sample.deletion_requested_at %}
+                    {% if sample.is_active %}
+                    <form
+                        method="post"
+                        action="{% url 'sample_deactivate' sample.pk %}"
+                        class="d-inline"
+                    >
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-outline-warning"
+                        >
+                            <i class="bi bi-pause-circle me-1"></i>
+                            Deactivate
+                        </button>
+                    </form>
+                    {% else %}
+                    <form
+                        method="post"
+                        action="{% url 'sample_activate' sample.pk %}"
+                        class="d-inline"
+                    >
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-outline-success"
+                        >
+                            <i class="bi bi-play-circle me-1"></i>
+                            Reactivate
+                        </button>
+                    </form>
+                    {% endif %}
+                {% endif %}
+
+                {% if can_delete_current_sample %}
+                    {% if sample.deletion_requested_at %}
+                        <form
+                            method="post"
+                            action="{% url 'sample_restore' sample.pk %}"
+                            class="d-inline"
+                        >
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-outline-success"
+                            >
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                Restore
+                            </button>
+                        </form>
+
+                        {% if purge_is_due %}
+                        <form
+                            method="post"
+                            action="{% url 'sample_purge' sample.pk %}"
+                            class="d-inline"
+                            onsubmit="return confirm('Permanently delete this Sample and its physical Sample files? This cannot be undone.');"
+                        >
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-danger"
+                            >
+                                <i class="bi bi-trash3 me-1"></i>
+                                Delete Permanently
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                        <form
+                            method="post"
+                            action="{% url 'sample_move_to_trash' sample.pk %}"
+                            class="d-inline"
+                            onsubmit="return confirm('Move this Sample to Trash? It will remain restorable for 30 days.');"
+                        >
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-outline-danger"
+                            >
+                                <i class="bi bi-trash me-1"></i>
+                                Move to Trash
+                            </button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+
     <div class="card shadow-sm mb-3">
         <div class="card-header fw-bold">
             <i class="bi bi-journal-text me-2 text-primary"></i>
@@ -531,4 +858,9 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
 {% endblock %}
