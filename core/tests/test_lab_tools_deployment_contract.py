@@ -164,6 +164,10 @@ class LabToolsDeploymentContractTests(SimpleTestCase):
             installer,
         )
         self.assertIn(
+            'chmod g-s "$RUNTIME_ROOT"',
+            installer,
+        )
+        self.assertIn(
             'install -o root -g biobank -m 0755',
             installer,
         )
