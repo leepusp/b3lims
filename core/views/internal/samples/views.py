@@ -2154,7 +2154,75 @@ def sample_edit_view(request, sample_id):
             prefix="origin",
         )
 
-        if form.is_valid() and origin_form.is_valid():
+        keyword_pairs_text = (
+            request.POST.get(
+                "keyword_pairs_text",
+                "",
+            )
+            or ""
+        )
+
+        keyword_pairs = []
+        keyword_pairs_error = ""
+
+        for line_number, raw_line in enumerate(
+            keyword_pairs_text.splitlines(),
+            start=1,
+        ):
+            line = raw_line.strip()
+
+            if not line:
+                continue
+
+            if ":" not in line:
+                keyword_pairs_error = (
+                    f"Custom keyword line {line_number} must use "
+                    "the format Key: Value."
+                )
+                break
+
+            key, value = line.split(
+                ":",
+                1,
+            )
+
+            key = key.strip()
+            value = value.strip()
+
+            if not key or not value:
+                keyword_pairs_error = (
+                    f"Custom keyword line {line_number} must contain "
+                    "both a key and a value."
+                )
+                break
+
+            keyword_pairs.append(
+                (
+                    key,
+                    value,
+                )
+            )
+
+        keyword_pairs = list(
+            dict.fromkeys(
+                keyword_pairs
+            )
+        )
+
+        form_valid = form.is_valid()
+        origin_valid = origin_form.is_valid()
+
+        if keyword_pairs_error:
+            form.add_error(
+                None,
+                keyword_pairs_error,
+            )
+
+        if (
+            form_valid
+            and origin_valid
+            and not keyword_pairs_error
+        ):
             identity_before = _safe_sample_text(getattr(base_sample, "organism_name", ""))
             real_sample = form.save()
 
@@ -2177,9 +2245,29 @@ def sample_edit_view(request, sample_id):
             )
 
 
-            tag_ids = request.POST.getlist("tags")
-            if tag_ids:
-                base_sample.tags.set(tag_ids)
+            tag_ids = request.POST.getlist(
+                "tags"
+            )
+
+            base_sample.tags.set(
+                active_tags_from_ids(
+                    tag_ids
+                )
+            )
+
+            base_sample.keywords.clear()
+
+            for key, value in keyword_pairs:
+                keyword_value, _ = (
+                    get_or_create_active_keyword_value(
+                        key,
+                        value,
+                    )
+                )
+
+                base_sample.keywords.add(
+                    keyword_value
+                )
 
             storage_location = form.cleaned_data.get("storage_location", "")
 
@@ -2294,6 +2382,67 @@ def sample_edit_view(request, sample_id):
     if "storage_location" in form.fields and current_storage_location:
         form.initial["storage_location"] = current_storage_location
 
+    all_tags = (
+        Tag.objects
+        .filter(
+            is_active=True,
+        )
+        .order_by(
+            "name"
+        )
+    )
+
+    if request.method == "POST":
+        selected_tag_ids = []
+
+        for raw_tag_id in request.POST.getlist(
+            "tags"
+        ):
+            try:
+                selected_tag_ids.append(
+                    int(
+                        raw_tag_id
+                    )
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+        keyword_pairs_text = (
+            request.POST.get(
+                "keyword_pairs_text",
+                "",
+            )
+            or ""
+        )
+
+    else:
+        selected_tag_ids = list(
+            base_sample.tags.values_list(
+                "pk",
+                flat=True,
+            )
+        )
+
+        keyword_pairs_text = "\n".join(
+            (
+                f"{keyword_value.keyword.name}: "
+                f"{keyword_value.value}"
+            )
+            for keyword_value in (
+                base_sample.keywords
+                .select_related(
+                    "keyword"
+                )
+                .order_by(
+                    "keyword__name",
+                    "value",
+                )
+            )
+        )
+
     ctx = base_context(request)
     ctx.update({
         'form': form,
@@ -2307,6 +2456,9 @@ def sample_edit_view(request, sample_id):
         'current_phages_string': current_phages_string,
         'current_storage_location': current_storage_location,
         'current_storage_paths': current_storage_paths,
+        'all_tags': all_tags,
+        'selected_tag_ids': selected_tag_ids,
+        'keyword_pairs_text': keyword_pairs_text,
         'all_samples': visible_samples_for_user(request.user).values('sample_id', 'organism_name', 'sample_type'),
     })
     return render(request, "internal/samples/edit.html", ctx)

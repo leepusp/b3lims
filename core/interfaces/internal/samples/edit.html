@@ -43,6 +43,20 @@
     <form method="POST" enctype="multipart/form-data" id="mainSampleForm">
         {% csrf_token %}
 
+        {% if form.non_field_errors %}
+            <div
+                class="alert alert-danger py-2 mb-4"
+                data-sample-edit-non-field-errors
+            >
+                {% for error in form.non_field_errors %}
+                    <div>
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <input type="hidden" name="scientific_notes" id="scientific_notes_input" value="{{ sample.scientific_notes|default:'' }}">
 
         <input type="hidden" id="init_hosts" value="{{ current_host_id|default:'' }}">
@@ -109,11 +123,6 @@
                         <div class="form-text small" style="font-size: 0.70rem;">(Ex: Freezer 1 ↵ Box A ↵)</div>
                     </div>
 
-                    <div class="col-md-12 mt-2 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase"><i class="bi bi-person-badge me-1"></i>Collaborator / Provider</label>
-                        <input type="text" name="collaborator" class="form-control bg-light" value="{{ sample.collaborator|default:'' }}" placeholder="Who isolated, donated or provided this sample?">
-                    </div>
-
                     <div class="col-md-6 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">
                             {{ form.owner.label }}
@@ -169,6 +178,90 @@
                     </div>
                 </div>
 
+                <div class="mt-5 p-4 bg-light border rounded">
+                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">
+                        <i class="bi bi-tags me-2 text-primary"></i>
+                        Metadata & Classification
+                    </h5>
+
+                    <div class="row g-4">
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">
+                                {{ form.notes.label }}
+                            </label>
+
+                            {{ form.notes }}
+
+                            <div class="form-text">
+                                Internal operational notes are separate
+                                from Scientific Notes (ELN).
+                            </div>
+
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.notes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label
+                                for="sampleTags"
+                                class="form-label fw-bold small"
+                            >
+                                Tags
+                            </label>
+
+                            <select
+                                id="sampleTags"
+                                name="tags"
+                                class="form-select"
+                                multiple
+                                size="7"
+                            >
+                                {% for tag in all_tags %}
+                                    <option
+                                        value="{{ tag.pk }}"
+                                        {% if tag.pk in selected_tag_ids %}selected{% endif %}
+                                    >
+                                        {{ tag.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+
+                            <div class="form-text">
+                                Select zero or more active Tags.
+                                Clearing all selections removes all Tags.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label
+                                for="keywordPairsText"
+                                class="form-label fw-bold small"
+                            >
+                                Custom Keywords
+                            </label>
+
+                            <textarea
+                                id="keywordPairsText"
+                                name="keyword_pairs_text"
+                                class="form-control"
+                                rows="7"
+                                placeholder="Target Gene: eGFP&#10;Expression System: T7"
+                            >{{ keyword_pairs_text }}</textarea>
+
+                            <div class="form-text">
+                                One Key: Value pair per line.
+                                Emptying this field removes all
+                                custom Keywords.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div id="biologicalRelationshipsSection" class="mt-5 p-4 bg-success-subtle border border-success rounded d-none">
                     <h5 class="text-uppercase text-success fw-bold small mb-3 border-bottom border-success pb-2">
                         <i class="bi bi-diagram-3 me-2"></i>Biological Interactions & Storage
@@ -204,7 +297,7 @@
 
                 {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
                 {% for field in form %}
-                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,aliquot_count,is_public,is_embargoed,owner,research_group,storage_location,biobank,collections,scientific_notes,collaborator" %}
+                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,aliquot_count,is_public,is_embargoed,owner,research_group,storage_location,biobank,collections,scientific_notes,notes,collaborator" %}
                         {% if forloop.first or forloop.counter0 == 0 %}
                             <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
                                 <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">

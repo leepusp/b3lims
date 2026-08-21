@@ -73,12 +73,14 @@ class SampleForm(forms.ModelForm):
             "collections",
             "storage_location",
             "scientific_notes",
+            "notes",
         ]
         labels = {
             "biosafety_level": "Biosafety Level",
             "aliquot_count": "Aliquot Count",
             "is_embargoed": "Sample Embargo",
             "research_group": "Research Group",
+            "notes": "Internal Notes",
         }
         widgets = {
             "sample_id": forms.TextInput(
@@ -155,6 +157,15 @@ class SampleForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "rows": 3,
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": (
+                        "Internal operational notes."
+                    ),
                 }
             ),
         }
