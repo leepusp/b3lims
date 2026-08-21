@@ -8,11 +8,11 @@
 >
 <link
     rel="stylesheet"
-    href="{% static 'internal/samples/sample_origin_map.css' %}"
+    href="{% static 'internal/samples/sample_origin_map.css' %}?v=20260821-map3"
 >
 <link
     rel="stylesheet"
-    href="{% static 'internal/samples/sample_origin_distribution_map.css' %}"
+    href="{% static 'internal/samples/sample_origin_distribution_map.css' %}?v=20260821-map3"
 >
 {% endblock %}
 
@@ -426,5 +426,5 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260821-map3"></script>
 {% endblock %}

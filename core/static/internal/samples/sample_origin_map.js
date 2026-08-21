@@ -31,11 +31,24 @@
         );
     }
 
-    function addBaseLayer(map) {
+    function addBaseLayer(
+        map,
+        options = {}
+    ) {
+        const noWrap =
+            options.noWrap === true;
+
         return L.tileLayer(
             "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             {
                 maxZoom: 19,
+                noWrap,
+                bounds: noWrap
+                    ? [
+                        [-85.05112878, -180],
+                        [85.05112878, 180],
+                    ]
+                    : undefined,
                 attribution: "&copy; OpenStreetMap contributors",
             }
         ).addTo(map);
@@ -381,103 +394,299 @@
         );
     }
 
-    function makePopup(point) {
-        const root =
+    function popupHasValue(value) {
+        return !(
+            value === null
+            || value === undefined
+            || String(value).trim() === ""
+        );
+    }
+
+    function popupText(
+        parent,
+        className,
+        value
+    ) {
+        const element =
             document.createElement("div");
 
-        const title =
+        element.className =
+            className;
+
+        element.textContent =
+            String(value);
+
+        parent.appendChild(
+            element
+        );
+
+        return element;
+    }
+
+    function addPopupField(
+        section,
+        label,
+        value
+    ) {
+        if (!popupHasValue(value)) {
+            return;
+        }
+
+        const row =
             document.createElement("div");
 
-        title.className =
-            "sample-origin-popup-title";
+        row.className =
+            "sample-origin-popup-field";
 
-        title.textContent =
-            point.sample_id || "Sample";
+        popupText(
+            row,
+            "sample-origin-popup-field-label",
+            label
+        );
 
-        root.appendChild(
+        popupText(
+            row,
+            "sample-origin-popup-field-value",
+            value
+        );
+
+        section.appendChild(
+            row
+        );
+    }
+
+    function addPopupSection(
+        body,
+        title,
+        fields
+    ) {
+        const populated =
+            fields.filter(
+                ([, value]) => (
+                    popupHasValue(value)
+                )
+            );
+
+        if (!populated.length) {
+            return;
+        }
+
+        const section =
+            document.createElement("div");
+
+        section.className =
+            "sample-origin-popup-section";
+
+        popupText(
+            section,
+            "sample-origin-popup-section-title",
             title
         );
 
-        const metadata = [
-            [
-                "Type",
-                point.sample_type,
-            ],
-            [
-                "Origin",
-                point.collection_site_name
-                    || point.geo_loc_name
-                    || point.country_or_ocean,
-            ],
-            [
-                "Country / Ocean",
-                point.country_or_ocean,
-            ],
-            [
-                "Coordinates",
-                (
-                    `${Number(point.latitude).toFixed(6)}, `
-                    + `${Number(point.longitude).toFixed(6)}`
-                ),
-            ],
-            [
-                "Depth",
-                (
-                    point.depth_m !== null
-                    && point.depth_m !== ""
-                )
-                    ? `${point.depth_m} m`
-                    : "",
-            ],
-            [
-                "Environment",
-                point.environmental_medium,
-            ],
-            [
-                "Biobank",
-                point.biobank,
-            ],
-            [
-                "Research Group",
-                point.research_group,
-            ],
-        ];
-
-        metadata.forEach(
+        populated.forEach(
             ([label, value]) => {
-                if (!value) {
-                    return;
-                }
-
-                const row =
-                    document.createElement("div");
-
-                row.className =
-                    "sample-origin-popup-meta";
-
-                const strong =
-                    document.createElement("strong");
-
-                strong.textContent =
-                    `${label}: `;
-
-                row.appendChild(
-                    strong
-                );
-
-                row.appendChild(
-                    document.createTextNode(
-                        String(value)
-                    )
-                );
-
-                root.appendChild(
-                    row
+                addPopupField(
+                    section,
+                    label,
+                    value
                 );
             }
         );
 
+        body.appendChild(
+            section
+        );
+    }
+
+    function makePopup(point) {
+        const root =
+            document.createElement("div");
+
+        root.className =
+            "sample-origin-popup-card";
+
+        const header =
+            document.createElement("div");
+
+        header.className =
+            "sample-origin-popup-header";
+
+        popupText(
+            header,
+            "sample-origin-popup-organism",
+            point.organism_name
+                || "Unspecified organism"
+        );
+
+        popupText(
+            header,
+            "sample-origin-popup-sample-id",
+            point.sample_id
+                || "Sample"
+        );
+
+        const badges =
+            document.createElement("div");
+
+        badges.className =
+            "sample-origin-popup-badges";
+
+        [
+            point.sample_type,
+            point.status_label,
+        ].forEach(
+            (value) => {
+                if (!popupHasValue(value)) {
+                    return;
+                }
+
+                popupText(
+                    badges,
+                    "sample-origin-popup-badge",
+                    value
+                );
+            }
+        );
+
+        if (badges.childElementCount) {
+            header.appendChild(
+                badges
+            );
+        }
+
+        root.appendChild(
+            header
+        );
+
+        const body =
+            document.createElement("div");
+
+        body.className =
+            "sample-origin-popup-body";
+
+        const lat =
+            numberOrNull(
+                point.latitude
+            );
+
+        const lng =
+            numberOrNull(
+                point.longitude
+            );
+
+        const coordinates =
+            coordinatePairIsValid(
+                lat,
+                lng
+            )
+                ? (
+                    `${lat.toFixed(6)}, `
+                    + `${lng.toFixed(6)}`
+                )
+                : "";
+
+        const depth =
+            popupHasValue(
+                point.depth_m
+            )
+                ? `${point.depth_m} m`
+                : "";
+
+        const elevation =
+            popupHasValue(
+                point.elevation_m
+            )
+                ? `${point.elevation_m} m`
+                : "";
+
+        addPopupSection(
+            body,
+            "Collection",
+            [
+                [
+                    "Site",
+                    point.collection_site_name,
+                ],
+                [
+                    "Location",
+                    point.geo_loc_name,
+                ],
+                [
+                    "Country / Ocean",
+                    point.country_or_ocean,
+                ],
+                [
+                    "Collection date",
+                    point.collection_date,
+                ],
+                [
+                    "Coordinates",
+                    coordinates,
+                ],
+                [
+                    "Depth",
+                    depth,
+                ],
+                [
+                    "Elevation",
+                    elevation,
+                ],
+            ]
+        );
+
+        addPopupSection(
+            body,
+            "Environment",
+            [
+                [
+                    "Habitat",
+                    point.habitat,
+                ],
+                [
+                    "Medium",
+                    point.environmental_medium,
+                ],
+                [
+                    "Broad scale",
+                    point.env_broad_scale,
+                ],
+                [
+                    "Local scale",
+                    point.env_local_scale,
+                ],
+            ]
+        );
+
+        addPopupSection(
+            body,
+            "Governance",
+            [
+                [
+                    "Biobank",
+                    point.biobank,
+                ],
+                [
+                    "Research Group",
+                    point.research_group,
+                ],
+                [
+                    "Owner",
+                    point.owner,
+                ],
+            ]
+        );
+
+        root.appendChild(
+            body
+        );
+
         if (point.detail_url) {
+            const actions =
+                document.createElement("div");
+
+            actions.className =
+                "sample-origin-popup-actions";
+
             const link =
                 document.createElement("a");
 
@@ -490,8 +699,12 @@
             link.textContent =
                 "View Sample";
 
-            root.appendChild(
+            actions.appendChild(
                 link
+            );
+
+            root.appendChild(
+                actions
             );
         }
 
@@ -532,17 +745,43 @@
             return;
         }
 
+        const worldBounds = [
+            [-85, -180],
+            [85, 180],
+        ];
+
+        const worldViewBounds = [
+            [-68, -175],
+            [78, 175],
+        ];
+
         const map = L.map(
             container,
             {
-                worldCopyJump: true,
+                worldCopyJump: false,
+                zoomSnap: 0.25,
+                maxBounds: worldBounds,
+                maxBoundsViscosity: 0.85,
             }
-        ).setView(
-            DEFAULT_CENTER,
-            DEFAULT_ZOOM
         );
 
-        addBaseLayer(map);
+        addBaseLayer(
+            map,
+            {
+                noWrap: true,
+            }
+        );
+
+        map.fitBounds(
+            worldViewBounds,
+            {
+                padding: [
+                    8,
+                    8,
+                ],
+                animate: false,
+            }
+        );
 
         const markerLayer =
             L.layerGroup().addTo(
@@ -680,6 +919,114 @@
             );
         }
 
+        let emptyOverlay = null;
+
+        function updateEmptyOverlay(
+            mappedCount
+        ) {
+            if (mappedCount > 0) {
+                if (emptyOverlay) {
+                    emptyOverlay.remove();
+                    emptyOverlay = null;
+                }
+
+                return;
+            }
+
+            if (!emptyOverlay) {
+                emptyOverlay =
+                    document.createElement("div");
+
+                emptyOverlay.className =
+                    "sample-origin-map-empty-overlay";
+
+                const card =
+                    document.createElement("div");
+
+                card.className =
+                    "sample-origin-map-empty-card";
+
+                const icon =
+                    document.createElement("div");
+
+                icon.className =
+                    "sample-origin-map-empty-icon";
+
+                const iconGlyph =
+                    document.createElement("i");
+
+                iconGlyph.className =
+                    "bi bi-geo-alt";
+
+                icon.appendChild(
+                    iconGlyph
+                );
+
+                const copy =
+                    document.createElement("div");
+
+                const title =
+                    document.createElement("div");
+
+                title.className =
+                    "sample-origin-map-empty-title";
+
+                const detail =
+                    document.createElement("div");
+
+                detail.className =
+                    "sample-origin-map-empty-text";
+
+                copy.appendChild(
+                    title
+                );
+
+                copy.appendChild(
+                    detail
+                );
+
+                card.appendChild(
+                    icon
+                );
+
+                card.appendChild(
+                    copy
+                );
+
+                emptyOverlay.appendChild(
+                    card
+                );
+
+                container.appendChild(
+                    emptyOverlay
+                );
+            }
+
+            const title =
+                emptyOverlay.querySelector(
+                    ".sample-origin-map-empty-title"
+                );
+
+            const detail =
+                emptyOverlay.querySelector(
+                    ".sample-origin-map-empty-text"
+                );
+
+            if (points.length) {
+                title.textContent =
+                    "No mapped Samples match the current filters.";
+
+                detail.textContent =
+                    "Reset or adjust the filters to display available geographic origins.";
+            } else {
+                title.textContent =
+                    "No visible Samples currently have complete latitude / longitude origin data.";
+
+                detail.textContent =
+                    "The map will populate automatically as origin metadata is added.";
+            }
+        }
+
         function render() {
             markerLayer.clearLayers();
 
@@ -788,18 +1135,59 @@
                         return;
                     }
 
+                    const icon =
+                        L.divIcon(
+                            {
+                                className:
+                                    "sample-origin-marker-icon",
+                                html:
+                                    '<span class="sample-origin-marker-dot"></span>',
+                                iconSize: [
+                                    22,
+                                    22,
+                                ],
+                                iconAnchor: [
+                                    11,
+                                    11,
+                                ],
+                                popupAnchor: [
+                                    0,
+                                    -12,
+                                ],
+                            }
+                        );
+
                     const marker =
                         L.marker(
                             [
                                 lat,
                                 lng,
-                            ]
+                            ],
+                            {
+                                icon,
+                                keyboard: true,
+                                title:
+                                    point.organism_name
+                                    || point.sample_id
+                                    || "Sample",
+                            }
                         );
 
                     marker.bindPopup(
                         makePopup(
                             point
-                        )
+                        ),
+                        {
+                            className:
+                                "sample-origin-leaflet-popup",
+                            minWidth: 320,
+                            maxWidth: 340,
+                            autoPan: true,
+                            autoPanPadding: [
+                                24,
+                                24,
+                            ],
+                        }
                     );
 
                     marker.addTo(
@@ -813,6 +1201,10 @@
                         ]
                     );
                 }
+            );
+
+            updateEmptyOverlay(
+                coordinates.length
             );
 
             if (summaryElement) {
@@ -849,9 +1241,15 @@
                     }
                 );
             } else {
-                map.setView(
-                    DEFAULT_CENTER,
-                    DEFAULT_ZOOM
+                map.fitBounds(
+                    worldViewBounds,
+                    {
+                        padding: [
+                            8,
+                            8,
+                        ],
+                        animate: false,
+                    }
                 );
             }
         }
