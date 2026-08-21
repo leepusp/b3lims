@@ -1,0 +1,251 @@
+.sample-distribution-page {
+    padding: 22px 26px 30px;
+}
+
+.sample-distribution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 18px;
+}
+
+.sample-distribution-eyebrow {
+    color: #2563eb;
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 4px;
+}
+
+.sample-distribution-title {
+    color: #0f172a;
+    font-size: 1.55rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.sample-distribution-subtitle {
+    max-width: 760px;
+    color: #64748b;
+    font-size: .86rem;
+    margin: 6px 0 0;
+}
+
+.sample-distribution-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sample-distribution-metrics {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(140px, 1fr)
+        );
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.sample-distribution-metric {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 15px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.sample-distribution-metric-value {
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.sample-distribution-metric-label {
+    color: #64748b;
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-top: 4px;
+}
+
+.sample-distribution-workspace {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr);
+    gap: 14px;
+    align-items: stretch;
+}
+
+.sample-distribution-filter-panel,
+.sample-distribution-map-panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+}
+
+.sample-distribution-filter-panel {
+    padding: 15px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+}
+
+.sample-distribution-panel-heading,
+.sample-distribution-map-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sample-distribution-panel-heading {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eef2f7;
+    margin-bottom: 13px;
+}
+
+.sample-distribution-panel-title,
+.sample-distribution-map-title {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.sample-distribution-panel-title {
+    font-size: .9rem;
+}
+
+.sample-distribution-map-title {
+    font-size: .95rem;
+}
+
+.sample-distribution-panel-help,
+.sample-distribution-map-description {
+    color: #64748b;
+    font-size: .72rem;
+    margin-top: 2px;
+}
+
+.sample-distribution-filter {
+    margin-bottom: 11px;
+}
+
+.sample-distribution-filter label {
+    display: block;
+    color: #334155;
+    font-size: .7rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.sample-distribution-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.sample-distribution-section-label {
+    color: #64748b;
+    border-top: 1px solid #eef2f7;
+    padding-top: 12px;
+    margin: 5px 0 10px;
+    font-size: .64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+}
+
+.sample-distribution-map-panel {
+    min-width: 0;
+    padding: 14px;
+}
+
+.sample-distribution-map-heading {
+    margin-bottom: 11px;
+}
+
+.sample-distribution-map-count {
+    white-space: nowrap;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.sample-origin-map.sample-origin-map-distribution {
+    height: clamp(
+        560px,
+        calc(100vh - 300px),
+        760px
+    );
+    border-radius: 10px;
+}
+
+.sample-distribution-map-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.sample-distribution-empty-note {
+    color: #64748b;
+    font-size: .74rem;
+}
+
+@media (max-width: 1100px) {
+    .sample-distribution-workspace {
+        grid-template-columns: 240px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .sample-distribution-header {
+        flex-direction: column;
+    }
+
+    .sample-distribution-metrics {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(130px, 1fr)
+            );
+    }
+
+    .sample-distribution-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .sample-distribution-filter-panel {
+        max-height: none;
+    }
+
+    .sample-origin-map.sample-origin-map-distribution {
+        height: 520px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sample-distribution-page {
+        padding: 16px 12px 24px;
+    }
+
+    .sample-distribution-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sample-origin-map.sample-origin-map-distribution {
+        height: 440px;
+    }
+}

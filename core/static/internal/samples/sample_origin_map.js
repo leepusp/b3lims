@@ -579,6 +579,36 @@
                 "sample-origin-filter-environment"
             );
 
+        const searchFilter =
+            document.getElementById(
+                "sample-origin-filter-search"
+            );
+
+        const habitatFilter =
+            document.getElementById(
+                "sample-origin-filter-habitat"
+            );
+
+        const broadScaleFilter =
+            document.getElementById(
+                "sample-origin-filter-broad-scale"
+            );
+
+        const localScaleFilter =
+            document.getElementById(
+                "sample-origin-filter-local-scale"
+            );
+
+        const siteFilter =
+            document.getElementById(
+                "sample-origin-filter-site"
+            );
+
+        const resetFilterButton =
+            document.getElementById(
+                "sample-origin-filter-reset"
+            );
+
         const summaryElement =
             document.getElementById(
                 "sample-origin-map-summary"
@@ -602,6 +632,52 @@
             return String(
                 point[key] || ""
             ) === value;
+        }
+
+        function normalizeSearch(value) {
+            return String(
+                value || ""
+            )
+                .trim()
+                .toLocaleLowerCase();
+        }
+
+        function searchMatches(
+            point,
+            value
+        ) {
+            const query =
+                normalizeSearch(
+                    value
+                );
+
+            if (!query) {
+                return true;
+            }
+
+            return [
+                point.sample_id,
+                point.organism_name,
+                point.sample_type,
+                point.collection_site_name,
+                point.geo_loc_name,
+                point.country_or_ocean,
+                point.environmental_medium,
+                point.habitat,
+                point.env_broad_scale,
+                point.env_local_scale,
+                point.biobank,
+                point.research_group,
+                point.owner,
+            ].some(
+                (candidate) => (
+                    normalizeSearch(
+                        candidate
+                    ).includes(
+                        query
+                    )
+                )
+            );
         }
 
         function render() {
@@ -651,6 +727,40 @@
                             selectedValue(
                                 environmentFilter
                             )
+                        )
+                        && matches(
+                            point,
+                            "habitat",
+                            selectedValue(
+                                habitatFilter
+                            )
+                        )
+                        && matches(
+                            point,
+                            "env_broad_scale",
+                            selectedValue(
+                                broadScaleFilter
+                            )
+                        )
+                        && matches(
+                            point,
+                            "env_local_scale",
+                            selectedValue(
+                                localScaleFilter
+                            )
+                        )
+                        && matches(
+                            point,
+                            "collection_site_name",
+                            selectedValue(
+                                siteFilter
+                            )
+                        )
+                        && searchMatches(
+                            point,
+                            searchFilter
+                                ? searchFilter.value
+                                : ""
                         )
                     )
                 );
@@ -753,6 +863,10 @@
             groupFilter,
             locationFilter,
             environmentFilter,
+            habitatFilter,
+            broadScaleFilter,
+            localScaleFilter,
+            siteFilter,
         ].forEach(
             (element) => {
                 if (element) {
@@ -763,6 +877,45 @@
                 }
             }
         );
+
+        if (searchFilter) {
+            searchFilter.addEventListener(
+                "input",
+                render
+            );
+        }
+
+        if (resetFilterButton) {
+            resetFilterButton.addEventListener(
+                "click",
+                () => {
+                    [
+                        typeFilter,
+                        statusFilter,
+                        biobankFilter,
+                        groupFilter,
+                        locationFilter,
+                        environmentFilter,
+                        habitatFilter,
+                        broadScaleFilter,
+                        localScaleFilter,
+                        siteFilter,
+                    ].forEach(
+                        (element) => {
+                            if (element) {
+                                element.value = "";
+                            }
+                        }
+                    );
+
+                    if (searchFilter) {
+                        searchFilter.value = "";
+                    }
+
+                    render();
+                }
+            );
+        }
 
         render();
 

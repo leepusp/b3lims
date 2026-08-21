@@ -1,0 +1,430 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
+<link
+    rel="stylesheet"
+    href="{% static 'internal/samples/sample_origin_map.css' %}"
+>
+<link
+    rel="stylesheet"
+    href="{% static 'internal/samples/sample_origin_distribution_map.css' %}"
+>
+{% endblock %}
+
+{% block content %}
+<div class="sample-distribution-page">
+
+    <div class="sample-distribution-header">
+        <div>
+            <div class="sample-distribution-eyebrow">
+                Geographic Provenance
+            </div>
+
+            <h1 class="sample-distribution-title">
+                <i class="bi bi-globe-americas me-2"></i>
+                Sample Origin Map
+            </h1>
+
+            <p class="sample-distribution-subtitle">
+                Interactive geographic distribution of Samples visible to
+                your account. Collection origin is independent from current
+                physical storage.
+            </p>
+        </div>
+
+        <div class="sample-distribution-actions">
+            <a
+                href="{% url 'samples_list' %}"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Samples
+            </a>
+
+            <a
+                href="{% url 'samples_dashboard' %}"
+                class="btn btn-sm btn-outline-primary"
+            >
+                <i class="bi bi-speedometer2 me-1"></i>
+                Dashboard
+            </a>
+        </div>
+    </div>
+
+
+    <div class="sample-distribution-metrics">
+
+        <div class="sample-distribution-metric">
+            <span class="sample-distribution-metric-value">
+                {{ sample_origin_map_stats.with_coordinates }}
+            </span>
+            <span class="sample-distribution-metric-label">
+                Mapped Samples
+            </span>
+        </div>
+
+        <div class="sample-distribution-metric">
+            <span class="sample-distribution-metric-value">
+                {{ sample_origin_map_stats.with_origin }}
+            </span>
+            <span class="sample-distribution-metric-label">
+                With Origin Metadata
+            </span>
+        </div>
+
+        <div class="sample-distribution-metric">
+            <span class="sample-distribution-metric-value">
+                {{ sample_origin_map_stats.without_coordinates }}
+            </span>
+            <span class="sample-distribution-metric-label">
+                Without Coordinates
+            </span>
+        </div>
+
+        <div class="sample-distribution-metric">
+            <span class="sample-distribution-metric-value">
+                {{ sample_origin_map_stats.total }}
+            </span>
+            <span class="sample-distribution-metric-label">
+                Visible Samples
+            </span>
+        </div>
+
+    </div>
+
+
+    <div class="sample-distribution-workspace">
+
+        <aside class="sample-distribution-filter-panel">
+
+            <div class="sample-distribution-panel-heading">
+                <div>
+                    <div class="sample-distribution-panel-title">
+                        Map Filters
+                    </div>
+                    <div class="sample-distribution-panel-help">
+                        Refine which Sample origins are displayed.
+                    </div>
+                </div>
+
+                <i class="bi bi-sliders"></i>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+
+                <label for="sample-origin-filter-search">
+                    Search
+                </label>
+
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        id="sample-origin-filter-search"
+                        type="search"
+                        class="form-control"
+                        placeholder="Sample, organism, site..."
+                        autocomplete="off"
+                    >
+                </div>
+
+            </div>
+
+
+            <div class="sample-distribution-filter-grid">
+
+                <div class="sample-distribution-filter">
+                    <label for="sample-origin-filter-type">
+                        Sample Type
+                    </label>
+
+                    <select
+                        id="sample-origin-filter-type"
+                        class="form-select form-select-sm"
+                    >
+                        <option value="">All types</option>
+
+                        {% for value in sample_origin_filter_types %}
+                            <option value="{{ value }}">
+                                {{ value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <div class="sample-distribution-filter">
+                    <label for="sample-origin-filter-status">
+                        Status
+                    </label>
+
+                    <select
+                        id="sample-origin-filter-status"
+                        class="form-select form-select-sm"
+                    >
+                        <option value="">All statuses</option>
+
+                        {% for value, label in sample_origin_filter_statuses %}
+                            <option value="{{ value }}">
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-biobank">
+                    Biobank
+                </label>
+
+                <select
+                    id="sample-origin-filter-biobank"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All Biobanks</option>
+
+                    {% for value in sample_origin_filter_biobanks %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-group">
+                    Research Group
+                </label>
+
+                <select
+                    id="sample-origin-filter-group"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All groups</option>
+
+                    {% for value in sample_origin_filter_groups %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-section-label">
+                Environmental Classification
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-broad-scale">
+                    Broad-scale Environment
+                </label>
+
+                <select
+                    id="sample-origin-filter-broad-scale"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All broad-scale environments</option>
+
+                    {% for value in sample_origin_filter_broad_scales %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-habitat">
+                    Habitat
+                </label>
+
+                <select
+                    id="sample-origin-filter-habitat"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All habitats</option>
+
+                    {% for value in sample_origin_filter_habitats %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-environment">
+                    Environmental Medium
+                </label>
+
+                <select
+                    id="sample-origin-filter-environment"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All media</option>
+
+                    {% for value in sample_origin_filter_environments %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-local-scale">
+                    Local-scale Environment
+                </label>
+
+                <select
+                    id="sample-origin-filter-local-scale"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All local environments</option>
+
+                    {% for value in sample_origin_filter_local_scales %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-section-label">
+                Geographic Location
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-location">
+                    Country / Ocean
+                </label>
+
+                <select
+                    id="sample-origin-filter-location"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All locations</option>
+
+                    {% for value in sample_origin_filter_locations %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="sample-distribution-filter">
+                <label for="sample-origin-filter-site">
+                    Collection Site
+                </label>
+
+                <select
+                    id="sample-origin-filter-site"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All collection sites</option>
+
+                    {% for value in sample_origin_filter_sites %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <button
+                id="sample-origin-filter-reset"
+                type="button"
+                class="btn btn-sm btn-outline-secondary w-100"
+            >
+                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                Reset Filters
+            </button>
+
+        </aside>
+
+
+        <section class="sample-distribution-map-panel">
+
+            <div class="sample-distribution-map-heading">
+
+                <div>
+                    <div class="sample-distribution-map-title">
+                        Interactive Distribution Map
+                    </div>
+
+                    <div class="sample-distribution-map-description">
+                        Complete WGS84 latitude / longitude pairs are plotted.
+                        Marine and offshore collection sites are supported.
+                    </div>
+                </div>
+
+                <div class="sample-distribution-map-count">
+                    {{ sample_origin_map_stats.with_coordinates }}
+                    mapped
+                </div>
+
+            </div>
+
+
+            {{ sample_origin_points|json_script:"sample-origin-distribution-points" }}
+
+
+            <div
+                id="sample-origin-distribution-map"
+                class="sample-origin-map sample-origin-map-distribution"
+                data-sample-origin-dashboard
+                data-points-script="sample-origin-distribution-points"
+            ></div>
+
+
+            <div class="sample-distribution-map-footer">
+
+                <div
+                    id="sample-origin-map-summary"
+                    class="sample-origin-dashboard-summary"
+                ></div>
+
+                {% if not sample_origin_map_stats.with_coordinates %}
+                    <div class="sample-distribution-empty-note">
+                        No visible Sample currently has a complete geographic
+                        coordinate pair. The world map remains available and
+                        will populate automatically as origin metadata is added.
+                    </div>
+                {% endif %}
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
+{% endblock %}

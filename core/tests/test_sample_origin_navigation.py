@@ -37,9 +37,8 @@ class SampleOriginNavigationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        expected_url = (
-            reverse("samples_dashboard")
-            + "#sample-origin-map"
+        expected_url = reverse(
+            "samples_origin_map"
         )
 
         self.assertContains(
