@@ -3364,57 +3364,374 @@ def sample_relate_view(request, sample_id):
 @login_required
 def samples_network_view(request):
     """
-    Constrói a estrutura de Nós e Arestas (Nodes & Edges) para o Grafo interativo.
-    Lê relacionamentos genéricos (SampleRelationship) e ecológicos (HostRange).
+    Interactive biological relationship network restricted to Samples
+    already visible to the authenticated user.
+
+    Nodes and edges use the same Sample visibility boundary. Relations
+    with a hidden endpoint are never serialized to the browser.
     """
+    visible_qs = (
+        visible_samples_for_user(
+            request.user
+        )
+        .select_related(
+            "owner",
+            "biobank",
+            "research_group",
+        )
+        .prefetch_related(
+            "collections",
+        )
+        .order_by(
+            "pk"
+        )
+    )
+
+    samples = list(
+        visible_qs
+    )
+
+    visible_ids = {
+        sample.pk
+        for sample in samples
+    }
+
     nodes = []
+    node_index = {}
+
+    for sample in samples:
+        sample_type = (
+            sample.sample_type
+            or ""
+        )
+
+        if "Bacterium" in sample_type:
+            node_type = "bacteria"
+        elif "Phage" in sample_type:
+            node_type = "phage"
+        elif "Plasmid" in sample_type:
+            node_type = "plasmid"
+        else:
+            node_type = "generic"
+
+        collections = sorted(
+            {
+                collection.name
+                for collection in sample.collections.all()
+                if collection.name
+            },
+            key=str.casefold,
+        )
+
+        node = {
+            "id": sample.pk,
+            "label": (
+                sample.sample_id
+                or f"Sample {sample.pk}"
+            ),
+            "sample_id": (
+                sample.sample_id
+                or ""
+            ),
+            "organism_name": (
+                sample.organism_name
+                or ""
+            ),
+            "sample_type": sample_type,
+            "node_type": node_type,
+            "group": node_type,
+            "status": (
+                sample.status
+                or ""
+            ),
+            "status_label": (
+                sample.get_status_display()
+            ),
+            "biosafety_level": (
+                sample.biosafety_level
+                or ""
+            ),
+            "owner": (
+                sample.owner.username
+                if sample.owner_id
+                else ""
+            ),
+            "research_group": (
+                sample.research_group.name
+                if sample.research_group_id
+                else ""
+            ),
+            "biobank": (
+                sample.biobank.name
+                if sample.biobank_id
+                else ""
+            ),
+            "collections": collections,
+            "collections_text": (
+                ", ".join(
+                    collections
+                )
+            ),
+            "is_public": bool(
+                sample.is_public
+            ),
+            "is_embargoed": bool(
+                sample.is_embargoed
+            ),
+            "detail_url": reverse(
+                "sample_detail",
+                args=[
+                    sample.pk,
+                ],
+            ),
+            "degree": 0,
+            "relationship_count": 0,
+            "host_range_count": 0,
+        }
+
+        # Keep the vis-network tooltip plain text. All richer metadata
+        # is rendered by our own inspector using textContent.
+        node["title"] = " | ".join(
+            [
+                node["organism_name"]
+                or "Unspecified organism",
+                node["sample_id"],
+                node["sample_type"]
+                or "Unspecified type",
+            ]
+        )
+
+        nodes.append(
+            node
+        )
+
+        node_index[
+            sample.pk
+        ] = node
+
     edges = []
 
-    # 1. Carrega todos os Samples ativos como NÓS
-    samples = visible_samples_for_user(request.user).select_related('owner', 'biobank', 'research_group')
-    for s in samples:
-        # Define a cor/grupo com base no tipo
-        group = "generic"
-        if "Bacterium" in (s.sample_type or ""): group = "bacteria"
-        elif "Phage" in (s.sample_type or ""): group = "phage"
-        elif "Plasmid" in (s.sample_type or ""): group = "plasmid"
+    relationships = (
+        SampleRelationship.objects
+        .filter(
+            source_sample_id__in=visible_ids,
+            target_sample_id__in=visible_ids,
+        )
+        .select_related(
+            "source_sample",
+            "target_sample",
+            "created_by",
+        )
+        .order_by(
+            "pk"
+        )
+    )
 
-        nodes.append({
-            "id": s.id,
-            "label": s.sample_id,
-            "title": f"<b>{s.organism_name or 'Unknown'}</b><br>Type: {s.sample_type}<br>Owner: {s.owner.username}",
-            "group": group
-        })
+    lineage_types = {
+        "aliquot",
+        "passage",
+        "mutated_from",
+        "assembled_from",
+        "extracted_from",
+    }
 
-    # 2. Carrega as Arestas Genéricas (Linhagem, Alíquotas, Storage)
-    relationships = SampleRelationship.objects.all()
-    for rel in relationships:
-        edges.append({
-            "from": rel.source_sample_id,
-            "to": rel.target_sample_id,
-            "label": rel.get_relationship_type_display(),
+    for relationship in relationships:
+        relationship_type = (
+            relationship.relationship_type
+            or "other"
+        )
+
+        if relationship_type == "STORAGE":
+            category = "storage"
+            label = "Storage / Association"
+        elif relationship_type in lineage_types:
+            category = "lineage"
+            label = (
+                relationship
+                .get_relationship_type_display()
+            )
+        elif relationship_type == "infects":
+            category = "infection"
+            label = (
+                relationship
+                .get_relationship_type_display()
+            )
+        else:
+            category = "other"
+            label = (
+                relationship
+                .get_relationship_type_display()
+            )
+
+        edge_id = (
+            f"relationship-{relationship.pk}"
+        )
+
+        edge = {
+            "id": edge_id,
+            "from": (
+                relationship.source_sample_id
+            ),
+            "to": (
+                relationship.target_sample_id
+            ),
+            "relation_source": (
+                "sample_relationship"
+            ),
+            "relationship_type": (
+                relationship_type
+            ),
+            "relationship_category": (
+                category
+            ),
+            "label": label,
+            "notes": (
+                relationship.notes
+                or ""
+            ),
+            "created_by": (
+                relationship.created_by.username
+                if relationship.created_by_id
+                else ""
+            ),
+            "created_at": (
+                relationship.created_at.isoformat()
+                if relationship.created_at
+                else ""
+            ),
             "arrows": "to",
-            "dashes": True if rel.relationship_type == "STORAGE" else False
-        })
+            "dashes": (
+                category == "storage"
+            ),
+            "color": (
+                {
+                    "color": "#64748b",
+                }
+            ),
+        }
 
-    # 3. Carrega as Arestas Ecológicas (HostRange - Fagos infectando Bactérias)
-    host_ranges = HostRange.objects.all().select_related('phage', 'bacteria')
-    for hr in host_ranges:
-        edges.append({
-            "from": hr.phage_id,
-            "to": hr.bacteria_id,
+        edges.append(
+            edge
+        )
+
+        for sample_id in (
+            relationship.source_sample_id,
+            relationship.target_sample_id,
+        ):
+            node_index[
+                sample_id
+            ]["degree"] += 1
+
+            node_index[
+                sample_id
+            ]["relationship_count"] += 1
+
+    host_ranges = (
+        HostRange.objects
+        .filter(
+            phage_id__in=visible_ids,
+            bacteria_id__in=visible_ids,
+        )
+        .select_related(
+            "phage",
+            "bacteria",
+        )
+        .order_by(
+            "pk"
+        )
+    )
+
+    for host_range in host_ranges:
+        edge = {
+            "id": (
+                f"host-range-{host_range.pk}"
+            ),
+            "from": (
+                host_range.phage_id
+            ),
+            "to": (
+                host_range.bacteria_id
+            ),
+            "relation_source": "host_range",
+            "relationship_type": "host_range",
+            "relationship_category": "infection",
             "label": "Infects",
+            "notes": (
+                host_range.notes
+                or ""
+            ),
+            "is_isolation_host": bool(
+                host_range.is_isolation_host
+            ),
+            "efficiency_eop": (
+                host_range.efficiency_eop
+            ),
             "arrows": "to",
-            "color": {"color": "#dc3545"}  # Linha vermelha para infecção
-        })
+            "dashes": False,
+            "color": {
+                "color": "#dc3545",
+            },
+        }
 
-    ctx = base_context(request)
-    ctx.update({
-        "nodes_json": json.dumps(nodes),
-        "edges_json": json.dumps(edges)
-    })
+        edges.append(
+            edge
+        )
 
-    return render(request, "internal/samples/network.html", ctx)
+        for sample_id in (
+            host_range.phage_id,
+            host_range.bacteria_id,
+        ):
+            node_index[
+                sample_id
+            ]["degree"] += 1
+
+            node_index[
+                sample_id
+            ]["host_range_count"] += 1
+
+    connected_count = sum(
+        1
+        for node in nodes
+        if node["degree"] > 0
+    )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx.update(
+        {
+            "network_nodes": nodes,
+            "network_edges": edges,
+            "network_stats": {
+                "visible_samples": len(
+                    nodes
+                ),
+                "connected_samples": (
+                    connected_count
+                ),
+                "isolated_samples": (
+                    len(nodes)
+                    - connected_count
+                ),
+                "relationships": len(
+                    edges
+                ),
+                "sample_relationships": (
+                    relationships.count()
+                ),
+                "host_ranges": (
+                    host_ranges.count()
+                ),
+            },
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/network.html",
+        ctx,
+    )
 
 
 
