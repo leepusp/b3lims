@@ -90,10 +90,7 @@ def serialize_sample_file(sample_file, compute_checksum=True):
     relative_path = str(sample_file.file.name)
     absolute_path = ""
 
-    try:
-        absolute_path = sample_file.file.path
-    except Exception:
-        absolute_path = str(Path(settings.MEDIA_ROOT) / relative_path)
+    absolute_path = sample_file.file.path
 
     path = Path(absolute_path)
     exists = path.exists() and path.is_file()
@@ -120,9 +117,9 @@ def find_exact_media_matches_for_sample(sample, compute_checksums=False):
     """
     Finds current MEDIA_ROOT files that directly contain the sample_id token.
 
-    This is intentionally conservative. Existing files under data/_unassigned_samples
-    may not match current sample_id values, so they remain indexed globally but are
-    not automatically assigned to a sample.
+    This is conservative discovery of files in the shared
+    institutional MEDIA_ROOT. It does not create SampleFile
+    records; curated SampleFile content uses per-user storage.
     """
     media_root = Path(settings.MEDIA_ROOT)
     if not media_root.exists():

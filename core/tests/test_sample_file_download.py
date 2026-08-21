@@ -1,8 +1,10 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -22,21 +24,32 @@ class SampleFileDownloadTests(TestCase):
             self.temporary_directory.cleanup
         )
 
-        self.media_root = (
+        self.user_home = (
             Path(
                 self.temporary_directory.name
             )
-            / "media"
+            / "sampleowner"
         )
-        self.media_root.mkdir()
+        self.user_home.mkdir()
 
         self.settings_override = override_settings(
-            MEDIA_ROOT=str(self.media_root),
-            MEDIA_URL="/biobank/data/",
+            BIOBANK_SAMPLE_DATA_RELATIVE_ROOT=(
+                "biobank/data"
+            ),
         )
         self.settings_override.enable()
         self.addCleanup(
             self.settings_override.disable
+        )
+
+        self.home_patch = patch(
+            "core.services.sample_data_storage."
+            "user_home_for_username",
+            return_value=self.user_home,
+        )
+        self.home_patch.start()
+        self.addCleanup(
+            self.home_patch.stop
         )
 
         user_model = get_user_model()
@@ -60,26 +73,40 @@ class SampleFileDownloadTests(TestCase):
             owner=self.owner,
         )
 
-        physical = (
-            self.media_root
-            / "_unassigned_samples"
-            / "download-test"
+        sample_directory = (
+            f"sample_{self.sample.pk}_"
+            f"{self.sample.sample_id}"
+        )
+
+        self.logical_name = (
+            "users/sampleowner/"
+            "samples/"
+            f"{sample_directory}/"
+            "files/report.txt"
+        )
+
+        self.physical = (
+            self.user_home
+            / "biobank"
+            / "data"
+            / "samples"
+            / sample_directory
+            / "files"
             / "report.txt"
         )
-        physical.parent.mkdir(
+
+        self.physical.parent.mkdir(
             parents=True
         )
-        physical.write_bytes(
+
+        self.physical.write_bytes(
             b"protected-download"
         )
 
         self.sample_file = (
             SampleFile.objects.create(
                 sample=self.sample,
-                file=(
-                    "_unassigned_samples/"
-                    "download-test/report.txt"
-                ),
+                file=self.logical_name,
                 description="Download test",
             )
         )
@@ -91,10 +118,6 @@ class SampleFileDownloadTests(TestCase):
             ],
         )
 
-        # reverse() correctly includes FORCE_SCRIPT_NAME for
-        # browser-facing URLs. Django's test Client expects
-        # PATH_INFO, where the WSGI server has already removed
-        # SCRIPT_NAME.
         script_name = str(
             getattr(
                 settings,
@@ -109,6 +132,7 @@ class SampleFileDownloadTests(TestCase):
         if script_name:
             if self.client_path == script_name:
                 self.client_path = "/"
+
             elif self.client_path.startswith(
                 script_name + "/"
             ):
@@ -118,11 +142,9 @@ class SampleFileDownloadTests(TestCase):
                     ]
                 )
 
-    def test_model_uses_hybrid_storage(self):
-        field = (
-            SampleFile._meta.get_field(
-                "file"
-            )
+    def test_model_uses_strict_user_storage(self):
+        field = SampleFile._meta.get_field(
+            "file"
         )
 
         self.assertIsInstance(
@@ -150,7 +172,6 @@ class SampleFileDownloadTests(TestCase):
             ),
             b"protected-download",
         )
-
 
     def test_unauthenticated_user_is_redirected(
         self,
@@ -183,9 +204,7 @@ class SampleFileDownloadTests(TestCase):
     def test_missing_physical_file_returns_404(
         self,
     ):
-        Path(
-            self.sample_file.file.path
-        ).unlink()
+        self.physical.unlink()
 
         self.client.force_login(
             self.owner
@@ -198,4 +217,31 @@ class SampleFileDownloadTests(TestCase):
         self.assertEqual(
             response.status_code,
             404,
+        )
+
+    def test_database_rejects_legacy_file_name(
+        self,
+    ):
+        with self.assertRaises(
+            IntegrityError
+        ):
+            with transaction.atomic():
+                (
+                    SampleFile.objects
+                    .filter(
+                        pk=self.sample_file.pk
+                    )
+                    .update(
+                        file=(
+                            "_unassigned_samples/"
+                            "legacy/report.txt"
+                        )
+                    )
+                )
+
+        self.sample_file.refresh_from_db()
+
+        self.assertEqual(
+            self.sample_file.file.name,
+            self.logical_name,
         )

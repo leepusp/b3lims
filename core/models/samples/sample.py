@@ -93,7 +93,6 @@ class Sample(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        from core.models.samples.sample_files import move_sample_files
         
         # REMOVIDO: A regra que forçava o biobank a ser igual ao da coleção.
         # Agora o Biobanco e as Coleções operam de forma independente.

@@ -110,24 +110,31 @@ class SampleFile(models.Model):
             **kwargs,
         )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    file__regex=(
+                        r"^users/"
+                        r"[A-Za-z0-9]"
+                        r"[A-Za-z0-9_.-]{0,63}/"
+                        r"samples/"
+                        r"sample_[0-9]+_"
+                        r"[A-Za-z0-9._-]+/"
+                        r"files/"
+                        r"[A-Za-z0-9]"
+                        r"[A-Za-z0-9_.-]{0,254}$"
+                    )
+                ),
+                name=(
+                    "samplefile_file_strict_user_path"
+                ),
+            ),
+        ]
+
     def __str__(self):
         return (
             f"File for "
             f"{self.sample.sample_id} "
             f"({self.category})"
         )
-
-
-def move_sample_files(sample):
-    """
-    Historical compatibility hook.
-
-    SampleFile paths are now stable under the owning user's
-    biobank/data/samples tree and must not move when a Sample
-    changes Collection or Biobank.
-
-    Legacy central files remain in place until an explicit,
-    checksummed migration is performed.
-    """
-
-    return None

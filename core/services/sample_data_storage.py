@@ -7,7 +7,6 @@ import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from urllib.parse import quote
 
 from django.conf import settings
 from django.core.exceptions import (
@@ -310,21 +309,17 @@ def claim_sample_data_file(username, relative_path):
 @deconstructible
 class UserHomeSampleDataStorage(Storage):
     """
-    Hybrid SampleFile storage.
+    Strict private storage for SampleFile.
 
-    New files use:
-      users/<username>/samples/sample_<pk>_<sample_id>/files/<name>
+    Every logical name must use:
 
-    Historical names continue to resolve below MEDIA_ROOT until
-    they are migrated explicitly.
+      users/<username>/samples/
+      sample_<pk>_<sample_id>/files/<filename>
+
+    SampleFile deliberately has no MEDIA_ROOT fallback.
     """
 
     user_prefix = "users"
-
-    def _is_user_name(self, name):
-        return str(name or "").startswith(
-            f"{self.user_prefix}/"
-        )
 
     def _split_user_name(self, name):
         raw = str(name or "")
@@ -349,7 +344,8 @@ class UserHomeSampleDataStorage(Storage):
             )
         ):
             raise SuspiciousFileOperation(
-                "The Sample storage name is invalid."
+                "SampleFile must use protected "
+                "per-user Sample storage."
             )
 
         username = validate_username(
@@ -366,74 +362,27 @@ class UserHomeSampleDataStorage(Storage):
 
         return username, relative
 
-    def _legacy_path(self, name):
-        raw = str(name or "")
-
-        if "\\" in raw:
-            raise SuspiciousFileOperation(
-                "Backslashes are not permitted "
-                "in legacy Sample storage names."
-            )
-
-        path = PurePosixPath(raw)
-
-        if (
-            path.is_absolute()
-            or not path.parts
-            or any(
-                part in {"", ".", ".."}
-                for part in path.parts
-            )
-        ):
-            raise SuspiciousFileOperation(
-                "The legacy Sample storage name is invalid."
-            )
-
-        root = Path(
-            settings.MEDIA_ROOT
-        ).resolve(strict=False)
-
-        candidate = (
-            root
-            / Path(*path.parts)
-        ).resolve(strict=False)
-
-        if candidate == root or root not in candidate.parents:
-            raise SuspiciousFileOperation(
-                "The legacy Sample path escapes MEDIA_ROOT."
-            )
-
-        return candidate
-
     def path(self, name):
-        if self._is_user_name(name):
-            username, relative = self._split_user_name(
-                name
-            )
-
-            return str(
-                protected_sample_data_path(
-                    username,
-                    relative.as_posix(),
-                )
-            )
+        username, relative = self._split_user_name(
+            name
+        )
 
         return str(
-            self._legacy_path(name)
+            protected_sample_data_path(
+                username,
+                relative.as_posix(),
+            )
         )
 
     def _open(self, name, mode="rb"):
         return File(
-            open(self.path(name), mode)
+            open(
+                self.path(name),
+                mode,
+            )
         )
 
     def _save(self, name, content):
-        if not self._is_user_name(name):
-            raise SuspiciousFileOperation(
-                "New Sample files must use "
-                "per-user Sample storage."
-            )
-
         username, relative = self._split_user_name(
             name
         )
@@ -478,6 +427,11 @@ class UserHomeSampleDataStorage(Storage):
             ) as target:
                 for chunk in content.chunks():
                     target.write(chunk)
+
+                target.flush()
+                os.fsync(
+                    target.fileno()
+                )
 
             claim_sample_data_file(
                 username,
@@ -539,23 +493,13 @@ class UserHomeSampleDataStorage(Storage):
         )
 
     def url(self, name):
-        # Keep the old MEDIA_URL contract only for historical
-        # central files while they still exist there.
-        if not self._is_user_name(name):
-            base = str(
-                settings.MEDIA_URL
-            ).rstrip("/")
-
-            encoded = quote(
-                str(name).lstrip("/"),
-                safe="/",
-            )
-
-            return f"{base}/{encoded}"
+        # Validate the logical name first so legacy/malformed
+        # names fail even when URL generation is attempted.
+        self._split_user_name(name)
 
         raise ValueError(
-            "Per-user Sample files are available "
-            "only through authorized download views."
+            "Sample files are available only through "
+            "authorized download views."
         )
 
 

@@ -24,19 +24,15 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             self.temporary_directory.cleanup
         )
 
-        root = Path(
-            self.temporary_directory.name
+        self.home = (
+            Path(
+                self.temporary_directory.name
+            )
+            / "alice"
         )
-
-        self.media_root = root / "media"
-        self.media_root.mkdir()
-
-        self.home = root / "alice"
         self.home.mkdir()
 
         self.settings_override = override_settings(
-            MEDIA_ROOT=str(self.media_root),
-            MEDIA_URL="/biobank/data/",
             BIOBANK_SAMPLE_DATA_RELATIVE_ROOT=(
                 "biobank/data"
             ),
@@ -76,13 +72,11 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             sample=self._sample()
         )
 
-        name = sample_file_upload_to(
-            instance,
-            "pET-28a.pdf",
-        )
-
         self.assertEqual(
-            name,
+            sample_file_upload_to(
+                instance,
+                "pET-28a.pdf",
+            ),
             (
                 "users/alice/samples/"
                 "sample_18_PLA-2026-5515/"
@@ -97,12 +91,10 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             sample=self._sample()
         )
 
-        name = sample_file_upload_to(
+        parts = sample_file_upload_to(
             instance,
             "report.txt",
-        )
-
-        parts = name.split("/")
+        ).split("/")
 
         self.assertEqual(
             parts,
@@ -116,92 +108,22 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             ],
         )
 
-        self.assertEqual(
-            parts[3],
-            "sample_18_PLA-2026-5515",
-        )
-
-        self.assertIn(
-            "PLA-2026-5515",
-            parts[3],
-        )
-
     def test_filename_is_sanitized(self):
         instance = SimpleNamespace(
             sample=self._sample()
         )
 
-        name = sample_file_upload_to(
-            instance,
-            "../../unsafe file?.txt",
-        )
-
         self.assertEqual(
-            name,
+            sample_file_upload_to(
+                instance,
+                "../../unsafe file?.txt",
+            ),
             (
                 "users/alice/samples/"
                 "sample_18_PLA-2026-5515/"
                 "files/unsafe_file_.txt"
             ),
         )
-
-    def test_legacy_media_root_file_still_opens(
-        self,
-    ):
-        legacy = (
-            self.media_root
-            / "_unassigned_samples"
-            / "legacy"
-            / "report.txt"
-        )
-
-        legacy.parent.mkdir(
-            parents=True
-        )
-
-        legacy.write_bytes(
-            b"legacy-data"
-        )
-
-        name = (
-            "_unassigned_samples/"
-            "legacy/report.txt"
-        )
-
-        self.assertEqual(
-            Path(
-                self.storage.path(name)
-            ),
-            legacy,
-        )
-
-        with self.storage.open(
-            name,
-            "rb",
-        ) as handle:
-            self.assertEqual(
-                handle.read(),
-                b"legacy-data",
-            )
-
-        self.assertEqual(
-            self.storage.url(name),
-            (
-                "/biobank/data/"
-                "_unassigned_samples/"
-                "legacy/report.txt"
-            ),
-        )
-
-    def test_legacy_path_traversal_is_rejected(
-        self,
-    ):
-        with self.assertRaises(
-            SuspiciousFileOperation
-        ):
-            self.storage.path(
-                "../outside.txt"
-            )
 
     def test_per_user_path_resolves_under_data_root(
         self,
@@ -212,26 +134,52 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             "files/report.txt"
         )
 
-        expected = (
-            self.home
-            / "biobank"
-            / "data"
-            / "samples"
-            / "sample_18_PLA-2026-5515"
-            / "files"
-            / "report.txt"
-        )
-
         self.assertEqual(
             Path(
                 self.storage.path(name)
             ),
-            expected,
+            (
+                self.home
+                / "biobank"
+                / "data"
+                / "samples"
+                / "sample_18_PLA-2026-5515"
+                / "files"
+                / "report.txt"
+            ),
         )
 
-    def test_per_user_url_is_not_public(
+    def test_legacy_media_root_name_is_rejected(
         self,
     ):
+        with self.assertRaises(
+            SuspiciousFileOperation
+        ):
+            self.storage.path(
+                "_unassigned_samples/"
+                "legacy/report.txt"
+            )
+
+    def test_arbitrary_relative_name_is_rejected(
+        self,
+    ):
+        with self.assertRaises(
+            SuspiciousFileOperation
+        ):
+            self.storage.path(
+                "samples/report.txt"
+            )
+
+    def test_path_traversal_is_rejected(self):
+        with self.assertRaises(
+            SuspiciousFileOperation
+        ):
+            self.storage.path(
+                "users/alice/samples/"
+                "../outside/files/report.txt"
+            )
+
+    def test_url_is_never_public(self):
         with self.assertRaises(
             ValueError
         ):
@@ -243,7 +191,7 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
                 )
             )
 
-    def test_save_uses_sample_data_runner_contract(
+    def test_save_uses_protected_sample_directory(
         self,
     ):
         files_directory = (
@@ -263,6 +211,7 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
                 username,
                 "alice",
             )
+
             self.assertEqual(
                 relative,
                 (
@@ -312,13 +261,11 @@ class UserHomeSampleDataStorageTests(SimpleTestCase):
             ),
         )
 
-        destination = (
-            files_directory
-            / "report.txt"
-        )
-
         self.assertEqual(
-            destination.read_bytes(),
+            (
+                files_directory
+                / "report.txt"
+            ).read_bytes(),
             b"protected-sample-data",
         )
 
