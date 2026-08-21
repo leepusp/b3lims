@@ -51,37 +51,551 @@ logger = logging.getLogger(__name__)
 # =========================================================
 @login_required
 def samples_list_view(request):
+    """
+    Display the active Samples visible to the current user.
+
+    Filtering always starts from visible_samples_for_user(), so
+    search, filter options and pagination never broaden access.
+    """
+
+    from django.core.paginator import Paginator
+
+    from core.permissions.samples import can_edit_sample
+    from core.services.storage_locations import get_all_storage_paths
+
     user = request.user
 
-    qs = visible_samples_for_user(user).select_related(
-        'biobank',
-        'owner',
-        'research_group',
-    ).prefetch_related('collections').order_by("-created_at")
+    base_qs = visible_samples_for_user(
+        user
+    )
 
-    query = request.GET.get('q')
-    if query:
+    # Filter options are derived only from Samples the current
+    # user can already see.
+    filter_sample_types = list(
+        base_qs
+        .order_by()
+        .exclude(
+            Q(sample_type__isnull=True)
+            | Q(sample_type="")
+        )
+        .values_list(
+            "sample_type",
+            flat=True,
+        )
+        .distinct()
+        .order_by(
+            "sample_type"
+        )
+    )
+
+    filter_owners = [
+        {
+            "id": row["owner_id"],
+            "name": row["owner__username"],
+        }
+        for row in (
+            base_qs
+            .order_by()
+            .values(
+                "owner_id",
+                "owner__username",
+            )
+            .distinct()
+            .order_by(
+                "owner__username"
+            )
+        )
+    ]
+
+    filter_research_groups = [
+        {
+            "id": row["research_group_id"],
+            "name": row["research_group__name"],
+        }
+        for row in (
+            base_qs
+            .order_by()
+            .exclude(
+                research_group__isnull=True
+            )
+            .values(
+                "research_group_id",
+                "research_group__name",
+            )
+            .distinct()
+            .order_by(
+                "research_group__name"
+            )
+        )
+    ]
+
+    filter_biobanks = [
+        {
+            "id": row["biobank_id"],
+            "name": row["biobank__name"],
+        }
+        for row in (
+            base_qs
+            .order_by()
+            .exclude(
+                biobank__isnull=True
+            )
+            .values(
+                "biobank_id",
+                "biobank__name",
+            )
+            .distinct()
+            .order_by(
+                "biobank__name"
+            )
+        )
+    ]
+
+    filter_biosafety_levels = list(
+        base_qs
+        .order_by()
+        .exclude(
+            Q(biosafety_level__isnull=True)
+            | Q(biosafety_level="")
+        )
+        .values_list(
+            "biosafety_level",
+            flat=True,
+        )
+        .distinct()
+        .order_by(
+            "biosafety_level"
+        )
+    )
+
+    filter_collections = (
+        Collection.objects
+        .filter(
+            samples__in=base_qs
+        )
+        .distinct()
+        .order_by(
+            "name"
+        )
+    )
+
+    filters = {
+        "q": (
+            request.GET.get(
+                "q",
+                "",
+            )
+            or ""
+        ).strip(),
+        "status": (
+            request.GET.get(
+                "status",
+                "",
+            )
+            or ""
+        ).strip(),
+        "sample_type": (
+            request.GET.get(
+                "sample_type",
+                "",
+            )
+            or ""
+        ).strip(),
+        "owner": (
+            request.GET.get(
+                "owner",
+                "",
+            )
+            or ""
+        ).strip(),
+        "research_group": (
+            request.GET.get(
+                "research_group",
+                "",
+            )
+            or ""
+        ).strip(),
+        "biobank": (
+            request.GET.get(
+                "biobank",
+                "",
+            )
+            or ""
+        ).strip(),
+        "biosafety": (
+            request.GET.get(
+                "biosafety",
+                "",
+            )
+            or ""
+        ).strip(),
+        "collection": (
+            request.GET.get(
+                "collection",
+                "",
+            )
+            or ""
+        ).strip(),
+        "storage": (
+            request.GET.get(
+                "storage",
+                "",
+            )
+            or ""
+        ).strip(),
+        "files": (
+            request.GET.get(
+                "files",
+                "",
+            )
+            or ""
+        ).strip(),
+        "visibility": (
+            request.GET.get(
+                "visibility",
+                "",
+            )
+            or ""
+        ).strip(),
+    }
+
+    qs = (
+        base_qs
+        .select_related(
+            "biobank",
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "collections",
+        )
+    )
+
+    # ---------------------------------------------------------
+    # Search
+    # ---------------------------------------------------------
+
+    if filters["q"]:
         qs = qs.filter(
-            Q(sample_id__icontains=query) |
-            Q(organism_name__icontains=query) |
-            Q(sample_type__icontains=query)
+            Q(
+                sample_id__icontains=filters["q"]
+            )
+            | Q(
+                organism_name__icontains=filters["q"]
+            )
+            | Q(
+                sample_type__icontains=filters["q"]
+            )
         )
 
-    status_filter = request.GET.get('status')
-    if status_filter and status_filter not in ['', 'All Statuses']:
-        qs = qs.filter(status=status_filter)
+    # ---------------------------------------------------------
+    # Scalar filters
+    # ---------------------------------------------------------
 
-    collection_id = request.GET.get('collection')
-    if collection_id and collection_id.isdigit():
-        qs = qs.filter(collections__id=collection_id)
+    valid_statuses = {
+        value
+        for value, _label
+        in Sample.STATUS_CHOICES
+    }
 
-    ctx = base_context(request)
-    ctx.update({
-        'samples': qs,
-        'filter_collections': Collection.objects.all(),
-        'all_samples_for_modal': visible_samples_for_user(user).values('id', 'sample_id', 'sample_type', 'organism_name'),
-    })
-    return render(request, "internal/samples/list.html", ctx)
+    if filters["status"] in valid_statuses:
+        qs = qs.filter(
+            status=filters["status"]
+        )
+    elif filters["status"]:
+        filters["status"] = ""
+
+    if (
+        filters["sample_type"]
+        in filter_sample_types
+    ):
+        qs = qs.filter(
+            sample_type=filters["sample_type"]
+        )
+    elif filters["sample_type"]:
+        filters["sample_type"] = ""
+
+    if filters["owner"].isdigit():
+        qs = qs.filter(
+            owner_id=int(
+                filters["owner"]
+            )
+        )
+    elif filters["owner"]:
+        filters["owner"] = ""
+
+    if filters["research_group"] == "none":
+        qs = qs.filter(
+            research_group__isnull=True
+        )
+    elif filters["research_group"].isdigit():
+        qs = qs.filter(
+            research_group_id=int(
+                filters["research_group"]
+            )
+        )
+    elif filters["research_group"]:
+        filters["research_group"] = ""
+
+    if filters["biobank"] == "none":
+        qs = qs.filter(
+            biobank__isnull=True
+        )
+    elif filters["biobank"].isdigit():
+        qs = qs.filter(
+            biobank_id=int(
+                filters["biobank"]
+            )
+        )
+    elif filters["biobank"]:
+        filters["biobank"] = ""
+
+    if filters["biosafety"] == "none":
+        qs = qs.filter(
+            Q(
+                biosafety_level__isnull=True
+            )
+            | Q(
+                biosafety_level=""
+            )
+        )
+    elif (
+        filters["biosafety"]
+        in filter_biosafety_levels
+    ):
+        qs = qs.filter(
+            biosafety_level=filters[
+                "biosafety"
+            ]
+        )
+    elif filters["biosafety"]:
+        filters["biosafety"] = ""
+
+    if filters["collection"] == "none":
+        qs = qs.filter(
+            collections__isnull=True
+        )
+    elif filters["collection"].isdigit():
+        qs = qs.filter(
+            collections__id=int(
+                filters["collection"]
+            )
+        )
+    elif filters["collection"]:
+        filters["collection"] = ""
+
+    if filters["visibility"] == "public":
+        qs = qs.filter(
+            is_public=True
+        )
+    elif filters["visibility"] == "private":
+        qs = qs.filter(
+            is_public=False
+        )
+    elif filters["visibility"]:
+        filters["visibility"] = ""
+
+    # M2M filtering above can duplicate rows.
+    qs = qs.distinct()
+
+    # ---------------------------------------------------------
+    # File count / file filter
+    # ---------------------------------------------------------
+
+    qs = qs.annotate(
+        file_count=Count(
+            "files",
+            distinct=True,
+        )
+    )
+
+    if filters["files"] == "with":
+        qs = qs.filter(
+            file_count__gt=0
+        )
+    elif filters["files"] == "without":
+        qs = qs.filter(
+            file_count=0
+        )
+    elif filters["files"]:
+        filters["files"] = ""
+
+    qs = qs.order_by(
+        "-created_at",
+        "-pk",
+    )
+
+    # ---------------------------------------------------------
+    # Storage filter
+    #
+    # This intentionally uses get_all_storage_paths() rather
+    # than only Sample.storage_location so structured and
+    # compatibility storage representations behave the same.
+    # ---------------------------------------------------------
+
+    if filters["storage"] in {
+        "assigned",
+        "unassigned",
+    }:
+        wants_storage = (
+            filters["storage"]
+            == "assigned"
+        )
+
+        filtered_samples = []
+
+        for sample in qs:
+            storage_paths = (
+                get_all_storage_paths(
+                    sample
+                )
+            )
+
+            sample.primary_storage_path = (
+                storage_paths[0]
+                if storage_paths
+                else ""
+            )
+
+            if bool(storage_paths) == wants_storage:
+                filtered_samples.append(
+                    sample
+                )
+
+        sample_source = filtered_samples
+
+    else:
+        if filters["storage"]:
+            filters["storage"] = ""
+
+        sample_source = qs
+
+    # ---------------------------------------------------------
+    # Pagination
+    # ---------------------------------------------------------
+
+    paginator = Paginator(
+        sample_source,
+        25,
+    )
+
+    page_obj = paginator.get_page(
+        request.GET.get(
+            "page"
+        )
+    )
+
+    # Add permission-sensitive and display-only state only to
+    # Samples on the current page.
+    for sample in page_obj.object_list:
+        sample.can_edit_current_user = (
+            can_edit_sample(
+                user,
+                sample,
+            )
+        )
+
+        if not hasattr(
+            sample,
+            "primary_storage_path",
+        ):
+            storage_paths = (
+                get_all_storage_paths(
+                    sample
+                )
+            )
+
+            sample.primary_storage_path = (
+                storage_paths[0]
+                if storage_paths
+                else ""
+            )
+
+    query_params = request.GET.copy()
+    query_params.pop(
+        "page",
+        None,
+    )
+
+    pagination_query = (
+        query_params.urlencode()
+    )
+
+    active_filter_count = sum(
+        1
+        for value in filters.values()
+        if value
+    )
+
+    visible_total = (
+        base_qs.count()
+    )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx.update(
+        {
+            "samples": page_obj.object_list,
+            "page_obj": page_obj,
+            "page_range": (
+                paginator.get_elided_page_range(
+                    page_obj.number,
+                    on_each_side=2,
+                    on_ends=1,
+                )
+            ),
+            "pagination_query": pagination_query,
+            "filters": filters,
+            "active_filter_count": (
+                active_filter_count
+            ),
+            "sample_list_summary": {
+                "visible_total": visible_total,
+                "filtered_total": paginator.count,
+            },
+            "filter_status_choices": (
+                Sample.STATUS_CHOICES
+            ),
+            "filter_sample_types": (
+                filter_sample_types
+            ),
+            "filter_owners": (
+                filter_owners
+            ),
+            "filter_research_groups": (
+                filter_research_groups
+            ),
+            "filter_biobanks": (
+                filter_biobanks
+            ),
+            "filter_biosafety_levels": (
+                filter_biosafety_levels
+            ),
+            "filter_collections": (
+                filter_collections
+            ),
+            "all_samples_for_modal": (
+                base_qs
+                .order_by(
+                    "sample_id"
+                )
+                .values(
+                    "id",
+                    "sample_id",
+                    "sample_type",
+                    "organism_name",
+                )
+            ),
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/list.html",
+        ctx,
+    )
 
 
 

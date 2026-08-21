@@ -2,53 +2,32 @@
 
 {% block title %}Samples · Biobank LIMS{% endblock %}
 {% block page_title %}Samples{% endblock %}
-{% block page_subtitle %}Management of biological inventory and sample metadata{% endblock %}
+{% block page_subtitle %}Search, filter and manage biological Samples{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Match the current card/table visual language used by Transport/Shipments. */
-    .table-responsive {
-        min-height: 300px !important;
-        padding-bottom: 150px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
-        overflow: visible;
-    }
-
-    .table-responsive table {
+    .sample-list-toolbar {
         width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 0;
     }
 
-    .table-responsive thead th {
-        font-size: 11px;
+    .sample-filter-label {
+        display: block;
+        margin-bottom: .25rem;
         color: #64748b;
-        text-transform: uppercase;
+        font-size: .68rem;
+        font-weight: 800;
         letter-spacing: .04em;
-        border-bottom: 1px solid #e8edf3;
-        padding: 12px 14px;
-        background: #f8fafc;
-        white-space: nowrap;
+        text-transform: uppercase;
     }
 
-    .table-responsive tbody td {
-        font-size: 13px;
-        color: #334155;
-        border-bottom: 1px solid #f1f5f9;
-        padding: 12px 14px;
-        vertical-align: middle;
-    }
-
-    .table-responsive tbody tr:last-child td {
-        border-bottom: 0;
+    .sample-filter-summary {
+        color: #64748b;
+        font-size: .8rem;
     }
 
     .sample-code {
-        font-weight: 850;
         color: #0d6efd;
+        font-weight: 800;
         text-decoration: none;
     }
 
@@ -56,195 +35,906 @@
         text-decoration: underline;
     }
 
-    .samples-empty {
-        padding: 28px;
-        text-align: center;
-        color: #94a3b8;
+    .sample-table-secondary {
+        color: #64748b;
+        font-size: .76rem;
     }
 
-    .sample-status-badge {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        padding: 3px 9px;
-        font-size: 11px;
-        font-weight: 800;
-        border: 1px solid transparent;
+    .sample-storage-path {
+        display: block;
+        max-width: 260px;
+        overflow: hidden;
+        color: #334155;
+        font-size: .78rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .sample-governance-name {
+        display: block;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sample-empty {
+        padding: 3.5rem 1rem !important;
+        color: #64748b !important;
+        text-align: center;
+    }
+
+    .sample-file-count {
+        min-width: 2.3rem;
+        text-align: center;
+    }
+
+    .sample-pagination-summary {
+        color: #64748b;
+        font-size: .8rem;
+    }
+
+    .sample-list-actions {
+        min-width: 8rem;
+    }
+
+    @media (max-width: 1199.98px) {
+        .sample-filter-control {
+            min-width: 180px;
+        }
     }
 </style>
 {% endblock %}
 
-{# --- 1. TITLE AND SUBTITLE --- #}
-{% block manage_title %}<i class="bi bi-droplet me-2 text-primary"></i>Sample Inventory{% endblock %}
-{% block manage_subtitle %}Management of biological inventory and sample metadata{% endblock %}
-{% block manage_subtitle_line %}{% endblock %}
 
-{# --- 2. ACTION BUTTONS --- #}
+{% block manage_title %}
+<i class="bi bi-droplet me-2 text-primary"></i>Sample Inventory
+{% endblock %}
+
+{% block manage_subtitle %}
+Search, filter and manage Samples visible to your account
+{% endblock %}
+
+
 {% block manage_actions %}
-<div class="d-flex gap-2">
-    <a href="{% url 'samples_dashboard' %}" class="btn btn-sm btn-outline-success">
-        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+<div class="d-flex flex-wrap gap-2">
+
+    <a
+        href="{% url 'samples_dashboard' %}"
+        class="btn btn-sm btn-outline-success"
+    >
+        <i class="bi bi-speedometer2 me-1"></i>
+        Dashboard
     </a>
-    <a href="{% url 'samples_network' %}" class="btn btn-sm btn-outline-info">
-        <i class="bi bi-diagram-3-fill me-2"></i>Network View
+
+    <a
+        href="{% url 'samples_network' %}"
+        class="btn btn-sm btn-outline-info"
+    >
+        <i class="bi bi-diagram-3 me-1"></i>
+        Network
     </a>
-    <a href="{% url 'samples_import' %}" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-table me-2"></i>Import Table
+
+    <a
+        href="{% url 'samples_import' %}"
+        class="btn btn-sm btn-outline-primary"
+    >
+        <i class="bi bi-table me-1"></i>
+        Import
     </a>
-    <a href="{% url 'export_samples_csv' %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-download me-2"></i>Export Table
+
+    <a
+        href="{% url 'export_samples_csv' %}"
+        class="btn btn-sm btn-outline-secondary"
+    >
+        <i class="bi bi-download me-1"></i>
+        Export
     </a>
-    <a href="{% url 'sample_add' %}" class="btn btn-sm btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>New Sample
+
+    <a
+        href="{% url 'sample_add' %}"
+        class="btn btn-sm btn-primary"
+    >
+        <i class="bi bi-plus-lg me-1"></i>
+        New Sample
     </a>
+
 </div>
 {% endblock %}
 
-{# --- 3. FILTERS E SEARCH INTEGRADO --- #}
+
 {% block manage_filters %}
-<form method="get" class="d-flex gap-3 w-100 justify-content-between align-items-center bg-white p-2 rounded border shadow-sm" id="filterForm">
-    
-    <div class="input-group input-group-sm" style="max-width: 350px;">
-        <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control border-start-0" placeholder="Search ID or Organism..." value="{{ request.GET.q|default:'' }}">
-        
-        {% if request.GET.q %}
-            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary" title="Clear search">
-                <i class="bi bi-x-lg"></i>
-            </a>
-        {% endif %}
-        <button type="submit" class="d-none"></button>
-    </div>
+<form
+    method="get"
+    id="sampleFilterForm"
+    class="sample-list-toolbar"
+>
+    <div class="row g-2">
 
-    <div class="d-flex gap-2">
-        <select name="status" class="form-select form-select-sm bg-light" style="min-width: 140px;" onchange="document.getElementById('filterForm').submit()">
-            <option value="">Status: All</option>
-            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="qc" {% if request.GET.status == 'qc' %}selected{% endif %}>In QC</option>
-            <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
-            <option value="depleted" {% if request.GET.status == 'depleted' %}selected{% endif %}>Depleted</option>
-        </select>
+        <div class="col-12 col-xl-4">
+            <label
+                for="sample-search"
+                class="sample-filter-label"
+            >
+                Search
+            </label>
 
-        <select name="collection" class="form-select form-select-sm bg-light" style="min-width: 160px;" onchange="document.getElementById('filterForm').submit()">
-            <option value="">Collection: All</option>
-            {% for col in filter_collections %}
-                <option value="{{ col.id }}" {% if request.GET.collection == col.id|stringformat:"i" %}selected{% endif %}>{{ col.name }}</option>
-            {% endfor %}
-        </select>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light">
+                    <i class="bi bi-search"></i>
+                </span>
+
+                <input
+                    id="sample-search"
+                    type="search"
+                    name="q"
+                    value="{{ filters.q }}"
+                    class="form-control"
+                    placeholder="Sample ID, organism or type"
+                    autocomplete="off"
+                >
+
+                <button
+                    type="submit"
+                    class="btn btn-outline-primary"
+                >
+                    Search
+                </button>
+            </div>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-status"
+                class="sample-filter-label"
+            >
+                Status
+            </label>
+
+            <select
+                id="filter-status"
+                name="status"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All statuses</option>
+
+                {% for value, label in filter_status_choices %}
+                    <option
+                        value="{{ value }}"
+                        {% if filters.status == value %}selected{% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-type"
+                class="sample-filter-label"
+            >
+                Sample Type
+            </label>
+
+            <select
+                id="filter-type"
+                name="sample_type"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All types</option>
+
+                {% for sample_type in filter_sample_types %}
+                    <option
+                        value="{{ sample_type }}"
+                        {% if filters.sample_type == sample_type %}selected{% endif %}
+                    >
+                        {{ sample_type }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-owner"
+                class="sample-filter-label"
+            >
+                Owner
+            </label>
+
+            <select
+                id="filter-owner"
+                name="owner"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All owners</option>
+
+                {% for owner in filter_owners %}
+                    <option
+                        value="{{ owner.id }}"
+                        {% if filters.owner == owner.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ owner.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-biosafety"
+                class="sample-filter-label"
+            >
+                Biosafety
+            </label>
+
+            <select
+                id="filter-biosafety"
+                name="biosafety"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All levels</option>
+                <option
+                    value="none"
+                    {% if filters.biosafety == "none" %}selected{% endif %}
+                >
+                    Unassigned
+                </option>
+
+                {% for level in filter_biosafety_levels %}
+                    <option
+                        value="{{ level }}"
+                        {% if filters.biosafety == level %}selected{% endif %}
+                    >
+                        {{ level }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-group"
+                class="sample-filter-label"
+            >
+                Research Group
+            </label>
+
+            <select
+                id="filter-group"
+                name="research_group"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All groups</option>
+                <option
+                    value="none"
+                    {% if filters.research_group == "none" %}selected{% endif %}
+                >
+                    Unassigned
+                </option>
+
+                {% for group in filter_research_groups %}
+                    <option
+                        value="{{ group.id }}"
+                        {% if filters.research_group == group.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ group.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-biobank"
+                class="sample-filter-label"
+            >
+                Biobank
+            </label>
+
+            <select
+                id="filter-biobank"
+                name="biobank"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All biobanks</option>
+                <option
+                    value="none"
+                    {% if filters.biobank == "none" %}selected{% endif %}
+                >
+                    Unassigned
+                </option>
+
+                {% for biobank in filter_biobanks %}
+                    <option
+                        value="{{ biobank.id }}"
+                        {% if filters.biobank == biobank.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ biobank.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-collection"
+                class="sample-filter-label"
+            >
+                Collection
+            </label>
+
+            <select
+                id="filter-collection"
+                name="collection"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">All collections</option>
+                <option
+                    value="none"
+                    {% if filters.collection == "none" %}selected{% endif %}
+                >
+                    No collection
+                </option>
+
+                {% for collection in filter_collections %}
+                    <option
+                        value="{{ collection.pk }}"
+                        {% if filters.collection == collection.pk|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ collection.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-storage"
+                class="sample-filter-label"
+            >
+                Physical Storage
+            </label>
+
+            <select
+                id="filter-storage"
+                name="storage"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">Any storage state</option>
+                <option
+                    value="assigned"
+                    {% if filters.storage == "assigned" %}selected{% endif %}
+                >
+                    Assigned
+                </option>
+                <option
+                    value="unassigned"
+                    {% if filters.storage == "unassigned" %}selected{% endif %}
+                >
+                    Unassigned
+                </option>
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-files"
+                class="sample-filter-label"
+            >
+                Files
+            </label>
+
+            <select
+                id="filter-files"
+                name="files"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">Any file state</option>
+                <option
+                    value="with"
+                    {% if filters.files == "with" %}selected{% endif %}
+                >
+                    Has files
+                </option>
+                <option
+                    value="without"
+                    {% if filters.files == "without" %}selected{% endif %}
+                >
+                    No files
+                </option>
+            </select>
+        </div>
+
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <label
+                for="filter-visibility"
+                class="sample-filter-label"
+            >
+                Visibility
+            </label>
+
+            <select
+                id="filter-visibility"
+                name="visibility"
+                class="form-select form-select-sm sample-filter-control"
+                onchange="this.form.submit()"
+            >
+                <option value="">Any visibility</option>
+                <option
+                    value="private"
+                    {% if filters.visibility == "private" %}selected{% endif %}
+                >
+                    Private
+                </option>
+                <option
+                    value="public"
+                    {% if filters.visibility == "public" %}selected{% endif %}
+                >
+                    Public
+                </option>
+            </select>
+        </div>
+
+
+        <div class="col-12 col-xl-4 d-flex align-items-end">
+            <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+
+                <div class="sample-filter-summary me-auto">
+                    <strong>{{ sample_list_summary.filtered_total }}</strong>
+                    matching
+                    {% if sample_list_summary.filtered_total != sample_list_summary.visible_total %}
+                        of
+                        <strong>{{ sample_list_summary.visible_total }}</strong>
+                        visible
+                    {% else %}
+                        visible
+                    {% endif %}
+                    Sample{{ sample_list_summary.filtered_total|pluralize }}
+                </div>
+
+                {% if active_filter_count %}
+                    <a
+                        href="{% url 'samples_list' %}"
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        <i class="bi bi-x-circle me-1"></i>
+                        Clear Filters
+                    </a>
+                {% endif %}
+
+            </div>
+        </div>
+
     </div>
 </form>
 {% endblock %}
 
-{# --- 4. TABLE HEADER --- #}
+
 {% block table_header %}
-    <th class="ps-4">ID / Barcode</th>
-    <th>Identification</th>
-    <th>Biological Type</th>
-    <th>Biosafety Level</th>
-    <th>Storage Location</th>
-    <th>Status</th>
-    <th>Created at</th>
-    <th class="text-end pe-4">Actions</th>
+<th class="ps-4">Sample</th>
+<th>Identification</th>
+<th>Type / Biosafety</th>
+<th>Governance</th>
+<th>Physical Storage</th>
+<th>Files</th>
+<th>Status / Visibility</th>
+<th>Created</th>
+<th class="text-end pe-4">Actions</th>
 {% endblock %}
 
-{# --- 5. TABLE BODY --- #}
+
 {% block table_body %}
-    {% for sample in samples %}
-    <tr>
-        <td class="ps-4 fw-bold text-primary align-middle">
-            <a href="{% url 'sample_detail' sample.id %}" class="sample-code">
-                {{ sample.sample_id }}
-            </a>
-                            <form method="post" action="{% url 'sample_create_shipment' sample.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Create shipment">
-                                    <i class="bi bi-truck"></i>
-                                </button>
-                            </form>
-        </td>
-        <td class="align-middle">
-            {% if sample.organism_name %}
-                <span class="badge bg-light text-dark border">{{ sample.organism_name }}</span>
+
+{% for sample in samples %}
+<tr>
+
+    <td class="ps-4 align-middle">
+        <a
+            href="{% url 'sample_detail' sample.pk %}"
+            class="sample-code"
+        >
+            {{ sample.sample_id }}
+        </a>
+
+        <div class="sample-table-secondary mt-1">
+            PK {{ sample.pk }}
+        </div>
+    </td>
+
+
+    <td class="align-middle">
+        {% if sample.organism_name %}
+            <div class="fw-semibold">
+                {{ sample.organism_name }}
+            </div>
+        {% else %}
+            <div class="text-muted">
+                Organism not defined
+            </div>
+        {% endif %}
+    </td>
+
+
+    <td class="align-middle">
+        <div class="fw-semibold">
+            {% if "Bacterium" in sample.sample_type %}
+                <i class="bi bi-circle-fill text-success me-1 small"></i>
+            {% elif "Phage" in sample.sample_type %}
+                <i class="bi bi-virus text-danger me-1"></i>
+            {% elif "Plasmid" in sample.sample_type %}
+                <i class="bi bi-diagram-2 text-info me-1"></i>
             {% else %}
-                <span class="text-muted small">-</span>
+                <i class="bi bi-droplet text-secondary me-1"></i>
             {% endif %}
-        </td>
-        <td class="align-middle fw-medium">
-            {% if 'Bacterium' in sample.sample_type %}
-                <i class="fas fa-bacterium text-success me-2" title="Bacteria"></i>
-            {% elif 'Phage' in sample.sample_type %}
-                <i class="fas fa-virus text-danger me-2" title="Phage"></i>
-            {% elif 'Plasmid' in sample.sample_type %}
-                <i class="fas fa-dna text-info me-2" title="Plasmid"></i>
-            {% else %}
-                <i class="fas fa-vial text-secondary me-2" title="Generic Sample"></i>
-            {% endif %}
+
             {{ sample.sample_type|default:"Not defined" }}
-        </td>
-        <td class="align-middle">
+        </div>
+
+        <div class="sample-table-secondary mt-1">
             {% if sample.biosafety_level %}
-                <span class="badge bg-light text-dark border">{{ sample.biosafety_level }}</span>
+                {{ sample.biosafety_level }}
             {% else %}
-                <span class="text-muted small">Not defined</span>
+                Biosafety unassigned
             {% endif %}
-        </td>
-        <td class="align-middle">
-            {% if sample.storage_location %}
-                <small class="d-block fw-bold text-dark"><i class="fas fa-box-open me-1 text-muted"></i>{{ sample.storage_location }}</small>
+        </div>
+    </td>
+
+
+    <td class="align-middle">
+        <div>
+            <i class="bi bi-person me-1 text-muted"></i>
+            {{ sample.owner.username }}
+        </div>
+
+        <div class="sample-table-secondary mt-1">
+            {% if sample.research_group %}
+                <span class="sample-governance-name">
+                    {{ sample.research_group.name }}
+                </span>
             {% else %}
-                <small class="d-block fw-bold text-muted">Pending Storage</small>
+                Research group unassigned
             {% endif %}
-            <small class="text-muted"><i class="fas fa-building me-1"></i>{{ sample.biobank.name|default:"No Biobank" }}</small>
-        </td>
-        <td class="align-middle">
-            {% if sample.status == 'available' %}
-                <span class="badge bg-success-subtle text-success">Available</span>
-            {% elif sample.status == 'pending' %}
-                <span class="badge bg-warning-subtle text-warning">Pending</span>
-            {% elif sample.status == 'qc' %}
-                <span class="badge bg-info-subtle text-info">QC</span>
-            {% elif sample.status == 'rejected' %}
-                <span class="badge bg-danger-subtle text-danger">Rejected</span>
+        </div>
+
+        <div
+            class="sample-table-secondary mt-1 sample-governance-name"
+            {% if sample.biobank %}title="{{ sample.biobank.name }}"{% endif %}
+        >
+            {% if sample.biobank %}
+                <i class="bi bi-building me-1"></i>
+                {{ sample.biobank.name }}
             {% else %}
-                <span class="badge bg-secondary">{{ sample.get_status_display }}</span>
+                Biobank unassigned
             {% endif %}
-        </td>
-        <td class="small text-muted align-middle">{{ sample.created_at|date:"d/m/Y" }}</td>
-        <td class="text-end pe-4 align-middle">
-            
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
-                    Options
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                      <li>
-                          <a class="dropdown-item py-2" href="{% url 'sample_detail' sample.id %}">
-                              <i class="bi bi-eye text-success me-2" style="width: 15px; text-align: center;"></i>View Details
-                          </a>
-                      </li>
+        </div>
+
+        {% if sample.collections.all %}
+            <div class="mt-1">
+                {% for collection in sample.collections.all|slice:":2" %}
+                    <span class="badge bg-light text-dark border">
+                        {{ collection.name }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </td>
+
+
+    <td class="align-middle">
+        {% if sample.primary_storage_path %}
+            <span
+                class="sample-storage-path"
+                title="{{ sample.primary_storage_path }}"
+            >
+                <i class="bi bi-geo-alt me-1 text-success"></i>
+                {{ sample.primary_storage_path }}
+            </span>
+
+            <div class="sample-table-secondary mt-1">
+                Assigned
+            </div>
+        {% else %}
+            <span class="badge bg-light text-secondary border">
+                <i class="bi bi-box-seam me-1"></i>
+                Unassigned
+            </span>
+        {% endif %}
+    </td>
+
+
+    <td class="align-middle">
+        {% if sample.file_count %}
+            <span class="badge bg-primary-subtle text-primary border sample-file-count">
+                {{ sample.file_count }}
+            </span>
+
+            <div class="sample-table-secondary mt-1">
+                file{{ sample.file_count|pluralize }}
+            </div>
+        {% else %}
+            <span class="badge bg-light text-secondary border sample-file-count">
+                0
+            </span>
+
+            <div class="sample-table-secondary mt-1">
+                No files
+            </div>
+        {% endif %}
+    </td>
+
+
+    <td class="align-middle">
+        {% if sample.status == "available" %}
+            <span class="badge bg-success-subtle text-success border">
+                {{ sample.get_status_display }}
+            </span>
+        {% elif sample.status == "pending" %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border">
+                {{ sample.get_status_display }}
+            </span>
+        {% elif sample.status == "qc" %}
+            <span class="badge bg-info-subtle text-info-emphasis border">
+                {{ sample.get_status_display }}
+            </span>
+        {% elif sample.status == "rejected" %}
+            <span class="badge bg-danger-subtle text-danger border">
+                {{ sample.get_status_display }}
+            </span>
+        {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border">
+                {{ sample.get_status_display }}
+            </span>
+        {% endif %}
+
+        <div class="mt-1">
+            {% if sample.is_public %}
+                <span class="badge bg-success-subtle text-success border">
+                    Public
+                </span>
+            {% else %}
+                <span class="badge bg-light text-secondary border">
+                    Private
+                </span>
+            {% endif %}
+        </div>
+    </td>
+
+
+    <td class="align-middle text-nowrap">
+        <div>
+            {{ sample.created_at|date:"Y-m-d" }}
+        </div>
+
+        <div class="sample-table-secondary">
+            {{ sample.created_at|date:"H:i" }}
+        </div>
+    </td>
+
+
+    <td class="align-middle text-end pe-4 sample-list-actions">
+
+        <div class="dropdown">
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                data-bs-toggle="dropdown"
+                data-bs-boundary="window"
+                aria-expanded="false"
+            >
+                Actions
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+
+                <li>
+                    <a
+                        href="{% url 'sample_detail' sample.pk %}"
+                        class="dropdown-item"
+                    >
+                        <i class="bi bi-eye me-2 text-success"></i>
+                        View Details
+                    </a>
+                </li>
+
+                {% if sample.can_edit_current_user %}
                     <li>
-                        <a class="dropdown-item py-2" href="{% url 'sample_edit' sample.id %}">
-                            <i class="fas fa-edit text-primary me-2" style="width: 15px; text-align: center;"></i>Edit Sample
+                        <a
+                            href="{% url 'sample_edit' sample.pk %}"
+                            class="dropdown-item"
+                        >
+                            <i class="bi bi-pencil me-2 text-primary"></i>
+                            Edit Sample
                         </a>
                     </li>
+
                     <li>
-                        <a class="dropdown-item py-2" href="{% url 'print_sample_label' sample.id %}" target="_blank">
-                            <i class="fas fa-qrcode text-secondary me-2" style="width: 15px; text-align: center;"></i>Print Label
-                        </a>
+                        <form
+                            method="post"
+                            action="{% url 'sample_create_shipment' sample.pk %}"
+                        >
+                            {% csrf_token %}
+
+                            <button
+                                type="submit"
+                                class="dropdown-item"
+                            >
+                                <i class="bi bi-truck me-2 text-warning"></i>
+                                Create Shipment
+                            </button>
+                        </form>
                     </li>
-                </ul>
+                {% endif %}
+
+                <li>
+                    <a
+                        href="{% url 'print_sample_label' sample.pk %}"
+                        target="_blank"
+                        rel="noopener"
+                        class="dropdown-item"
+                    >
+                        <i class="bi bi-qr-code me-2 text-secondary"></i>
+                        Print Label
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+    <td
+        colspan="9"
+        class="sample-empty"
+    >
+        <i class="bi bi-droplet fs-2 d-block mb-2"></i>
+
+        {% if active_filter_count %}
+            <div class="fw-semibold">
+                No Samples match the current filters.
             </div>
 
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="8" class="samples-empty">
-            <i class="fas fa-vials fa-3x mb-3 text-secondary opacity-50"></i>
-            <p class="mb-1">No samples found.</p>
-            <small>Try changing filters or create a new sample.</small>
-        </td>
-    </tr>
-    {% endfor %}
+            <div class="small mt-1">
+                Change or clear one or more filters to broaden the results.
+            </div>
+
+            <a
+                href="{% url 'samples_list' %}"
+                class="btn btn-sm btn-outline-secondary mt-3"
+            >
+                Clear Filters
+            </a>
+        {% else %}
+            <div class="fw-semibold">
+                No Samples are currently visible.
+            </div>
+
+            <div class="small mt-1">
+                Create a new Sample or request access to an existing record.
+            </div>
+        {% endif %}
+    </td>
+</tr>
+
+{% endfor %}
+
+{% endblock %}
+
+
+{% block pagination %}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+
+    <div class="sample-pagination-summary">
+        {% if page_obj.paginator.count %}
+            Showing
+            <strong>{{ page_obj.start_index }}</strong>–<strong>{{ page_obj.end_index }}</strong>
+            of
+            <strong>{{ page_obj.paginator.count }}</strong>
+            matching Sample{{ page_obj.paginator.count|pluralize }}
+        {% else %}
+            No matching Samples
+        {% endif %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav aria-label="Sample list pagination">
+            <ul class="pagination pagination-sm mb-0">
+
+                <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    {% if page_obj.has_previous %}
+                        <a
+                            class="page-link"
+                            href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                        >
+                            Previous
+                        </a>
+                    {% else %}
+                        <span class="page-link">
+                            Previous
+                        </span>
+                    {% endif %}
+                </li>
+
+
+                {% for page_number in page_range %}
+
+                    {% if page_number == "…" %}
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                …
+                            </span>
+                        </li>
+
+                    {% elif page_number == page_obj.number %}
+                        <li
+                            class="page-item active"
+                            aria-current="page"
+                        >
+                            <span class="page-link">
+                                {{ page_number }}
+                            </span>
+                        </li>
+
+                    {% else %}
+                        <li class="page-item">
+                            <a
+                                class="page-link"
+                                href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_number }}"
+                            >
+                                {{ page_number }}
+                            </a>
+                        </li>
+                    {% endif %}
+
+                {% endfor %}
+
+
+                <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                    {% if page_obj.has_next %}
+                        <a
+                            class="page-link"
+                            href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+                        >
+                            Next
+                        </a>
+                    {% else %}
+                        <span class="page-link">
+                            Next
+                        </span>
+                    {% endif %}
+                </li>
+
+            </ul>
+        </nav>
+    {% endif %}
+
+</div>
+
 {% endblock %}
