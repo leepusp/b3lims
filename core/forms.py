@@ -346,23 +346,61 @@ class SampleOriginForm(forms.ModelForm):
     class Meta:
         model = SampleOrigin
         fields = [
+            "culture_status",
+            "acquisition_source",
+            "source_collection_name",
+            "source_collection_accession",
             "collection_site_name",
             "collection_date",
             "geo_loc_name",
             "country_or_ocean",
             "latitude",
             "longitude",
+            "coordinate_source",
+            "coordinate_uncertainty_m",
             "depth_m",
             "elevation_m",
             "habitat",
             "environmental_medium",
             "env_broad_scale",
             "env_local_scale",
+            "ecosystem",
+            "ecosystem_category",
+            "ecosystem_type",
+            "ecosystem_subtype",
+            "specific_ecosystem",
             "collection_method",
             "notes",
             "location_visibility",
         ]
+
         widgets = {
+            "culture_status": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "acquisition_source": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "source_collection_name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "ATCC, DSMZ, JCM, collaborator repository..."
+                    ),
+                }
+            ),
+            "source_collection_accession": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "External collection or catalogue identifier"
+                    ),
+                }
+            ),
             "collection_site_name": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -411,6 +449,21 @@ class SampleOriginForm(forms.ModelForm):
                     "placeholder": "-46.633308",
                 }
             ),
+            "coordinate_source": forms.Select(
+                attrs={
+                    "class": "form-select",
+                }
+            ),
+            "coordinate_uncertainty_m": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.001",
+                    "min": "0",
+                    "placeholder": (
+                        "Horizontal uncertainty in metres"
+                    ),
+                }
+            ),
             "depth_m": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -447,11 +500,57 @@ class SampleOriginForm(forms.ModelForm):
             "env_broad_scale": forms.TextInput(
                 attrs={
                     "class": "form-control",
+                    "placeholder": (
+                        "Broad environmental context"
+                    ),
                 }
             ),
             "env_local_scale": forms.TextInput(
                 attrs={
                     "class": "form-control",
+                    "placeholder": (
+                        "Local environmental context"
+                    ),
+                }
+            ),
+            "ecosystem": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Environmental ecosystem"
+                    ),
+                }
+            ),
+            "ecosystem_category": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Ecosystem category"
+                    ),
+                }
+            ),
+            "ecosystem_type": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Ecosystem type"
+                    ),
+                }
+            ),
+            "ecosystem_subtype": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Ecosystem subtype"
+                    ),
+                }
+            ),
+            "specific_ecosystem": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Specific ecosystem"
+                    ),
                 }
             ),
             "collection_method": forms.Textarea(
@@ -473,14 +572,45 @@ class SampleOriginForm(forms.ModelForm):
             ),
         }
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.fields[
+            "culture_status"
+        ].choices = [
+            (
+                "",
+                "Not specified",
+            ),
+            *SampleOrigin.CULTURE_STATUS_CHOICES,
+        ]
+
+        self.fields[
+            "acquisition_source"
+        ].choices = [
+            (
+                "",
+                "Not specified",
+            ),
+            *SampleOrigin.ACQUISITION_SOURCE_CHOICES,
+        ]
+
+        self.fields[
+            "coordinate_source"
+        ].choices = [
+            (
+                "",
+                "Not specified",
+            ),
+            *SampleOrigin.COORDINATE_SOURCE_CHOICES,
+        ]
+
         # Geographic provenance itself is optional.
-        # Do not make location visibility force creation of an empty
-        # SampleOrigin record.
-        self.fields["location_visibility"].required = False
+        # Location visibility alone must not create an empty
+        # SampleOrigin row.
+        self.fields[
+            "location_visibility"
+        ].required = False
 
         if not self.is_bound:
             self.fields[
@@ -496,6 +626,7 @@ class SampleOriginForm(forms.ModelForm):
             )
             or SampleOrigin.LOCATION_INTERNAL
         )
+
 
 
 # ----------------------------------------------------------

@@ -604,6 +604,158 @@
                     </div>
                 {% endif %}
 
+                {% if sample_origin.culture_status or sample_origin.acquisition_source or sample_origin.source_collection_name or sample_origin.source_collection_accession %}
+                    <div class="mt-4">
+                        <h6 class="fw-bold mb-3">
+                            Origin / Acquisition
+                        </h6>
+
+                        <dl class="row mb-0">
+
+                            <dt class="col-sm-5 text-muted">
+                                Culture Status
+                            </dt>
+                            <dd class="col-sm-7">
+                                {{ sample_origin.get_culture_status_display|default:"Not specified" }}
+                            </dd>
+
+                            <dt class="col-sm-5 text-muted">
+                                Acquisition Source
+                            </dt>
+                            <dd class="col-sm-7">
+                                {{ sample_origin.get_acquisition_source_display|default:"Not specified" }}
+                            </dd>
+
+                            {% if sample_origin.source_collection_name %}
+                                <dt class="col-sm-5 text-muted">
+                                    Source Culture Collection
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.source_collection_name }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.source_collection_accession %}
+                                <dt class="col-sm-5 text-muted">
+                                    Source Collection Accession
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.source_collection_accession }}
+                                </dd>
+                            {% endif %}
+
+                        </dl>
+                    </div>
+                {% endif %}
+
+
+                {% if sample_origin.coordinate_source or sample_origin.coordinate_uncertainty_m != None %}
+                    <div class="mt-4">
+                        <h6 class="fw-bold mb-3">
+                            Coordinate Provenance
+                        </h6>
+
+                        <dl class="row mb-0">
+
+                            {% if sample_origin.coordinate_source %}
+                                <dt class="col-sm-5 text-muted">
+                                    Coordinate Source
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.get_coordinate_source_display }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.coordinate_uncertainty_m != None %}
+                                <dt class="col-sm-5 text-muted">
+                                    Coordinate Uncertainty
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.coordinate_uncertainty_m }} m
+                                </dd>
+                            {% endif %}
+
+                        </dl>
+                    </div>
+                {% endif %}
+
+
+                {% if sample_origin.ecosystem or sample_origin.ecosystem_category or sample_origin.ecosystem_type or sample_origin.ecosystem_subtype or sample_origin.specific_ecosystem or sample_origin.env_broad_scale or sample_origin.env_local_scale %}
+                    <div class="mt-4">
+                        <h6 class="fw-bold mb-3">
+                            Environmental Classification
+                        </h6>
+
+                        <dl class="row mb-0">
+
+                            {% if sample_origin.env_broad_scale %}
+                                <dt class="col-sm-5 text-muted">
+                                    Broad-scale Context
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.env_broad_scale }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.env_local_scale %}
+                                <dt class="col-sm-5 text-muted">
+                                    Local Context
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.env_local_scale }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.ecosystem %}
+                                <dt class="col-sm-5 text-muted">
+                                    Ecosystem
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.ecosystem }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.ecosystem_category %}
+                                <dt class="col-sm-5 text-muted">
+                                    Ecosystem Category
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.ecosystem_category }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.ecosystem_type %}
+                                <dt class="col-sm-5 text-muted">
+                                    Ecosystem Type
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.ecosystem_type }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.ecosystem_subtype %}
+                                <dt class="col-sm-5 text-muted">
+                                    Ecosystem Subtype
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.ecosystem_subtype }}
+                                </dd>
+                            {% endif %}
+
+                            {% if sample_origin.specific_ecosystem %}
+                                <dt class="col-sm-5 text-muted">
+                                    Specific Ecosystem
+                                </dt>
+                                <dd class="col-sm-7">
+                                    {{ sample_origin.specific_ecosystem }}
+                                </dd>
+                            {% endif %}
+
+                        </dl>
+                    </div>
+                {% endif %}
+
+
                 {% if sample_origin.collection_method or sample_origin.notes %}
                     <hr>
 

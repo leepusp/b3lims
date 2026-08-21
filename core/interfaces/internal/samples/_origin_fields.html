@@ -8,157 +8,350 @@
         </div>
     {% endif %}
 
-    <div class="row g-3">
 
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Collection Site
-            </label>
-            {{ origin_form.collection_site_name }}
-            {% if origin_form.collection_site_name.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.collection_site_name.errors }}
+    <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-box-arrow-in-down text-primary"></i>
+            <div>
+                <div class="fw-bold">
+                    Origin / Acquisition
                 </div>
-            {% endif %}
-        </div>
-
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Collection Date
-            </label>
-            {{ origin_form.collection_date }}
-            {% if origin_form.collection_date.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.collection_date.errors }}
+                <div class="sample-origin-help">
+                    Describe how the biological material was obtained
+                    before its current storage in the LIMS.
                 </div>
-            {% endif %}
-        </div>
-
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Location Visibility
-            </label>
-            {{ origin_form.location_visibility }}
-            <div class="sample-origin-help mt-1">
-                Internal only is the safest default.
             </div>
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Geographic Location
-            </label>
-            {{ origin_form.geo_loc_name }}
-            {% if origin_form.geo_loc_name.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.geo_loc_name.errors }}
-                </div>
-            {% endif %}
-        </div>
+        <div class="row g-3">
 
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Country / Ocean
-            </label>
-            {{ origin_form.country_or_ocean }}
-            {% if origin_form.country_or_ocean.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.country_or_ocean.errors }}
-                </div>
-            {% endif %}
-        </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Culture Status
+                </label>
+                {{ origin_form.culture_status }}
+                {% if origin_form.culture_status.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.culture_status.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Latitude
-            </label>
-            {{ origin_form.latitude }}
-            {% if origin_form.latitude.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.latitude.errors }}
-                </div>
-            {% endif %}
-        </div>
+            <div class="col-md-5">
+                <label class="form-label fw-bold small">
+                    Acquisition Source
+                </label>
+                {{ origin_form.acquisition_source }}
+                {% if origin_form.acquisition_source.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.acquisition_source.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Longitude
-            </label>
-            {{ origin_form.longitude }}
-            {% if origin_form.longitude.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.longitude.errors }}
-                </div>
-            {% endif %}
-        </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">
+                    Source Culture Collection
+                </label>
+                {{ origin_form.source_collection_name }}
+                {% if origin_form.source_collection_name.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.source_collection_name.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Depth (m)
-            </label>
-            {{ origin_form.depth_m }}
-            {% if origin_form.depth_m.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.depth_m.errors }}
-                </div>
-            {% endif %}
-        </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">
+                    Source Collection Accession
+                </label>
+                {{ origin_form.source_collection_accession }}
+                {% if origin_form.source_collection_accession.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.source_collection_accession.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-        <div class="col-md-3">
-            <label class="form-label fw-bold small">
-                Elevation / Altitude (m)
-            </label>
-            {{ origin_form.elevation_m }}
-            {% if origin_form.elevation_m.errors %}
-                <div class="text-danger small">
-                    {{ origin_form.elevation_m.errors }}
-                </div>
-            {% endif %}
         </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Habitat
-            </label>
-            {{ origin_form.habitat }}
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Environmental Medium
-            </label>
-            {{ origin_form.environmental_medium }}
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Broad-scale Environmental Context
-            </label>
-            {{ origin_form.env_broad_scale }}
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Local Environmental Context
-            </label>
-            {{ origin_form.env_local_scale }}
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Collection Method
-            </label>
-            {{ origin_form.collection_method }}
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label fw-bold small">
-                Origin Notes
-            </label>
-            {{ origin_form.notes }}
-        </div>
-
     </div>
+
+
+    <div class="border rounded-3 p-3 mb-3">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-geo-alt text-primary"></i>
+            <div>
+                <div class="fw-bold">
+                    Collection & Geography
+                </div>
+                <div class="sample-origin-help">
+                    Geographic provenance is independent from the
+                    Sample's current physical storage location.
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Collection Site
+                </label>
+                {{ origin_form.collection_site_name }}
+                {% if origin_form.collection_site_name.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.collection_site_name.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Collection Date
+                </label>
+                {{ origin_form.collection_date }}
+                {% if origin_form.collection_date.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.collection_date.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Location Visibility
+                </label>
+                {{ origin_form.location_visibility }}
+                {% if origin_form.location_visibility.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.location_visibility.errors }}
+                    </div>
+                {% endif %}
+                <div class="sample-origin-help mt-1">
+                    Internal only is the safest default.
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Geographic Location
+                </label>
+                {{ origin_form.geo_loc_name }}
+                {% if origin_form.geo_loc_name.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.geo_loc_name.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Country / Ocean
+                </label>
+                {{ origin_form.country_or_ocean }}
+                {% if origin_form.country_or_ocean.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.country_or_ocean.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Latitude
+                </label>
+                {{ origin_form.latitude }}
+                {% if origin_form.latitude.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.latitude.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Longitude
+                </label>
+                {{ origin_form.longitude }}
+                {% if origin_form.longitude.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.longitude.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Depth (m)
+                </label>
+                {{ origin_form.depth_m }}
+                {% if origin_form.depth_m.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.depth_m.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">
+                    Elevation / Altitude (m)
+                </label>
+                {{ origin_form.elevation_m }}
+                {% if origin_form.elevation_m.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.elevation_m.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-crosshair text-primary"></i>
+            <div>
+                <div class="fw-bold">
+                    Coordinate Provenance
+                </div>
+                <div class="sample-origin-help">
+                    Record how the coordinates were obtained and their
+                    known horizontal uncertainty.
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Coordinate Source
+                </label>
+                {{ origin_form.coordinate_source }}
+                {% if origin_form.coordinate_source.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.coordinate_source.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Coordinate Uncertainty (m)
+                </label>
+                {{ origin_form.coordinate_uncertainty_m }}
+                {% if origin_form.coordinate_uncertainty_m.errors %}
+                    <div class="text-danger small">
+                        {{ origin_form.coordinate_uncertainty_m.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="border rounded-3 p-3 mb-3">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-tree text-primary"></i>
+            <div>
+                <div class="fw-bold">
+                    Environmental Classification
+                </div>
+                <div class="sample-origin-help">
+                    MIxS-style environmental context may be recorded
+                    together with a hierarchical ecosystem classification.
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Habitat
+                </label>
+                {{ origin_form.habitat }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Environmental Medium
+                </label>
+                {{ origin_form.environmental_medium }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Broad-scale Environmental Context
+                </label>
+                {{ origin_form.env_broad_scale }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Local Environmental Context
+                </label>
+                {{ origin_form.env_local_scale }}
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">
+                    Ecosystem
+                </label>
+                {{ origin_form.ecosystem }}
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">
+                    Ecosystem Category
+                </label>
+                {{ origin_form.ecosystem_category }}
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">
+                    Ecosystem Type
+                </label>
+                {{ origin_form.ecosystem_type }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Ecosystem Subtype
+                </label>
+                {{ origin_form.ecosystem_subtype }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Specific Ecosystem
+                </label>
+                {{ origin_form.specific_ecosystem }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Collection Method
+                </label>
+                {{ origin_form.collection_method }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                    Origin Notes
+                </label>
+                {{ origin_form.notes }}
+            </div>
+
+        </div>
+    </div>
+
 
     <hr>
 
@@ -197,4 +390,5 @@
             No collection coordinates selected.
         </span>
     </div>
+
 </div>

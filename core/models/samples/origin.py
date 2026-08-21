@@ -39,10 +39,131 @@ class SampleOrigin(models.Model):
         ),
     ]
 
+    CULTURE_CULTURED = "cultured"
+    CULTURE_UNCULTURED = "uncultured"
+
+    CULTURE_STATUS_CHOICES = [
+        (
+            CULTURE_CULTURED,
+            "Cultured",
+        ),
+        (
+            CULTURE_UNCULTURED,
+            "Uncultured",
+        ),
+    ]
+
+    ACQUISITION_ISOLATED_LAB = "isolated_lab"
+    ACQUISITION_COLLABORATOR = "collaborator"
+    ACQUISITION_CULTURE_COLLECTION = "culture_collection"
+    ACQUISITION_EXTERNAL_REPOSITORY = "external_repository"
+    ACQUISITION_OTHER = "other"
+
+    ACQUISITION_SOURCE_CHOICES = [
+        (
+            ACQUISITION_ISOLATED_LAB,
+            "Isolated by laboratory",
+        ),
+        (
+            ACQUISITION_COLLABORATOR,
+            "Obtained from collaborator",
+        ),
+        (
+            ACQUISITION_CULTURE_COLLECTION,
+            "Obtained from culture collection",
+        ),
+        (
+            ACQUISITION_EXTERNAL_REPOSITORY,
+            "Obtained from external repository",
+        ),
+        (
+            ACQUISITION_OTHER,
+            "Other",
+        ),
+    ]
+
+    COORDINATE_MAP = "map"
+    COORDINATE_GPS = "gps"
+    COORDINATE_GAZETTEER = "gazetteer"
+    COORDINATE_PROVIDER = "provider"
+    COORDINATE_IMPORTED = "imported"
+    COORDINATE_OTHER = "other"
+
+    COORDINATE_SOURCE_CHOICES = [
+        (
+            COORDINATE_MAP,
+            "Map selection",
+        ),
+        (
+            COORDINATE_GPS,
+            "GPS",
+        ),
+        (
+            COORDINATE_GAZETTEER,
+            "Gazetteer / geocoding service",
+        ),
+        (
+            COORDINATE_PROVIDER,
+            "Reported by provider",
+        ),
+        (
+            COORDINATE_IMPORTED,
+            "Imported metadata",
+        ),
+        (
+            COORDINATE_OTHER,
+            "Other",
+        ),
+    ]
+
     sample = models.OneToOneField(
         "core.Sample",
         on_delete=models.CASCADE,
         related_name="origin",
+    )
+
+    culture_status = models.CharField(
+        max_length=20,
+        choices=CULTURE_STATUS_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Culture status",
+        help_text=(
+            "Whether the source organism or material was maintained "
+            "as a culture at the time represented by this provenance."
+        ),
+    )
+
+    acquisition_source = models.CharField(
+        max_length=40,
+        choices=ACQUISITION_SOURCE_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Acquisition source",
+        help_text=(
+            "How the biological material represented by this Sample "
+            "was originally acquired."
+        ),
+    )
+
+    source_collection_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Source culture collection",
+        help_text=(
+            "Name of an external culture collection, repository or "
+            "provider from which the material was obtained."
+        ),
+    )
+
+    source_collection_accession = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Source collection accession",
+        help_text=(
+            "Accession, catalogue number or external identifier assigned "
+            "by the source culture collection or repository."
+        ),
     )
 
     collection_site_name = models.CharField(
@@ -118,6 +239,34 @@ class SampleOrigin(models.Model):
         ),
     )
 
+    coordinate_source = models.CharField(
+        max_length=30,
+        choices=COORDINATE_SOURCE_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Coordinate source",
+        help_text=(
+            "How the latitude / longitude pair was obtained."
+        ),
+    )
+
+    coordinate_uncertainty_m = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(
+                Decimal("0")
+            ),
+        ],
+        verbose_name="Coordinate uncertainty (m)",
+        help_text=(
+            "Estimated horizontal uncertainty of the recorded "
+            "coordinates in metres."
+        ),
+    )
+
     depth_m = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -185,6 +334,51 @@ class SampleOrigin(models.Model):
         ),
     )
 
+    ecosystem = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=(
+            "Highest-level ecosystem classification associated with "
+            "the source environment."
+        ),
+    )
+
+    ecosystem_category = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Ecosystem category",
+        help_text=(
+            "Second-level environmental classification."
+        ),
+    )
+
+    ecosystem_type = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Ecosystem type",
+        help_text=(
+            "Environmental type within the selected ecosystem category."
+        ),
+    )
+
+    ecosystem_subtype = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Ecosystem subtype",
+        help_text=(
+            "Environmental subtype within the selected ecosystem type."
+        ),
+    )
+
+    specific_ecosystem = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Specific ecosystem",
+        help_text=(
+            "Most specific available environmental classification."
+        ),
+    )
+
     collection_method = models.TextField(
         blank=True,
         help_text=(
@@ -243,6 +437,42 @@ class SampleOrigin(models.Model):
                         "Latitude and longitude must be provided together."
                     ),
                 }
+            )
+
+
+        has_coordinates = (
+            has_latitude
+            and has_longitude
+        )
+
+        coordinate_errors = {}
+
+        if (
+            self.coordinate_source
+            and not has_coordinates
+        ):
+            coordinate_errors[
+                "coordinate_source"
+            ] = (
+                "Coordinate source requires a complete latitude / "
+                "longitude pair."
+            )
+
+        if (
+            self.coordinate_uncertainty_m
+            is not None
+            and not has_coordinates
+        ):
+            coordinate_errors[
+                "coordinate_uncertainty_m"
+            ] = (
+                "Coordinate uncertainty requires a complete latitude / "
+                "longitude pair."
+            )
+
+        if coordinate_errors:
+            raise ValidationError(
+                coordinate_errors
             )
 
     @property
