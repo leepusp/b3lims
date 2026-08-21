@@ -93,6 +93,10 @@ install -d \
     -m 0751 \
     "$RUNTIME_ROOT"
 
+# A setgid parent may propagate SGID to a newly created directory.
+# Reassert the exact runtime mode required by the access contract.
+chmod 0751 "$RUNTIME_ROOT"
+
 install -o root -g biobank -m 0755 \
     "$SOURCE_RUNTIME" \
     "$SHARED_RUNTIME"
