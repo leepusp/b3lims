@@ -14,13 +14,15 @@ class Migration(migrations.Migration):
             model_name='plasmid',
             name='insert_part',
         ),
-        migrations.RemoveField(
-            model_name='vectorbackbone',
-            name='sample_ptr',
-        ),
+        # Remove the dependent Plasmid FK before removing the
+        # VectorBackbone primary-key parent link.
         migrations.RemoveField(
             model_name='plasmid',
             name='backbone',
+        ),
+        migrations.RemoveField(
+            model_name='vectorbackbone',
+            name='sample_ptr',
         ),
         migrations.AlterModelOptions(
             name='plasmid',

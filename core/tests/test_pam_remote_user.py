@@ -26,6 +26,7 @@ class PamRemoteUserMiddlewareTests(TestCase):
                 "::1",
             ),
             BIOBANK_PAM_MINIMUM_UID=1000,
+            BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN=False,
         )
         self.settings_override.enable()
 
