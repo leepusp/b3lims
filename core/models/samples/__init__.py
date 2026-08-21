@@ -18,3 +18,4 @@ __all__ = [
     "SampleImportBatch",
     "SampleIntakeRecord",
 ]
+from .access import SampleAccessGrant

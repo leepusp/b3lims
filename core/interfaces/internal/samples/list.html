@@ -158,6 +158,14 @@ Search, filter and manage Samples visible to your account
     id="sampleFilterForm"
     class="sample-list-toolbar"
 >
+    {% if sample_shared_scope_active %}
+        <input
+            type="hidden"
+            name="access"
+            value="shared"
+        >
+    {% endif %}
+
     <div class="row g-2">
 
         <div class="col-12 col-xl-4">
@@ -522,6 +530,40 @@ Search, filter and manage Samples visible to your account
                     Sample{{ sample_list_summary.filtered_total|pluralize }}
                 </div>
 
+                <a
+                    href="{% url 'samples_list' %}?access=shared"
+                    class="btn btn-sm {% if sample_shared_scope_active %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                >
+                    <i class="bi bi-people me-1"></i>
+                    Shared With Me
+                    <span class="badge text-bg-light ms-1">
+                        {{ sample_shared_with_me_count }}
+                    </span>
+                </a>
+
+                {% if sample_shared_scope_active %}
+                    <a
+                        href="{% url 'samples_list' %}"
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        <i class="bi bi-grid me-1"></i>
+                        All Visible Samples
+                    </a>
+                {% endif %}
+
+                <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    id="shareSelectedSamplesButton"
+                    data-bs-toggle="modal"
+                    data-bs-target="#shareSelectedSamplesModal"
+                    disabled
+                >
+                    <i class="bi bi-person-plus me-1"></i>
+                    Share Selected
+                    (<span id="shareSelectedSamplesCount">0</span>)
+                </button>
+
                 {% if active_filter_count %}
                     <a
                         href="{% url 'samples_list' %}"
@@ -541,7 +583,18 @@ Search, filter and manage Samples visible to your account
 
 
 {% block table_header %}
-<th class="ps-4">Sample</th>
+<th
+    class="text-center"
+    style="width: 44px;"
+>
+    <input
+        type="checkbox"
+        class="form-check-input"
+        id="sampleShareSelectAll"
+        aria-label="Select all shareable Samples on this page"
+    >
+</th>
+<th>Sample</th>
 <th>Identification</th>
 <th>Type / Biosafety</th>
 <th>Governance</th>
@@ -558,7 +611,26 @@ Search, filter and manage Samples visible to your account
 {% for sample in samples %}
 <tr>
 
-    <td class="ps-4 align-middle">
+    <td class="align-middle text-center">
+        {% if sample.can_manage_sharing_current_user %}
+            <input
+                type="checkbox"
+                class="form-check-input sample-share-select"
+                value="{{ sample.pk }}"
+                id="share-sample-{{ sample.pk }}"
+                aria-label="Select {{ sample.sample_id }} for sharing"
+            >
+        {% else %}
+            <span
+                class="text-muted"
+                title="Only the Sample owner or an administrator can manage direct sharing."
+            >
+                &mdash;
+            </span>
+        {% endif %}
+    </td>
+
+    <td class="align-middle">
         <a
             href="{% url 'sample_detail' sample.pk %}"
             class="sample-code"
@@ -818,7 +890,7 @@ Search, filter and manage Samples visible to your account
 
 <tr>
     <td
-        colspan="9"
+        colspan="10"
         class="sample-empty"
     >
         <i class="bi bi-droplet fs-2 d-block mb-2"></i>
@@ -943,6 +1015,347 @@ Search, filter and manage Samples visible to your account
         </nav>
     {% endif %}
 
+
 </div>
+
+<div
+    class="modal fade"
+    id="shareSelectedSamplesModal"
+    tabindex="-1"
+    aria-labelledby="shareSelectedSamplesModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <form
+                method="post"
+                action="{% url 'sample_bulk_share' %}"
+                id="shareSelectedSamplesForm"
+            >
+                {% csrf_token %}
+
+                <div id="shareSelectedSampleInputs"></div>
+
+                <div class="modal-header">
+                    <h5
+                        class="modal-title"
+                        id="shareSelectedSamplesModalLabel"
+                    >
+                        <i class="bi bi-person-plus me-2"></i>
+                        Share Selected Samples
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="alert alert-light border small">
+                        Sharing
+                        <strong id="shareSelectedModalCount">0</strong>
+                        Sample(s). Ownership, Research Group,
+                        Collections, Biobank and physical file
+                        locations will not change.
+                    </div>
+
+                    <div class="mb-3">
+                        <label
+                            for="bulkShareUser"
+                            class="form-label fw-semibold"
+                        >
+                            Biobank User
+                        </label>
+
+                        <select
+                            id="bulkShareUser"
+                            name="user_id"
+                            class="form-select"
+                            required
+                        >
+                            <option value="">
+                                Select a user...
+                            </option>
+
+                            {% for share_user in sample_share_users %}
+                                <option value="{{ share_user.pk }}">
+                                    {{ share_user.username }}
+                                    {% if share_user.get_full_name %}
+                                        — {{ share_user.get_full_name }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <div class="form-text">
+                            The selected user does not need to belong
+                            to the Sample's Research Group.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label
+                            for="bulkShareAccessLevel"
+                            class="form-label fw-semibold"
+                        >
+                            Permission
+                        </label>
+
+                        <select
+                            id="bulkShareAccessLevel"
+                            name="access_level"
+                            class="form-select"
+                            required
+                        >
+                            <option value="view">
+                                View
+                            </option>
+
+                            <option value="edit">
+                                Edit
+                            </option>
+                        </select>
+
+                        <div class="form-text">
+                            View permits Sample metadata and protected
+                            file access. Edit additionally permits
+                            normal Sample editing, but not re-sharing,
+                            Trash, permanent deletion or ownership
+                            transfer.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label
+                            for="bulkShareExpiresAt"
+                            class="form-label fw-semibold"
+                        >
+                            Access Expiration
+                            <span class="text-muted fw-normal">
+                                (optional)
+                            </span>
+                        </label>
+
+                        <input
+                            id="bulkShareExpiresAt"
+                            name="expires_at"
+                            type="datetime-local"
+                            class="form-control"
+                        >
+
+                        <div class="form-text">
+                            Leave blank for access without an expiration date.
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                    >
+                        <i class="bi bi-person-check me-1"></i>
+                        Share Samples
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function () {
+    "use strict";
+
+    function allShareCheckboxes() {
+        return Array.from(
+            document.querySelectorAll(
+                ".sample-share-select"
+            )
+        );
+    }
+
+    function selectedShareCheckboxes() {
+        return allShareCheckboxes().filter(
+            function (checkbox) {
+                return checkbox.checked;
+            }
+        );
+    }
+
+    function rebuildSelectedSampleInputs() {
+        var container = document.getElementById(
+            "shareSelectedSampleInputs"
+        );
+
+        if (!container) {
+            return 0;
+        }
+
+        container.replaceChildren();
+
+        var selected = selectedShareCheckboxes();
+
+        selected.forEach(
+            function (checkbox) {
+                var input = document.createElement(
+                    "input"
+                );
+
+                input.type = "hidden";
+                input.name = "sample_ids";
+                input.value = checkbox.value;
+
+                container.appendChild(
+                    input
+                );
+            }
+        );
+
+        return selected.length;
+    }
+
+    function updateSampleShareSelection() {
+        var all = allShareCheckboxes();
+        var selected = selectedShareCheckboxes();
+
+        var count = selected.length;
+
+        var button = document.getElementById(
+            "shareSelectedSamplesButton"
+        );
+
+        var buttonCount = document.getElementById(
+            "shareSelectedSamplesCount"
+        );
+
+        var modalCount = document.getElementById(
+            "shareSelectedModalCount"
+        );
+
+        var selectAll = document.getElementById(
+            "sampleShareSelectAll"
+        );
+
+        if (button) {
+            button.disabled = count === 0;
+        }
+
+        if (buttonCount) {
+            buttonCount.textContent = String(
+                count
+            );
+        }
+
+        if (modalCount) {
+            modalCount.textContent = String(
+                count
+            );
+        }
+
+        if (selectAll) {
+            selectAll.checked = (
+                all.length > 0
+                && selected.length === all.length
+            );
+
+            selectAll.indeterminate = (
+                selected.length > 0
+                && selected.length < all.length
+            );
+        }
+    }
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+            var all = allShareCheckboxes();
+
+            var selectAll = document.getElementById(
+                "sampleShareSelectAll"
+            );
+
+            var form = document.getElementById(
+                "shareSelectedSamplesForm"
+            );
+
+            var modal = document.getElementById(
+                "shareSelectedSamplesModal"
+            );
+
+            all.forEach(
+                function (checkbox) {
+                    checkbox.addEventListener(
+                        "change",
+                        updateSampleShareSelection
+                    );
+                }
+            );
+
+            if (selectAll) {
+                selectAll.addEventListener(
+                    "change",
+                    function () {
+                        all.forEach(
+                            function (checkbox) {
+                                checkbox.checked =
+                                    selectAll.checked;
+                            }
+                        );
+
+                        updateSampleShareSelection();
+                    }
+                );
+            }
+
+            if (modal) {
+                modal.addEventListener(
+                    "show.bs.modal",
+                    function () {
+                        rebuildSelectedSampleInputs();
+                        updateSampleShareSelection();
+                    }
+                );
+            }
+
+            if (form) {
+                form.addEventListener(
+                    "submit",
+                    function (event) {
+                        if (
+                            rebuildSelectedSampleInputs()
+                            === 0
+                        ) {
+                            event.preventDefault();
+                            updateSampleShareSelection();
+                        }
+                    }
+                );
+            }
+
+            updateSampleShareSelection();
+        }
+    );
+})();
+</script>
 
 {% endblock %}

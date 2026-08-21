@@ -105,11 +105,14 @@ from core.views.internal.samples.views import sample_qr_scan_view
 from core.views.internal.samples.views import sample_file_download_view
 from core.views.internal.samples.views import (
     sample_activate_view,
+    sample_bulk_share_view,
     sample_deactivate_view,
     sample_lifecycle_view,
     sample_move_to_trash_view,
     sample_purge_view,
     sample_restore_view,
+    sample_share_revoke_view,
+    sample_share_view,
 )
 
 urlpatterns = [
@@ -184,6 +187,21 @@ urlpatterns = [
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
+    path(
+        "samples/share/",
+        sample_bulk_share_view,
+        name="sample_bulk_share",
+    ),
+    path(
+        "samples/<int:sample_id>/share/",
+        sample_share_view,
+        name="sample_share",
+    ),
+    path(
+        "samples/<int:sample_id>/share/<int:grant_id>/revoke/",
+        sample_share_revoke_view,
+        name="sample_share_revoke",
+    ),
     path(
         "samples/lifecycle/",
         sample_lifecycle_view,

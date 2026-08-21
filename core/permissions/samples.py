@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.utils import timezone
 
 
 def _is_authenticated(user):
@@ -74,6 +75,91 @@ def is_sample_publicly_accessible(sample):
     )
 
 
+def _active_direct_sample_grants(user, sample):
+    """
+    Return active direct grants for this user/Sample pair.
+
+    Uses prefetched access_grants when available to avoid per-Sample
+    database queries in visible_samples_for_user().
+    """
+    if not _is_authenticated(user):
+        return []
+
+    now = timezone.now()
+
+    prefetched = getattr(
+        sample,
+        "_prefetched_objects_cache",
+        {},
+    ).get(
+        "access_grants"
+    )
+
+    if prefetched is not None:
+        return [
+            grant
+            for grant in prefetched
+            if (
+                grant.user_id == user.id
+                and (
+                    grant.expires_at is None
+                    or grant.expires_at > now
+                )
+            )
+        ]
+
+    return list(
+        sample.access_grants.filter(
+            user_id=user.id,
+        ).filter(
+            Q(
+                expires_at__isnull=True
+            )
+            | Q(
+                expires_at__gt=now
+            )
+        )
+    )
+
+
+def _has_direct_sample_access(
+    user,
+    sample,
+    *,
+    edit=False,
+):
+    grants = _active_direct_sample_grants(
+        user,
+        sample,
+    )
+
+    if not grants:
+        return False
+
+    if not edit:
+        return True
+
+    return any(
+        grant.access_level == "edit"
+        for grant in grants
+    )
+
+
+def can_manage_sample_sharing(user, sample):
+    """
+    Only the Sample owner or an administrator may delegate direct access.
+
+    EDIT grants deliberately do not confer permission to re-share data.
+    """
+    if _is_admin(user):
+        return True
+
+    return _is_owner(
+        user,
+        sample,
+    )
+
+
 def can_view_sample(user, sample):
     """
     Sample viewing policy.
@@ -86,6 +172,12 @@ def can_view_sample(user, sample):
         return True
 
     if _is_owner(user, sample):
+        return True
+
+    if _has_direct_sample_access(
+        user,
+        sample,
+    ):
         return True
 
     if _has_group_access(user, sample):
@@ -115,6 +207,13 @@ def can_edit_sample(user, sample):
         return True
 
     if _is_owner(user, sample):
+        return True
+
+    if _has_direct_sample_access(
+        user,
+        sample,
+        edit=True,
+    ):
         return True
 
     if _has_group_access(user, sample):
@@ -185,6 +284,8 @@ def visible_samples_for_user(user):
         .prefetch_related(
             "collections",
             "collections__research_group",
+            "access_grants",
+            "access_grants__user",
         )
     )
 

@@ -171,6 +171,7 @@ class SampleForm(forms.ModelForm):
         )
 
         if user is None:
+            self._lock_existing_owner_field()
             return
 
         owner_qs = assignable_sample_owners_for_user(
@@ -278,6 +279,55 @@ class SampleForm(forms.ModelForm):
         )
         self.fields["collections"].queryset = collection_qs.order_by(
             "name"
+        )
+
+        self._lock_existing_owner_field()
+
+    def _lock_existing_owner_field(self):
+        """
+        Prevent implicit ownership transfer through the standard
+        Sample ModelForm.
+
+        Existing Sample files are contractually stored under the
+        current owner's protected home directory. Ownership changes
+        therefore require the dedicated Transfer Ownership workflow,
+        which can coordinate database state, physical storage,
+        integrity verification and audit logging.
+        """
+        if not (
+            self.instance
+            and self.instance.pk
+        ):
+            return
+
+        owner_field = self.fields.get(
+            "owner"
+        )
+
+        if owner_field is None:
+            return
+
+        # Existing Sample ownership is changed only through the dedicated transfer workflow.
+        if self.instance.owner_id:
+            owner_field.queryset = (
+                User.objects
+                .filter(
+                    pk=self.instance.owner_id
+                )
+                .order_by(
+                    "username"
+                )
+            )
+        else:
+            owner_field.queryset = (
+                User.objects.none()
+            )
+
+        owner_field.disabled = True
+        owner_field.help_text = (
+            "Ownership cannot be changed from the standard "
+            "Edit Sample form. Use the dedicated Transfer "
+            "Ownership workflow."
         )
 
 

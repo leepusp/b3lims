@@ -291,6 +291,40 @@ def samples_list_view(request):
         )
     )
 
+    # Direct Sample sharing scope.
+    shared_scope = (
+        request.GET.get(
+            "access",
+            "",
+        )
+        or ""
+    ).strip()
+
+    if shared_scope == "shared":
+        shared_now = timezone.now()
+
+        qs = (
+            qs
+            .filter(
+                access_grants__user=request.user,
+            )
+            .filter(
+                Q(
+                    access_grants__expires_at__isnull=True,
+                )
+                | Q(
+                    access_grants__expires_at__gt=shared_now,
+                )
+            )
+            .exclude(
+                owner=request.user,
+            )
+            .distinct()
+        )
+
+    elif shared_scope:
+        shared_scope = ""
+
     # ---------------------------------------------------------
     # Search
     # ---------------------------------------------------------
@@ -515,6 +549,17 @@ def samples_list_view(request):
             )
         )
 
+        from core.permissions.samples import (
+            can_manage_sample_sharing,
+        )
+
+        sample.can_manage_sharing_current_user = (
+            can_manage_sample_sharing(
+                user,
+                sample,
+            )
+        )
+
         if not hasattr(
             sample,
             "primary_storage_path",
@@ -549,6 +594,51 @@ def samples_list_view(request):
 
     visible_total = (
         base_qs.count()
+    )
+
+    # Direct Sample sharing list context.
+    from django.contrib.auth import get_user_model
+    from core.models.samples.access import SampleAccessGrant
+
+    SharingUser = get_user_model()
+    sharing_now = timezone.now()
+
+    shared_with_me_count = (
+        SampleAccessGrant.objects
+        .filter(
+            user=request.user,
+            sample__is_active=True,
+            sample__deletion_requested_at__isnull=True,
+        )
+        .filter(
+            Q(
+                expires_at__isnull=True,
+            )
+            | Q(
+                expires_at__gt=sharing_now,
+            )
+        )
+        .exclude(
+            sample__owner=request.user,
+        )
+        .values(
+            "sample_id"
+        )
+        .distinct()
+        .count()
+    )
+
+    sample_share_users = (
+        SharingUser.objects
+        .filter(
+            is_active=True,
+        )
+        .exclude(
+            pk=request.user.pk,
+        )
+        .order_by(
+            "username"
+        )
     )
 
     ctx = base_context(
@@ -607,6 +697,16 @@ def samples_list_view(request):
                     "sample_type",
                     "organism_name",
                 )
+            ),
+            "sample_share_users": (
+                sample_share_users
+            ),
+            "sample_shared_with_me_count": (
+                shared_with_me_count
+            ),
+            "sample_shared_scope_active": (
+                shared_scope
+                == "shared"
             ),
         }
     )
@@ -2301,6 +2401,61 @@ def sample_detail_view(request, sample_id):
     sample_files = SampleFile.objects.filter(sample=base_sample).order_by("-uploaded_at")
     current_storage_paths = get_all_storage_paths(base_sample)
 
+    # Direct Sample sharing detail context.
+    from django.contrib.auth import get_user_model
+    from core.permissions.samples import (
+        can_manage_sample_sharing,
+    )
+
+    SharingUser = get_user_model()
+
+    direct_access_grants = list(
+        base_sample.access_grants
+        .select_related(
+            "user",
+            "granted_by",
+        )
+        .order_by(
+            "user__username"
+        )
+    )
+
+    current_direct_sample_grant = next(
+        (
+            grant
+            for grant in direct_access_grants
+            if (
+                grant.user_id
+                == request.user.id
+                and not grant.is_expired
+            )
+        ),
+        None,
+    )
+
+    can_manage_sharing = (
+        can_manage_sample_sharing(
+            request.user,
+            base_sample,
+        )
+    )
+
+    sample_share_users = (
+        SharingUser.objects
+        .filter(
+            is_active=True,
+        )
+        .exclude(
+            pk=base_sample.owner_id,
+        )
+        .exclude(
+            pk=request.user.pk,
+        )
+        .order_by(
+            "username"
+        )
+    )
+
     ctx = base_context(request)
     ctx.update({
         "sample": base_sample,
@@ -2309,6 +2464,18 @@ def sample_detail_view(request, sample_id):
         "children": children,
         "sample_files": sample_files,
         "current_storage_paths": current_storage_paths,
+        "can_manage_sample_sharing": (
+            can_manage_sharing
+        ),
+        "direct_access_grants": (
+            direct_access_grants
+        ),
+        "current_direct_sample_grant": (
+            current_direct_sample_grant
+        ),
+        "sample_share_users": (
+            sample_share_users
+        ),
         "sample_origin": (
             SampleOrigin.objects
             .filter(
@@ -2903,3 +3070,379 @@ def sample_create_shipment_view(request, sample_id):
     )
 
     return redirect("shipment_edit", shipment_id=shipment.id)
+
+# =========================================================
+# DIRECT SAMPLE SHARING
+# =========================================================
+
+def _parse_sample_share_expiry(request):
+    from django.utils.dateparse import parse_datetime
+
+    raw = str(
+        request.POST.get(
+            "expires_at",
+            "",
+        )
+        or ""
+    ).strip()
+
+    if not raw:
+        return None
+
+    value = parse_datetime(
+        raw
+    )
+
+    if value is None:
+        raise ValidationError(
+            "Enter a valid access expiration date and time."
+        )
+
+    if timezone.is_naive(
+        value
+    ):
+        value = timezone.make_aware(
+            value,
+            timezone.get_current_timezone(),
+        )
+
+    if value <= timezone.now():
+        raise ValidationError(
+            "Access expiration must be in the future."
+        )
+
+    return value
+
+
+@login_required
+@require_POST
+def sample_bulk_share_view(request):
+    from django.contrib.auth import get_user_model
+
+    from core.services.sample_sharing import (
+        bulk_grant_sample_access,
+    )
+
+    User = get_user_model()
+
+    raw_ids = request.POST.getlist(
+        "sample_ids"
+    )
+
+    try:
+        sample_ids = list(
+            dict.fromkeys(
+                int(value)
+                for value in raw_ids
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        messages.error(
+            request,
+            "The selected Samples are invalid.",
+        )
+
+        return redirect(
+            "samples_list"
+        )
+
+    if not sample_ids:
+        messages.error(
+            request,
+            "Select at least one Sample to share.",
+        )
+
+        return redirect(
+            "samples_list"
+        )
+
+    samples = list(
+        Sample.objects
+        .filter(
+            pk__in=sample_ids,
+            is_active=True,
+            deletion_requested_at__isnull=True,
+        )
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "collections",
+            "collections__research_group",
+        )
+        .order_by(
+            "pk"
+        )
+    )
+
+    if len(samples) != len(
+        sample_ids
+    ):
+        messages.error(
+            request,
+            "One or more selected Samples are unavailable.",
+        )
+
+        return redirect(
+            "samples_list"
+        )
+
+    target_user = get_object_or_404(
+        User,
+        pk=request.POST.get(
+            "user_id"
+        ),
+        is_active=True,
+    )
+
+    access_level = str(
+        request.POST.get(
+            "access_level",
+            "view",
+        )
+        or "view"
+    ).strip()
+
+    try:
+        expires_at = (
+            _parse_sample_share_expiry(
+                request
+            )
+        )
+
+        result = (
+            bulk_grant_sample_access(
+                samples=samples,
+                user=target_user,
+                access_level=access_level,
+                granted_by=request.user,
+                expires_at=expires_at,
+            )
+        )
+
+    except (
+        PermissionDenied,
+        ValidationError,
+    ) as exc:
+        message = (
+            "; ".join(
+                getattr(
+                    exc,
+                    "messages",
+                    [],
+                )
+            )
+            or str(exc)
+        )
+
+        messages.error(
+            request,
+            message,
+        )
+
+        return redirect(
+            "samples_list"
+        )
+
+    summary = (
+        f"Access for {target_user.username}: "
+        f"{result.created} created, "
+        f"{result.updated} updated"
+    )
+
+    if result.skipped_owner:
+        summary += (
+            f", {result.skipped_owner} skipped because "
+            "the user already owns the Sample"
+        )
+
+    messages.success(
+        request,
+        summary + ".",
+    )
+
+    return redirect(
+        "samples_list"
+    )
+
+
+@login_required
+@require_POST
+def sample_share_view(
+    request,
+    sample_id,
+):
+    from django.contrib.auth import get_user_model
+
+    from core.services.sample_sharing import (
+        grant_sample_access,
+    )
+
+    User = get_user_model()
+
+    sample = get_object_or_404(
+        Sample.objects
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "collections",
+            "collections__research_group",
+        ),
+        pk=sample_id,
+        is_active=True,
+        deletion_requested_at__isnull=True,
+    )
+
+    target_user = get_object_or_404(
+        User,
+        pk=request.POST.get(
+            "user_id"
+        ),
+        is_active=True,
+    )
+
+    try:
+        grant, created = (
+            grant_sample_access(
+                sample=sample,
+                user=target_user,
+                access_level=str(
+                    request.POST.get(
+                        "access_level",
+                        "view",
+                    )
+                    or "view"
+                ).strip(),
+                granted_by=request.user,
+                expires_at=(
+                    _parse_sample_share_expiry(
+                        request
+                    )
+                ),
+            )
+        )
+
+    except (
+        PermissionDenied,
+        ValidationError,
+    ) as exc:
+        message = (
+            "; ".join(
+                getattr(
+                    exc,
+                    "messages",
+                    [],
+                )
+            )
+            or str(exc)
+        )
+
+        messages.error(
+            request,
+            message,
+        )
+
+        return redirect(
+            "sample_detail",
+            sample_id=sample.pk,
+        )
+
+    messages.success(
+        request,
+        (
+            f"{'Granted' if created else 'Updated'} "
+            f"{grant.get_access_level_display()} access "
+            f"for {target_user.username}."
+        ),
+    )
+
+    return redirect(
+        "sample_detail",
+        sample_id=sample.pk,
+    )
+
+
+@login_required
+@require_POST
+def sample_share_revoke_view(
+    request,
+    sample_id,
+    grant_id,
+):
+    from core.models.samples.access import (
+        SampleAccessGrant,
+    )
+    from core.services.sample_sharing import (
+        revoke_sample_access,
+    )
+
+    sample = get_object_or_404(
+        Sample.objects
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "collections",
+            "collections__research_group",
+        ),
+        pk=sample_id,
+    )
+
+    grant = get_object_or_404(
+        SampleAccessGrant.objects
+        .select_related(
+            "user"
+        ),
+        pk=grant_id,
+        sample=sample,
+    )
+
+    username = (
+        grant.user.username
+    )
+
+    try:
+        deleted = revoke_sample_access(
+            sample=sample,
+            user=grant.user,
+            revoked_by=request.user,
+        )
+
+    except PermissionDenied as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+        return redirect(
+            "sample_detail",
+            sample_id=sample.pk,
+        )
+
+    if deleted:
+        messages.success(
+            request,
+            (
+                f"Direct access for "
+                f"{username} was revoked."
+            ),
+        )
+
+    else:
+        messages.info(
+            request,
+            "The direct access grant was already absent.",
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=sample.pk,
+    )
