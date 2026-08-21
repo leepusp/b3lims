@@ -21,7 +21,7 @@ def track_sample_history(sender, instance, **kwargs):
             sample=instance,
             event_type="transfer",
             location_snapshot=instance.storage_location or "N/A",
-            notes=f"Movimentação detectada: De '{old_instance.storage_location}' para '{instance.storage_location}'"
+            notes=f"Movement detected: From '{old_instance.storage_location}' to '{instance.storage_location}'"
         )
 
     # 2. Rastreio de Mudança de Status (Controle de Qualidade)

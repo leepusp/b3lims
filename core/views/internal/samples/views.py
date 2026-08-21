@@ -301,7 +301,7 @@ def sample_create_view(request):
 
                                 b_size_raw = request.POST.get("backbone_size_bp", "")
                                 b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
-                                
+
                                 i_size_raw = request.POST.get("insert_size_bp", "")
                                 i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
 
@@ -356,7 +356,7 @@ def sample_create_view(request):
                                     sample.keywords.add(keyword_value)
 
                             # =========================================================
-                            # RELAÇÕES BIOLÓGICAS (LINHAS DINÂMICAS)
+                            # BIOLOGICAL RELATIONSHIPS (DYNAMIC ROWS)
                             # =========================================================
                             host_bacterium_ids = request.POST.getlist("host_bacterium[]")
                             host_bacterium_notes = request.POST.getlist("host_bacterium_notes[]")
@@ -423,23 +423,75 @@ def sample_create_view(request):
 
                             created_samples.append(sample)
 
-                    # Anexos
+                    # Attachments
                     files = request.FILES.getlist("file")
                     categories = request.POST.getlist("file_category")
                     descriptions = request.POST.getlist("file_description")
                     from core.models.samples.sample import SampleStorageLevel
 
+                    valid_file_categories = {
+                        choice[0]
+                        for choice in SampleFile.VIEW_CATEGORIES
+                    }
+
+                    legacy_file_category_aliases = {
+                        "Sequence": "sequence",
+                        "Other": "raw",
+                    }
+
                     for sample in created_samples:
                         for k, f in enumerate(files):
-                            cat = categories[k] if k < len(categories) else "Other"
-                            desc = descriptions[k] if k < len(descriptions) else ""
-                            SampleFile.objects.create(sample=sample, file=f, category=cat, description=desc)
+                            category = (
+                                categories[k]
+                                if k < len(categories)
+                                else "raw"
+                            )
+
+                            category = (
+                                legacy_file_category_aliases.get(
+                                    category,
+                                    category,
+                                )
+                            )
+
+                            if category not in valid_file_categories:
+                                category = "raw"
+
+                            description = (
+                                descriptions[k]
+                                if k < len(descriptions)
+                                else ""
+                            )
+
+                            SampleFile.objects.create(
+                                sample=sample,
+                                file=f,
+                                category=category,
+                                description=description,
+                            )
 
                         if storage_location:
-                            limpo = storage_location.replace('>', '|').replace(',', '|').replace(';', '|')
-                            fatias = [f.strip() for f in limpo.split('|') if f.strip()]
-                            for nivel_atual, nome_fatia in enumerate(fatias):
-                                SampleStorageLevel.objects.create(sample=sample, name=nome_fatia, level_index=nivel_atual)
+                            normalized_location = (
+                                storage_location
+                                .replace(">", "|")
+                                .replace(",", "|")
+                                .replace(";", "|")
+                            )
+
+                            storage_levels = [
+                                level.strip()
+                                for level in normalized_location.split("|")
+                                if level.strip()
+                            ]
+
+                            for level_index, level_name in enumerate(
+                                storage_levels
+                            ):
+                                SampleStorageLevel.objects.create(
+                                    sample=sample,
+                                    name=level_name,
+                                    level_index=level_index,
+                                )
 
                 intake_record_id = request.POST.get("intake_record_id")
                 if intake_record_id and created_samples:
@@ -520,7 +572,7 @@ def print_sample_label(request, sample_id):
     qr = qrcode.QRCode(version=1, box_size=10, border=0)
     qr.add_data(qr_url) # <--- Embutimos a URL no QR Code!
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buf = io.BytesIO()
     img.save(buf, format='PNG')
@@ -534,14 +586,14 @@ def sample_qr_scan_view(request, uuid):
     Página mobile-friendly acessada ao ler o QR Code com o celular.
     """
     sample = get_object_or_404(Sample, uuid=uuid)
-    
+
     # Validação de Segurança e Redirecionamento Dinâmico (Usa o reverse para não perder o prefixo /biobank/)
     if not sample.is_public:
         if not request.user.is_authenticated:
             login_url = reverse('login')
             next_url = reverse('sample_qr_scan', args=[sample.uuid])
             return redirect(f"{login_url}?next={next_url}")
-        
+
         from core.permissions.samples import can_view_sample
         if not can_view_sample(request.user, sample):
             raise PermissionDenied("You do not have permission to view this sample.")
@@ -554,7 +606,7 @@ def sample_qr_scan_view(request, uuid):
 
     ctx = base_context(request) if request.user.is_authenticated else {}
     ctx['sample'] = real_sample
-    
+
     return render(request, "internal/samples/qr_view.html", ctx)
 
 
@@ -889,21 +941,43 @@ def sample_edit_view(request, sample_id):
             valid_categories = {choice[0] for choice in SampleFile.VIEW_CATEGORIES}
 
             for k, f in enumerate(files):
-                cat = categories[k] if k < len(categories) else "raw"
-                if cat not in valid_categories:
-                    cat = "raw"
+                category = (
+                    categories[k]
+                    if k < len(categories)
+                    else "raw"
+                )
 
-                desc = descriptions[k] if k < len(descriptions) else ""
+                category = {
+                    "Sequence": "sequence",
+                    "Other": "raw",
+                }.get(
+                    category,
+                    category,
+                )
+
+                if category not in valid_categories:
+                    category = "raw"
+
+                description = (
+                    descriptions[k]
+                    if k < len(descriptions)
+                    else ""
+                )
+
                 sample_file = SampleFile.objects.create(
                     sample=base_sample,
                     file=f,
-                    category=cat,
-                    description=desc,
+                    category=category,
+                    description=description,
                 )
 
-                # SampleFile.save() may auto-detect category from extension.
-                # Preserve the explicit category selected in the edit form.
-                SampleFile.objects.filter(pk=sample_file.pk).update(category=cat)
+                # SampleFile.save() may auto-detect a category from
+                # the extension. Preserve the explicit user choice.
+                SampleFile.objects.filter(
+                    pk=sample_file.pk
+                ).update(
+                    category=category
+                )
 
             if removed_count:
                 messages.info(request, f"{removed_count} sample file link(s) removed. Physical files were kept in storage.")

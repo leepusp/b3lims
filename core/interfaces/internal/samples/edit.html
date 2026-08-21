@@ -40,9 +40,9 @@
 
     <form method="POST" enctype="multipart/form-data" id="mainSampleForm">
         {% csrf_token %}
-        
+
         <input type="hidden" name="scientific_notes" id="scientific_notes_input" value="{{ sample.scientific_notes|default:'' }}">
-        
+
         <input type="hidden" id="init_hosts" value="{{ current_host_id|default:'' }}">
         <input type="hidden" id="init_plasmids" value="{{ current_plasmids_string|default:'' }}">
         <input type="hidden" id="init_phages" value="{{ current_phages_string|default:'' }}">
@@ -55,26 +55,26 @@
 
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body p-4">
-                
+
                 <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">1. General Data & Governance</h5>
                 <div class="row g-3">
-                    
+
                     <div class="col-md-4 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_id.label }}</label>
                         {{ form.sample_id }}
                     </div>
-                    
+
                     <div class="col-md-4 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_type.label }}</label>
                         {{ form.sample_type }}
                         <div class="form-text small text-warning">The biological type cannot be changed.</div>
                     </div>
-                    
+
                     <div class="col-md-4 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">{{ form.status.label }}</label>
                         {{ form.status }}
                     </div>
-                    
+
                     <div class="col-md-12 mb-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Physical Location</label>
                         <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
@@ -114,7 +114,7 @@
                         <i class="bi bi-diagram-3 me-2"></i>Biological Interactions & Storage
                     </h5>
                     <div class="row g-4">
-                        
+
                         <div id="hostBacteriumDiv" class="col-md-12 d-none">
                             <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
                             <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
@@ -145,14 +145,14 @@
                 {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
                 {% for field in form %}
                     {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,is_public,storage_location,biobank,collections,scientific_notes,collaborator" %}
-                        {% if forloop.first or forloop.counter0 == 0 %} 
+                        {% if forloop.first or forloop.counter0 == 0 %}
                             <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
                                 <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
                                     <i class="bi bi-magic me-2"></i>Biological Properties
                                 </h5>
                                 <div class="row g-3">
                         {% endif %}
-                        
+
                         <div class="col-md-4 mb-2">
                             <label class="form-label fw-bold text-primary-emphasis small">{{ field.label }}</label>
                             {{ field }}
@@ -168,7 +168,7 @@
                     <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">
                         <i class="bi bi-diagram-2 me-2 text-warning"></i>Biological Traceability (Network)
                     </h5>
-                    
+
                     <div class="row g-4">
                         <div class="col-md-6">
                             <div class="card border-0 bg-light shadow-sm h-100 border-start border-3 border-warning">
@@ -223,7 +223,7 @@
                 </div>
 
                 <div class="mt-5">
-                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Files and Attachments</h5>
+                    <h5 id="sample-files" class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Files and Attachments</h5>
                     <div class="row g-4">
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-muted small text-uppercase">Saved Files</label>
@@ -328,11 +328,11 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        
+
         // 1. Mostrar/Esconder as caixas de Relação Biológica com base no Sample Type
         const typeInput = document.querySelector('input[name="sample_type"]');
         const selectedType = typeInput ? typeInput.value : '';
-        
+
         const bioRelSection = document.getElementById('biologicalRelationshipsSection');
         const hostBacteriumDiv = document.getElementById('hostBacteriumDiv');
         const storedPlasmidsDiv = document.getElementById('storedPlasmidsDiv');
@@ -401,8 +401,11 @@
                     <div class="row g-2">
                         <div class="col-md-5">
                             <select name="file_category" class="form-select form-select-sm">
-                                <option value="Sequence">Fasta/Sequence</option>
-                                <option value="Other" selected>Other</option>
+                                <option value="raw" selected>Raw Data / Other</option>
+                                <option value="sequence">Sequence (FASTA/FASTQ)</option>
+                                <option value="table">Table (CSV/Excel)</option>
+                                <option value="image">Image (Microscopy/Gel)</option>
+                                <option value="pdf">PDF Document</option>
                             </select>
                         </div>
                         <div class="col-md-7">

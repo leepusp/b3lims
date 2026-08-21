@@ -1,5 +1,6 @@
 import mimetypes
 import os
+from pathlib import PurePosixPath
 
 from django.db import models
 
@@ -131,6 +132,17 @@ class SampleFile(models.Model):
                 ),
             ),
         ]
+
+    @property
+    def filename(self):
+        """Return only the user-facing file basename."""
+
+        if not self.file:
+            return ""
+
+        return PurePosixPath(
+            str(self.file.name)
+        ).name
 
     def __str__(self):
         return (

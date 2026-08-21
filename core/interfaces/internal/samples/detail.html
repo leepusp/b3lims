@@ -2,206 +2,533 @@
 
 {% block title %}{{ sample.sample_id }} · Samples · Biobank LIMS{% endblock %}
 {% block page_title %}Samples{% endblock %}
-{% block page_subtitle %}Sample identity, storage, traceability and operational actions{% endblock %}
+{% block page_subtitle %}Sample identity, governance, storage, relationships and files{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-start mb-4">
+
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3 mb-4">
         <div>
-            <h1 class="h4 fw-bold mb-1">
-                <i class="bi bi-droplet text-primary me-2"></i>{{ sample.sample_id }}
-            </h1>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h1 class="h3 fw-bold mb-0">
+                    <i class="bi bi-droplet text-primary me-2"></i>{{ sample.sample_id }}
+                </h1>
+
+                <span class="badge bg-primary-subtle text-primary border">
+                    {{ sample.get_status_display }}
+                </span>
+
+                {% if sample.is_public %}
+                    <span class="badge bg-success-subtle text-success border">
+                        Public
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border">
+                        Private
+                    </span>
+                {% endif %}
+
+                {% if not sample.is_active %}
+                    <span class="badge bg-danger-subtle text-danger border">
+                        Inactive
+                    </span>
+                {% endif %}
+            </div>
+
             <div class="text-muted">
-                {{ sample.sample_type|default:"No type" }} · {{ sample.organism_name|default:"No organism name" }}
+                {{ sample.sample_type|default:"Sample type not defined" }}
+                ·
+                {{ sample.organism_name|default:"Organism not defined" }}
             </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-2 justify-content-end">
-            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Back
+        <div class="d-flex flex-wrap gap-2">
+            <a
+                href="{% url 'samples_list' %}"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Samples
             </a>
 
             {% if can_edit_current_sample %}
-            <a href="{% url 'sample_edit' sample.id %}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-pencil me-1"></i>Edit
-            </a>
+                <a
+                    href="{% url 'sample_edit' sample.id %}"
+                    class="btn btn-sm btn-primary"
+                >
+                    <i class="bi bi-pencil me-1"></i>
+                    Edit Sample
+                </a>
 
-            <a href="{% url 'sample_relate' sample.id %}" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-diagram-3 me-1"></i>Relate
-            </a>
+                <a
+                    href="{% url 'sample_relate' sample.id %}"
+                    class="btn btn-sm btn-outline-success"
+                >
+                    <i class="bi bi-diagram-3 me-1"></i>
+                    Add Relationship
+                </a>
 
-            <form method="post" action="{% url 'notebook_create_from_sample' sample.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-journal-plus me-1"></i>ELN Entry
-                </button>
-            </form>
+                <form
+                    method="post"
+                    action="{% url 'notebook_create_from_sample' sample.id %}"
+                    class="d-inline"
+                >
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="btn btn-sm btn-outline-success"
+                    >
+                        <i class="bi bi-journal-plus me-1"></i>
+                        Create ELN Entry
+                    </button>
+                </form>
 
-            <form method="post" action="{% url 'sample_create_shipment' sample.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-truck me-1"></i>Create Shipment
-                </button>
-            </form>
+                <form
+                    method="post"
+                    action="{% url 'sample_create_shipment' sample.id %}"
+                    class="d-inline"
+                >
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="btn btn-sm btn-outline-warning"
+                    >
+                        <i class="bi bi-truck me-1"></i>
+                        Create Shipment
+                    </button>
+                </form>
             {% endif %}
 
-            <a href="{% url 'print_sample_label' sample.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-qr-code me-1"></i>Print Label
+            <a
+                href="{% url 'print_sample_label' sample.id %}"
+                target="_blank"
+                rel="noopener"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                <i class="bi bi-qr-code me-1"></i>
+                Print Label
             </a>
         </div>
     </div>
 
+
     <div class="row g-3 mb-3">
-        <div class="col-lg-4">
+
+        <div class="col-xl-4 col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">Identity</div>
+                <div class="card-header fw-bold">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>
+                    Overview
+                </div>
+
                 <div class="card-body">
-                    <p><strong>Sample ID:</strong><br>{{ sample.sample_id }}</p>
-                    <p><strong>Type:</strong><br>{{ sample.sample_type|default:"Not defined" }}</p>
-                    <p><strong>Biosafety Level:</strong><br>{{ sample.biosafety_level|default:"Not defined" }}</p>
-                    <p><strong>Organism:</strong><br>{{ sample.organism_name|default:"Not defined" }}</p>
-                    <p><strong>Status:</strong><br>{{ sample.get_status_display|default:sample.status }}</p>
-                    <p><strong>Public:</strong><br>{% if sample.is_public %}Yes{% else %}No{% endif %}</p>
-                    <p><strong>Active:</strong><br>{% if sample.is_active %}Yes{% else %}No{% endif %}</p>
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5 text-muted">Sample ID</dt>
+                        <dd class="col-sm-7 fw-semibold">
+                            {{ sample.sample_id }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Sample Type</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.sample_type|default:"Not defined" }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Organism</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.organism_name|default:"Not defined" }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Biosafety Level</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.biosafety_level|default:"Not assigned" }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Status</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.get_status_display }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Created</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.created_at|date:"Y-m-d H:i" }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Last Updated</dt>
+                        <dd class="col-sm-7 mb-0">
+                            {{ sample.updated_at|date:"Y-m-d H:i" }}
+                        </dd>
+
+                    </dl>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4">
+
+        <div class="col-xl-4 col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">Governance</div>
+                <div class="card-header fw-bold">
+                    <i class="bi bi-shield-check me-2 text-success"></i>
+                    Ownership & Governance
+                </div>
+
                 <div class="card-body">
-                    <p><strong>Biobank:</strong><br>{{ sample.biobank.name|default:"Not assigned" }}</p>
-                    <p><strong>Research group:</strong><br>{{ sample.research_group.name|default:"Not assigned" }}</p>
-                    <p><strong>Owner:</strong><br>{{ sample.owner.username|default:"Not assigned" }}</p>
-                    <p><strong>Collections:</strong><br>
-                        {% for collection in sample.collections.all %}
-                            <span class="badge bg-light text-dark border me-1">{{ collection.name }}</span>
-                        {% empty %}
-                            <span class="text-muted">No collection linked.</span>
-                        {% endfor %}
-                    </p>
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5 text-muted">Owner</dt>
+                        <dd class="col-sm-7">
+                            {{ sample.owner.username|default:"Not assigned" }}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">
+                            Research Group
+                        </dt>
+                        <dd class="col-sm-7">
+                            {% if sample.research_group %}
+                                {{ sample.research_group.name }}
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Biobank</dt>
+                        <dd class="col-sm-7">
+                            {% if sample.biobank %}
+                                {{ sample.biobank.name }}
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Visibility</dt>
+                        <dd class="col-sm-7">
+                            {% if sample.is_public %}
+                                Public
+                            {% else %}
+                                Private
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Collections</dt>
+                        <dd class="col-sm-7 mb-0">
+                            {% for collection in sample.collections.all %}
+                                <span class="badge bg-light text-dark border me-1 mb-1">
+                                    {{ collection.name }}
+                                </span>
+                            {% empty %}
+                                <span class="text-muted">
+                                    No collections assigned.
+                                </span>
+                            {% endfor %}
+                        </dd>
+
+                    </dl>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">Storage</div>
-                <div class="card-body">
-                    <p><strong>Legacy location:</strong><br>{{ sample.storage_location|default:"Not assigned" }}</p>
 
-                    <p><strong>Structured paths:</strong></p>
-                    <ul class="mb-0">
+        <div class="col-xl-4 col-lg-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">
+                    <i class="bi bi-box-seam me-2 text-warning"></i>
+                    Physical Storage
+                </div>
+
+                <div class="card-body">
+                    {% if current_storage_paths %}
+
+                        <div class="small text-muted mb-2">
+                            Current registered location
+                        </div>
+
                         {% for path in current_storage_paths %}
-                            <li>{{ path }}</li>
-                        {% empty %}
-                            <li class="text-muted">No structured storage path assigned.</li>
+                            <div class="border rounded p-2 mb-2 bg-light">
+                                <i class="bi bi-geo-alt me-1 text-danger"></i>
+                                <span class="fw-semibold">
+                                    {{ path }}
+                                </span>
+                            </div>
                         {% endfor %}
-                    </ul>
+
+                    {% else %}
+
+                        <div class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            No physical storage location assigned.
+                        </div>
+
+                    {% endif %}
+
+                    {% if can_edit_current_sample %}
+                        <div class="mt-3">
+                            <a
+                                href="{% url 'sample_edit' sample.id %}"
+                                class="btn btn-sm btn-outline-secondary"
+                            >
+                                <i class="bi bi-pencil me-1"></i>
+                                Manage Storage
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
+        </div>
+
+    </div>
+
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+            <i class="bi bi-journal-text me-2 text-primary"></i>
+            Scientific Notes
+        </div>
+
+        <div class="card-body">
+            {% if sample.scientific_notes %}
+                {{ sample.scientific_notes|safe }}
+            {% else %}
+                <span class="text-muted">
+                    No scientific notes registered.
+                </span>
+            {% endif %}
         </div>
     </div>
 
+
     <div class="row g-3 mb-3">
+
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header fw-bold">
-                    <i class="bi bi-arrow-up-right me-2 text-warning"></i>Source relationships
+                    <i class="bi bi-arrow-up-right me-2 text-warning"></i>
+                    Source Samples
                 </div>
+
                 <div class="card-body">
                     {% for rel in parents %}
+
                         <div class="border-bottom py-2">
-                            <span class="badge bg-warning-subtle text-dark border">{{ rel.get_relationship_type_display }}</span>
-                            <a href="{% url 'sample_detail' rel.source_sample.id %}" class="fw-bold text-decoration-none ms-2">
-                                {{ rel.source_sample.sample_id }}
-                            </a>
-                            <div class="small text-muted">{{ rel.source_sample.sample_type|default:"Generic" }}</div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+
+                                <span class="badge bg-warning-subtle text-dark border">
+                                    {{ rel.get_relationship_type_display }}
+                                </span>
+
+                                <a
+                                    href="{% url 'sample_detail' rel.source_sample.id %}"
+                                    class="fw-semibold text-decoration-none"
+                                >
+                                    {{ rel.source_sample.sample_id }}
+                                </a>
+
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                {{ rel.source_sample.sample_type|default:"Generic Sample" }}
+                            </div>
+
+                            {% if rel.notes %}
+                                <div class="small mt-1">
+                                    {{ rel.notes }}
+                                </div>
+                            {% endif %}
                         </div>
+
                     {% empty %}
-                        <div class="text-muted">No source sample registered.</div>
+
+                        <div class="text-muted">
+                            No source samples registered.
+                        </div>
+
                     {% endfor %}
                 </div>
             </div>
         </div>
+
 
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header fw-bold">
-                    <i class="bi bi-arrow-return-right me-2 text-secondary"></i>Derived samples
+                    <i class="bi bi-arrow-return-right me-2 text-secondary"></i>
+                    Derived Samples
                 </div>
+
                 <div class="card-body">
                     {% for rel in children %}
+
                         <div class="border-bottom py-2">
-                            <span class="badge bg-secondary-subtle text-secondary border">{{ rel.get_relationship_type_display }}</span>
-                            <a href="{% url 'sample_detail' rel.target_sample.id %}" class="fw-bold text-decoration-none ms-2">
-                                {{ rel.target_sample.sample_id }}
-                            </a>
-                            <div class="small text-muted">{{ rel.target_sample.sample_type|default:"Generic" }}</div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+
+                                <span class="badge bg-secondary-subtle text-secondary border">
+                                    {{ rel.get_relationship_type_display }}
+                                </span>
+
+                                <a
+                                    href="{% url 'sample_detail' rel.target_sample.id %}"
+                                    class="fw-semibold text-decoration-none"
+                                >
+                                    {{ rel.target_sample.sample_id }}
+                                </a>
+
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                {{ rel.target_sample.sample_type|default:"Generic Sample" }}
+                            </div>
+
+                            {% if rel.notes %}
+                                <div class="small mt-1">
+                                    {{ rel.notes }}
+                                </div>
+                            {% endif %}
                         </div>
+
                     {% empty %}
-                        <div class="text-muted">No derived samples registered.</div>
+
+                        <div class="text-muted">
+                            No derived samples registered.
+                        </div>
+
                     {% endfor %}
                 </div>
             </div>
         </div>
+
     </div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold">
-            <i class="bi bi-journal-text me-2"></i>Scientific notes
+
+    <div
+        class="card shadow-sm mb-3"
+        id="sample-files"
+    >
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+
+            <div class="fw-bold">
+                <i class="bi bi-paperclip me-2 text-primary"></i>
+                Files
+                <span class="badge bg-secondary ms-1">
+                    {{ sample_files|length }}
+                </span>
+            </div>
+
+            {% if can_edit_current_sample %}
+                <a
+                    href="{% url 'sample_edit' sample.id %}#sample-files"
+                    class="btn btn-sm btn-outline-primary"
+                >
+                    <i class="bi bi-cloud-arrow-up me-1"></i>
+                    Manage Files
+                </a>
+            {% endif %}
+
         </div>
-        <div class="card-body">
-            {{ sample.scientific_notes|default:"No scientific notes registered."|safe }}
-        </div>
+
+        {% if sample_files %}
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th>File</th>
+                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Description</th>
+                            <th>Uploaded</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for file in sample_files %}
+
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">
+                                        <i class="bi bi-file-earmark me-1 text-muted"></i>
+                                        {{ file.filename|default:"Unnamed file" }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        {{ file.get_category_display|default:file.category }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="small">
+                                        {{ file.mime_type|default:"Unknown" }}
+                                    </span>
+                                </td>
+
+                                <td class="text-nowrap">
+                                    {% if file.file_size %}
+                                        {{ file.file_size|filesizeformat }}
+                                    {% else %}
+                                        <span class="text-muted">
+                                            Unknown
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ file.description|default:"No description" }}
+                                </td>
+
+                                <td class="text-nowrap">
+                                    {{ file.uploaded_at|date:"Y-m-d H:i" }}
+                                </td>
+
+                                <td class="text-end">
+                                    <a
+                                        href="{% url 'sample_file_download' file.pk %}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="btn btn-sm btn-outline-primary"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>
+                                        Open
+                                    </a>
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+            <div class="card-footer small text-muted">
+                Files are served through permission-controlled
+                Biobank routes. Internal filesystem paths are not exposed.
+            </div>
+
+        {% else %}
+
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-paperclip fs-3 d-block mb-2"></i>
+                No files uploaded for this sample.
+            </div>
+
+        {% endif %}
     </div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header fw-bold">
-            <i class="bi bi-paperclip me-2"></i>Files and attachments
-        </div>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>File</th>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Uploaded</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for file in sample_files %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'sample_file_download' file.pk %}" target="_blank" rel="noopener">
-                                {{ file.file.name }}
-                            </a>
-                        </td>
-                        <td>{{ file.get_category_display|default:file.category }}</td>
-                        <td>{{ file.description|default:"-" }}</td>
-                        <td>{{ file.uploaded_at|date:"d/m/Y H:i" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
-                            No files linked to this sample.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 
     {% if sample.notes %}
-    <div class="card shadow-sm">
-        <div class="card-header fw-bold">Internal notes</div>
-        <div class="card-body">
-            {{ sample.notes|linebreaks }}
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold">
+                <i class="bi bi-sticky me-2"></i>
+                Internal Notes
+            </div>
+
+            <div class="card-body">
+                {{ sample.notes|linebreaks }}
+            </div>
         </div>
-    </div>
     {% endif %}
+
 </div>
 {% endblock %}

@@ -2,13 +2,13 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
-# Imports mantidos para integridade
+# Imports retained for model integrity
 from core.models.collections.collection import Collection
 from core.models.biobanks.biobank import Biobank
 from core.models.tags.model import Tag
 from core.models.keywords.model import KeywordValue
 
-# NOVO: Importação do Grupo de Pesquisa
+# Research group model
 from core.models.research_groups.model import ResearchGroup
 
 class Sample(models.Model):
@@ -19,18 +19,18 @@ class Sample(models.Model):
         ("NB-4", "NB-4"),
     ]
     """
-    Amostra biológica CEPIDB3. 
-    Modelo Base com herança Polimórfica.
+    CEPID B3 biological sample.
+    Base model used by specialized sample types.
     """
     STATUS_CHOICES = [
-        ('pending', 'Aguardando Recebimento'),
-        ('qc', 'Em Controle de Qualidade'),
-        ('available', 'Disponível / Aprovada'),
-        ('rejected', 'Rejeitada / Inviável'),
-        ('depleted', 'Exaurida'),
+        ("pending", "Pending Receipt"),
+        ("qc", "Quality Control"),
+        ("available", "Available / Approved"),
+        ("rejected", "Rejected / Nonviable"),
+        ("depleted", "Depleted"),
     ]
 
-    # Identificação
+    # Identification
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     sample_id = models.CharField(max_length=100, unique=True)
     sample_type = models.CharField(max_length=100, blank=True, null=True)
@@ -39,47 +39,47 @@ class Sample(models.Model):
         choices=BIOSAFETY_LEVEL_CHOICES,
         blank=True,
         null=True,
-        verbose_name="Nível de biossegurança",
+        verbose_name="Biosafety level",
         help_text="Biosafety level required for handling this sample.",
     )
     organism_name = models.CharField(max_length=255, blank=True, null=True)
 
     # ==========================================
-    # ORGANIZAÇÃO (ATUALIZADO PARA MANY-TO-MANY)
+    # ORGANIZATION
     # ==========================================
     biobank = models.ForeignKey(Biobank, on_delete=models.SET_NULL, null=True, blank=True, related_name="samples")
-    # Trocado de ForeignKey(collection) para ManyToManyField(collections)
+    # A sample may belong to multiple collections.
     collections = models.ManyToManyField(Collection, blank=True, related_name="samples")
-    
+
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_samples")
 
-    # NOVO: Vínculo com o Laboratório/Grupo de Pesquisa
+    # Research group / laboratory association
     research_group = models.ForeignKey(
         ResearchGroup,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="samples",
-        help_text="Grupo de Pesquisa (Laboratório) ao qual esta amostra pertence."
+        help_text="Research group or laboratory associated with this sample."
     )
 
-    # Status e Governança
+    # Status and governance
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_public = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
-    # NOVOS CAMPOS (ELN e Dados Técnicos)
+
+    # ELN and technical metadata
     scientific_notes = models.TextField(blank=True, null=True)
 
-    # Metadados Físicos (Preenchido dinamicamente pelo construtor de caminho no frontend)
+    # Physical storage metadata
     storage_location = models.CharField(max_length=255, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
 
-    # CLASSIFICAÇÃO Genérica
+    # General classification
     tags = models.ManyToManyField(Tag, blank=True, related_name="samples")
     keywords = models.ManyToManyField(KeywordValue, blank=True, related_name="samples")
 
-    # FILOGENIA / REDE BIOLÓGICA
+    # Lineage / biological network
     lineage = models.ManyToManyField(
         'self',
         through='core.SampleRelationship',
@@ -93,37 +93,37 @@ class Sample(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        
-        # REMOVIDO: A regra que forçava o biobank a ser igual ao da coleção.
-        # Agora o Biobanco e as Coleções operam de forma independente.
+
+        # Biobank and Collection assignments are intentionally
+        # independent.
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.sample_id} - {self.organism_name or 'Sem organismo'}"
+        return f"{self.sample_id} - {self.organism_name or 'No organism'}"
 
 
 # ========================================================================
-# ARMAZENAMENTO FÍSICO (O Caminho do Meio / Híbrido)
+# PHYSICAL STORAGE COMPATIBILITY
 # ========================================================================
 class SampleStorageLevel(models.Model):
     """
-    Tabela relacional para guardar fatias da localização física de uma amostra.
-    Exemplo para "Freezer 1 > Prateleira 2 > Caixa A":
-    - level_index 0: "Freezer 1" (Tipo Principal)
-    - level_index 1: "Prateleira 2" (Subtipo 1)
-    - level_index 2: "Caixa A" (Subtipo 2)
+    Compatibility representation of a hierarchical physical storage path.
+    Example: "Freezer 1 > Shelf 2 > Box A":
+    - level_index 0: "Freezer 1" (root level)
+    - level_index 1: "Shelf 2" (level 1)
+    - level_index 2: "Box A" (level 2)
     """
     sample = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name='storage_levels')
-    name = models.CharField(max_length=150, help_text="Nome do nível (Ex: Freezer 1)")
-    level_index = models.PositiveIntegerField(help_text="0 é o nível mais alto/principal")
+    name = models.CharField(max_length=150, help_text="Storage level name (for example, Freezer 1)")
+    level_index = models.PositiveIntegerField(help_text="Zero represents the root storage level")
 
     class Meta:
         ordering = ['level_index']
-        # Garante que uma amostra não tenha dois "Nível 0"
+        # A sample can have only one entry for each level index.
         unique_together = ('sample', 'level_index')
-        verbose_name = "Nível de Armazenamento"
-        verbose_name_plural = "Níveis de Armazenamento"
+        verbose_name = "Storage Level"
+        verbose_name_plural = "Storage Levels"
 
     def __str__(self):
-        return f"[{self.level_index}] {self.name} (Amostra: {self.sample.sample_id})"
+        return f"[{self.level_index}] {self.name} (Sample: {self.sample.sample_id})"
