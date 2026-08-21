@@ -973,6 +973,56 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
 
 
 @login_required
+def shipment_cibio_template_download_view(
+    request,
+    shipment_id,
+    document_id,
+    template_key,
+):
+    from django.http import FileResponse, Http404
+
+    from core.services.shipment_cibio_templates import (
+        get_cibio_template,
+    )
+
+    shipment = get_object_or_404(
+        visible_shipments_for_user(request.user),
+        id=shipment_id,
+    )
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+
+    if document.document_type != "cibio_authorization":
+        raise Http404(
+            "CIBio templates are only available from "
+            "CIBio authorization documents."
+        )
+
+    try:
+        template, template_path = get_cibio_template(
+            template_key
+        )
+    except (KeyError, FileNotFoundError, ValueError) as exc:
+        raise Http404(
+            "The requested CIBio template is unavailable."
+        ) from exc
+
+    response = FileResponse(
+        template_path.open("rb"),
+        as_attachment=True,
+        filename=template.download_name,
+        content_type=template.content_type,
+    )
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+
+    return response
+
+
+@login_required
 def shipment_document_workspace_view(request, shipment_id, document_id):
     shipment = get_object_or_404(visible_shipments_for_user(request.user), id=shipment_id)
     document = get_object_or_404(

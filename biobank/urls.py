@@ -1,5 +1,8 @@
 from core.views.internal.shipments.views import shipment_generated_document_view
-from core.views.internal.shipments.views import shipment_document_workspace_view
+from core.views.internal.shipments.views import (
+    shipment_cibio_template_download_view,
+    shipment_document_workspace_view,
+)
 from core.views.internal.shipments.views import shipment_edit_view
 from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
 from core.views.internal.shipments.views import shipments_list_view, shipments_dashboard_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
@@ -148,6 +151,13 @@ urlpatterns = [
     path("shipments/<int:shipment_id>/approve-documents/", shipment_approve_documents_view, name="shipment_approve_documents"),
     path("shipments/<int:shipment_id>/package-labels/", shipment_package_labels_view, name="shipment_package_labels"),
     path("shipments/<int:shipment_id>/documents/<int:document_id>/generated/", shipment_generated_document_view, name="shipment_generated_document"),
+    path(
+        "shipments/<int:shipment_id>/documents/"
+        "<int:document_id>/cibio-templates/"
+        "<slug:template_key>/download/",
+        shipment_cibio_template_download_view,
+        name="shipment_cibio_template_download",
+    ),
     path("shipments/<int:shipment_id>/documents/<int:document_id>/", shipment_document_workspace_view, name="shipment_document_workspace"),
     path("shipments/<int:shipment_id>/documents-review/", shipment_documents_review_view, name="shipment_documents_review"),
     path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
