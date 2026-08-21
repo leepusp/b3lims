@@ -330,3 +330,122 @@
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* Network grouped-Sample inspector */
+
+.sample-network-group-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.sample-network-group-summary-item {
+    padding: 3px 7px;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: .61rem;
+    font-weight: 800;
+}
+
+.sample-network-group-search {
+    margin-bottom: 6px;
+    font-size: .7rem;
+}
+
+.sample-network-group-result-count {
+    margin-bottom: 7px;
+    color: #94a3b8;
+    font-size: .61rem;
+    font-weight: 700;
+}
+
+.sample-network-group-members {
+    display: flex;
+    max-height: 410px;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.sample-network-group-member {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 8px;
+    color: #1e293b;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    cursor: pointer;
+    transition:
+        border-color .12s ease,
+        background-color .12s ease,
+        transform .12s ease;
+}
+
+.sample-network-group-member:hover {
+    background: #f8fbff;
+    border-color: #93c5fd;
+    transform: translateX(1px);
+}
+
+.sample-network-group-member:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+}
+
+.sample-network-group-member-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.sample-network-group-member-id {
+    display: block;
+    color: #1d4ed8;
+    font-size: .68rem;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.sample-network-group-member-organism {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: .61rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.sample-network-group-member-locate {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 50%;
+}
+
+.sample-network-group-empty {
+    padding: 16px 8px;
+    color: #94a3b8;
+    text-align: center;
+    font-size: .68rem;
+}
+
+.sample-network-group-actions {
+    padding-top: 11px;
+    margin-top: 11px;
+    border-top: 1px solid #edf2f7;
+}

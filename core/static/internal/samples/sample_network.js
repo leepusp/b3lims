@@ -1446,6 +1446,458 @@
     }
 
 
+    function focusGroupedSample(
+        clusterId,
+        node
+    ) {
+        if (
+            clusterId
+            && network.isCluster(
+                clusterId
+            )
+        ) {
+            network.openCluster(
+                clusterId
+            );
+        }
+
+        network.selectNodes(
+            [
+                node.id,
+            ]
+        );
+
+        network.focus(
+            node.id,
+            {
+                scale: 1.45,
+                animation: {
+                    duration: 550,
+                    easingFunction:
+                        "easeInOutQuad",
+                },
+            }
+        );
+
+        showNode(
+            node
+        );
+    }
+
+
+    function showCluster(
+        clusterId
+    ) {
+        const memberIds =
+            network.getNodesInCluster(
+                clusterId
+            );
+
+        const members =
+            rawNodes
+            .get(
+                memberIds
+            )
+            .filter(Boolean)
+            .sort(
+                (left, right) => (
+                    String(
+                        left.sample_id
+                        || left.label
+                        || ""
+                    )
+                    .localeCompare(
+                        String(
+                            right.sample_id
+                            || right.label
+                            || ""
+                        ),
+                        undefined,
+                        {
+                            numeric: true,
+                            sensitivity: "base",
+                        }
+                    )
+                )
+            );
+
+        controls.inspector.className =
+            "";
+
+        controls.inspector
+        .replaceChildren();
+
+        let groupName =
+            "Grouped Samples";
+
+        const groupingKey =
+            controls.clusterBy
+                ? controls.clusterBy.value
+                : "";
+
+        if (
+            members.length
+            && groupingKey
+        ) {
+            const components =
+                groupingKey
+                === "connected_component"
+                    ? computeComponents()
+                    : new Map();
+
+            groupName =
+                groupingValue(
+                    members[0],
+                    groupingKey,
+                    components
+                );
+        }
+
+        appendText(
+            controls.inspector,
+            "sample-network-inspector-heading",
+            groupName
+        );
+
+        appendText(
+            controls.inspector,
+            "sample-network-inspector-id",
+            `${members.length} Sample${
+                members.length === 1
+                    ? ""
+                    : "s"
+            }`
+        );
+
+
+        const connectedCount =
+            members.filter(
+                (node) => (
+                    Number(
+                        node.degree
+                        || 0
+                    ) > 0
+                )
+            ).length;
+
+        const isolatedCount =
+            members.length
+            - connectedCount;
+
+
+        const summary =
+            document.createElement(
+                "div"
+            );
+
+        summary.className =
+            "sample-network-group-summary";
+
+        appendText(
+            summary,
+            "sample-network-group-summary-item",
+            `${connectedCount} connected`
+        );
+
+        appendText(
+            summary,
+            "sample-network-group-summary-item",
+            `${isolatedCount} isolated`
+        );
+
+        controls.inspector.appendChild(
+            summary
+        );
+
+
+        const section =
+            inspectorSection(
+                controls.inspector,
+                "Samples"
+            );
+
+
+        const search =
+            document.createElement(
+                "input"
+            );
+
+        search.type =
+            "search";
+
+        search.className =
+            (
+                "form-control "
+                + "form-control-sm "
+                + "sample-network-group-search"
+            );
+
+        search.placeholder =
+            "Filter Sample ID or organism...";
+
+        search.autocomplete =
+            "off";
+
+        section.appendChild(
+            search
+        );
+
+
+        const count =
+            document.createElement(
+                "div"
+            );
+
+        count.className =
+            "sample-network-group-result-count";
+
+        section.appendChild(
+            count
+        );
+
+
+        const list =
+            document.createElement(
+                "div"
+            );
+
+        list.className =
+            "sample-network-group-members";
+
+        section.appendChild(
+            list
+        );
+
+
+        function renderMembers() {
+            const term =
+                normalize(
+                    search.value
+                );
+
+            const filtered =
+                members.filter(
+                    (node) => {
+                        if (!term) {
+                            return true;
+                        }
+
+                        return [
+                            node.sample_id,
+                            node.organism_name,
+                            node.sample_type,
+                        ].some(
+                            (value) => (
+                                normalize(
+                                    value
+                                ).includes(
+                                    term
+                                )
+                            )
+                        );
+                    }
+                );
+
+
+            count.textContent =
+                `${filtered.length} of ${members.length} shown`;
+
+            list.replaceChildren();
+
+
+            if (!filtered.length) {
+                appendText(
+                    list,
+                    "sample-network-group-empty",
+                    "No Samples match this group search."
+                );
+
+                return;
+            }
+
+
+            filtered.forEach(
+                (node) => {
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+                    button.type =
+                        "button";
+
+                    button.className =
+                        "sample-network-group-member";
+
+                    button.title =
+                        `Locate ${node.sample_id}`;
+
+
+                    const copy =
+                        document.createElement(
+                            "span"
+                        );
+
+                    copy.className =
+                        "sample-network-group-member-copy";
+
+
+                    appendText(
+                        copy,
+                        "sample-network-group-member-id",
+                        node.sample_id
+                            || node.label
+                            || `Sample ${node.id}`
+                    );
+
+
+                    if (
+                        node.organism_name
+                    ) {
+                        appendText(
+                            copy,
+                            "sample-network-group-member-organism",
+                            node.organism_name
+                        );
+                    }
+
+
+                    const locate =
+                        document.createElement(
+                            "span"
+                        );
+
+                    locate.className =
+                        "sample-network-group-member-locate";
+
+                    locate.setAttribute(
+                        "aria-hidden",
+                        "true"
+                    );
+
+                    const icon =
+                        document.createElement(
+                            "i"
+                        );
+
+                    icon.className =
+                        "bi bi-crosshair";
+
+                    locate.appendChild(
+                        icon
+                    );
+
+
+                    button.appendChild(
+                        copy
+                    );
+
+                    button.appendChild(
+                        locate
+                    );
+
+
+                    button.addEventListener(
+                        "click",
+                        () => {
+                            focusGroupedSample(
+                                clusterId,
+                                node
+                            );
+                        }
+                    );
+
+
+                    list.appendChild(
+                        button
+                    );
+                }
+            );
+        }
+
+
+        search.addEventListener(
+            "input",
+            renderMembers
+        );
+
+
+        renderMembers();
+
+
+        if (
+            members.length
+        ) {
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+            actions.className =
+                "sample-network-group-actions";
+
+
+            const fitMembers =
+                document.createElement(
+                    "button"
+                );
+
+            fitMembers.type =
+                "button";
+
+            fitMembers.className =
+                (
+                    "btn btn-sm "
+                    + "btn-outline-primary w-100"
+                );
+
+            fitMembers.textContent =
+                "Show Group in Graph";
+
+
+            fitMembers.addEventListener(
+                "click",
+                () => {
+                    if (
+                        network.isCluster(
+                            clusterId
+                        )
+                    ) {
+                        network.openCluster(
+                            clusterId
+                        );
+                    }
+
+                    network.selectNodes(
+                        memberIds
+                    );
+
+                    network.fit(
+                        {
+                            nodes:
+                                memberIds,
+                            animation: {
+                                duration: 550,
+                                easingFunction:
+                                    "easeInOutQuad",
+                            },
+                        }
+                    );
+                }
+            );
+
+
+            actions.appendChild(
+                fitMembers
+            );
+
+            controls.inspector.appendChild(
+                actions
+            );
+        }
+    }
+
+
     network.on(
         "click",
         (params) => {
@@ -1460,21 +1912,8 @@
                         nodeId
                     )
                 ) {
-                    controls.inspector.className =
-                        "";
-
-                    controls.inspector.replaceChildren();
-
-                    appendText(
-                        controls.inspector,
-                        "sample-network-inspector-heading",
-                        "Grouped Samples"
-                    );
-
-                    appendText(
-                        controls.inspector,
-                        "sample-network-inspector-id",
-                        `${network.getNodesInCluster(nodeId).length} Samples`
+                    showCluster(
+                        nodeId
                     );
 
                     return;
