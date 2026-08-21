@@ -6,7 +6,7 @@ umask 0077
 
 ENV_ROOT="/home/public/conda/envs/biobank"
 PYTHON="$ENV_ROOT/bin/python"
-RUNTIME_ROOT="/home/public/biobank/runtime"
+RUNTIME_ROOT="/home/public/apps/biobank/runtime"
 SERVER_SCRIPT="$RUNTIME_ROOT/notebook_server.sh"
 STORAGE_HELPER="/usr/local/sbin/biobank-user-storage"
 
@@ -90,39 +90,6 @@ ensure_runtime_access() {
 
 prepare_directory() {
     "$STORAGE_HELPER" prepare-directory "$APP_USER" "$1" >/dev/null
-}
-
-migrate_legacy_workspace_if_needed() {
-    local notebook_id="$1" user_id="$2" destination="$3"
-    local legacy_root="/home/public/biobank/notebooks/users"
-    local source="$legacy_root/user_${user_id}_${APP_USER}/notebook_${notebook_id}"
-
-    LEGACY_WORKSPACE_COPIED=false
-    test ! -e "$destination/notebook.ipynb" || return 0
-    test -e "$source" || return 0
-    test ! -L "$source" && test -d "$source" ||
-        fail "Legacy notebook workspace is not a regular directory."
-    test -z "$(find "$source" -type l -print -quit)" ||
-        fail "Legacy notebook workspace contains a symbolic link."
-    test -z "$(find "$destination" -mindepth 1 -print -quit)" ||
-        fail "New notebook workspace is not empty."
-
-    cp -a -- "$source/." "$destination/"
-    chown -R "$APP_USER:$PRIMARY_GROUP" "$destination"
-    find "$destination" -type d -exec chmod 0770 {} +
-    find "$destination" -type f -exec chmod 0660 {} +
-    if test "$APP_USER" = "ladmin"
-    then
-        setfacl -R -m "u::rwX,m::rwx,o::---" "$destination"
-        find "$destination" -type d -exec \
-            setfacl -d -m "u::rwx,m::rwx,o::---" {} +
-    else
-        setfacl -R -m "u::rwX,u:ladmin:rwX,g::rwX,m::rwx,o::---" \
-            "$destination"
-        find "$destination" -type d -exec \
-            setfacl -d -m "u::rwx,u:ladmin:rwx,g::rwx,m::rwx,o::---" {} +
-    fi
-    LEGACY_WORKSPACE_COPIED=true
 }
 
 write_owned_file() {
@@ -279,8 +246,6 @@ server_start() {
 
     workspace="$(workspace_directory "$notebook_id")"
     prepare_directory "jupyter/notebooks/notebook_${notebook_id}"
-    migrate_legacy_workspace_if_needed \
-        "$notebook_id" "$user_id" "$workspace"
     notebook_file="$workspace/notebook.ipynb"
 
     if test ! -e "$notebook_file"

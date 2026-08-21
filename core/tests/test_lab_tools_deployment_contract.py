@@ -84,26 +84,92 @@ class LabToolsDeploymentContractTests(SimpleTestCase):
             "deploy/install_lab_tools_home_storage.sh"
         )
 
-        shared_runtime = (
-            "/home/public/biobank/runtime/"
-            "notebook_server.sh"
-        )
+        legacy_root = "/home/public" + "/biobank"
 
         self.assertIn(
-            'RUNTIME_ROOT="/home/public/biobank/runtime"',
+            'RUNTIME_ROOT="/home/public/apps/biobank/runtime"',
+            runner,
+        )
+        self.assertNotIn(
+            legacy_root,
             runner,
         )
         self.assertNotIn(
             "/usr/local/libexec/biobank",
             runner,
         )
-        self.assertIn(shared_runtime, installer)
+
         self.assertIn(
-            '"$SOURCE_ROOT/runtime/notebook_server.sh"',
+            'APP_ROOT="/home/public/apps/biobank"',
+            installer,
+        )
+        self.assertIn(
+            'RUNTIME_ROOT="$APP_ROOT/runtime"',
+            installer,
+        )
+        self.assertIn(
+            'SHARED_RUNTIME="$RUNTIME_ROOT/notebook_server.sh"',
+            installer,
+        )
+        self.assertIn(
+            'SOURCE_RUNTIME="$SOURCE_ROOT/runtime/notebook_server.sh"',
+            installer,
+        )
+        self.assertIn(
+            '"$SOURCE_RUNTIME" \\\n'
+            '    "$SHARED_RUNTIME"',
+            installer,
+        )
+        self.assertNotIn(
+            legacy_root,
             installer,
         )
         self.assertIn(
             "EXPECTED_SHARED_RUNTIME_AFTER",
+            installer,
+        )
+
+    def test_shared_runtime_install_permissions_and_first_install(self):
+        installer = self._source(
+            "deploy/install_lab_tools_home_storage.sh"
+        )
+
+        self.assertIn(
+            'APP_ROOT="/home/public/apps/biobank"',
+            installer,
+        )
+        self.assertIn(
+            'RUNTIME_ROOT="$APP_ROOT/runtime"',
+            installer,
+        )
+        self.assertIn(
+            'SHARED_RUNTIME="$RUNTIME_ROOT/notebook_server.sh"',
+            installer,
+        )
+        self.assertIn(
+            'SOURCE_RUNTIME="$SOURCE_ROOT/runtime/notebook_server.sh"',
+            installer,
+        )
+        self.assertIn(
+            'chmod 2771 "$APP_ROOT"',
+            installer,
+        )
+        self.assertIn(
+            '-m 0751 \\\n'
+            '    "$RUNTIME_ROOT"',
+            installer,
+        )
+        self.assertIn(
+            'install -o root -g biobank -m 0755',
+            installer,
+        )
+        self.assertIn(
+            'if test -f "$SHARED_RUNTIME"',
+            installer,
+        )
+        self.assertNotIn(
+            'test -f "$SHARED_RUNTIME" || '
+            'fail "Current shared Jupyter runtime was not found."',
             installer,
         )
 

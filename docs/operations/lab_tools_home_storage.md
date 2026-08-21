@@ -102,16 +102,21 @@ and are removed with the session run directory.
 
 ## Deployment order
 
-1. Back up PostgreSQL, the Git candidate, `/home/public/biobank`, the current
+1. Back up PostgreSQL, the Git candidate, the current Biobank application storage, the current
    Jupyter runner, and the applicable sudoers files.
 2. Confirm there are no active legacy Biobank Jupyter jobs. Stop them through
    the application before changing the runner.
 3. Have an administrator run `deploy/install_lab_tools_home_storage.sh` from
    the reviewed release tree. This is the only step requiring unrestricted
    root access. It installs the reviewed sandbox runtime under
-   `/home/public/biobank/runtime/notebook_server.sh`, a root-controlled path
-   shared with every compute node. A head-node-only path such as
-   `/usr/local/libexec` must not be written into Slurm job scripts. Installation
+   `/home/public/apps/biobank/runtime/notebook_server.sh`, a root-controlled path
+   shared with every compute node. The application root uses mode `2771`, the
+   shared runtime directory uses `0751`, and `notebook_server.sh` uses `0755`.
+   This gives authenticated Slurm users execute-only pathname traversal to the
+   shared runtime without granting membership in the `biobank` Unix group or
+   access to protected application directories such as `storage`, `backups`,
+   and `logs`. A head-node-only path such as `/usr/local/libexec` must not be
+   written into Slurm job scripts. Installation
    accepts only the reviewed isolated-runtime SHA-256
    `2e9144ff1591509eb8c8912d0ce655fac9434f7584ab217afd84f6160b2784a1`
    or the current authenticated-home runtime SHA-256
