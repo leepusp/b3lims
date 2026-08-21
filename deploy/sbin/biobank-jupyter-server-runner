@@ -336,9 +336,9 @@ PY
     write_owned_file "$run_dir/job_id" 0660
     write_owned_file "$run_dir/slurm_user" 0660
 
-    printf '{"status":"submitted","job_id":"%s","notebook_id":%s,"run_id":"%s","run_dir":"%s","workspace":"%s","notebook_file":"%s","partition":"%s","requested_node":"%s","slurm_user":"%s","legacy_workspace_copied":%s}\n' \
+    printf '{"status":"submitted","job_id":"%s","notebook_id":%s,"run_id":"%s","run_dir":"%s","workspace":"%s","notebook_file":"%s","partition":"%s","requested_node":"%s","slurm_user":"%s"}\n' \
         "$job_id" "$notebook_id" "$run_id" "$run_dir" "$workspace" \
-        "$notebook_file" "$partition" "$node" "$APP_USER" "$LEGACY_WORKSPACE_COPIED"
+        "$notebook_file" "$partition" "$node" "$APP_USER"
 }
 
 server_status() {
