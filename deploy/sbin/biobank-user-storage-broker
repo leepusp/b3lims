@@ -339,14 +339,14 @@ def _normalize_directory(fd, context):
 
     _run_setfacl(
         fd,
-        "-m",
+        "--set",
         acl,
     )
 
     _run_setfacl(
         fd,
         "-d",
-        "-m",
+        "--set",
         acl,
     )
 
@@ -365,7 +365,7 @@ def _normalize_file(fd, context):
 
     _run_setfacl(
         fd,
-        "-m",
+        "--set",
         _file_acl(context),
     )
 

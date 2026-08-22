@@ -178,3 +178,89 @@ class StorageBrokerSecurityTests(SimpleTestCase):
             "g::---",
             broker._file_acl(context),
         )
+
+
+    def test_normalizers_replace_acl_instead_of_merging(self):
+        from unittest import mock
+
+        broker = self.broker
+
+        context = broker.UserContext(
+            username="exampleuser",
+            uid=os.getuid(),
+            gid=os.getgid(),
+            home="/home/exampleuser",
+        )
+
+        self.assertEqual(
+            broker._directory_acl(context),
+            (
+                "u::rwx,u:biobank:rwx,"
+                "g::---,m::rwx,o::---"
+            ),
+        )
+        self.assertEqual(
+            broker._file_acl(context),
+            (
+                "u::rw-,u:biobank:rw-,"
+                "g::---,m::rw-,o::---"
+            ),
+        )
+
+        with mock.patch.object(
+            broker.os,
+            "fchown",
+        ), mock.patch.object(
+            broker.os,
+            "fchmod",
+        ), mock.patch.object(
+            broker,
+            "_run_setfacl",
+        ) as run_setfacl:
+            broker._normalize_directory(
+                73,
+                context,
+            )
+
+            self.assertEqual(
+                run_setfacl.call_args_list,
+                [
+                    mock.call(
+                        73,
+                        "--set",
+                        broker._directory_acl(context),
+                    ),
+                    mock.call(
+                        73,
+                        "-d",
+                        "--set",
+                        broker._directory_acl(context),
+                    ),
+                ],
+            )
+
+            run_setfacl.reset_mock()
+
+            broker._normalize_file(
+                74,
+                context,
+            )
+
+            run_setfacl.assert_called_once_with(
+                74,
+                "--set",
+                broker._file_acl(context),
+            )
+
+            run_setfacl.reset_mock()
+
+            broker._grant_home_traverse(
+                75,
+                context,
+            )
+
+            run_setfacl.assert_called_once_with(
+                75,
+                "-m",
+                "u:biobank:--x",
+            )
