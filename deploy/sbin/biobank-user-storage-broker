@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+# Provision and validate private per-user Biobank storage.
+
+set -euo pipefail
+umask 0077
+
+APP_USER="biobank"
+RELATIVE_ROOT="biobank/lab_tools"
+DATA_RELATIVE_ROOT="biobank/data"
+
+fail() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+test "${EUID}" -eq 0 || fail "This helper must run as root."
+
+validate_username() {
+    [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] ||
+        fail "Invalid Unix username."
+}
+
+load_user() {
+    local username="$1"
+    local passwd_record
+
+    validate_username "$username"
+    passwd_record="$(getent passwd "$username")" ||
+        fail "Unix user was not found."
+
+    IFS=: read -r ACCOUNT_NAME _ UID_NUMBER GID_NUMBER _ HOME_DIR _ \
+        <<< "$passwd_record"
+
+    test "$ACCOUNT_NAME" = "$username" || fail "Unix account mismatch."
+    [[ "$UID_NUMBER" =~ ^[0-9]+$ ]] || fail "Invalid Unix UID."
+    (( UID_NUMBER >= 1000 )) || fail "System accounts are not eligible."
+    [[ "$HOME_DIR" == /home/* ]] || fail "User home is outside /home."
+    test -d "$HOME_DIR" || fail "User home does not exist."
+
+    PRIMARY_GROUP="$(id -gn "$username")"
+    LAB_ROOT="$HOME_DIR/$RELATIVE_ROOT"
+    DATA_ROOT="$HOME_DIR/$DATA_RELATIVE_ROOT"
+}
+
+apply_directory_acl() {
+    local username="$1"
+    local directory="$2"
+
+    chown "$username:$PRIMARY_GROUP" "$directory"
+    chmod 0770 "$directory"
+    if test "$username" = "$APP_USER"
+    then
+        setfacl -m "u::rwx,g::rwx,m::rwx,o::---" "$directory"
+        setfacl -d -m "u::rwx,g::rwx,m::rwx,o::---" "$directory"
+    else
+        setfacl -m \
+            "u::rwx,u:${APP_USER}:rwx,g::rwx,m::rwx,o::---" \
+            "$directory"
+        setfacl -d -m \
+            "u::rwx,u:${APP_USER}:rwx,g::rwx,m::rwx,o::---" \
+            "$directory"
+    fi
+}
+
+ensure_storage() {
+    local username="$1"
+    local directory
+
+    if test "$username" != "$APP_USER"
+    then
+        setfacl -m "u:${APP_USER}:--x" "$HOME_DIR"
+    fi
+
+    for directory in \
+        "$HOME_DIR/biobank" \
+        "$DATA_ROOT" \
+        "$DATA_ROOT/samples" \
+        "$LAB_ROOT" \
+        "$LAB_ROOT/eln" \
+        "$LAB_ROOT/eln/entries" \
+        "$LAB_ROOT/jupyter" \
+        "$LAB_ROOT/jupyter/notebooks" \
+        "$LAB_ROOT/jupyter/jobs" \
+        "$LAB_ROOT/molecular" \
+        "$LAB_ROOT/molecular/records" \
+        "$LAB_ROOT/exports" \
+        "$LAB_ROOT/tmp"
+    do
+        install -d -o "$username" -g "$PRIMARY_GROUP" -m 0770 "$directory"
+        apply_directory_acl "$username" "$directory"
+    done
+}
+
+validate_relative_directory() {
+    local value="$1"
+
+    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments|jupyter/notebooks/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+|molecular/records/[0-9]+|molecular/records/[0-9]+/alignments|molecular/records/[0-9]+/structures|exports(/[A-Za-z0-9_.-]+)?|tmp(/[A-Za-z0-9_.-]+)?)$ ]] ||
+        fail "Storage directory is outside the managed layout."
+
+    [[ "$value" != *".."* && "$value" != *//* ]] ||
+        fail "Invalid relative storage directory."
+}
+
+validate_relative_file() {
+    local value="$1"
+
+    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/structures/[A-Za-z0-9_.-]+|exports/[A-Za-z0-9_.-]+|tmp/[A-Za-z0-9_.-]+)$ ]] ||
+        fail "Storage file is outside the managed layout."
+
+    [[ "$value" != *".."* && "$value" != *//* ]] ||
+        fail "Invalid relative storage file."
+}
+
+validate_data_relative_directory() {
+    local value="$1"
+
+    [[ "$value" =~ ^samples/sample_[0-9]+_[A-Za-z0-9._-]+/files$ ]] ||
+        fail "Sample data directory is outside the managed layout."
+
+    [[ "$value" != *".."* && "$value" != *//* ]] ||
+        fail "Invalid relative Sample data directory."
+}
+
+validate_data_relative_file() {
+    local value="$1"
+
+    [[ "$value" =~ ^samples/sample_[0-9]+_[A-Za-z0-9._-]+/files/[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$ ]] ||
+        fail "Sample data file is outside the managed layout."
+
+    [[ "$value" != *".."* && "$value" != *//* ]] ||
+        fail "Invalid relative Sample data file."
+}
+
+protected_path() {
+    local relative="$1"
+    local candidate
+
+    candidate="$(realpath -m -- "$LAB_ROOT/$relative")"
+    [[ "$candidate" == "$LAB_ROOT/"* ]] ||
+        fail "Storage path escaped the user Lab Tools root."
+    printf '%s\n' "$candidate"
+}
+
+protected_data_path() {
+    local relative="$1"
+    local candidate
+
+    candidate="$(realpath -m -- "$DATA_ROOT/$relative")"
+    [[ "$candidate" == "$DATA_ROOT/"* ]] ||
+        fail "Sample data path escaped the protected user data root."
+    printf '%s\n' "$candidate"
+}
+
+prepare_directory() {
+    local username="$1"
+    local relative="$2"
+    local directory component
+    local -a components
+
+    validate_relative_directory "$relative"
+    directory="$(protected_path "$relative")"
+    IFS=/ read -r -a components <<< "$relative"
+    directory="$LAB_ROOT"
+
+    for component in "${components[@]}"
+    do
+        directory="$directory/$component"
+        test ! -L "$directory" ||
+            fail "Managed directories may not be symbolic links."
+        if test -e "$directory"
+        then
+            test -d "$directory" ||
+                fail "Managed directory path is not a directory."
+        fi
+        install -d -o "$username" -g "$PRIMARY_GROUP" -m 0770 "$directory"
+        apply_directory_acl "$username" "$directory"
+    done
+}
+
+prepare_data_directory() {
+    local username="$1"
+    local relative="$2"
+    local directory component
+    local -a components
+
+    validate_data_relative_directory "$relative"
+    protected_data_path "$relative" >/dev/null
+
+    IFS=/ read -r -a components <<< "$relative"
+    directory="$DATA_ROOT"
+
+    for component in "${components[@]}"
+    do
+        directory="$directory/$component"
+
+        test ! -L "$directory" ||
+            fail "Managed Sample data directories may not be symbolic links."
+
+        if test -e "$directory"
+        then
+            test -d "$directory" ||
+                fail "Managed Sample data path is not a directory."
+        fi
+
+        install -d             -o "$username"             -g "$PRIMARY_GROUP"             -m 0770             "$directory"
+
+        apply_directory_acl "$username" "$directory"
+    done
+}
+
+claim_file() {
+    local username="$1"
+    local relative="$2"
+    local path
+
+    validate_relative_file "$relative"
+    path="$(protected_path "$relative")"
+    test ! -L "$path" || fail "Managed files may not be symbolic links."
+    test -f "$path" || fail "Managed file was not found."
+    chown "$username:$PRIMARY_GROUP" "$path"
+    chmod 0660 "$path"
+    if test "$username" = "$APP_USER"
+    then
+        setfacl -m "u::rw-,g::rw-,m::rw-,o::---" "$path"
+    else
+        setfacl -m \
+            "u::rw-,u:${APP_USER}:rw-,g::rw-,m::rw-,o::---" \
+            "$path"
+    fi
+}
+
+claim_data_file() {
+    local username="$1"
+    local relative="$2"
+    local path
+
+    validate_data_relative_file "$relative"
+    path="$(protected_data_path "$relative")"
+
+    test ! -L "$path" ||
+        fail "Managed Sample data files may not be symbolic links."
+
+    test -f "$path" ||
+        fail "Managed Sample data file was not found."
+
+    chown "$username:$PRIMARY_GROUP" "$path"
+    chmod 0660 "$path"
+
+    if test "$username" = "$APP_USER"
+    then
+        setfacl -m             "u::rw-,g::rw-,m::rw-,o::---"             "$path"
+    else
+        setfacl -m             "u::rw-,u:${APP_USER}:rw-,g::rw-,m::rw-,o::---"             "$path"
+    fi
+}
+
+ACTION="${1:-}"
+USERNAME="${2:-}"
+load_user "$USERNAME"
+ensure_storage "$USERNAME"
+
+case "$ACTION" in
+    ensure)
+        test "$#" -eq 2 || fail "ensure requires USERNAME."
+        ;;
+    prepare-directory)
+        test "$#" -eq 3 || fail "prepare-directory requires USERNAME PATH."
+        prepare_directory "$USERNAME" "$3"
+        ;;
+    claim-file)
+        test "$#" -eq 3 || fail "claim-file requires USERNAME PATH."
+        claim_file "$USERNAME" "$3"
+        ;;
+    prepare-data-directory)
+        test "$#" -eq 3 ||
+            fail "prepare-data-directory requires USERNAME PATH."
+        prepare_data_directory "$USERNAME" "$3"
+        ;;
+    claim-data-file)
+        test "$#" -eq 3 ||
+            fail "claim-data-file requires USERNAME PATH."
+        claim_data_file "$USERNAME" "$3"
+        ;;
+    *)
+        fail "Usage: $0 {ensure|prepare-directory|claim-file|prepare-data-directory|claim-data-file} USERNAME [PATH]"
+        ;;
+esac
+
+printf '{"status":"ok","user":"%s","root":"%s"}\n' \
+    "$USERNAME" "$LAB_ROOT"

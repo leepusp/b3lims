@@ -1,0 +1,512 @@
+#!/usr/bin/env bash
+# Root-controlled Slurm runner for user-owned Biobank Jupyter servers.
+
+set -euo pipefail
+umask 0077
+
+ENV_ROOT="/home/public/conda/envs/biobank"
+PYTHON="$ENV_ROOT/bin/python"
+RUNTIME_ROOT="/home/public/apps/biobank/runtime"
+SERVER_SCRIPT="$RUNTIME_ROOT/notebook_server.sh"
+STORAGE_HELPER="/usr/local/sbin/biobank-user-storage-broker"
+
+fail() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+test "${EUID}" -eq 0 || fail "This helper must run as root."
+
+validate_numeric_id() {
+    [[ "$2" =~ ^[0-9]+$ ]] || fail "$1 must be numeric."
+}
+
+validate_run_id() {
+    [[ "$1" =~ ^[A-Za-z0-9_-]{1,100}$ ]] ||
+        fail "Invalid run identifier."
+}
+
+validate_partition() {
+    case "$1" in
+        basic|max50) ;;
+        *) fail "Invalid partition. Allowed values: basic, max50." ;;
+    esac
+}
+
+validate_node() {
+    case "$1" in
+        auto|n01|gn01|gn02|gn03) ;;
+        *) fail "Invalid compute node. Allowed values: auto, n01, gn01, gn02, gn03." ;;
+    esac
+}
+
+validate_integer_range() {
+    local label="$1" value="$2" minimum="$3" maximum="$4"
+    [[ "$value" =~ ^[0-9]+$ ]] || fail "$label must be numeric."
+    (( value >= minimum && value <= maximum )) ||
+        fail "$label must be between $minimum and $maximum."
+}
+
+load_user() {
+    local username="$1"
+    local passwd_record
+
+    [[ "$username" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] ||
+        fail "Invalid Unix username."
+    passwd_record="$(getent passwd "$username")" ||
+        fail "Unix user was not found."
+    IFS=: read -r ACCOUNT_NAME _ UID_NUMBER GID_NUMBER _ HOME_DIR LOGIN_SHELL \
+        <<< "$passwd_record"
+    test "$ACCOUNT_NAME" = "$username" || fail "Unix account mismatch."
+    [[ "$UID_NUMBER" =~ ^[0-9]+$ ]] || fail "Invalid Unix UID."
+    (( UID_NUMBER >= 1000 )) || fail "System accounts are not eligible."
+    test "$HOME_DIR" = "/home/$username" ||
+        fail "User home does not match /home/USERNAME."
+    test -d "$HOME_DIR" || fail "User home does not exist."
+
+    APP_USER="$username"
+    PRIMARY_GROUP="$(id -gn "$username")"
+    LAB_ROOT="$HOME_DIR/biobank/lab_tools"
+}
+
+workspace_directory() {
+    printf '%s/jupyter/notebooks/notebook_%s\n' "$LAB_ROOT" "$1"
+}
+
+notebook_job_root() {
+    printf '%s/jupyter/jobs/notebook_%s\n' "$LAB_ROOT" "$1"
+}
+
+session_directory() {
+    printf '%s/%s\n' "$(notebook_job_root "$1")" "$2"
+}
+
+ensure_runtime_access() {
+    test -x "$PYTHON" || fail "Biobank Conda environment is unavailable."
+    test -x "$SERVER_SCRIPT" || fail "Official Notebook server script is unavailable."
+    test -x "$STORAGE_HELPER" || fail "User storage helper is unavailable."
+
+}
+
+prepare_directory() {
+    "$STORAGE_HELPER" prepare-directory "$APP_USER" "$1" >/dev/null
+}
+
+write_owned_file() {
+    local path="$1" mode="$2"
+    chown "$APP_USER:$PRIMARY_GROUP" "$path"
+    chmod "$mode" "$path"
+
+    if test "$mode" = "0750"
+    then
+        if test "$APP_USER" = "biobank"
+        then
+            setfacl -m "u::rwx,g::r-x,m::rwx,o::---" "$path"
+        else
+            setfacl -m \
+                "u::rwx,u:biobank:r-x,g::r-x,m::rwx,o::---" "$path"
+        fi
+    else
+        if test "$APP_USER" = "biobank"
+        then
+            setfacl -m "u::rw-,g::rw-,m::rw-,o::---" "$path"
+        else
+            setfacl -m \
+                "u::rw-,u:biobank:rw-,g::rw-,m::rw-,o::---" "$path"
+        fi
+    fi
+}
+
+stored_job_id() {
+    local run_dir="$1" job_id
+    test -f "$run_dir/job_id" || fail "Jupyter server session was not found."
+    job_id="$(tr -cd '0-9' < "$run_dir/job_id")"
+    [[ "$job_id" =~ ^[0-9]+$ ]] || fail "Invalid stored Slurm job ID."
+    printf '%s\n' "$job_id"
+}
+
+validate_session_owner() {
+    local run_dir="$1"
+    test -f "$run_dir/slurm_user" || fail "Session owner marker was not found."
+    test "$(<"$run_dir/slurm_user")" = "$APP_USER" ||
+        fail "Session does not belong to the requested user."
+}
+
+active_job_owner() {
+    /usr/bin/squeue \
+        --noheader \
+        --jobs="$1" \
+        --format='%u' |
+        head -n 1 |
+        xargs
+}
+
+slurm_state() {
+    local job_id="$1" state
+    state="$(
+        /usr/bin/squeue \
+            --noheader \
+            --jobs="$job_id" \
+            --user="$APP_USER" \
+            --format='%T' |
+        head -n 1 |
+        xargs
+    )"
+
+    if test -z "$state"
+    then
+        state="$(
+            /usr/bin/sacct \
+                --noheader \
+                --parsable2 \
+                --jobs="$job_id" \
+                --allocations \
+                --format=State,User |
+            awk -F'|' -v user="$APP_USER" '$2 == user {print $1; exit}' |
+            xargs
+        )"
+    fi
+
+    test -n "$state" || state="UNKNOWN"
+    printf '%s\n' "$state"
+}
+
+is_terminal_state() {
+    local state="${1%% *}"
+    state="${state%%+*}"
+
+    case "$state" in
+        COMPLETED|FAILED|CANCELLED|TIMEOUT|OUT_OF_MEMORY|NODE_FAIL|PREEMPTED|BOOT_FAIL|DEADLINE|REVOKED)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+remove_run_directory() {
+    local notebook_id="$1" run_id="$2"
+    local job_root run_dir
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_run_id "$run_id"
+    job_root="$(notebook_job_root "$notebook_id")"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+
+    test "$run_dir" = "$job_root/$run_id" ||
+        fail "Session cleanup path validation failed."
+    test ! -L "$job_root" ||
+        fail "Notebook job root may not be a symbolic link."
+    test ! -L "$run_dir" ||
+        fail "Session runtime may not be a symbolic link."
+
+    if test -e "$run_dir"
+    then
+        test -d "$run_dir" ||
+            fail "Session runtime is not a directory."
+        rm -rf --one-file-system -- "$run_dir"
+        test ! -e "$run_dir" ||
+            fail "Session runtime could not be removed."
+    fi
+
+    rmdir -- "$job_root" 2>/dev/null || true
+}
+
+server_start() {
+    test "$#" -eq 8 ||
+        fail "server-start requires NOTEBOOK_ID USER_ID USER CPUS MEMORY MINUTES PARTITION NODE."
+
+    local notebook_id="$1" user_id="$2" username="$3"
+    local cpus="$4" memory_mb="$5" minutes="$6" partition="$7" node="$8"
+    local workspace notebook_file run_id run_dir job_script job_id
+    local maximum_minutes
+    local -a node_arguments=()
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_numeric_id "Application user ID" "$user_id"
+    validate_integer_range "CPU count" "$cpus" 1 128
+    validate_integer_range "Memory" "$memory_mb" 1024 1048576
+    validate_integer_range "Time" "$minutes" 60 10080
+    validate_partition "$partition"
+    validate_node "$node"
+    case "$partition" in
+        basic) maximum_minutes=4320 ;;
+        max50) maximum_minutes=10080 ;;
+    esac
+    (( minutes <= maximum_minutes )) ||
+        fail "Time exceeds the selected partition limit."
+    if test "$node" != "auto"
+    then
+        node_arguments=("--nodelist=$node")
+    fi
+    load_user "$username"
+    ensure_runtime_access
+    "$STORAGE_HELPER" ensure "$APP_USER" >/dev/null
+
+    workspace="$(workspace_directory "$notebook_id")"
+    prepare_directory "jupyter/notebooks/notebook_${notebook_id}"
+    notebook_file="$workspace/notebook.ipynb"
+
+    if test ! -e "$notebook_file"
+    then
+        /usr/sbin/runuser -u "$APP_USER" -- \
+            env HOME="$HOME_DIR" USER="$APP_USER" LOGNAME="$APP_USER" \
+            "$PYTHON" - "$notebook_file" "$APP_USER" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+username = sys.argv[2]
+payload = {
+    "cells": [],
+    "metadata": {
+        "biobank": {"owner": username},
+        "kernelspec": {
+            "display_name": "Python 3 (ipykernel)",
+            "language": "python",
+            "name": "python3",
+        },
+        "language_info": {"name": "python"},
+    },
+    "nbformat": 4,
+    "nbformat_minor": 5,
+}
+temporary = path.with_suffix(".tmp")
+temporary.write_text(json.dumps(payload, indent=2) + "\n")
+temporary.chmod(0o660)
+temporary.replace(path)
+PY
+    fi
+
+    test ! -L "$notebook_file" && test -f "$notebook_file" ||
+        fail "Notebook path is not a regular file."
+    write_owned_file "$notebook_file" 0660
+
+    run_id="$(date -u +%Y%m%dT%H%M%SZ)_$$_${RANDOM}"
+    validate_run_id "$run_id"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+    prepare_directory "jupyter/jobs/notebook_${notebook_id}/${run_id}"
+
+    job_script="$run_dir/session.sh"
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'set -euo pipefail\n'
+        printf 'umask 0077\n'
+        printf 'export HOME=%q USER=%q LOGNAME=%q\n' \
+            "$HOME_DIR" "$APP_USER" "$APP_USER"
+        printf 'export XDG_CACHE_HOME=%q XDG_CONFIG_HOME=%q XDG_DATA_HOME=%q\n' \
+            "$HOME_DIR/.cache" "$HOME_DIR/.config" "$HOME_DIR/.local/share"
+        printf 'export BIOBANK_APP_USER=%q BIOBANK_NOTEBOOK_ID=%q\n' \
+            "$APP_USER" "$notebook_id"
+        printf 'exec %q %q %q %q\n' \
+            "$SERVER_SCRIPT" "$workspace" "$run_dir" "notebook.ipynb"
+    } > "$job_script"
+    write_owned_file "$job_script" 0750
+
+    if ! job_id="$(
+        /usr/sbin/runuser -u "$APP_USER" -- \
+            env HOME="$HOME_DIR" USER="$APP_USER" LOGNAME="$APP_USER" \
+            /usr/bin/sbatch \
+                --parsable \
+                --partition="$partition" \
+                "${node_arguments[@]}" \
+                --job-name="biobank_notebook_${notebook_id}" \
+                --comment="BIOBANK_JUPYTER=${notebook_id},USER=${APP_USER},RUN=${run_id}" \
+                --nodes=1 \
+                --ntasks=1 \
+                --cpus-per-task="$cpus" \
+                --mem="${memory_mb}M" \
+                --time="$minutes" \
+                --chdir="$run_dir" \
+                --output="$run_dir/slurm-%j.out" \
+                --error="$run_dir/slurm-%j.err" \
+                "$job_script"
+    )"
+    then
+        remove_run_directory "$notebook_id" "$run_id"
+        fail "Slurm submission failed."
+    fi
+    job_id="${job_id%%;*}"
+    [[ "$job_id" =~ ^[0-9]+$ ]] || fail "Slurm returned an invalid job ID."
+
+    printf '%s\n' "$job_id" > "$run_dir/job_id"
+    printf '%s\n' "$APP_USER" > "$run_dir/slurm_user"
+    write_owned_file "$run_dir/job_id" 0660
+    write_owned_file "$run_dir/slurm_user" 0660
+
+    printf '{"status":"submitted","job_id":"%s","notebook_id":%s,"run_id":"%s","run_dir":"%s","workspace":"%s","notebook_file":"%s","partition":"%s","requested_node":"%s","slurm_user":"%s"}\n' \
+        "$job_id" "$notebook_id" "$run_id" "$run_dir" "$workspace" \
+        "$notebook_file" "$partition" "$node" "$APP_USER"
+}
+
+server_status() {
+    test "$#" -eq 3 || fail "server-status requires NOTEBOOK_ID USER RUN_ID."
+    local notebook_id="$1" username="$2" run_id="$3"
+    local run_dir job_id state ready=false server_json='{}'
+    local run_directory_removed=false
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_run_id "$run_id"
+    load_user "$username"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+    validate_session_owner "$run_dir"
+    job_id="$(stored_job_id "$run_dir")"
+    state="$(slurm_state "$job_id")"
+
+    if test -f "$run_dir/connection.json"
+    then
+        server_json="$(
+            "$PYTHON" - "$run_dir/connection.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    data = json.loads(Path(sys.argv[1]).read_text())
+except (OSError, ValueError, TypeError):
+    print("{}")
+else:
+    safe = {
+        key: data.get(key)
+        for key in (
+            "status", "host", "port", "base_url",
+            "default_url", "notebook", "ready_at",
+        )
+    }
+    print(json.dumps(safe, separators=(",", ":")))
+PY
+        )"
+        if test "$("$PYTHON" -c 'import json,sys; print(str(json.loads(sys.argv[1]).get("status") == "ready").lower())' "$server_json")" = true
+        then
+            ready=true
+        fi
+    fi
+
+    if is_terminal_state "$state"
+    then
+        remove_run_directory "$notebook_id" "$run_id"
+        run_directory_removed=true
+    fi
+
+    printf '{"status":"ok","job_id":"%s","notebook_id":%s,"run_id":"%s","state":"%s","ready":%s,"run_dir":"%s","slurm_user":"%s","run_directory_removed":%s,"server":%s}\n' \
+        "$job_id" "$notebook_id" "$run_id" "$state" "$ready" \
+        "$run_dir" "$APP_USER" "$run_directory_removed" "$server_json"
+}
+
+server_stop() {
+    test "$#" -eq 3 || fail "server-stop requires NOTEBOOK_ID USER RUN_ID."
+    local notebook_id="$1" username="$2" run_id="$3"
+    local run_dir job_id owner
+    local run_directory_removed=false
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_run_id "$run_id"
+    load_user "$username"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+    validate_session_owner "$run_dir"
+    job_id="$(stored_job_id "$run_dir")"
+    owner="$(active_job_owner "$job_id")"
+
+    if test -z "$owner"
+    then
+        remove_run_directory "$notebook_id" "$run_id"
+        run_directory_removed=true
+        printf '{"status":"already_stopped","job_id":"%s","notebook_id":%s,"run_id":"%s","slurm_user":"%s","run_directory_removed":%s}\n' \
+            "$job_id" "$notebook_id" "$run_id" "$APP_USER" "$run_directory_removed"
+        return 0
+    fi
+
+    test "$owner" = "$APP_USER" || fail "Slurm job belongs to another user."
+    /usr/sbin/runuser -u "$APP_USER" -- \
+        /usr/bin/scancel "$job_id"
+
+    for _ in $(seq 1 50)
+    do
+        owner="$(active_job_owner "$job_id")"
+        test -n "$owner" || break
+        sleep 0.2
+    done
+
+    if test -z "$owner"
+    then
+        remove_run_directory "$notebook_id" "$run_id"
+        run_directory_removed=true
+    fi
+
+    printf '{"status":"stopped","job_id":"%s","notebook_id":%s,"run_id":"%s","slurm_user":"%s","run_directory_removed":%s}\n' \
+        "$job_id" "$notebook_id" "$run_id" "$APP_USER" "$run_directory_removed"
+}
+
+session_cleanup() {
+    test "$#" -eq 3 ||
+        fail "session-cleanup requires NOTEBOOK_ID USER RUN_ID."
+    local notebook_id="$1" username="$2" run_id="$3"
+    local run_dir job_id owner removed=false
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_run_id "$run_id"
+    load_user "$username"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+
+    if test -e "$run_dir/slurm_user"
+    then
+        validate_session_owner "$run_dir"
+    fi
+
+    if test -e "$run_dir/job_id"
+    then
+        test -e "$run_dir/slurm_user" ||
+            fail "Session owner marker was not found."
+        job_id="$(stored_job_id "$run_dir")"
+        owner="$(active_job_owner "$job_id")"
+        test -z "$owner" ||
+            fail "Active session runtime may not be removed."
+    fi
+
+    if test -e "$run_dir"
+    then
+        remove_run_directory "$notebook_id" "$run_id"
+        removed=true
+    fi
+
+    printf '{"status":"ok","notebook_id":%s,"run_id":"%s","slurm_user":"%s","run_directory_removed":%s}\n' \
+        "$notebook_id" "$run_id" "$APP_USER" "$removed"
+}
+
+workspace_delete() {
+    test "$#" -eq 3 ||
+        fail "workspace-delete requires NOTEBOOK_ID USER_ID USER."
+    local notebook_id="$1" user_id="$2" username="$3"
+    local workspace removed=false
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_numeric_id "Application user ID" "$user_id"
+    load_user "$username"
+    workspace="$(workspace_directory "$notebook_id")"
+    test ! -L "$workspace" || fail "Notebook workspace may not be a symbolic link."
+
+    if test -e "$workspace"
+    then
+        test -d "$workspace" || fail "Notebook workspace is not a directory."
+        rm -rf --one-file-system -- "$workspace"
+        test ! -e "$workspace" || fail "Notebook workspace could not be removed."
+        removed=true
+    fi
+
+    printf '{"status":"ok","notebook_id":%s,"user_id":%s,"app_user":"%s","workspace_removed":%s}\n' \
+        "$notebook_id" "$user_id" "$APP_USER" "$removed"
+}
+
+ACTION="${1:-}"
+shift || true
+
+case "$ACTION" in
+    server-start) server_start "$@" ;;
+    server-status) server_status "$@" ;;
+    server-stop) server_stop "$@" ;;
+    session-cleanup) session_cleanup "$@" ;;
+    workspace-delete) workspace_delete "$@" ;;
+    *) fail "Usage: $0 {server-start|server-status|server-stop|session-cleanup|workspace-delete} ..." ;;
+esac
