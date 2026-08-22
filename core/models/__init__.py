@@ -15,6 +15,8 @@ from .samples.enrichment import (
     SampleExternalIdentifier,
     SampleTaxonomyAssignment,
     SampleTaxonomyReview,
+    SampleGenomeAssemblyAssignment,
+    SampleGenomeAssemblyReview,
 )
 
 from .events.model import Event

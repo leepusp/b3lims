@@ -2962,6 +2962,235 @@ def sample_file_download_view(
 
 @login_required
 @require_POST
+def sample_genome_assembly_review_view(
+    request,
+    sample_id,
+    assignment_id,
+):
+    from core.models.samples.enrichment import (
+        SampleGenomeAssemblyAssignment,
+    )
+    from core.services.sample_enrichment.assembly_review import (
+        review_genome_assembly_assignment,
+    )
+
+    base_sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if (
+        not can_edit_sample(
+            request.user,
+            base_sample,
+        )
+        and not request.user.is_superuser
+    ):
+        raise PermissionDenied
+
+    assignment = get_object_or_404(
+        SampleGenomeAssemblyAssignment,
+        pk=assignment_id,
+        sample=base_sample,
+        is_current=True,
+    )
+
+    new_status = (
+        request.POST
+        .get(
+            "status",
+            "",
+        )
+        .strip()
+        .lower()
+    )
+
+    note = (
+        request.POST
+        .get(
+            "note",
+            "",
+        )
+        .strip()
+    )
+
+    try:
+        review = (
+            review_genome_assembly_assignment(
+                assignment=assignment,
+                reviewer=request.user,
+                new_status=new_status,
+                note=note,
+            )
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+
+    else:
+        messages.success(
+            request,
+            (
+                "Genome Assembly review recorded: "
+                f"{review.assignment.accession} "
+                f"is now "
+                f"{review.assignment.get_match_status_display()}."
+            ),
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=base_sample.pk,
+    )
+
+
+@login_required
+@require_POST
+def sample_ncbi_genome_resolve_view(
+    request,
+    sample_id,
+):
+    base_sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if (
+        not can_edit_sample(
+            request.user,
+            base_sample,
+        )
+        and not request.user.is_superuser
+    ):
+        raise PermissionDenied
+
+    from core.services.sample_enrichment.ncbi_genome import (
+        NCBIGenomeLookupError,
+        resolve_and_store_ncbi_genome_assembly,
+    )
+
+    accession = (
+        request.POST
+        .get(
+            "accession",
+            "",
+        )
+        .strip()
+    )
+
+    if not accession:
+        messages.error(
+            request,
+            (
+                "Enter an explicit versioned NCBI "
+                "Assembly accession before resolving "
+                "Genome Assembly metadata."
+            ),
+        )
+
+        return redirect(
+            "sample_detail",
+            sample_id=base_sample.pk,
+        )
+
+    try:
+        result = (
+            resolve_and_store_ncbi_genome_assembly(
+                base_sample,
+                request.user,
+                accession,
+            )
+        )
+
+    except ValueError as exc:
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    except NCBIGenomeLookupError as exc:
+        messages.error(
+            request,
+            (
+                "NCBI Genome Assembly lookup failed: "
+                f"{exc}"
+            ),
+        )
+
+    else:
+        assignment = result.get(
+            "assignment"
+        )
+
+        normalized = (
+            result.get(
+                "normalized"
+            )
+            or {}
+        )
+
+        if assignment is not None:
+            details = []
+
+            if assignment.assembly_name:
+                details.append(
+                    assignment.assembly_name
+                )
+
+            if assignment.organism_name:
+                details.append(
+                    assignment.organism_name
+                )
+
+            detail_suffix = (
+                " · " + " · ".join(details)
+                if details
+                else ""
+            )
+
+            messages.success(
+                request,
+                (
+                    "NCBI Genome Assembly resolved: "
+                    f"{assignment.accession}"
+                    f"{detail_suffix}."
+                ),
+            )
+
+        else:
+            resolution_status = str(
+                normalized.get(
+                    "resolution_status",
+                    "unresolved",
+                )
+                or "unresolved"
+            ).replace(
+                "_",
+                " ",
+            )
+
+            messages.warning(
+                request,
+                (
+                    "NCBI Genome Assembly lookup did "
+                    "not produce a unique assignment "
+                    f"({resolution_status})."
+                ),
+            )
+
+    return redirect(
+        "sample_detail",
+        sample_id=base_sample.pk,
+    )
+
+
+@login_required
+@require_POST
 def sample_taxonomy_review_view(
     request,
     sample_id,
@@ -3328,6 +3557,23 @@ def sample_detail_view(request, sample_id):
                 )
                 .order_by(
                     "source"
+                )
+            ),
+            "genome_assembly_assignments": (
+                base_sample.genome_assembly_assignments
+                .filter(
+                    is_current=True
+                )
+                .select_related(
+                    "reviewed_by",
+                    "snapshot",
+                )
+                .prefetch_related(
+                    "reviews__reviewer"
+                )
+                .order_by(
+                    "source",
+                    "accession",
                 )
             ),
             "enrichment_snapshots": (

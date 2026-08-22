@@ -1497,6 +1497,391 @@
                     {% endif %}
                 </div>
 
+                <div class="col-lg-8">
+                    <hr class="my-4">
+
+                    <h6 class="fw-semibold mb-3">
+                        Genome Assemblies
+                    </h6>
+
+                    {% if genome_assembly_assignments %}
+                        {% for assignment in genome_assembly_assignments %}
+                            <div class="border rounded p-3 mb-3">
+                                <div
+                                    class="d-flex flex-wrap justify-content-between align-items-start gap-2"
+                                >
+                                    <div>
+                                        <div class="fw-semibold font-monospace">
+                                            {{ assignment.accession }}
+                                        </div>
+
+                                        <div class="small text-muted">
+                                            {{ assignment.get_source_display }}
+                                            {% if assignment.assembly_name %}
+                                                · {{ assignment.assembly_name }}
+                                            {% endif %}
+                                            {% if assignment.assembly_level %}
+                                                · {{ assignment.assembly_level }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if assignment.match_status == "verified" %}
+                                        <span class="badge text-bg-success">
+                                            Verified
+                                        </span>
+                                    {% elif assignment.match_status == "conflict" %}
+                                        <span class="badge text-bg-danger">
+                                            Conflict
+                                        </span>
+                                    {% elif assignment.match_status == "stale" %}
+                                        <span class="badge text-bg-secondary">
+                                            Stale
+                                        </span>
+                                    {% elif assignment.match_status == "unresolved" %}
+                                        <span class="badge text-bg-warning">
+                                            Unresolved
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-info">
+                                            Candidate
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <dl class="row small mt-3 mb-0">
+                                    {% if assignment.organism_name %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Organism
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.organism_name }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.taxon_id %}
+                                        <dt class="col-sm-4 text-muted">
+                                            TaxID
+                                        </dt>
+                                        <dd class="col-sm-8 font-monospace">
+                                            {{ assignment.taxon_id }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.current_accession %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Current accession
+                                        </dt>
+                                        <dd class="col-sm-8 font-monospace">
+                                            {{ assignment.current_accession }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.paired_accession %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Paired accession
+                                        </dt>
+                                        <dd class="col-sm-8 font-monospace">
+                                            {{ assignment.paired_accession }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.source_database %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Source database
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.source_database }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.assembly_status %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Assembly status
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.assembly_status }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.assembly_type %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Assembly type
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.assembly_type }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.refseq_category %}
+                                        <dt class="col-sm-4 text-muted">
+                                            RefSeq category
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.refseq_category }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.release_date %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Release date
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.release_date }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.submitter %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Submitter
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.submitter }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.bioproject_accession %}
+                                        <dt class="col-sm-4 text-muted">
+                                            BioProject
+                                        </dt>
+                                        <dd class="col-sm-8 font-monospace">
+                                            {{ assignment.bioproject_accession }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.biosample_accession %}
+                                        <dt class="col-sm-4 text-muted">
+                                            BioSample
+                                        </dt>
+                                        <dd class="col-sm-8 font-monospace">
+                                            {{ assignment.biosample_accession }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.total_sequence_length != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Total sequence length
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.total_sequence_length }} bp
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.number_of_contigs != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Contigs
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.number_of_contigs }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.number_of_scaffolds != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Scaffolds
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.number_of_scaffolds }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.contig_n50 != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Contig N50
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.contig_n50 }} bp
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.scaffold_n50 != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Scaffold N50
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.scaffold_n50 }} bp
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.gc_percent != None %}
+                                        <dt class="col-sm-4 text-muted">
+                                            GC
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.gc_percent }}%
+                                        </dd>
+                                    {% endif %}
+                                </dl>
+
+                                {% if assignment.source == "ncbi" %}
+                                    <div class="mt-2">
+                                        <a
+                                            href="https://www.ncbi.nlm.nih.gov/datasets/genome/{{ assignment.accession|urlencode }}/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="small"
+                                        >
+                                            Open NCBI Genome
+                                            <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                {% endif %}
+
+                                <div class="small text-muted mt-2">
+                                    External Genome Assembly metadata does not
+                                    automatically overwrite curated Sample
+                                    organism, taxonomy, strain, or phenotype
+                                    metadata.
+                                </div>
+
+                                {% if assignment.reviewed_at %}
+                                    <div class="small text-muted mt-2">
+                                        Last reviewed
+                                        {{ assignment.reviewed_at|date:"d/m/Y H:i" }}
+                                        {% if assignment.reviewed_by %}
+                                            by {{ assignment.reviewed_by.username }}
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if can_edit_current_sample %}
+                                    <div class="border-top mt-3 pt-3">
+                                        <div class="small fw-semibold mb-2">
+                                            Review Genome Assembly
+                                        </div>
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'sample_genome_assembly_review' sample.pk assignment.pk %}"
+                                        >
+                                            {% csrf_token %}
+
+                                            <div class="mb-2">
+                                                <textarea
+                                                    name="note"
+                                                    class="form-control form-control-sm"
+                                                    rows="2"
+                                                    placeholder="Review note. Required when marking Conflict."
+                                                ></textarea>
+                                            </div>
+
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% if assignment.match_status != "verified" %}
+                                                    <button
+                                                        type="submit"
+                                                        name="status"
+                                                        value="verified"
+                                                        class="btn btn-sm btn-outline-success"
+                                                    >
+                                                        <i class="bi bi-check-circle me-1"></i>
+                                                        Verify
+                                                    </button>
+                                                {% endif %}
+
+                                                {% if assignment.match_status != "conflict" %}
+                                                    <button
+                                                        type="submit"
+                                                        name="status"
+                                                        value="conflict"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                    >
+                                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                                        Mark Conflict
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </form>
+                                    </div>
+                                {% endif %}
+
+                                {% with reviews=assignment.reviews.all %}
+                                    {% if reviews %}
+                                        <details class="mt-3">
+                                            <summary class="small fw-semibold">
+                                                Review History
+                                            </summary>
+
+                                            <div class="list-group list-group-flush mt-2">
+                                                {% for review in reviews %}
+                                                    <div class="list-group-item px-0 py-2">
+                                                        <div class="small">
+                                                            <strong>
+                                                                {{ review.get_previous_status_display }}
+                                                                →
+                                                                {{ review.get_new_status_display }}
+                                                            </strong>
+                                                        </div>
+
+                                                        <div class="small text-muted">
+                                                            {{ review.reviewed_at|date:"d/m/Y H:i" }}
+                                                            {% if review.reviewer %}
+                                                                · {{ review.reviewer.username }}
+                                                            {% endif %}
+                                                        </div>
+
+                                                        {% if review.note %}
+                                                            <div class="small mt-1">
+                                                                {{ review.note|linebreaksbr }}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </details>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted small mb-3">
+                            No external Genome Assembly assignment has been
+                            recorded for this Sample.
+                        </div>
+                    {% endif %}
+
+                    {% if can_edit_current_sample %}
+                        <div class="border rounded p-3 bg-light">
+                            <div class="fw-semibold mb-2">
+                                Resolve NCBI Genome Assembly
+                            </div>
+
+                            <form
+                                method="post"
+                                action="{% url 'sample_ncbi_genome_resolve' sample.pk %}"
+                            >
+                                {% csrf_token %}
+
+                                <div class="input-group">
+                                    <input
+                                        type="text"
+                                        name="accession"
+                                        class="form-control font-monospace"
+                                        placeholder="GCF_000006765.1 or GCA_000006765.1"
+                                        aria-label="Versioned NCBI Genome Assembly accession"
+                                        autocomplete="off"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-primary"
+                                    >
+                                        <i class="bi bi-search me-1"></i>
+                                        Resolve
+                                    </button>
+                                </div>
+
+                                <div class="form-text">
+                                    Enter an exact versioned NCBI Assembly
+                                    accession. The Biobank does not infer an
+                                    Assembly from species or strain, and
+                                    external metadata never silently replaces
+                                    curated Sample metadata.
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
                 <div class="col-lg-4">
                     <h6 class="fw-semibold mb-3">
                         External Identifiers

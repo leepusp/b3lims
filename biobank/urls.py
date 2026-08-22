@@ -56,6 +56,8 @@ from core.views.internal.samples.views import (
     export_samples_csv,
     sample_edit_view,
     sample_detail_view,
+    sample_ncbi_genome_resolve_view,
+    sample_genome_assembly_review_view,
     sample_ncbi_taxonomy_resolve_view,
     sample_taxonomy_review_view,
     sample_relate_view,
@@ -243,6 +245,16 @@ urlpatterns = [
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),
+    path(
+        "samples/<int:sample_id>/external/ncbi-genome/resolve/",
+        sample_ncbi_genome_resolve_view,
+        name="sample_ncbi_genome_resolve",
+    ),
+    path(
+        "samples/<int:sample_id>/external/genome-assembly/<int:assignment_id>/review/",
+        sample_genome_assembly_review_view,
+        name="sample_genome_assembly_review",
+    ),
     path(
         "samples/<int:sample_id>/external/ncbi-taxonomy/resolve/",
         sample_ncbi_taxonomy_resolve_view,

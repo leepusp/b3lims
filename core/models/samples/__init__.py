@@ -10,6 +10,8 @@ from .enrichment import (
     SampleExternalIdentifier,
     SampleTaxonomyAssignment,
     SampleTaxonomyReview,
+    SampleGenomeAssemblyAssignment,
+    SampleGenomeAssemblyReview,
 )
 
 __all__ = [
@@ -25,6 +27,8 @@ __all__ = [
     "SampleIntakeRecord",
     "SampleTaxonomyAssignment",
     "SampleTaxonomyReview",
+    "SampleGenomeAssemblyAssignment",
+    "SampleGenomeAssemblyReview",
     "SampleExternalIdentifier",
     "SampleEnrichmentSnapshot",
 ]
