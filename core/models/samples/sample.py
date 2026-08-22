@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
@@ -11,6 +12,27 @@ from core.models.keywords.model import KeywordValue
 
 # Research group model
 from core.models.research_groups.model import ResearchGroup
+
+SAMPLE_MICRO_QR_ALPHABET = (
+    "23456789"
+    "ABCDEFGHJKLMNPQRSTUVWXYZ"
+)
+SAMPLE_MICRO_QR_TOKEN_LENGTH = 10
+
+
+def generate_sample_micro_qr_token():
+    """
+    Generate the permanent compact identifier encoded in a
+    Sample Micro QR symbol.
+
+    The alphabet deliberately excludes visually ambiguous
+    characters such as 0, 1, I and O.
+    """
+    return "".join(
+        secrets.choice(SAMPLE_MICRO_QR_ALPHABET)
+        for _ in range(SAMPLE_MICRO_QR_TOKEN_LENGTH)
+    )
+
 
 class Sample(models.Model):
     BIOSAFETY_LEVEL_CHOICES = [
@@ -34,6 +56,16 @@ class Sample(models.Model):
     # Identification
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     sample_id = models.CharField(max_length=100, unique=True)
+    micro_qr_token = models.CharField(
+        max_length=SAMPLE_MICRO_QR_TOKEN_LENGTH,
+        unique=True,
+        editable=False,
+        default=generate_sample_micro_qr_token,
+        help_text=(
+            "Permanent compact identifier encoded in the "
+            "Sample Micro QR label."
+        ),
+    )
     sample_type = models.CharField(max_length=100, blank=True, null=True)
     biosafety_level = models.CharField(
         max_length=10,
