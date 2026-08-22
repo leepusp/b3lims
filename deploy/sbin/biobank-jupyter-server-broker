@@ -65,7 +65,6 @@ load_user() {
     test -d "$HOME_DIR" || fail "User home does not exist."
 
     APP_USER="$username"
-    PRIMARY_GROUP="$(id -gn "$username")"
     LAB_ROOT="$HOME_DIR/biobank/lab_tools"
 }
 
@@ -92,43 +91,63 @@ prepare_directory() {
     "$STORAGE_HELPER" prepare-directory "$APP_USER" "$1" >/dev/null
 }
 
-write_owned_file() {
+write_user_file() {
     local path="$1" mode="$2"
-    chown "$APP_USER:$PRIMARY_GROUP" "$path"
-    chmod "$mode" "$path"
 
-    if test "$mode" = "0750"
-    then
-        if test "$APP_USER" = "biobank"
-        then
-            setfacl -m "u::rwx,g::r-x,m::rwx,o::---" "$path"
-        else
-            setfacl -m \
-                "u::rwx,u:biobank:r-x,g::r-x,m::rwx,o::---" "$path"
-        fi
-    else
-        if test "$APP_USER" = "biobank"
-        then
-            setfacl -m "u::rw-,g::rw-,m::rw-,o::---" "$path"
-        else
-            setfacl -m \
-                "u::rw-,u:biobank:rw-,g::rw-,m::rw-,o::---" "$path"
-        fi
-    fi
+    /usr/sbin/runuser -u "$APP_USER" -- /usr/bin/tee -- "$path" >/dev/null
+    /usr/sbin/runuser -u "$APP_USER" -- /usr/bin/chmod "$mode" -- "$path"
+}
+
+read_user_file() {
+    local path="$1"
+
+    /usr/sbin/runuser -u "$APP_USER" -- /usr/bin/cat -- "$path"
+}
+
+remove_user_tree() {
+    local path="$1"
+
+    /usr/sbin/runuser -u "$APP_USER" -- \
+        /usr/bin/rm -rf --one-file-system -- "$path"
+}
+
+remove_user_directory() {
+    local path="$1"
+
+    /usr/sbin/runuser -u "$APP_USER" -- \
+        /usr/bin/rmdir -- "$path" \
+        2>/dev/null || true
 }
 
 stored_job_id() {
     local run_dir="$1" job_id
-    test -f "$run_dir/job_id" || fail "Jupyter server session was not found."
-    job_id="$(tr -cd '0-9' < "$run_dir/job_id")"
-    [[ "$job_id" =~ ^[0-9]+$ ]] || fail "Invalid stored Slurm job ID."
+
+    test -f "$run_dir/job_id" ||
+        fail "Jupyter server session was not found."
+
+    job_id="$(
+        read_user_file "$run_dir/job_id" |
+        /usr/bin/tr -cd '0-9'
+    )"
+
+    [[ "$job_id" =~ ^[0-9]+$ ]] ||
+        fail "Invalid stored Slurm job ID."
+
     printf '%s\n' "$job_id"
 }
 
 validate_session_owner() {
     local run_dir="$1"
-    test -f "$run_dir/slurm_user" || fail "Session owner marker was not found."
-    test "$(<"$run_dir/slurm_user")" = "$APP_USER" ||
+    local owner_marker
+
+    test -f "$run_dir/slurm_user" ||
+        fail "Session owner marker was not found."
+
+    owner_marker="$(
+        read_user_file "$run_dir/slurm_user"
+    )"
+
+    test "$owner_marker" = "$APP_USER" ||
         fail "Session does not belong to the requested user."
 }
 
@@ -205,12 +224,12 @@ remove_run_directory() {
     then
         test -d "$run_dir" ||
             fail "Session runtime is not a directory."
-        rm -rf --one-file-system -- "$run_dir"
+        remove_user_tree "$run_dir"
         test ! -e "$run_dir" ||
             fail "Session runtime could not be removed."
     fi
 
-    rmdir -- "$job_root" 2>/dev/null || true
+    remove_user_directory "$job_root"
 }
 
 server_start() {
@@ -282,7 +301,10 @@ PY
 
     test ! -L "$notebook_file" && test -f "$notebook_file" ||
         fail "Notebook path is not a regular file."
-    write_owned_file "$notebook_file" 0660
+    "$STORAGE_HELPER" claim-file \
+        "$APP_USER" \
+        "jupyter/notebooks/notebook_${notebook_id}/notebook.ipynb" \
+        >/dev/null
 
     run_id="$(date -u +%Y%m%dT%H%M%SZ)_$$_${RANDOM}"
     validate_run_id "$run_id"
@@ -302,8 +324,7 @@ PY
             "$APP_USER" "$notebook_id"
         printf 'exec %q %q %q %q\n' \
             "$SERVER_SCRIPT" "$workspace" "$run_dir" "notebook.ipynb"
-    } > "$job_script"
-    write_owned_file "$job_script" 0750
+    } | write_user_file "$job_script" 0700
 
     if ! job_id="$(
         /usr/sbin/runuser -u "$APP_USER" -- \
@@ -331,10 +352,11 @@ PY
     job_id="${job_id%%;*}"
     [[ "$job_id" =~ ^[0-9]+$ ]] || fail "Slurm returned an invalid job ID."
 
-    printf '%s\n' "$job_id" > "$run_dir/job_id"
-    printf '%s\n' "$APP_USER" > "$run_dir/slurm_user"
-    write_owned_file "$run_dir/job_id" 0660
-    write_owned_file "$run_dir/slurm_user" 0660
+    printf '%s\n' "$job_id" |
+        write_user_file "$run_dir/job_id" 0600
+
+    printf '%s\n' "$APP_USER" |
+        write_user_file "$run_dir/slurm_user" 0600
 
     printf '{"status":"submitted","job_id":"%s","notebook_id":%s,"run_id":"%s","run_dir":"%s","workspace":"%s","notebook_file":"%s","partition":"%s","requested_node":"%s","slurm_user":"%s"}\n' \
         "$job_id" "$notebook_id" "$run_id" "$run_dir" "$workspace" \
@@ -358,7 +380,8 @@ server_status() {
     if test -f "$run_dir/connection.json"
     then
         server_json="$(
-            "$PYTHON" - "$run_dir/connection.json" <<'PY'
+            /usr/sbin/runuser -u "$APP_USER" -- \
+                "$PYTHON" - "$run_dir/connection.json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -490,7 +513,7 @@ workspace_delete() {
     if test -e "$workspace"
     then
         test -d "$workspace" || fail "Notebook workspace is not a directory."
-        rm -rf --one-file-system -- "$workspace"
+        remove_user_tree "$workspace"
         test ! -e "$workspace" || fail "Notebook workspace could not be removed."
         removed=true
     fi

@@ -28,6 +28,35 @@ class LabToolsDeploymentContractTests(SimpleTestCase):
             source,
         )
 
+    def test_storage_broker_uses_fd_anchored_mutations(self):
+        source = self._source(
+            "deploy/sbin/biobank-user-storage-broker"
+        )
+
+        for marker in (
+            "os.O_NOFOLLOW",
+            "dir_fd=parent_fd",
+            "os.fchown(",
+            "os.fchmod(",
+            "pass_fds=(fd,)",
+            '"g::---,m::rwx,o::---"',
+            '"g::---,m::rw-,o::---"',
+        ):
+            self.assertIn(marker, source)
+
+        self.assertNotIn(
+            'install -d -o "$username"',
+            source,
+        )
+        self.assertNotIn(
+            'chown "$username:$PRIMARY_GROUP"',
+            source,
+        )
+        self.assertNotIn(
+            'chmod 0770 "$directory"',
+            source,
+        )
+
     def test_runner_validates_and_forwards_optional_node(self):
         source = self._source(
             "deploy/sbin/biobank-jupyter-server-runner"
@@ -245,6 +274,45 @@ class LabToolsDeploymentContractTests(SimpleTestCase):
             "--setenv XDG_DATA_HOME "
             "/runtime/xdg-data",
             runtime,
+        )
+
+    def test_jupyter_broker_drops_root_before_user_path_mutation(self):
+        source = self._source(
+            "deploy/sbin/biobank-jupyter-server-broker"
+        )
+
+        for marker in (
+            'write_user_file()',
+            'read_user_file()',
+            'remove_user_tree()',
+            '/usr/sbin/runuser -u "$APP_USER" -- /usr/bin/tee',
+            '/usr/bin/rm -rf --one-file-system',
+            'remove_user_tree "$run_dir"',
+            'remove_user_tree "$workspace"',
+            '"$STORAGE_HELPER" claim-file',
+            '"jupyter/notebooks/notebook_${notebook_id}/notebook.ipynb"',
+        ):
+            self.assertIn(marker, source)
+
+        self.assertNotIn(
+            'chown "$APP_USER:$PRIMARY_GROUP"',
+            source,
+        )
+        self.assertNotIn(
+            'write_owned_file',
+            source,
+        )
+        self.assertNotIn(
+            '} > "$job_script"',
+            source,
+        )
+        self.assertNotIn(
+            'rm -rf --one-file-system -- "$run_dir"',
+            source,
+        )
+        self.assertNotIn(
+            'rm -rf --one-file-system -- "$workspace"',
+            source,
         )
 
     def test_terminal_sessions_remove_runtime_artifacts(self):

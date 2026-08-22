@@ -1,290 +1,792 @@
-#!/usr/bin/env bash
-# Provision and validate private per-user Biobank storage.
+#!/usr/bin/python3
+"""Root-controlled, fd-anchored Biobank per-user storage broker."""
 
-set -euo pipefail
-umask 0077
+import errno
+import json
+import os
+import pwd
+import re
+import stat
+import subprocess
+import sys
 
-APP_USER="biobank"
-RELATIVE_ROOT="biobank/lab_tools"
-DATA_RELATIVE_ROOT="biobank/data"
 
-fail() {
-    printf 'ERROR: %s\n' "$*" >&2
-    exit 1
-}
+APP_USER = "biobank"
+HOME_ROOT = "/home"
+SETFACL = "/usr/bin/setfacl"
 
-test "${EUID}" -eq 0 || fail "This helper must run as root."
+DIRECTORY_FLAGS = (
+    os.O_RDONLY
+    | os.O_DIRECTORY
+    | os.O_NOFOLLOW
+    | os.O_CLOEXEC
+)
 
-validate_username() {
-    [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] ||
-        fail "Invalid Unix username."
-}
+FILE_FLAGS = (
+    os.O_RDONLY
+    | os.O_NOFOLLOW
+    | os.O_CLOEXEC
+    | os.O_NONBLOCK
+)
 
-load_user() {
-    local username="$1"
-    local passwd_record
+USERNAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+)
 
-    validate_username "$username"
-    passwd_record="$(getent passwd "$username")" ||
-        fail "Unix user was not found."
+LAB_DIRECTORY_RE = re.compile(
+    r"^(?:"
+    r"eln/entries/[0-9]+/attachments"
+    r"|jupyter/notebooks/notebook_[0-9]+"
+    r"|jupyter/jobs/notebook_[0-9]+"
+    r"|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+"
+    r"|molecular/records/[0-9]+"
+    r"|molecular/records/[0-9]+/alignments"
+    r"|molecular/records/[0-9]+/structures"
+    r"|exports(?:/[A-Za-z0-9_.-]+)?"
+    r"|tmp(?:/[A-Za-z0-9_.-]+)?"
+    r")$"
+)
 
-    IFS=: read -r ACCOUNT_NAME _ UID_NUMBER GID_NUMBER _ HOME_DIR _ \
-        <<< "$passwd_record"
+LAB_FILE_RE = re.compile(
+    r"^(?:"
+    r"eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+"
+    r"|jupyter/notebooks/notebook_[0-9]+/notebook\.ipynb"
+    r"|molecular/records/[0-9]+/[A-Za-z0-9_.-]+"
+    r"|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+"
+    r"|molecular/records/[0-9]+/structures/[A-Za-z0-9_.-]+"
+    r"|exports/[A-Za-z0-9_.-]+"
+    r"|tmp/[A-Za-z0-9_.-]+"
+    r")$"
+)
 
-    test "$ACCOUNT_NAME" = "$username" || fail "Unix account mismatch."
-    [[ "$UID_NUMBER" =~ ^[0-9]+$ ]] || fail "Invalid Unix UID."
-    (( UID_NUMBER >= 1000 )) || fail "System accounts are not eligible."
-    [[ "$HOME_DIR" == /home/* ]] || fail "User home is outside /home."
-    test -d "$HOME_DIR" || fail "User home does not exist."
+DATA_DIRECTORY_RE = re.compile(
+    r"^samples/sample_[0-9]+_[A-Za-z0-9._-]+/files$"
+)
 
-    PRIMARY_GROUP="$(id -gn "$username")"
-    LAB_ROOT="$HOME_DIR/$RELATIVE_ROOT"
-    DATA_ROOT="$HOME_DIR/$DATA_RELATIVE_ROOT"
-}
+DATA_FILE_RE = re.compile(
+    r"^samples/sample_[0-9]+_[A-Za-z0-9._-]+/"
+    r"files/[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$"
+)
 
-apply_directory_acl() {
-    local username="$1"
-    local directory="$2"
+BASE_LAYOUT = (
+    "biobank",
+    "biobank/data",
+    "biobank/data/samples",
+    "biobank/lab_tools",
+    "biobank/lab_tools/eln",
+    "biobank/lab_tools/eln/entries",
+    "biobank/lab_tools/jupyter",
+    "biobank/lab_tools/jupyter/notebooks",
+    "biobank/lab_tools/jupyter/jobs",
+    "biobank/lab_tools/molecular",
+    "biobank/lab_tools/molecular/records",
+    "biobank/lab_tools/exports",
+    "biobank/lab_tools/tmp",
+)
 
-    chown "$username:$PRIMARY_GROUP" "$directory"
-    chmod 0770 "$directory"
-    if test "$username" = "$APP_USER"
-    then
-        setfacl -m "u::rwx,g::rwx,m::rwx,o::---" "$directory"
-        setfacl -d -m "u::rwx,g::rwx,m::rwx,o::---" "$directory"
-    else
-        setfacl -m \
-            "u::rwx,u:${APP_USER}:rwx,g::rwx,m::rwx,o::---" \
-            "$directory"
-        setfacl -d -m \
-            "u::rwx,u:${APP_USER}:rwx,g::rwx,m::rwx,o::---" \
-            "$directory"
-    fi
-}
 
-ensure_storage() {
-    local username="$1"
-    local directory
+class BrokerError(RuntimeError):
+    pass
 
-    if test "$username" != "$APP_USER"
-    then
-        setfacl -m "u:${APP_USER}:--x" "$HOME_DIR"
-    fi
 
-    for directory in \
-        "$HOME_DIR/biobank" \
-        "$DATA_ROOT" \
-        "$DATA_ROOT/samples" \
-        "$LAB_ROOT" \
-        "$LAB_ROOT/eln" \
-        "$LAB_ROOT/eln/entries" \
-        "$LAB_ROOT/jupyter" \
-        "$LAB_ROOT/jupyter/notebooks" \
-        "$LAB_ROOT/jupyter/jobs" \
-        "$LAB_ROOT/molecular" \
-        "$LAB_ROOT/molecular/records" \
-        "$LAB_ROOT/exports" \
-        "$LAB_ROOT/tmp"
-    do
-        install -d -o "$username" -g "$PRIMARY_GROUP" -m 0770 "$directory"
-        apply_directory_acl "$username" "$directory"
-    done
-}
+class UserContext:
+    __slots__ = (
+        "username",
+        "uid",
+        "gid",
+        "home",
+    )
 
-validate_relative_directory() {
-    local value="$1"
+    def __init__(self, username, uid, gid, home):
+        self.username = username
+        self.uid = uid
+        self.gid = gid
+        self.home = home
 
-    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments|jupyter/notebooks/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+|molecular/records/[0-9]+|molecular/records/[0-9]+/alignments|molecular/records/[0-9]+/structures|exports(/[A-Za-z0-9_.-]+)?|tmp(/[A-Za-z0-9_.-]+)?)$ ]] ||
-        fail "Storage directory is outside the managed layout."
 
-    [[ "$value" != *".."* && "$value" != *//* ]] ||
-        fail "Invalid relative storage directory."
-}
+def fail(message):
+    raise BrokerError(message)
 
-validate_relative_file() {
-    local value="$1"
 
-    [[ "$value" =~ ^(eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+|molecular/records/[0-9]+/structures/[A-Za-z0-9_.-]+|exports/[A-Za-z0-9_.-]+|tmp/[A-Za-z0-9_.-]+)$ ]] ||
-        fail "Storage file is outside the managed layout."
+def validate_username(username):
+    if not USERNAME_RE.fullmatch(username):
+        fail("Invalid Unix username.")
 
-    [[ "$value" != *".."* && "$value" != *//* ]] ||
-        fail "Invalid relative storage file."
-}
 
-validate_data_relative_directory() {
-    local value="$1"
+def validate_relative(value, pattern, label):
+    if (
+        not value
+        or ".." in value
+        or "//" in value
+        or not pattern.fullmatch(value)
+    ):
+        fail(label)
 
-    [[ "$value" =~ ^samples/sample_[0-9]+_[A-Za-z0-9._-]+/files$ ]] ||
-        fail "Sample data directory is outside the managed layout."
 
-    [[ "$value" != *".."* && "$value" != *//* ]] ||
-        fail "Invalid relative Sample data directory."
-}
+def load_user(username):
+    validate_username(username)
 
-validate_data_relative_file() {
-    local value="$1"
+    try:
+        record = pwd.getpwnam(username)
+    except KeyError:
+        fail("Unix user was not found.")
 
-    [[ "$value" =~ ^samples/sample_[0-9]+_[A-Za-z0-9._-]+/files/[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$ ]] ||
-        fail "Sample data file is outside the managed layout."
+    if record.pw_uid < 1000:
+        fail("System accounts are not eligible.")
 
-    [[ "$value" != *".."* && "$value" != *//* ]] ||
-        fail "Invalid relative Sample data file."
-}
+    expected_home = f"/home/{username}"
 
-protected_path() {
-    local relative="$1"
-    local candidate
+    if record.pw_dir != expected_home:
+        fail("User home does not match /home/USERNAME.")
 
-    candidate="$(realpath -m -- "$LAB_ROOT/$relative")"
-    [[ "$candidate" == "$LAB_ROOT/"* ]] ||
-        fail "Storage path escaped the user Lab Tools root."
-    printf '%s\n' "$candidate"
-}
+    return UserContext(
+        username=username,
+        uid=record.pw_uid,
+        gid=record.pw_gid,
+        home=expected_home,
+    )
 
-protected_data_path() {
-    local relative="$1"
-    local candidate
 
-    candidate="$(realpath -m -- "$DATA_ROOT/$relative")"
-    [[ "$candidate" == "$DATA_ROOT/"* ]] ||
-        fail "Sample data path escaped the protected user data root."
-    printf '%s\n' "$candidate"
-}
+def _validate_component(component):
+    if (
+        not component
+        or component in {".", ".."}
+        or "/" in component
+        or "\x00" in component
+    ):
+        fail("Invalid managed path component.")
 
-prepare_directory() {
-    local username="$1"
-    local relative="$2"
-    local directory component
-    local -a components
 
-    validate_relative_directory "$relative"
-    directory="$(protected_path "$relative")"
-    IFS=/ read -r -a components <<< "$relative"
-    directory="$LAB_ROOT"
+def _open_existing_directory(
+    parent_fd,
+    component,
+    expected_device=None,
+):
+    _validate_component(component)
 
-    for component in "${components[@]}"
-    do
-        directory="$directory/$component"
-        test ! -L "$directory" ||
-            fail "Managed directories may not be symbolic links."
-        if test -e "$directory"
-        then
-            test -d "$directory" ||
-                fail "Managed directory path is not a directory."
-        fi
-        install -d -o "$username" -g "$PRIMARY_GROUP" -m 0770 "$directory"
-        apply_directory_acl "$username" "$directory"
-    done
-}
+    try:
+        fd = os.open(
+            component,
+            DIRECTORY_FLAGS,
+            dir_fd=parent_fd,
+        )
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        if exc.errno in {
+            errno.ELOOP,
+            errno.ENOTDIR,
+        }:
+            fail(
+                "Managed directory component is not a real directory."
+            )
+        raise
 
-prepare_data_directory() {
-    local username="$1"
-    local relative="$2"
-    local directory component
-    local -a components
+    try:
+        metadata = os.fstat(fd)
 
-    validate_data_relative_directory "$relative"
-    protected_data_path "$relative" >/dev/null
+        if not stat.S_ISDIR(metadata.st_mode):
+            fail("Managed path component is not a directory.")
 
-    IFS=/ read -r -a components <<< "$relative"
-    directory="$DATA_ROOT"
+        if (
+            expected_device is not None
+            and metadata.st_dev != expected_device
+        ):
+            fail(
+                "Managed storage may not cross filesystem boundaries."
+            )
 
-    for component in "${components[@]}"
-    do
-        directory="$directory/$component"
+        return fd
+    except Exception:
+        os.close(fd)
+        raise
 
-        test ! -L "$directory" ||
-            fail "Managed Sample data directories may not be symbolic links."
 
-        if test -e "$directory"
-        then
-            test -d "$directory" ||
-                fail "Managed Sample data path is not a directory."
-        fi
+def _open_absolute_directory_no_symlinks(path):
+    if not path.startswith("/"):
+        fail("Absolute directory path is required.")
 
-        install -d             -o "$username"             -g "$PRIMARY_GROUP"             -m 0770             "$directory"
+    components = [
+        value
+        for value in path.split("/")
+        if value
+    ]
 
-        apply_directory_acl "$username" "$directory"
-    done
-}
+    current_fd = os.open(
+        "/",
+        DIRECTORY_FLAGS,
+    )
 
-claim_file() {
-    local username="$1"
-    local relative="$2"
-    local path
+    try:
+        for component in components:
+            next_fd = _open_existing_directory(
+                current_fd,
+                component,
+            )
 
-    validate_relative_file "$relative"
-    path="$(protected_path "$relative")"
-    test ! -L "$path" || fail "Managed files may not be symbolic links."
-    test -f "$path" || fail "Managed file was not found."
-    chown "$username:$PRIMARY_GROUP" "$path"
-    chmod 0660 "$path"
-    if test "$username" = "$APP_USER"
-    then
-        setfacl -m "u::rw-,g::rw-,m::rw-,o::---" "$path"
-    else
-        setfacl -m \
-            "u::rw-,u:${APP_USER}:rw-,g::rw-,m::rw-,o::---" \
-            "$path"
-    fi
-}
+            os.close(current_fd)
+            current_fd = next_fd
 
-claim_data_file() {
-    local username="$1"
-    local relative="$2"
-    local path
+        return current_fd
+    except Exception:
+        os.close(current_fd)
+        raise
 
-    validate_data_relative_file "$relative"
-    path="$(protected_data_path "$relative")"
 
-    test ! -L "$path" ||
-        fail "Managed Sample data files may not be symbolic links."
+def _open_home(context):
+    home_root_fd = _open_absolute_directory_no_symlinks(
+        HOME_ROOT
+    )
 
-    test -f "$path" ||
-        fail "Managed Sample data file was not found."
+    try:
+        home_fd = _open_existing_directory(
+            home_root_fd,
+            context.username,
+        )
+    finally:
+        os.close(home_root_fd)
 
-    chown "$username:$PRIMARY_GROUP" "$path"
-    chmod 0660 "$path"
+    try:
+        metadata = os.fstat(home_fd)
 
-    if test "$username" = "$APP_USER"
-    then
-        setfacl -m             "u::rw-,g::rw-,m::rw-,o::---"             "$path"
-    else
-        setfacl -m             "u::rw-,u:${APP_USER}:rw-,g::rw-,m::rw-,o::---"             "$path"
-    fi
-}
+        if metadata.st_uid != context.uid:
+            fail(
+                "User home ownership does not match the Unix account."
+            )
 
-ACTION="${1:-}"
-USERNAME="${2:-}"
-load_user "$USERNAME"
-ensure_storage "$USERNAME"
+        return home_fd
+    except Exception:
+        os.close(home_fd)
+        raise
 
-case "$ACTION" in
-    ensure)
-        test "$#" -eq 2 || fail "ensure requires USERNAME."
-        ;;
-    prepare-directory)
-        test "$#" -eq 3 || fail "prepare-directory requires USERNAME PATH."
-        prepare_directory "$USERNAME" "$3"
-        ;;
-    claim-file)
-        test "$#" -eq 3 || fail "claim-file requires USERNAME PATH."
-        claim_file "$USERNAME" "$3"
-        ;;
-    prepare-data-directory)
-        test "$#" -eq 3 ||
-            fail "prepare-data-directory requires USERNAME PATH."
-        prepare_data_directory "$USERNAME" "$3"
-        ;;
-    claim-data-file)
-        test "$#" -eq 3 ||
-            fail "claim-data-file requires USERNAME PATH."
-        claim_data_file "$USERNAME" "$3"
-        ;;
-    *)
-        fail "Usage: $0 {ensure|prepare-directory|claim-file|prepare-data-directory|claim-data-file} USERNAME [PATH]"
-        ;;
-esac
 
-printf '{"status":"ok","user":"%s","root":"%s"}\n' \
-    "$USERNAME" "$LAB_ROOT"
+def _run_setfacl(fd, *arguments):
+    try:
+        completed = subprocess.run(
+            [
+                SETFACL,
+                *arguments,
+                f"/proc/self/fd/{fd}",
+            ],
+            check=False,
+            pass_fds=(fd,),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except OSError as exc:
+        fail(
+            f"Unable to execute setfacl: {exc.strerror}."
+        )
+
+    if completed.returncode != 0:
+        message = completed.stderr.strip()
+
+        if not message:
+            message = "setfacl failed"
+
+        fail(message)
+
+
+def _grant_home_traverse(home_fd, context):
+    if context.username == APP_USER:
+        return
+
+    _run_setfacl(
+        home_fd,
+        "-m",
+        f"u:{APP_USER}:--x",
+    )
+
+
+def _directory_acl(context):
+    if context.username == APP_USER:
+        return (
+            "u::rwx,g::---,m::---,o::---"
+        )
+
+    return (
+        f"u::rwx,u:{APP_USER}:rwx,"
+        "g::---,m::rwx,o::---"
+    )
+
+
+def _file_acl(context):
+    if context.username == APP_USER:
+        return (
+            "u::rw-,g::---,m::---,o::---"
+        )
+
+    return (
+        f"u::rw-,u:{APP_USER}:rw-,"
+        "g::---,m::rw-,o::---"
+    )
+
+
+def _normalize_directory(fd, context):
+    os.fchown(
+        fd,
+        context.uid,
+        context.gid,
+    )
+
+    os.fchmod(
+        fd,
+        0o700,
+    )
+
+    acl = _directory_acl(context)
+
+    _run_setfacl(
+        fd,
+        "-m",
+        acl,
+    )
+
+    _run_setfacl(
+        fd,
+        "-d",
+        "-m",
+        acl,
+    )
+
+
+def _normalize_file(fd, context):
+    os.fchown(
+        fd,
+        context.uid,
+        context.gid,
+    )
+
+    os.fchmod(
+        fd,
+        0o600,
+    )
+
+    _run_setfacl(
+        fd,
+        "-m",
+        _file_acl(context),
+    )
+
+
+def _open_or_create_directory(
+    parent_fd,
+    component,
+    context,
+    expected_device,
+):
+    _validate_component(component)
+
+    for _attempt in range(4):
+        try:
+            fd = _open_existing_directory(
+                parent_fd,
+                component,
+                expected_device,
+            )
+        except FileNotFoundError:
+            try:
+                os.mkdir(
+                    component,
+                    mode=0o700,
+                    dir_fd=parent_fd,
+                )
+            except FileExistsError:
+                continue
+
+            fd = _open_existing_directory(
+                parent_fd,
+                component,
+                expected_device,
+            )
+
+        _normalize_directory(
+            fd,
+            context,
+        )
+
+        return fd
+
+    fail(
+        "Managed directory changed repeatedly during creation."
+    )
+
+
+def _split_relative(relative):
+    values = relative.split("/")
+
+    for value in values:
+        _validate_component(value)
+
+    return values
+
+
+def _ensure_chain(
+    home_fd,
+    relative,
+    context,
+    expected_device,
+):
+    current_fd = os.dup(home_fd)
+
+    try:
+        for component in _split_relative(relative):
+            next_fd = _open_or_create_directory(
+                current_fd,
+                component,
+                context,
+                expected_device,
+            )
+
+            os.close(current_fd)
+            current_fd = next_fd
+
+        return current_fd
+    except Exception:
+        os.close(current_fd)
+        raise
+
+
+def _open_chain(
+    home_fd,
+    relative,
+    context,
+    expected_device,
+):
+    current_fd = os.dup(home_fd)
+
+    try:
+        for component in _split_relative(relative):
+            next_fd = _open_existing_directory(
+                current_fd,
+                component,
+                expected_device,
+            )
+
+            _normalize_directory(
+                next_fd,
+                context,
+            )
+
+            os.close(current_fd)
+            current_fd = next_fd
+
+        return current_fd
+    except Exception:
+        os.close(current_fd)
+        raise
+
+
+def _open_regular_file(
+    parent_fd,
+    filename,
+    expected_device,
+):
+    _validate_component(filename)
+
+    try:
+        fd = os.open(
+            filename,
+            FILE_FLAGS,
+            dir_fd=parent_fd,
+        )
+    except OSError as exc:
+        if exc.errno in {
+            errno.ELOOP,
+            errno.ENOTDIR,
+        }:
+            fail(
+                "Managed file may not be a symbolic link."
+            )
+        raise
+
+    try:
+        metadata = os.fstat(fd)
+
+        if not stat.S_ISREG(metadata.st_mode):
+            fail("Managed path is not a regular file.")
+
+        if metadata.st_dev != expected_device:
+            fail(
+                "Managed file may not cross filesystem boundaries."
+            )
+
+        return fd
+    except Exception:
+        os.close(fd)
+        raise
+
+
+def ensure_layout(
+    home_fd,
+    context,
+    expected_device,
+):
+    _grant_home_traverse(
+        home_fd,
+        context,
+    )
+
+    for relative in BASE_LAYOUT:
+        fd = _ensure_chain(
+            home_fd,
+            relative,
+            context,
+            expected_device,
+        )
+
+        os.close(fd)
+
+
+def prepare_lab_directory(
+    home_fd,
+    context,
+    relative,
+    expected_device,
+):
+    validate_relative(
+        relative,
+        LAB_DIRECTORY_RE,
+        "Storage directory is outside the managed layout.",
+    )
+
+    fd = _ensure_chain(
+        home_fd,
+        f"biobank/lab_tools/{relative}",
+        context,
+        expected_device,
+    )
+
+    os.close(fd)
+
+
+def prepare_data_directory(
+    home_fd,
+    context,
+    relative,
+    expected_device,
+):
+    validate_relative(
+        relative,
+        DATA_DIRECTORY_RE,
+        "Sample data directory is outside the managed layout.",
+    )
+
+    fd = _ensure_chain(
+        home_fd,
+        f"biobank/data/{relative}",
+        context,
+        expected_device,
+    )
+
+    os.close(fd)
+
+
+def claim_file(
+    home_fd,
+    context,
+    relative,
+    prefix,
+    pattern,
+    error_message,
+    expected_device,
+):
+    validate_relative(
+        relative,
+        pattern,
+        error_message,
+    )
+
+    components = _split_relative(relative)
+
+    filename = components[-1]
+    parent_relative = "/".join(
+        components[:-1]
+    )
+
+    managed_parent = prefix
+
+    if parent_relative:
+        managed_parent = (
+            f"{prefix}/{parent_relative}"
+        )
+
+    parent_fd = _open_chain(
+        home_fd,
+        managed_parent,
+        context,
+        expected_device,
+    )
+
+    try:
+        file_fd = _open_regular_file(
+            parent_fd,
+            filename,
+            expected_device,
+        )
+    finally:
+        os.close(parent_fd)
+
+    try:
+        _normalize_file(
+            file_fd,
+            context,
+        )
+    finally:
+        os.close(file_fd)
+
+
+def execute(action, username, relative=None):
+    context = load_user(username)
+
+    home_fd = _open_home(context)
+
+    try:
+        home_metadata = os.fstat(home_fd)
+        expected_device = home_metadata.st_dev
+
+        ensure_layout(
+            home_fd,
+            context,
+            expected_device,
+        )
+
+        if action == "ensure":
+            if relative is not None:
+                fail("ensure does not accept a path.")
+
+        elif action == "prepare-directory":
+            if relative is None:
+                fail(
+                    "prepare-directory requires USERNAME PATH."
+                )
+
+            prepare_lab_directory(
+                home_fd,
+                context,
+                relative,
+                expected_device,
+            )
+
+        elif action == "claim-file":
+            if relative is None:
+                fail(
+                    "claim-file requires USERNAME PATH."
+                )
+
+            claim_file(
+                home_fd,
+                context,
+                relative,
+                "biobank/lab_tools",
+                LAB_FILE_RE,
+                "Storage file is outside the managed layout.",
+                expected_device,
+            )
+
+        elif action == "prepare-data-directory":
+            if relative is None:
+                fail(
+                    "prepare-data-directory requires USERNAME PATH."
+                )
+
+            prepare_data_directory(
+                home_fd,
+                context,
+                relative,
+                expected_device,
+            )
+
+        elif action == "claim-data-file":
+            if relative is None:
+                fail(
+                    "claim-data-file requires USERNAME PATH."
+                )
+
+            claim_file(
+                home_fd,
+                context,
+                relative,
+                "biobank/data",
+                DATA_FILE_RE,
+                "Sample data file is outside the managed layout.",
+                expected_device,
+            )
+
+        else:
+            fail(
+                "Usage: biobank-user-storage-broker "
+                "{ensure|prepare-directory|claim-file|"
+                "prepare-data-directory|claim-data-file} "
+                "USERNAME [PATH]"
+            )
+
+    finally:
+        os.close(home_fd)
+
+    return {
+        "status": "ok",
+        "user": context.username,
+        "root": (
+            f"{context.home}/biobank/lab_tools"
+        ),
+    }
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        fail("This helper must run as root.")
+
+    if len(argv) not in {3, 4}:
+        fail(
+            "Usage: biobank-user-storage-broker "
+            "{ensure|prepare-directory|claim-file|"
+            "prepare-data-directory|claim-data-file} "
+            "USERNAME [PATH]"
+        )
+
+    action = argv[1]
+    username = argv[2]
+    relative = (
+        argv[3]
+        if len(argv) == 4
+        else None
+    )
+
+    result = execute(
+        action,
+        username,
+        relative,
+    )
+
+    print(
+        json.dumps(
+            result,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)
+    except BrokerError as exc:
+        print(
+            f"ERROR: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    except (OSError, subprocess.SubprocessError) as exc:
+        message = getattr(
+            exc,
+            "strerror",
+            None,
+        ) or str(exc)
+
+        print(
+            f"ERROR: storage operation failed: {message}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
