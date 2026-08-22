@@ -99,7 +99,10 @@ from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 
 # 9. QR CODE (PAGE)
-from core.views.internal.samples.views import sample_qr_scan_view
+from core.views.internal.samples.views import (
+    sample_micro_qr_resolve_view,
+    sample_qr_scan_view,
+)
 
 # ================= ROTAS (URLPATTERNS) =================
 
@@ -425,7 +428,16 @@ urlpatterns = [
 
 
     # ---------------- QR CODE (PAGE) --------------------------------
-    path('samples/scan/<uuid:uuid>/', sample_qr_scan_view, name='sample_qr_scan'),
+    path(
+        "samples/micro-qr/<str:token>/",
+        sample_micro_qr_resolve_view,
+        name="sample_micro_qr_resolve",
+    ),
+    path(
+        'samples/scan/<uuid:uuid>/',
+        sample_qr_scan_view,
+        name='sample_qr_scan',
+    ),
 
 ]
 

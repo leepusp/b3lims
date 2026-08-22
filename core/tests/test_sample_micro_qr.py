@@ -120,3 +120,309 @@ class SampleMicroQrTokenTests(TestCase):
             field.default,
             generate_sample_micro_qr_token,
         )
+
+
+class SampleMicroQrFunctionalTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import (
+            AnonymousUser,
+        )
+        from django.test import RequestFactory
+
+        self.AnonymousUser = AnonymousUser
+        self.factory = RequestFactory()
+
+        self.owner = User.objects.create_user(
+            username="sample-micro-qr-functional-owner",
+            password="test-password",
+        )
+
+        self.outsider = User.objects.create_user(
+            username="sample-micro-qr-functional-outsider",
+            password="test-password",
+        )
+
+        self.sample = Sample.objects.create(
+            sample_id="MICRO-QR-FUNCTIONAL-0001",
+            owner=self.owner,
+            sample_type="Other",
+        )
+
+    def _request(
+        self,
+        path,
+        user,
+    ):
+        request = self.factory.get(path)
+        request.user = user
+        return request
+
+    def test_renderer_produces_fixed_m3_m_micro_qr(
+        self,
+    ):
+        import base64
+
+        from core.services.sample_micro_qr import (
+            SAMPLE_MICRO_QR_BORDER,
+            build_sample_micro_qr,
+            sample_micro_qr_png_base64,
+        )
+
+        qr = build_sample_micro_qr(
+            self.sample.micro_qr_token
+        )
+
+        self.assertTrue(
+            qr.is_micro
+        )
+        self.assertEqual(
+            qr.designator,
+            "M3-M",
+        )
+        self.assertEqual(
+            SAMPLE_MICRO_QR_BORDER,
+            2,
+        )
+        self.assertEqual(
+            qr.symbol_size(
+                border=0
+            ),
+            (15, 15),
+        )
+        self.assertEqual(
+            qr.symbol_size(
+                border=2
+            ),
+            (19, 19),
+        )
+
+        png = base64.b64decode(
+            sample_micro_qr_png_base64(
+                self.sample.micro_qr_token
+            )
+        )
+
+        self.assertTrue(
+            png.startswith(
+                b"\x89PNG\r\n\x1a\n"
+            )
+        )
+
+    def test_print_label_contains_micro_qr_and_token(
+        self,
+    ):
+        from core.views.internal.samples.views import (
+            print_sample_label,
+        )
+
+        request = self._request(
+            (
+                f"/samples/"
+                f"{self.sample.pk}/print/"
+            ),
+            self.owner,
+        )
+
+        response = print_sample_label(
+            request,
+            self.sample.pk,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        body = response.content.decode()
+
+        self.assertIn(
+            "data:image/png;base64,",
+            body,
+        )
+        self.assertIn(
+            "Sample Micro QR",
+            body,
+        )
+        self.assertIn(
+            self.sample.micro_qr_token,
+            body,
+        )
+
+    def test_owner_can_resolve_micro_qr_token(
+        self,
+    ):
+        from core.views.internal.samples.views import (
+            sample_micro_qr_resolve_view,
+        )
+
+        request = self._request(
+            (
+                "/samples/micro-qr/"
+                f"{self.sample.micro_qr_token}/"
+            ),
+            self.owner,
+        )
+
+        response = sample_micro_qr_resolve_view(
+            request,
+            self.sample.micro_qr_token,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertIn(
+            self.sample.sample_id,
+            response.content.decode(),
+        )
+
+    def test_private_sample_micro_qr_requires_login(
+        self,
+    ):
+        from core.views.internal.samples.views import (
+            sample_micro_qr_resolve_view,
+        )
+
+        request = self._request(
+            (
+                "/samples/micro-qr/"
+                f"{self.sample.micro_qr_token}/"
+            ),
+            self.AnonymousUser(),
+        )
+
+        response = sample_micro_qr_resolve_view(
+            request,
+            self.sample.micro_qr_token,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+        self.assertIn(
+            "login",
+            response["Location"],
+        )
+        self.assertIn(
+            "next=",
+            response["Location"],
+        )
+
+    def test_unauthorized_authenticated_user_is_denied(
+        self,
+    ):
+        from django.core.exceptions import (
+            PermissionDenied,
+        )
+
+        from core.views.internal.samples.views import (
+            sample_micro_qr_resolve_view,
+        )
+
+        request = self._request(
+            (
+                "/samples/micro-qr/"
+                f"{self.sample.micro_qr_token}/"
+            ),
+            self.outsider,
+        )
+
+        with self.assertRaises(
+            PermissionDenied
+        ):
+            sample_micro_qr_resolve_view(
+                request,
+                self.sample.micro_qr_token,
+            )
+
+    def test_public_sample_micro_qr_allows_anonymous_access(
+        self,
+    ):
+        from core.views.internal.samples.views import (
+            sample_micro_qr_resolve_view,
+        )
+
+        self.sample.is_public = True
+        self.sample.is_active = True
+        self.sample.is_embargoed = False
+        self.sample.save(
+            update_fields=[
+                "is_public",
+                "is_active",
+                "is_embargoed",
+            ]
+        )
+
+        request = self._request(
+            (
+                "/samples/micro-qr/"
+                f"{self.sample.micro_qr_token}/"
+            ),
+            self.AnonymousUser(),
+        )
+
+        response = sample_micro_qr_resolve_view(
+            request,
+            self.sample.micro_qr_token,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+    def test_invalid_micro_qr_token_returns_404(
+        self,
+    ):
+        from django.http import Http404
+
+        from core.views.internal.samples.views import (
+            sample_micro_qr_resolve_view,
+        )
+
+        request = self._request(
+            "/samples/micro-qr/INVALID01O/",
+            self.owner,
+        )
+
+        with self.assertRaises(
+            Http404
+        ):
+            sample_micro_qr_resolve_view(
+                request,
+                "INVALID01O",
+            )
+
+    def test_micro_qr_url_contract_and_legacy_url_remain(
+        self,
+    ):
+        from django.urls import reverse
+
+        micro_url = reverse(
+            "sample_micro_qr_resolve",
+            args=[
+                self.sample.micro_qr_token,
+            ],
+        )
+
+        legacy_url = reverse(
+            "sample_qr_scan",
+            args=[
+                self.sample.uuid,
+            ],
+        )
+
+        self.assertIn(
+            (
+                "/samples/micro-qr/"
+                f"{self.sample.micro_qr_token}/"
+            ),
+            micro_url,
+        )
+
+        self.assertIn(
+            "/samples/scan/",
+            legacy_url,
+        )

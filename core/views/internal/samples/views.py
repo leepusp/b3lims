@@ -1,9 +1,6 @@
 from core.services.sample_origin import save_sample_origin
 from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
-import qrcode
-import io
-import base64
 import csv
 import logging
 from django.urls import reverse
@@ -53,6 +50,11 @@ from core.permissions.samples import (
 from core.permissions.collections import can_edit_collection
 from core.permissions.biobanks import editable_biobanks_for_user
 from core.services.sample_intake import import_sample_table
+from core.services.sample_micro_qr import (
+    InvalidSampleMicroQrToken,
+    normalize_sample_micro_qr_token,
+    sample_micro_qr_png_base64,
+)
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
 from core.services.shipment_factory import create_shipment_from_sample
@@ -2084,23 +2086,30 @@ def sample_create_view(request):
 # =========================================================
 @login_required
 def print_sample_label(request, sample_id):
-    sample = get_object_or_404(Sample, id=sample_id)
-    if not can_view_sample(request.user, sample):
+    sample = get_object_or_404(
+        Sample,
+        id=sample_id,
+    )
+
+    if not can_view_sample(
+        request.user,
+        sample,
+    ):
         raise PermissionDenied
 
-    # A MÁGICA: Gera a URL completa e absoluta (ex: https://davinci.icb.usp.br/biobank/samples/scan/1234-5678/)
-    qr_url = request.build_absolute_uri(reverse('sample_qr_scan', args=[sample.uuid]))
+    qr_base64 = sample_micro_qr_png_base64(
+        sample.micro_qr_token
+    )
 
-    qr = qrcode.QRCode(version=1, box_size=10, border=0)
-    qr.add_data(qr_url) # <--- Embutimos a URL no QR Code!
-    qr.make(fit=True)
-
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = io.BytesIO()
-    img.save(buf, format='PNG')
-    qr_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-    return render(request, "internal/samples/print_label.html", {'sample': sample, 'qr_code': qr_base64})
+    return render(
+        request,
+        "internal/samples/print_label.html",
+        {
+            "sample": sample,
+            "qr_code": qr_base64,
+            "micro_qr_designator": "M3-M",
+        },
+    )
 
 
 def sample_qr_scan_view(request, uuid):
@@ -2137,6 +2146,85 @@ def sample_qr_scan_view(request, uuid):
     ctx['sample'] = real_sample
 
     return render(request, "internal/samples/qr_view.html", ctx)
+
+
+def sample_micro_qr_resolve_view(
+    request,
+    token,
+):
+    """
+    Resolve a compact Sample Micro QR token while preserving
+    the same visibility and authorization contract used by
+    legacy UUID Sample QR labels.
+    """
+    try:
+        normalized_token = (
+            normalize_sample_micro_qr_token(
+                token
+            )
+        )
+    except InvalidSampleMicroQrToken as exc:
+        raise Http404(
+            "Sample Micro QR token not found."
+        ) from exc
+
+    sample = get_object_or_404(
+        Sample,
+        micro_qr_token=normalized_token,
+    )
+
+    sample_is_publicly_accessible = (
+        sample.is_active
+        and sample.is_public
+        and not sample.is_embargoed
+        and sample.deletion_requested_at
+        is None
+    )
+
+    if not sample_is_publicly_accessible:
+        if not request.user.is_authenticated:
+            login_url = reverse("login")
+            next_url = reverse(
+                "sample_micro_qr_resolve",
+                args=[
+                    sample.micro_qr_token,
+                ],
+            )
+            return redirect(
+                f"{login_url}?next={next_url}"
+            )
+
+        if not can_view_sample(
+            request.user,
+            sample,
+        ):
+            raise PermissionDenied(
+                "You do not have permission "
+                "to view this sample."
+            )
+
+    if hasattr(sample, "bacteria"):
+        real_sample = sample.bacteria
+    elif hasattr(sample, "phage"):
+        real_sample = sample.phage
+    elif hasattr(sample, "plasmid"):
+        real_sample = sample.plasmid
+    else:
+        real_sample = sample
+
+    ctx = (
+        base_context(request)
+        if request.user.is_authenticated
+        else {}
+    )
+
+    ctx["sample"] = real_sample
+
+    return render(
+        request,
+        "internal/samples/qr_view.html",
+        ctx,
+    )
 
 
 @login_required
