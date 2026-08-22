@@ -480,6 +480,104 @@ class SampleExternalEnrichmentTests(
         "core.services.sample_enrichment."
         "ncbi_taxonomy.urllib.request.urlopen"
     )
+    def test_refresh_preserves_verified_human_review(
+        self,
+        mocked_urlopen,
+    ):
+        mocked_urlopen.return_value = FakeResponse(
+            ncbi_taxonomy_payload()
+        )
+
+        first = resolve_and_store_ncbi_taxonomy(
+            self.bacterium,
+            self.owner,
+            "Pseudomonas aeruginosa",
+        )
+
+        assignment = first["assignment"]
+        assignment.match_status = (
+            SampleTaxonomyAssignment
+            .STATUS_VERIFIED
+        )
+        assignment.reviewed_by = self.owner
+        assignment.save(
+            update_fields=[
+                "match_status",
+                "reviewed_by",
+            ]
+        )
+
+        resolve_and_store_ncbi_taxonomy(
+            self.bacterium,
+            self.owner,
+            "Pseudomonas aeruginosa",
+        )
+
+        assignment.refresh_from_db()
+
+        self.assertEqual(
+            assignment.match_status,
+            SampleTaxonomyAssignment
+            .STATUS_VERIFIED,
+        )
+        self.assertEqual(
+            assignment.reviewed_by,
+            self.owner,
+        )
+
+    @patch(
+        "core.services.sample_enrichment."
+        "ncbi_taxonomy.urllib.request.urlopen"
+    )
+    def test_refresh_preserves_conflict_human_review(
+        self,
+        mocked_urlopen,
+    ):
+        mocked_urlopen.return_value = FakeResponse(
+            ncbi_taxonomy_payload()
+        )
+
+        first = resolve_and_store_ncbi_taxonomy(
+            self.bacterium,
+            self.owner,
+            "Pseudomonas aeruginosa",
+        )
+
+        assignment = first["assignment"]
+        assignment.match_status = (
+            SampleTaxonomyAssignment
+            .STATUS_CONFLICT
+        )
+        assignment.reviewed_by = self.owner
+        assignment.save(
+            update_fields=[
+                "match_status",
+                "reviewed_by",
+            ]
+        )
+
+        resolve_and_store_ncbi_taxonomy(
+            self.bacterium,
+            self.owner,
+            "Pseudomonas aeruginosa",
+        )
+
+        assignment.refresh_from_db()
+
+        self.assertEqual(
+            assignment.match_status,
+            SampleTaxonomyAssignment
+            .STATUS_CONFLICT,
+        )
+        self.assertEqual(
+            assignment.reviewed_by,
+            self.owner,
+        )
+
+    @patch(
+        "core.services.sample_enrichment."
+        "ncbi_taxonomy.urllib.request.urlopen"
+    )
     def test_ambiguous_response_is_snapshotted_without_assignment(
         self,
         mocked_urlopen,

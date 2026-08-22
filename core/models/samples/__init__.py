@@ -9,6 +9,7 @@ from .enrichment import (
     SampleEnrichmentSnapshot,
     SampleExternalIdentifier,
     SampleTaxonomyAssignment,
+    SampleTaxonomyReview,
 )
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "SampleImportBatch",
     "SampleIntakeRecord",
     "SampleTaxonomyAssignment",
+    "SampleTaxonomyReview",
     "SampleExternalIdentifier",
     "SampleEnrichmentSnapshot",
 ]

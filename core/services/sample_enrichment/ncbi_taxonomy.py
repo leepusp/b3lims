@@ -746,13 +746,17 @@ def resolve_and_store_ncbi_taxonomy(
             if (
                 previous is not None
                 and previous.match_status
-                ==
-                SampleTaxonomyAssignment
-                .STATUS_VERIFIED
-            ):
-                match_status = (
+                in {
                     SampleTaxonomyAssignment
-                    .STATUS_VERIFIED
+                    .STATUS_VERIFIED,
+                    SampleTaxonomyAssignment
+                    .STATUS_CONFLICT,
+                }
+            ):
+                # A refresh of the same external TaxID must not
+                # erase a prior human review decision.
+                match_status = (
+                    previous.match_status
                 )
 
             (

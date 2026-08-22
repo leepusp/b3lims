@@ -57,6 +57,7 @@ from core.views.internal.samples.views import (
     sample_edit_view,
     sample_detail_view,
     sample_ncbi_taxonomy_resolve_view,
+    sample_taxonomy_review_view,
     sample_relate_view,
     samples_network_view,  # <-- FUNÇÃO DO GRAFO IMPORTADA AQUI
     sample_import_view,
@@ -246,6 +247,11 @@ urlpatterns = [
         "samples/<int:sample_id>/external/ncbi-taxonomy/resolve/",
         sample_ncbi_taxonomy_resolve_view,
         name="sample_ncbi_taxonomy_resolve",
+    ),
+    path(
+        "samples/<int:sample_id>/external/taxonomy/<int:assignment_id>/review/",
+        sample_taxonomy_review_view,
+        name="sample_taxonomy_review",
     ),
     path("samples/<int:sample_id>/", sample_detail_view, name="sample_detail"),
     path("samples/<int:sample_id>/notebook/create/", notebook_views.notebook_create_from_sample, name="notebook_create_from_sample"),

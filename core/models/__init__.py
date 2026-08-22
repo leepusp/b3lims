@@ -14,6 +14,7 @@ from .samples.enrichment import (
     SampleEnrichmentSnapshot,
     SampleExternalIdentifier,
     SampleTaxonomyAssignment,
+    SampleTaxonomyReview,
 )
 
 from .events.model import Event

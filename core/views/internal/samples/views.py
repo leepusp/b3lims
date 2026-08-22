@@ -2962,6 +2962,95 @@ def sample_file_download_view(
 
 @login_required
 @require_POST
+def sample_taxonomy_review_view(
+    request,
+    sample_id,
+    assignment_id,
+):
+    from core.models.samples.enrichment import (
+        SampleTaxonomyAssignment,
+    )
+    from core.services.sample_enrichment.taxonomy_review import (
+        review_taxonomy_assignment,
+    )
+
+    base_sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if (
+        not can_edit_sample(
+            request.user,
+            base_sample,
+        )
+        and not request.user.is_superuser
+    ):
+        raise PermissionDenied
+
+    assignment = get_object_or_404(
+        SampleTaxonomyAssignment,
+        pk=assignment_id,
+        sample=base_sample,
+        is_current=True,
+    )
+
+    new_status = (
+        request.POST
+        .get(
+            "status",
+            "",
+        )
+        .strip()
+        .lower()
+    )
+
+    note = (
+        request.POST
+        .get(
+            "note",
+            "",
+        )
+        .strip()
+    )
+
+    try:
+        review = (
+            review_taxonomy_assignment(
+                assignment=assignment,
+                reviewer=request.user,
+                new_status=new_status,
+                note=note,
+            )
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "; ".join(
+                exc.messages
+            ),
+        )
+
+    else:
+        messages.success(
+            request,
+            (
+                "Taxonomy review recorded: "
+                f"{review.assignment.scientific_name} "
+                f"is now "
+                f"{review.assignment.get_match_status_display()}."
+            ),
+        )
+
+    return redirect(
+        "sample_detail",
+        sample_id=base_sample.pk,
+    )
+
+
+@login_required
+@require_POST
 def sample_ncbi_taxonomy_resolve_view(
     request,
     sample_id,
@@ -3229,6 +3318,13 @@ def sample_detail_view(request, sample_id):
                 base_sample.taxonomy_assignments
                 .filter(
                     is_current=True
+                )
+                .select_related(
+                    "reviewed_by",
+                    "snapshot",
+                )
+                .prefetch_related(
+                    "reviews__reviewer"
                 )
                 .order_by(
                     "source"

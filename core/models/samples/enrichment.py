@@ -441,3 +441,84 @@ class SampleTaxonomyAssignment(models.Model):
             f"{self.scientific_name} "
             f"({self.taxon_id})"
         )
+
+
+class SampleTaxonomyReview(models.Model):
+    """
+    Append-only human review history for an external taxonomy assignment.
+
+    SampleTaxonomyAssignment stores the latest review state, while this
+    model preserves every human decision made over that assignment.
+    """
+
+    assignment = models.ForeignKey(
+        SampleTaxonomyAssignment,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+
+    previous_status = models.CharField(
+        max_length=16,
+        choices=(
+            SampleTaxonomyAssignment
+            .MATCH_STATUS_CHOICES
+        ),
+    )
+
+    new_status = models.CharField(
+        max_length=16,
+        choices=(
+            SampleTaxonomyAssignment
+            .MATCH_STATUS_CHOICES
+        ),
+    )
+
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name=(
+            "sample_taxonomy_reviews"
+        ),
+    )
+
+    note = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    reviewed_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-reviewed_at",
+            "-pk",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "assignment",
+                    "reviewed_at",
+                ],
+                name="samp_tax_review_time_idx",
+            ),
+        ]
+
+        verbose_name = (
+            "Sample Taxonomy Review"
+        )
+
+        verbose_name_plural = (
+            "Sample Taxonomy Reviews"
+        )
+
+    def __str__(self):
+        return (
+            f"{self.assignment}: "
+            f"{self.previous_status} -> "
+            f"{self.new_status}"
+        )
