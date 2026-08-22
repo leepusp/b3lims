@@ -879,6 +879,16 @@ Search, filter and manage Samples visible to your account
 
                 <li>
                     <a
+                        href="{% url 'sample_micro_qr_lookup' %}"
+                        class="dropdown-item"
+                    >
+                        <i class="bi bi-qr-code-scan me-2 text-primary"></i>
+                        Micro QR Lookup
+                    </a>
+                </li>
+
+                <li>
+                    <a
                         href="{% url 'print_sample_label' sample.pk %}"
                         target="_blank"
                         rel="noopener"

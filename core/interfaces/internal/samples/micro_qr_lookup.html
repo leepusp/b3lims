@@ -1,0 +1,88 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Sample Micro QR Lookup{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 640px;">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h1 class="h5 mb-0">
+                <i class="bi bi-qr-code-scan me-2 text-primary"></i>
+                Sample Micro QR Lookup
+            </h1>
+        </div>
+
+        <div class="card-body">
+            <p class="text-muted">
+                Scan, paste, or enter the 10-character token printed
+                next to the Sample Micro QR.
+            </p>
+
+            <form method="get" autocomplete="off">
+                <label
+                    for="micro-qr-token"
+                    class="form-label fw-semibold"
+                >
+                    Micro QR token
+                </label>
+
+                <div class="input-group">
+                    <input
+                        id="micro-qr-token"
+                        name="token"
+                        type="text"
+                        value="{{ micro_qr_token }}"
+                        maxlength="10"
+                        pattern="[2-9A-HJ-NP-Z]{10}"
+                        class="form-control font-monospace text-uppercase"
+                        placeholder="7KDM4QX9PT"
+                        autocomplete="off"
+                        autocapitalize="characters"
+                        spellcheck="false"
+                        autofocus
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Open Sample
+                    </button>
+                </div>
+
+                <div class="form-text">
+                    Accepted characters:
+                    2–9 and uppercase letters excluding I and O.
+                </div>
+            </form>
+
+            {% if micro_qr_error %}
+                <div
+                    class="alert alert-danger mt-3 mb-0"
+                    role="alert"
+                >
+                    {{ micro_qr_error }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    const input = document.getElementById("micro-qr-token");
+
+    if (!input) {
+        return;
+    }
+
+    input.addEventListener("input", () => {
+        input.value = input.value
+            .toUpperCase()
+            .replace(/[^2-9A-HJ-NP-Z]/g, "")
+            .slice(0, 10);
+    });
+})();
+</script>
+{% endblock %}

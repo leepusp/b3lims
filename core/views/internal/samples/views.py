@@ -2148,6 +2148,70 @@ def sample_qr_scan_view(request, uuid):
     return render(request, "internal/samples/qr_view.html", ctx)
 
 
+@login_required
+def sample_micro_qr_lookup_view(request):
+    """
+    Resolve a Sample Micro QR token entered manually or
+    supplied by a keyboard-wedge barcode scanner.
+    """
+    token = request.GET.get(
+        "token",
+        "",
+    )
+
+    error = ""
+
+    if token:
+        try:
+            normalized_token = (
+                normalize_sample_micro_qr_token(
+                    token
+                )
+            )
+        except InvalidSampleMicroQrToken:
+            error = (
+                "Enter a valid 10-character "
+                "Sample Micro QR token."
+            )
+        else:
+            sample = Sample.objects.filter(
+                micro_qr_token=normalized_token
+            ).first()
+
+            if sample is None:
+                error = (
+                    "No Sample was found for this "
+                    "Micro QR token."
+                )
+            elif not can_view_sample(
+                request.user,
+                sample,
+            ):
+                raise PermissionDenied(
+                    "You do not have permission "
+                    "to view this sample."
+                )
+            else:
+                return redirect(
+                    "sample_micro_qr_resolve",
+                    token=sample.micro_qr_token,
+                )
+
+    ctx = base_context(request)
+    ctx.update(
+        {
+            "micro_qr_token": token,
+            "micro_qr_error": error,
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/micro_qr_lookup.html",
+        ctx,
+    )
+
+
 def sample_micro_qr_resolve_view(
     request,
     token,

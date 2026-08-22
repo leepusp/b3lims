@@ -100,6 +100,7 @@ from core.views.internal.lab_tools import jupyter as jupyter_views
 
 # 9. QR CODE (PAGE)
 from core.views.internal.samples.views import (
+    sample_micro_qr_lookup_view,
     sample_micro_qr_resolve_view,
     sample_qr_scan_view,
 )
@@ -428,6 +429,11 @@ urlpatterns = [
 
 
     # ---------------- QR CODE (PAGE) --------------------------------
+    path(
+        "samples/micro-qr/",
+        sample_micro_qr_lookup_view,
+        name="sample_micro_qr_lookup",
+    ),
     path(
         "samples/micro-qr/<str:token>/",
         sample_micro_qr_resolve_view,

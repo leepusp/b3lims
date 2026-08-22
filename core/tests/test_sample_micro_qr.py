@@ -1,7 +1,9 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 
 from core.models import Sample
 from core.models.samples.sample import (
@@ -426,3 +428,212 @@ class SampleMicroQrFunctionalTests(TestCase):
             "/samples/scan/",
             legacy_url,
         )
+
+
+class SampleMicroQrLookupTests(TestCase):
+    @staticmethod
+    def _client_path(url):
+        """
+        Convert a reverse() URL containing FORCE_SCRIPT_NAME
+        into PATH_INFO expected by Django's test client.
+        """
+        prefix = (
+            settings.FORCE_SCRIPT_NAME
+            or ""
+        ).rstrip("/")
+
+        if (
+            prefix
+            and url.startswith(
+                prefix + "/"
+            )
+        ):
+            return url[len(prefix):]
+
+        return url
+
+    def _lookup_path(self):
+        return self._client_path(
+            reverse(
+                "sample_micro_qr_lookup"
+            )
+        )
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="sample-micro-qr-lookup-owner",
+            password="test-password",
+        )
+
+        self.outsider = User.objects.create_user(
+            username="sample-micro-qr-lookup-outsider",
+            password="test-password",
+        )
+
+        self.sample = Sample.objects.create(
+            sample_id="MICRO-QR-LOOKUP-0001",
+            owner=self.owner,
+        )
+
+    def test_lookup_requires_authentication(self):
+        response = self.client.get(
+            self._lookup_path()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+    def test_lookup_page_renders_for_authenticated_user(
+        self,
+    ):
+        self.client.force_login(
+            self.owner
+        )
+
+        response = self.client.get(
+            self._lookup_path()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "Sample Micro QR Lookup",
+        )
+
+        self.assertContains(
+            response,
+            'maxlength="10"',
+        )
+
+    def test_lookup_resolves_visible_sample(
+        self,
+    ):
+        self.client.force_login(
+            self.owner
+        )
+
+        response = self.client.get(
+            self._lookup_path(),
+            {
+                "token":
+                    self.sample.micro_qr_token.lower()
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.assertEqual(
+            response.url,
+            reverse(
+                "sample_micro_qr_resolve",
+                args=[
+                    self.sample.micro_qr_token,
+                ],
+            ),
+        )
+
+    def test_lookup_rejects_invalid_token(
+        self,
+    ):
+        self.client.force_login(
+            self.owner
+        )
+
+        response = self.client.get(
+            self._lookup_path(),
+            {
+                "token": "INVALID01O",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Enter a valid 10-character "
+                "Sample Micro QR token."
+            ),
+        )
+
+    def test_lookup_reports_unknown_token(
+        self,
+    ):
+        self.client.force_login(
+            self.owner
+        )
+
+        candidates = (
+            "23456789AB",
+            "23456789AC",
+            "23456789AD",
+        )
+
+        token = next(
+            value
+            for value in candidates
+            if not Sample.objects.filter(
+                micro_qr_token=value
+            ).exists()
+        )
+
+        response = self.client.get(
+            self._lookup_path(),
+            {
+                "token": token,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            (
+                "No Sample was found for this "
+                "Micro QR token."
+            ),
+        )
+
+    def test_lookup_denies_hidden_sample(
+        self,
+    ):
+        from django.core.exceptions import (
+            PermissionDenied,
+        )
+        from django.test import RequestFactory
+
+        from core.views.internal.samples.views import (
+            sample_micro_qr_lookup_view,
+        )
+
+        request = RequestFactory().get(
+            self._lookup_path(),
+            {
+                "token":
+                    self.sample.micro_qr_token,
+            },
+        )
+
+        request.user = self.outsider
+
+        with self.assertRaises(
+            PermissionDenied
+        ):
+            sample_micro_qr_lookup_view(
+                request
+            )
