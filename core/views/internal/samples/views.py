@@ -2961,6 +2961,132 @@ def sample_file_download_view(
 
 
 @login_required
+@require_POST
+def sample_ncbi_taxonomy_resolve_view(
+    request,
+    sample_id,
+):
+    base_sample = get_object_or_404(
+        Sample,
+        pk=sample_id,
+    )
+
+    if (
+        not can_edit_sample(
+            request.user,
+            base_sample,
+        )
+        and not request.user.is_superuser
+    ):
+        raise PermissionDenied
+
+    from core.services.sample_enrichment.ncbi_taxonomy import (
+        NCBITaxonomyLookupError,
+        resolve_and_store_ncbi_taxonomy,
+        suggest_ncbi_taxonomy_query,
+    )
+
+    query = (
+        request.POST
+        .get(
+            "query",
+            "",
+        )
+        .strip()
+    )
+
+    if not query:
+        query = (
+            suggest_ncbi_taxonomy_query(
+                base_sample
+            )
+        )
+
+    if not query:
+        messages.error(
+            request,
+            (
+                "Enter an NCBI TaxID or scientific "
+                "name before resolving taxonomy."
+            ),
+        )
+
+        return redirect(
+            "sample_detail",
+            sample_id=base_sample.pk,
+        )
+
+    try:
+        result = (
+            resolve_and_store_ncbi_taxonomy(
+                base_sample,
+                request.user,
+                query,
+            )
+        )
+
+    except NCBITaxonomyLookupError as exc:
+        messages.error(
+            request,
+            (
+                "NCBI Taxonomy lookup failed: "
+                f"{exc}"
+            ),
+        )
+
+    else:
+        assignment = result.get(
+            "assignment"
+        )
+
+        normalized = (
+            result.get(
+                "normalized"
+            )
+            or {}
+        )
+
+        if assignment is not None:
+            messages.success(
+                request,
+                (
+                    "NCBI Taxonomy resolved: "
+                    f"{assignment.scientific_name} "
+                    f"(TaxID {assignment.taxon_id})."
+                ),
+            )
+
+        elif (
+            normalized.get(
+                "resolution_status"
+            )
+            == "not_found"
+        ):
+            messages.warning(
+                request,
+                (
+                    "NCBI Taxonomy returned no "
+                    "matching record."
+                ),
+            )
+
+        else:
+            messages.warning(
+                request,
+                (
+                    "NCBI Taxonomy could not be "
+                    "resolved to exactly one record. "
+                    "No taxonomy assignment was created."
+                ),
+            )
+
+    return redirect(
+        "sample_detail",
+        sample_id=base_sample.pk,
+    )
+
+
+@login_required
 def sample_detail_view(request, sample_id):
     """
     Central detail page for a sample, gathering identity, storage,
@@ -3089,7 +3215,42 @@ def sample_detail_view(request, sample_id):
         ),
     })
 
-    return render(request, "internal/samples/detail.html", ctx)
+    from core.services.sample_enrichment.ncbi_taxonomy import (
+        suggest_ncbi_taxonomy_query,
+    )
+
+    ctx.update(
+        {
+            "external_identifiers": (
+                base_sample.external_identifiers
+                .all()
+            ),
+            "taxonomy_assignments": (
+                base_sample.taxonomy_assignments
+                .filter(
+                    is_current=True
+                )
+                .order_by(
+                    "source"
+                )
+            ),
+            "enrichment_snapshots": (
+                base_sample.enrichment_snapshots
+                .all()[:5]
+            ),
+            "ncbi_taxonomy_suggested_query": (
+                suggest_ncbi_taxonomy_query(
+                    real_sample
+                )
+            ),
+        }
+    )
+
+    return render(
+        request,
+        "internal/samples/detail.html",
+        ctx,
+    )
 
 
 

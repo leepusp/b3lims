@@ -10,6 +10,11 @@ from .samples.sample_files import SampleFile
 from .samples.subtypes import Bacteria, Phage, Plasmid, HostRange
 from .samples.relationship import SampleRelationship
 from .samples.intake import SampleImportBatch, SampleIntakeRecord
+from .samples.enrichment import (
+    SampleEnrichmentSnapshot,
+    SampleExternalIdentifier,
+    SampleTaxonomyAssignment,
+)
 
 from .events.model import Event
 

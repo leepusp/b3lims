@@ -1192,6 +1192,312 @@
     </div>
 
 
+    <div class="card shadow-sm">
+        <div
+            class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"
+        >
+            <div class="fw-bold">
+                <i class="bi bi-globe2 me-2"></i>
+                External Data
+            </div>
+
+            <span class="badge text-bg-light border">
+                Source-aware metadata
+            </span>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <h6 class="fw-semibold mb-3">
+                        Taxonomy Assignments
+                    </h6>
+
+                    {% if taxonomy_assignments %}
+                        {% for assignment in taxonomy_assignments %}
+                            <div class="border rounded p-3 mb-3">
+                                <div
+                                    class="d-flex flex-wrap justify-content-between align-items-start gap-2"
+                                >
+                                    <div>
+                                        <div class="fw-semibold">
+                                            {{ assignment.scientific_name }}
+                                        </div>
+
+                                        <div class="small text-muted">
+                                            {{ assignment.get_source_display }}
+                                            · TaxID {{ assignment.taxon_id }}
+                                            {% if assignment.rank %}
+                                                · {{ assignment.rank|title }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if assignment.match_status == "verified" %}
+                                        <span class="badge text-bg-success">
+                                            Verified
+                                        </span>
+                                    {% elif assignment.match_status == "conflict" %}
+                                        <span class="badge text-bg-danger">
+                                            Conflict
+                                        </span>
+                                    {% elif assignment.match_status == "stale" %}
+                                        <span class="badge text-bg-secondary">
+                                            Stale
+                                        </span>
+                                    {% elif assignment.match_status == "unresolved" %}
+                                        <span class="badge text-bg-warning">
+                                            Unresolved
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-info">
+                                            Candidate
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <dl class="row small mt-3 mb-0">
+                                    {% if assignment.domain_or_realm %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Domain / Realm
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.domain_or_realm }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.kingdom %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Kingdom
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.kingdom }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.phylum %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Phylum
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.phylum }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.class_name %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Class
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.class_name }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.order_name %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Order
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.order_name }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.family %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Family
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.family }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.genus %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Genus
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.genus }}
+                                        </dd>
+                                    {% endif %}
+
+                                    {% if assignment.species %}
+                                        <dt class="col-sm-4 text-muted">
+                                            Species
+                                        </dt>
+                                        <dd class="col-sm-8">
+                                            {{ assignment.species }}
+                                        </dd>
+                                    {% endif %}
+                                </dl>
+
+                                {% if assignment.source == "ncbi" %}
+                                    <div class="mt-2">
+                                        <a
+                                            href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={{ assignment.taxon_id|urlencode }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="small"
+                                        >
+                                            Open NCBI Taxonomy
+                                            <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                {% endif %}
+
+                                <div class="small text-muted mt-2">
+                                    External assignments do not automatically
+                                    overwrite curated Sample metadata.
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted small mb-3">
+                            No external taxonomy assignment has been
+                            recorded for this Sample.
+                        </div>
+                    {% endif %}
+
+                    {% if can_edit_current_sample %}
+                        <div class="border rounded p-3 bg-light">
+                            <div class="fw-semibold mb-2">
+                                Resolve NCBI Taxonomy
+                            </div>
+
+                            <form
+                                method="post"
+                                action="{% url 'sample_ncbi_taxonomy_resolve' sample.pk %}"
+                            >
+                                {% csrf_token %}
+
+                                <div class="input-group">
+                                    <input
+                                        type="text"
+                                        name="query"
+                                        class="form-control"
+                                        value="{{ ncbi_taxonomy_suggested_query }}"
+                                        placeholder="NCBI TaxID or scientific name"
+                                        aria-label="NCBI TaxID or scientific name"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-primary"
+                                    >
+                                        <i class="bi bi-search me-1"></i>
+                                        Resolve
+                                    </button>
+                                </div>
+
+                                <div class="form-text">
+                                    For bacterial Samples, the query is
+                                    suggested from curated genus and species.
+                                    For other Sample types, enter a TaxID or
+                                    scientific name explicitly.
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-lg-4">
+                    <h6 class="fw-semibold mb-3">
+                        External Identifiers
+                    </h6>
+
+                    {% if external_identifiers %}
+                        <div class="list-group mb-4">
+                            {% for identifier in external_identifiers %}
+                                <div class="list-group-item">
+                                    <div
+                                        class="d-flex justify-content-between gap-2"
+                                    >
+                                        <div>
+                                            <div class="small text-muted">
+                                                {{ identifier.get_source_display }}
+                                                · {{ identifier.identifier_type }}
+                                            </div>
+
+                                            <div class="font-monospace">
+                                                {{ identifier.identifier }}
+                                            </div>
+                                        </div>
+
+                                        {% if identifier.is_primary %}
+                                            <span
+                                                class="badge text-bg-light border align-self-start"
+                                            >
+                                                Primary
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="small text-muted mb-4">
+                            No external identifiers recorded.
+                        </div>
+                    {% endif %}
+
+                    <h6 class="fw-semibold mb-3">
+                        Recent Lookups
+                    </h6>
+
+                    {% if enrichment_snapshots %}
+                        <div class="list-group">
+                            {% for snapshot in enrichment_snapshots %}
+                                <div class="list-group-item">
+                                    <div
+                                        class="d-flex justify-content-between gap-2"
+                                    >
+                                        <div>
+                                            <div class="small fw-semibold">
+                                                {{ snapshot.get_source_display }}
+                                            </div>
+
+                                            <div class="small text-muted">
+                                                {{ snapshot.query }}
+                                            </div>
+                                        </div>
+
+                                        {% if snapshot.success %}
+                                            <span
+                                                class="badge text-bg-success align-self-start"
+                                            >
+                                                OK
+                                            </span>
+                                        {% else %}
+                                            <span
+                                                class="badge text-bg-danger align-self-start"
+                                            >
+                                                Error
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="small text-muted mt-1">
+                                        {{ snapshot.fetched_at|date:"d/m/Y H:i" }}
+                                    </div>
+
+                                    {% if snapshot.error_message %}
+                                        <div class="small text-danger mt-1">
+                                            {{ snapshot.error_message }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="small text-muted">
+                            No external lookups recorded.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     {% if sample.notes %}
         <div class="card shadow-sm">
             <div class="card-header fw-bold">
