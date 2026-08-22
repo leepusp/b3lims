@@ -166,12 +166,20 @@ class StorageBrokerSecurityTests(SimpleTestCase):
             broker._directory_acl(context),
         )
         self.assertIn(
+            "u:ccalomeno:rwx",
+            broker._directory_acl(context),
+        )
+        self.assertIn(
             "g::---",
             broker._directory_acl(context),
         )
 
         self.assertIn(
             "u:biobank:rw-",
+            broker._file_acl(context),
+        )
+        self.assertIn(
+            "u:ccalomeno:rw-",
             broker._file_acl(context),
         )
         self.assertIn(
@@ -196,11 +204,35 @@ class StorageBrokerSecurityTests(SimpleTestCase):
             broker._directory_acl(context),
             (
                 "u::rwx,u:biobank:rwx,"
+                "u:ccalomeno:rwx,"
                 "g::---,m::rwx,o::---"
             ),
         )
         self.assertEqual(
             broker._file_acl(context),
+            (
+                "u::rw-,u:biobank:rw-,"
+                "u:ccalomeno:rw-,"
+                "g::---,m::rw-,o::---"
+            ),
+        )
+
+        admin_context = broker.UserContext(
+            username="ccalomeno",
+            uid=os.getuid(),
+            gid=os.getgid(),
+            home="/home/ccalomeno",
+        )
+
+        self.assertEqual(
+            broker._directory_acl(admin_context),
+            (
+                "u::rwx,u:biobank:rwx,"
+                "g::---,m::rwx,o::---"
+            ),
+        )
+        self.assertEqual(
+            broker._file_acl(admin_context),
             (
                 "u::rw-,u:biobank:rw-,"
                 "g::---,m::rw-,o::---"
@@ -259,8 +291,31 @@ class StorageBrokerSecurityTests(SimpleTestCase):
                 context,
             )
 
+            self.assertEqual(
+                run_setfacl.call_args_list,
+                [
+                    mock.call(
+                        75,
+                        "-m",
+                        "u:biobank:--x",
+                    ),
+                    mock.call(
+                        75,
+                        "-m",
+                        "u:ccalomeno:--x",
+                    ),
+                ],
+            )
+
+            run_setfacl.reset_mock()
+
+            broker._grant_home_traverse(
+                76,
+                admin_context,
+            )
+
             run_setfacl.assert_called_once_with(
-                75,
+                76,
                 "-m",
                 "u:biobank:--x",
             )

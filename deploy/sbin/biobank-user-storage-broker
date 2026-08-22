@@ -12,6 +12,7 @@ import sys
 
 
 APP_USER = "biobank"
+ADMIN_USER = "ccalomeno"
 HOME_ROOT = "/home"
 SETFACL = "/usr/bin/setfacl"
 
@@ -292,11 +293,21 @@ def _grant_home_traverse(home_fd, context):
     if context.username == APP_USER:
         return
 
-    _run_setfacl(
-        home_fd,
-        "-m",
-        f"u:{APP_USER}:--x",
-    )
+    principals = [
+        APP_USER,
+    ]
+
+    if context.username != ADMIN_USER:
+        principals.append(
+            ADMIN_USER
+        )
+
+    for principal in principals:
+        _run_setfacl(
+            home_fd,
+            "-m",
+            f"u:{principal}:--x",
+        )
 
 
 def _directory_acl(context):
@@ -305,8 +316,15 @@ def _directory_acl(context):
             "u::rwx,g::---,m::---,o::---"
         )
 
+    if context.username == ADMIN_USER:
+        return (
+            f"u::rwx,u:{APP_USER}:rwx,"
+            "g::---,m::rwx,o::---"
+        )
+
     return (
         f"u::rwx,u:{APP_USER}:rwx,"
+        f"u:{ADMIN_USER}:rwx,"
         "g::---,m::rwx,o::---"
     )
 
@@ -317,8 +335,15 @@ def _file_acl(context):
             "u::rw-,g::---,m::---,o::---"
         )
 
+    if context.username == ADMIN_USER:
+        return (
+            f"u::rw-,u:{APP_USER}:rw-,"
+            "g::---,m::rw-,o::---"
+        )
+
     return (
         f"u::rw-,u:{APP_USER}:rw-,"
+        f"u:{ADMIN_USER}:rw-,"
         "g::---,m::rw-,o::---"
     )
 
