@@ -91,7 +91,7 @@
         </div>
         <div class="text-info">
             <div class="sample-id">{{ sample.sample_id }}</div>
-            <div class="organism">{{ sample.organism_name|default:sample.sample_type|truncatechars:35 }}</div>
+            <div class="organism">{{ sample.organism_name|default:sample.sample_type|truncatechars:45 }}</div>
             <div class="date">{{ sample.created_at|date:"d/m/Y" }}</div>
             <div class="micro-qr-token">{{ sample.micro_qr_token }}</div>
         </div>

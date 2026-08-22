@@ -43,7 +43,7 @@
         <ul class="list-group list-group-flush">
             
             {% if sample.sample_type == "Bacterium (Host)" %}
-                <li class="list-group-item"><strong>Species:</strong> {{ sample.genus }} {{ sample.species }} {{ sample.strain }}</li>
+                <li class="list-group-item"><strong>Species:</strong> {{ sample.taxonomic_display_name|default:"-" }}</li>
                 <li class="list-group-item"><strong>Genotype:</strong> {{ sample.genotype|default:"-" }}</li>
                 <li class="list-group-item"><strong>Resistance:</strong> {{ sample.resistance_markers|join:", "|default:"-" }}</li>
             

@@ -1,3 +1,4 @@
+from core.models.samples.subtypes import format_bacterial_taxonomic_name
 from core.services.sample_origin import save_sample_origin
 from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
@@ -1466,14 +1467,14 @@ def sample_create_view(request):
                     genus = request.POST.get("genus", "").strip()
                     species = request.POST.get("species", "").strip()
                     strain = request.POST.get("strain", "").strip()
-                    organism_name = official_name or f"{genus} {species} {strain}".strip()
+                    organism_name = official_name or format_bacterial_taxonomic_name(genus, species, strain)
 
                 elif sample_type == "Phage (Virus)":
                     official_name = request.POST.get("official_name", "").strip()
-                    phage_name = request.POST.get("phage_name", "").strip()
+                    strain = request.POST.get("strain", "").strip()
                     genus = request.POST.get("genus", "").strip()
                     taxonomy = request.POST.get("taxonomy", "").strip()
-                    organism_name = official_name or phage_name or f"{genus} {taxonomy}".strip()
+                    organism_name = official_name or strain or f"{genus} {taxonomy}".strip()
 
                 elif sample_type == "Plasmid":
                     construction = request.POST.get("construction_name", "").strip()
@@ -1779,7 +1780,7 @@ def sample_create_view(request):
                                 **base_data,
                                 official_name=request.POST.get("official_name", ""),
                                 aliases=request.POST.get("aliases", ""),
-                                phage_name=request.POST.get("phage_name", ""),
+                                strain=request.POST.get("strain", ""),
                                 genus=request.POST.get("genus", ""),
                                 morphotype=request.POST.get("morphotype"),
                                 taxonomy=request.POST.get("taxonomy"),
@@ -2382,7 +2383,7 @@ def _preferred_sample_identity(base_sample, real_sample=None):
 
     Rules:
     - Bacterium: official_name first.
-    - Phage: official_name, then phage_name.
+    - Phage: official_name, then strain; legacy phage_name remains a fallback.
     - Plasmid: construction_name first, then backbone_name.
     """
     sample_type = _safe_sample_text(getattr(base_sample, "sample_type", ""))
@@ -2397,12 +2398,12 @@ def _preferred_sample_identity(base_sample, real_sample=None):
         genus = _safe_sample_text(getattr(obj, "genus", ""))
         species = _safe_sample_text(getattr(obj, "species", ""))
         strain = _safe_sample_text(getattr(obj, "strain", ""))
-        inferred = " ".join(part for part in [genus, species, strain] if part)
+        inferred = format_bacterial_taxonomic_name(genus, species, strain)
         if inferred:
             return inferred
 
     if "Phage" in sample_type:
-        for attr in ["official_name", "phage_name"]:
+        for attr in ["official_name", "strain", "phage_name"]:
             value = _safe_sample_text(getattr(obj, attr, ""))
             if value:
                 return value

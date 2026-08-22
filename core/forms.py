@@ -674,7 +674,7 @@ class PhageForm(SampleForm):
     class Meta(SampleForm.Meta):
         model = Phage
         fields = SampleForm.Meta.fields + [
-            "official_name", "aliases", "phage_name", "genus", "morphotype", 
+            "official_name", "aliases", "strain", "genus", "morphotype",
             "taxonomy", "lifestyle", "isolation_source", "isolation_method", 
             "genome_type", "genome_size_bp", "temp_C", "ncbi_accession"
         ]
@@ -682,7 +682,7 @@ class PhageForm(SampleForm):
             **SampleForm.Meta.widgets,
             "official_name": forms.TextInput(attrs={"class": "form-control"}),
             "aliases": forms.TextInput(attrs={"class": "form-control"}),
-            "phage_name": forms.TextInput(attrs={"class": "form-control"}),
+            "strain": forms.TextInput(attrs={"class": "form-control"}),
             "genus": forms.TextInput(attrs={"class": "form-control"}),
             "morphotype": forms.Select(attrs={"class": "form-select"}),
             "taxonomy": forms.TextInput(attrs={"class": "form-control"}),

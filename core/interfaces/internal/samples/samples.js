@@ -395,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const templates = {
             "Bacterium (Host)": ["official_name", "aliases", "genus", "species", "strain", "genotype", "isolation_source", "resistance_markers"],
-            "Phage (Virus)": ["official_name", "aliases", "phage_name", "genus", "morphotype", "taxonomy", "lifestyle", "isolation_source", "isolation_method", "genome_type", "genome_size_bp", "temp_C", "ncbi_accession"],
+            "Phage (Virus)": ["official_name", "aliases", "strain", "genus", "morphotype", "taxonomy", "lifestyle", "isolation_source", "isolation_method", "genome_type", "genome_size_bp", "temp_C", "ncbi_accession"],
             "Plasmid": [
                 "backbone_name", "backbone_aliases", "vector_type", "induction_system", "origin_of_replication", "backbone_size_bp", "backbone_resistance_markers", 
                 "is_empty_vector", "construction_name", "insert_name", "purpose", "insert_size_bp", "insert_resistance_markers"
@@ -586,7 +586,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "genotype",
             "isolation_source",
             "resistance_markers",
-            "phage_name",
             "morphotype",
             "taxonomy",
             "lifestyle",

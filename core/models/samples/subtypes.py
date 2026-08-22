@@ -5,6 +5,43 @@ from .sample import Sample
 # =========================================================
 # 1. BACTERIA (Hosts)
 # =========================================================
+def format_bacterial_taxonomic_name(
+    genus,
+    species,
+    strain,
+):
+    genus = (genus or "").strip()
+    species = (species or "").strip()
+    strain = (strain or "").strip()
+
+    if (
+        genus
+        and species
+        and species.casefold().startswith(
+            genus.casefold() + " "
+        )
+    ):
+        taxon = species
+    else:
+        taxon = " ".join(
+            part
+            for part in (
+                genus,
+                species,
+            )
+            if part
+        )
+
+    return " ".join(
+        part
+        for part in (
+            taxon,
+            strain,
+        )
+        if part
+    )
+
+
 class Bacteria(Sample):
     official_name = models.CharField(max_length=200, blank=True, null=True, help_text="Official/Standard Name")
     aliases = models.TextField(blank=True, null=True, help_text="Alternative names or common aliases")
@@ -24,6 +61,15 @@ class Bacteria(Sample):
 # =========================================================
 # 2. PHAGES (Viruses)
 # =========================================================
+    @property
+    def taxonomic_display_name(self):
+        return format_bacterial_taxonomic_name(
+            self.genus,
+            self.species,
+            self.strain,
+        )
+
+
 class Phage(Sample):
     MORPHOTYPE_CHOICES = [
         ('myovirus', 'Myovirus'),
@@ -44,7 +90,22 @@ class Phage(Sample):
 
     official_name = models.CharField(max_length=200, blank=True, null=True, help_text="Official/Standard Name")
     aliases = models.TextField(blank=True, null=True, help_text="Alternative names or common aliases")
-    phage_name = models.CharField(max_length=100, blank=True, null=True, help_text="Phage Name. Ex: T4")
+    phage_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=(
+            "Legacy phage name retained for compatibility "
+            "with existing records."
+        ),
+    )
+    strain = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Phage strain or isolate designation.",
+    )
     genus = models.CharField(max_length=100, blank=True, null=True, help_text="Genus. Ex: Tequatrovirus")
     morphotype = models.CharField(max_length=50, choices=MORPHOTYPE_CHOICES, blank=True, null=True)
     taxonomy = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: Autographiviridae, Straboviridae")

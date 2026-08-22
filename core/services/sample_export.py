@@ -33,7 +33,6 @@ STANDARD_COLUMNS = [
     "resistance_markers",
 
     # Phage fields
-    "phage_name",
     "morphotype",
     "taxonomy",
     "lifestyle",

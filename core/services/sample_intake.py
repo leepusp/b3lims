@@ -187,7 +187,7 @@ def import_sample_table(batch):
                     if x
                 )
             elif sample_type == "Phage (Virus)":
-                organism_name = normalized.get("phage_name", "") or normalized.get("taxonomy", "")
+                organism_name = normalized.get("strain", "") or normalized.get("phage_name", "") or normalized.get("taxonomy", "")
             elif sample_type == "Plasmid":
                 organism_name = normalized.get("construction_name", "") or normalized.get("backbone_name", "")
 
