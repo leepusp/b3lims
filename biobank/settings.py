@@ -21,6 +21,15 @@ SECRET_KEY = env('SECRET_KEY', default="dev-secret-key")
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
+SESSION_COOKIE_SECURE = env.bool(
+    "SESSION_COOKIE_SECURE",
+    default=False,
+)
+CSRF_COOKIE_SECURE = env.bool(
+    "CSRF_COOKIE_SECURE",
+    default=False,
+)
+
 # 1. Autoriza o domínio da USP a enviar formulários POST (Resolve o Erro 403 CSRF)
 CSRF_TRUSTED_ORIGINS = ['https://davinci.icb.usp.br']
 
