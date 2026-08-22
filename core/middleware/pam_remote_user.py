@@ -53,6 +53,21 @@ def _trusted_proxy(request):
         request.META.get("REMOTE_ADDR") or ""
     ).strip()
 
+    # Gunicorn reports an empty REMOTE_ADDR for requests
+    # received through a Unix-domain socket. Trust that
+    # transport only when explicitly enabled. Access to the
+    # socket itself must remain restricted by filesystem
+    # permissions.
+    if (
+        not remote_address
+        and getattr(
+            settings,
+            "BIOBANK_PAM_TRUST_UNIX_SOCKET",
+            False,
+        )
+    ):
+        return True
+
     trusted = {
         str(value).strip()
         for value in getattr(

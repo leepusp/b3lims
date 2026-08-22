@@ -97,6 +97,11 @@ BIOBANK_PAM_TRUSTED_PROXIES = tuple(
     if value.strip()
 )
 
+BIOBANK_PAM_TRUST_UNIX_SOCKET = env.bool(
+    "BIOBANK_PAM_TRUST_UNIX_SOCKET",
+    default=False,
+)
+
 BIOBANK_PAM_HOME_ROOTS = tuple(
     value.strip()
     for value in os.environ.get(
