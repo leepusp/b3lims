@@ -20,11 +20,30 @@ Credentials are loaded from:
 
     /home/public/apps/biobank/storage/secrets/biobank_db.env
 
+The credential file is not part of the Git repository. Its production
+least-privilege contract is:
+
+- Secret directory: `root:ladmin`, mode `2750`.
+- Credential file: `root:ladmin`, mode `0640`.
+- `ladmin` receives read-only access because it operates the scheduled backup.
+- The `biobank`, `apache`, and `ccalomeno` Unix identities have no direct
+  access to the backup credential.
+
+Credential values must never be committed, copied into documentation, or
+printed in operational logs.
+
 ## Backup script
 
-The backup script is located at:
+The reviewed version-controlled source is:
+
+    deploy/operations/backup_postgresql.sh
+
+The installed runtime script is:
 
     /home/public/apps/biobank/scripts/backup_postgresql.sh
+
+The runtime script must be installed from the reviewed source and verified by
+SHA-256 before its schedule is enabled.
 
 It generates:
 
@@ -37,7 +56,11 @@ The manifest is located at:
 
 ## Schedule
 
-The backup is scheduled in the ladmin crontab:
+The canonical schedule source is:
+
+    deploy/cron/ladmin-biobank-backups
+
+The backup is scheduled in the `ladmin` crontab:
 
     20 3 * * * /home/public/apps/biobank/scripts/backup_postgresql.sh >/dev/null 2>&1
 

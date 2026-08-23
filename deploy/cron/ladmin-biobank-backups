@@ -1,0 +1,4 @@
+# B3 LIMS production backups.
+# Install these entries in the ladmin crontab.
+20 3 * * * /home/public/apps/biobank/scripts/backup_postgresql.sh >/dev/null 2>&1
+50 3 * * * /home/public/apps/biobank/scripts/backup_media.sh >/dev/null 2>&1

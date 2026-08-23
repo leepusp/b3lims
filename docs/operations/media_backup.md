@@ -13,7 +13,16 @@ PostgreSQL backups do not include these files. They are backed up separately.
 
 ## Backup script
 
+The reviewed version-controlled source is:
+
+    deploy/operations/backup_media.sh
+
+The installed runtime script is:
+
     /home/public/apps/biobank/scripts/backup_media.sh
+
+The runtime script must be installed from the reviewed source and verified by
+SHA-256 before its schedule is enabled.
 
 ## Output
 
@@ -32,7 +41,11 @@ Logs:
 
 ## Schedule
 
-The media backup is scheduled in the ladmin crontab:
+The canonical schedule source is:
+
+    deploy/cron/ladmin-biobank-backups
+
+The media backup is scheduled in the `ladmin` crontab:
 
     50 3 * * * /home/public/apps/biobank/scripts/backup_media.sh >/dev/null 2>&1
 
