@@ -45,3 +45,4 @@ from core.models.research_groups.model import ResearchGroup
 from core.models.chemicals.chemical import Chemical, ChemicalFile, ChemicalStockMovement
 from core.models.lab_tools.notebook import JupyterKernelSession, JupyterNotebook
 from core.models.samples.access import SampleAccessGrant
+from .user_profile import UserProfile

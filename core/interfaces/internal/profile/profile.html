@@ -4,51 +4,100 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-md-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="h4 fw-bold mb-1">User Profile</h2>
+            <p class="text-muted mb-0">Manage your scientific identity and review your scoped memberships.</p>
+        </div>
+        <span class="badge bg-light text-dark border">PAM identity: {{ user.username }}</span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-4">
             <div class="card shadow-sm border-0 mb-4">
-                <div class="card-body text-center py-5">
-                    <div class="mb-3">
-                        <span class="display-4 bg-light rounded-circle text-primary d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
-                            {{ user.username|first|upper }}
-                        </span>
-                    </div>
-                    <h4 class="fw-bold mb-0">{{ user.get_full_name|default:user.username }}</h4>
-                    <p class="text-muted">{{ user.email }}</p>
-                    
-                    <div class="mt-3">
-                        {% if user.is_superuser %}
-                            <span class="badge bg-dark">Super Administrator</span>
-                        {% endif %}
-                        {% if user.is_staff %}
-                            <span class="badge bg-info text-dark">Staff Member</span>
-                        {% endif %}
-                    </div>
+                <div class="card-body text-center py-4">
+                    <span class="display-5 bg-light rounded-circle text-primary d-inline-flex align-items-center justify-content-center mb-3" style="width: 88px; height: 88px;">
+                        {{ user_profile.preferred_name|default:user.get_full_name|default:user.username|first|upper }}
+                    </span>
+                    <h3 class="h5 fw-bold mb-1">
+                        {{ user_profile.preferred_name|default:user.get_full_name|default:user.username }}
+                    </h3>
+                    <p class="text-muted mb-2">{{ user.email|default:"No email address recorded" }}</p>
+                    <span class="badge bg-secondary">{{ user_profile.get_profile_visibility_display }}</span>
+                    {% if user.is_superuser %}<span class="badge bg-dark">Super Administrator</span>{% endif %}
+                    {% if user.is_staff %}<span class="badge bg-info text-dark">Staff Member</span>{% endif %}
                 </div>
             </div>
-            
+
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white fw-bold">System Groups</div>
                 <ul class="list-group list-group-flush">
                     {% for group in user.groups.all %}
                         <li class="list-group-item"><i class="bi bi-shield-lock me-2 text-secondary"></i>{{ group.name }}</li>
                     {% empty %}
-                        <li class="list-group-item text-muted small">Not assigned to any Django admin group.</li>
+                        <li class="list-group-item text-muted small">No Django administration group assigned.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">Biobank Roles</div>
+                <ul class="list-group list-group-flush">
+                    {% for assignment in user.biobank_roles.all %}
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>{{ assignment.biobank.name }}</span>
+                            <span class="badge bg-light text-dark border">{{ assignment.get_role_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted small">No scoped Biobank role assigned.</li>
                     {% endfor %}
                 </ul>
             </div>
         </div>
 
-        <div class="col-md-8">
-            
-            <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-diagram-3 me-2"></i>Research Groups & Labs</h5>
-            
+        <div class="col-xl-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white fw-bold">
+                    <i class="bi bi-person-vcard me-2 text-primary"></i>Scientific Identity
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_profile">
+
+                        {% if profile_form.non_field_errors %}
+                            <div class="alert alert-danger">{{ profile_form.non_field_errors }}</div>
+                        {% endif %}
+
+                        <div class="alert alert-light border small">
+                            Username and authentication are managed by PAM. B3 LIMS stores only the profile fields below.
+                        </div>
+
+                        <div class="row g-3">
+                            {% for field in profile_form %}
+                            <div class="{% if field.name == 'expertise' or field.name == 'biography' %}col-12{% else %}col-md-6{% endif %}">
+                                <label class="form-label fw-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check2-circle me-1"></i>Save Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <h2 class="h5 fw-bold mb-3 text-secondary"><i class="bi bi-diagram-3 me-2"></i>Research Groups and Labs</h2>
+
             {% if not coordinated_groups and not member_groups %}
                 <div class="card shadow-sm border-0 mb-4 bg-light">
-                    <div class="card-body text-center py-4 text-muted">
-                        <i class="bi bi-people display-6 opacity-50 mb-2 d-block"></i>
-                        <p class="mb-0">You are not part of any Research Group.</p>
-                    </div>
+                    <div class="card-body text-center py-4 text-muted">You are not part of a Research Group.</div>
                 </div>
             {% endif %}
 
@@ -59,41 +108,31 @@
                     <span class="badge bg-light text-primary">Coordinator</span>
                 </div>
                 <div class="card-body p-4">
-                    {% if group.description %}
-                        <p class="text-muted small mb-4">{{ group.description }}</p>
-                    {% endif %}
-
-                    <div class="bg-light p-3 rounded border mb-4">
-                        <label class="small fw-bold text-dark mb-2"><i class="bi bi-person-plus me-1"></i>Add New Member</label>
-                        <form method="POST" action="" class="d-flex gap-2">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="add_member">
-                            <input type="hidden" name="group_id" value="{{ group.id }}">
-                            <input type="text" name="member_identifier" class="form-control form-control-sm" placeholder="Enter user email or username..." required>
-                            <button type="submit" class="btn btn-sm btn-success px-3 fw-bold">Add</button>
-                        </form>
-                        <div class="form-text small mt-1">Users must be registered in the system before they can be added to your group.</div>
-                    </div>
-
-                    <h6 class="small fw-bold text-secondary text-uppercase mb-3 border-bottom pb-2">Current Members ({{ group.members.count }})</h6>
+                    {% if group.description %}<p class="text-muted small">{{ group.description }}</p>{% endif %}
+                    <form method="post" class="row g-2 align-items-end mb-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_member">
+                        <input type="hidden" name="group_id" value="{{ group.id }}">
+                        <div class="col">
+                            <label class="form-label small fw-bold">Add member by email or username</label>
+                            <input type="text" name="member_identifier" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-auto"><button type="submit" class="btn btn-sm btn-success">Add Member</button></div>
+                    </form>
                     <ul class="list-group list-group-flush border rounded">
                         {% for member in group.members.all %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center bg-white">
-                            <div>
-                                <i class="bi bi-person-circle me-2 text-secondary"></i>
-                                <span class="fw-medium">{{ member.get_full_name|default:member.username }}</span> 
-                                <small class="text-muted ms-1">({{ member.email }})</small>
-                            </div>
-                            <form method="POST" action="" onsubmit="return confirm('Are you sure you want to remove this member from the group?');">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ member.get_full_name|default:member.username }} <small class="text-muted">{{ member.email }}</small></span>
+                            <form method="post" onsubmit="return confirm('Remove this member from the group?');">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="remove_member">
                                 <input type="hidden" name="group_id" value="{{ group.id }}">
                                 <input type="hidden" name="member_id" value="{{ member.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Remove member"><i class="bi bi-x-lg"></i></button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Remove member"><i class="bi bi-x-lg"></i></button>
                             </form>
                         </li>
                         {% empty %}
-                        <li class="list-group-item text-muted small text-center py-3 bg-light">No members added to this group yet.</li>
+                            <li class="list-group-item text-muted small">No members have been added.</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -102,113 +141,52 @@
 
             {% for group in member_groups %}
             <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark"><i class="bi bi-diagram-3 text-secondary me-2"></i>{{ group.name }}</span>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">{{ group.name }}</span>
                     <span class="badge bg-secondary">Member</span>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <span class="small text-muted text-uppercase fw-bold">Coordinator:</span>
-                        <span class="ms-2 fw-medium text-dark"><i class="bi bi-star-fill text-warning me-1 small"></i>{{ group.coordinator.get_full_name|default:group.coordinator.username }}</span>
-                    </div>
-                    <div>
-                        <span class="small text-muted text-uppercase fw-bold d-block mb-1">Colleagues in this group:</span>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% for m in group.members.all %}
-                                {% if m != user %}
-                                    <span class="badge bg-light text-secondary border"><i class="bi bi-person me-1"></i>{{ m.username }}</span>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
+                    <p class="mb-2"><strong>Coordinator:</strong> {{ group.coordinator.get_full_name|default:group.coordinator.username }}</p>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for member in group.members.all %}
+                            {% if member != user %}<span class="badge bg-light text-secondary border">{{ member.username }}</span>{% endif %}
+                        {% endfor %}
                     </div>
                 </div>
             </div>
             {% endfor %}
 
-
-            <h5 class="fw-bold mb-3 mt-5 text-secondary"><i class="bi bi-boxes me-2"></i>My Managed Entities</h5>
-            
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold"><i class="bi bi-building me-2 text-primary"></i>Your Biobanks</span>
-                    <span class="badge bg-light text-dark border">{{ user_biobanks|length }}</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table mb-0 align-middle">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="ps-3">Biobank Name</th>
-                                    <th>Status</th>
-                                    <th>Visibility</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for biobank in user_biobanks %}
-                                <tr>
-                                    <td class="ps-3 fw-bold">{{ biobank.name }}</td>
-                                    <td>
-                                        {% if biobank.is_active %}
-                                            <span class="text-success small"><i class="bi bi-check-circle me-1"></i>Active</span>
-                                        {% else %}
-                                            <span class="text-muted small">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if biobank.is_public %}
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle">Public</span>
-                                        {% else %}
-                                            <span class="badge bg-light text-secondary border">Restricted</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="3" class="text-center text-muted py-3">You don't own any biobank yet.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <h2 class="h5 fw-bold mb-3 mt-5 text-secondary"><i class="bi bi-boxes me-2"></i>Managed Entities</h2>
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white d-flex justify-content-between">
+                            <span class="fw-bold">Your Biobanks</span><span class="badge bg-light text-dark border">{{ user_biobanks|length }}</span>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for biobank in user_biobanks %}
+                                <li class="list-group-item d-flex justify-content-between"><span>{{ biobank.name }}</span><span>{% if biobank.is_active %}Active{% else %}Inactive{% endif %}</span></li>
+                            {% empty %}
+                                <li class="list-group-item text-muted small">You do not own a Biobank.</li>
+                            {% endfor %}
+                        </ul>
                     </div>
                 </div>
-            </div>
-
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold"><i class="bi bi-collection me-2 text-success"></i>Your Collections</span>
-                    <span class="badge bg-light text-dark border">{{ user_collections|length }}</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table mb-0 align-middle">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="ps-3">Collection Name</th>
-                                    <th>Research Group</th> <th>Visibility</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for collection in user_collections %}
-                                <tr>
-                                    <td class="ps-3 fw-bold">{{ collection.name }}</td>
-                                    <td class="small text-muted">
-                                        {% if collection.research_group %}
-                                            <i class="bi bi-diagram-3 me-1"></i>{{ collection.research_group.name }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if collection.is_public %}
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Public</span>
-                                        {% else %}
-                                            <span class="badge bg-light text-secondary border">Restricted</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="3" class="text-center text-muted py-3">You don't own any collection yet.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white d-flex justify-content-between">
+                            <span class="fw-bold">Your Collections</span><span class="badge bg-light text-dark border">{{ user_collections|length }}</span>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for collection in user_collections %}
+                                <li class="list-group-item">
+                                    <div class="fw-medium">{{ collection.name }}</div>
+                                    <small class="text-muted">{% if collection.research_group %}{{ collection.research_group.name }}{% else %}No Research Group{% endif %}</small>
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-muted small">You do not own a Collection.</li>
+                            {% endfor %}
+                        </ul>
                     </div>
                 </div>
             </div>
