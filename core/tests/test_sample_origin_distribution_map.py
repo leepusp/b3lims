@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.test.utils import override_script_prefix
 from django.urls import reverse
 
 from core.models.samples.origin import SampleOrigin
@@ -177,9 +178,14 @@ class SampleOriginDistributionMapTests(TestCase):
         )
 
     def test_dedicated_map_route_has_expected_prefix(self):
-        self.assertEqual(
-            reverse(
+        with override_script_prefix(
+            "/biobank/"
+        ):
+            route = reverse(
                 "samples_origin_map"
-            ),
+            )
+
+        self.assertEqual(
+            route,
             "/biobank/samples/map/",
         )
