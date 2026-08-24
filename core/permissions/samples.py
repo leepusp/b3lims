@@ -2,6 +2,10 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
+from core.services.sample_access_shadow import (
+    observe_sample_access_shadow,
+)
+
 
 def _is_authenticated(user):
     return bool(
@@ -134,30 +138,52 @@ def _has_direct_sample_access(
     )
 
     if not grants:
-        return False
+        legacy_allowed = False
+    elif not edit:
+        legacy_allowed = True
+    else:
+        legacy_allowed = any(
+            grant.access_level == "edit"
+            for grant in grants
+        )
 
-    if not edit:
-        return True
-
-    return any(
-        grant.access_level == "edit"
-        for grant in grants
+    observe_sample_access_shadow(
+        user,
+        sample,
+        required_level=(
+            "edit"
+            if edit
+            else "view"
+        ),
+        legacy_allowed=legacy_allowed,
     )
+
+    return legacy_allowed
 
 
 def can_manage_sample_sharing(user, sample):
     """
-    Only the Sample owner or an administrator may delegate direct access.
+    Only the Sample owner or an administrator currently delegates access.
 
-    EDIT grants deliberately do not confer permission to re-share data.
+    Generic MANAGE is observed but remains non-authoritative in shadow mode.
     """
     if _is_admin(user):
         return True
 
-    return _is_owner(
+    if _is_owner(
         user,
         sample,
+    ):
+        return True
+
+    observe_sample_access_shadow(
+        user,
+        sample,
+        required_level="manage",
+        legacy_allowed=False,
     )
+
+    return False
 
 
 def can_view_sample(user, sample):

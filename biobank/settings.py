@@ -152,6 +152,14 @@ BIOBANK_PAM_EXCLUDED_GROUPS = tuple(
     if value.strip()
 )
 
+# Generic Sample grants are evaluated in shadow mode only when explicitly
+# enabled. The authoritative legacy decision remains unchanged.
+BIOBANK_SAMPLE_GRANT_SHADOW_MODE = env.bool(
+    "BIOBANK_SAMPLE_GRANT_SHADOW_MODE",
+    default=False,
+)
+
+
 # =========================
 # URLS / WSGI
 # =========================
