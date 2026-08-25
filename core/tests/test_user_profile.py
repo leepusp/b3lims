@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -8,6 +9,22 @@ from core.models import ResearchGroup, UserProfile
 User = get_user_model()
 
 
+def request_path(name, args=None):
+    external_path = reverse(
+        name,
+        args=args,
+    )
+
+    prefix = (
+        settings.FORCE_SCRIPT_NAME or ""
+    ).rstrip("/")
+
+    if prefix and external_path.startswith(prefix + "/"):
+        return external_path[len(prefix):]
+
+    return external_path
+
+
 class UserProfileTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -15,7 +32,8 @@ class UserProfileTests(TestCase):
             email="before@example.org",
         )
         self.client.force_login(self.user)
-        self.url = reverse("user_profile")
+        self.external_url = reverse("user_profile")
+        self.url = request_path("user_profile")
 
     def profile_payload(self, **overrides):
         payload = {
@@ -45,7 +63,11 @@ class UserProfileTests(TestCase):
     def test_profile_update_persists_user_and_scientific_identity(self):
         response = self.client.post(self.url, self.profile_payload())
 
-        self.assertRedirects(response, self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            self.external_url,
+        )
         self.user.refresh_from_db()
         profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(self.user.first_name, "Ada")
@@ -95,7 +117,11 @@ class UserProfileTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            self.external_url,
+        )
         self.assertTrue(group.members.filter(id=member.id).exists())
 
     def test_non_coordinator_cannot_add_a_group_member(self):
@@ -115,7 +141,11 @@ class UserProfileTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            self.external_url,
+        )
         self.assertFalse(group.members.filter(id=member.id).exists())
 
     def test_profile_does_not_duplicate_scoped_roles_or_groups(self):
