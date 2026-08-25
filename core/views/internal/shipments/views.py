@@ -4,6 +4,7 @@ from core.services.shipment_requirements_engine import (
 )
 from core.services.shipment_document_generator import get_initial_values_from_shipment, render_document_html
 from core.services.shipment_document_form_schemas import get_document_form_schema, extract_form_values
+from core.services.shipment_file_access import shipment_document_file_response
 from core.models import ShipmentDocument, ShipmentDocumentFormData, ShipmentChecklistItem
 from django.http import HttpResponse
 try:
@@ -1186,11 +1187,41 @@ def shipment_document_workspace_view(request, shipment_id, document_id):
                 document_signed_file(document)
             ),
             "signed_file_url": (
-                document_signed_file(document).url
+                reverse(
+                    "shipment_document_file_download",
+                    args=[
+                        shipment.id,
+                        document.id,
+                        "signed",
+                    ],
+                )
                 if document_signed_file(document)
                 else ""
             ),
         },
+    )
+
+
+@login_required
+def shipment_document_file_download_view(
+    request,
+    shipment_id,
+    document_id,
+    file_kind,
+):
+    shipment = get_object_or_404(
+        visible_shipments_for_user(request.user),
+        id=shipment_id,
+    )
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+
+    return shipment_document_file_response(
+        document,
+        file_kind,
     )
 
 

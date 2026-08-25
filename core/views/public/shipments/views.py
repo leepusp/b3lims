@@ -16,6 +16,7 @@ from core.models import (
 )
 from core.services.shipment_qr import build_qr_data_uri
 from core.services.shipment_workflow import sync_shipment_requirements
+from core.services.shipment_file_access import shipment_document_file_response
 
 
 def _bool_from_post(value):
@@ -430,6 +431,36 @@ def public_shipment_documents_view(request, token):
             "pending_required_documents": get_pending_required_signed_documents(shipment),
             "can_release_final_outputs": can_release_final_package_outputs(shipment),
         },
+    )
+
+
+def public_shipment_document_file_download_view(
+    request,
+    token,
+    document_id,
+    file_kind,
+):
+    access_token = _get_public_access_token_or_403(
+        token,
+        access_type="public_edit",
+    )
+
+    if access_token is None:
+        return HttpResponseForbidden(
+            "Invalid or expired public access token."
+        )
+
+    shipment = access_token.shipment
+
+    document = get_object_or_404(
+        ShipmentDocument,
+        id=document_id,
+        shipment=shipment,
+    )
+
+    return shipment_document_file_response(
+        document,
+        file_kind,
     )
 
 

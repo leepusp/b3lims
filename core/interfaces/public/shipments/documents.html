@@ -102,7 +102,7 @@
 
                         <td>
                             {% if document.generated_file %}
-                                <a href="{{ document.generated_file.url }}" class="btn btn-sm btn-outline-secondary">
+                                <a href="{% url 'public_shipment_document_file_download' access_token.token document.id 'generated' %}" class="btn btn-sm btn-outline-secondary">
                                     Baixar
                                 </a>
                             {% else %}
@@ -112,7 +112,7 @@
 
                         <td>
                             {% if document.signed_file %}
-                                <a href="{{ document.signed_file.url }}" class="btn btn-sm btn-outline-success">
+                                <a href="{% url 'public_shipment_document_file_download' access_token.token document.id 'signed' %}" class="btn btn-sm btn-outline-success">
                                     Ver assinado
                                 </a>
                             {% else %}

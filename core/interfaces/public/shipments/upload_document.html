@@ -28,7 +28,7 @@
 
         {% if document.generated_file %}
             <div class="mb-3">
-                <a href="{{ document.generated_file.url }}" class="btn btn-outline-secondary">
+                <a href="{% url 'public_shipment_document_file_download' access_token.token document.id 'generated' %}" class="btn btn-outline-secondary">
                     Baixar documento/modelo
                 </a>
             </div>

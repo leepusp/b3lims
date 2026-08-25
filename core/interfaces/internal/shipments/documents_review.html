@@ -85,7 +85,7 @@
 
                             <td>
                                 {% if document.generated_file %}
-                                    <a href="{{ document.generated_file.url }}"
+                                    <a href="{% url 'shipment_document_file_download' shipment.id document.id 'generated' %}"
                                        target="_blank"
                                        class="btn btn-sm btn-outline-secondary">
                                         Open model/generated
@@ -97,13 +97,13 @@
 
                             <td>
                                 {% if document.signed_file %}
-                                    <a href="{{ document.signed_file.url }}"
+                                    <a href="{% url 'shipment_document_file_download' shipment.id document.id 'signed' %}"
                                        target="_blank"
                                        class="btn btn-sm btn-outline-success">
                                         Open signed file
                                     </a>
                                 {% elif document.form_data.signed_file %}
-                                    <a href="{{ document.form_data.signed_file.url }}"
+                                    <a href="{% url 'shipment_document_file_download' shipment.id document.id 'signed' %}"
                                        target="_blank"
                                        class="btn btn-sm btn-outline-success">
                                         Open signed file
