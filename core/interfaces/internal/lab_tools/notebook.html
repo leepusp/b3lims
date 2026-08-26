@@ -1579,7 +1579,7 @@
                                     </button>
 
                                     <a class="btn btn-sm btn-outline-success"
-                                       href="/biobank/internal/chemicals/"
+                                       href="{% url 'chemical_detail' link.chemical.id %}"
                                        target="_blank">
                                         Open reagent
                                     </a>
@@ -3596,7 +3596,7 @@ function searchChemicals(query) {
         return;
     }
 
-    fetch(`/biobank/internal/api/search-chemicals/?q=${encodeURIComponent(trimmed)}`)
+    fetch(`{% url 'search_chemicals_api' %}?q=${encodeURIComponent(trimmed)}`)
         .then(response => response.json())
         .then(data => {
             const results = data.results || [];
@@ -3627,7 +3627,9 @@ function searchChemicals(query) {
 function linkChemical(chemicalId) {
     saveStatus.textContent = "Linking reagent...";
 
-    postJson(`/biobank/internal/lab-tools/notebook/api/link-chemical/{{ active_entry.id }}/`, {
+    postJson(
+        "{% if active_entry %}{% url 'notebook_link_chemical_api' active_entry.id %}{% endif %}",
+        {
         chemical_id: chemicalId
     })
         .then(data => {
@@ -3651,7 +3653,11 @@ function linkChemical(chemicalId) {
 function unlinkChemical(linkId) {
     saveStatus.textContent = "Unlinking reagent...";
 
-    postJson(`/biobank/internal/lab-tools/notebook/api/unlink-chemical/{{ active_entry.id }}/${linkId}/`, {})
+    postJson(
+        "{% if active_entry %}{% url 'notebook_unlink_chemical_api' active_entry.id 0 %}{% endif %}"
+            .replace("/0/", `/${linkId}/`),
+        {}
+    )
         .then(data => {
             if (data.status === "success") {
                 const card = document.getElementById(`chemical-link-${linkId}`);

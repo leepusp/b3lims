@@ -12,7 +12,7 @@ from core.models.lab_tools.notebook import (
 
 
 def request_path(name, args=None):
-    return reverse(name, args=args).removeprefix("/biobank")
+    return reverse(name, args=args)
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)
@@ -117,10 +117,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
         self.assertContains(response, 'id="mw-construction-track"')
         self.assertContains(response, 'id="mw-selection-summary"')
 
-        script = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/molecular_workspace.js",
-        ).read_text()
+        script = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
 
         for function_name in (
             "applyWorkspaceView",
@@ -141,16 +138,8 @@ class MolecularWorkspaceFrontendTests(TestCase):
             script,
         )
 
-        track = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_sequence_track.js",
-        ).read_text()
-        track_styles = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_sequence_track.css",
-        ).read_text()
+        track = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_sequence_track.js').read_text()
+        track_styles = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_sequence_track.css').read_text()
         self.assertIn(
             "window.BiobankSequenceTrack",
             track,
@@ -164,10 +153,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
             track_styles,
         )
 
-        adapter = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/molecular_seqviz.js",
-        ).read_text()
+        adapter = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js').read_text()
         self.assertIn("window.seqviz.Viewer", adapter)
         self.assertIn("BiobankMolecularWorkspace", adapter)
         self.assertIn('zoom: {linear: Number(zoom.value || 50)}', adapter)
@@ -204,16 +190,8 @@ class MolecularWorkspaceFrontendTests(TestCase):
             "core/interfaces/internal/lab_tools/"
             "molecular_sequence_detail.html",
         ).read_text()
-        workspace = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.js",
-        ).read_text()
-        adapter = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_seqviz.js",
-        ).read_text()
+        workspace = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
+        adapter = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js').read_text()
 
         self.assertIn(
             'id="mw-type-display"',
@@ -307,11 +285,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
         )
 
     def test_statistics_supports_readonly_classification_control(self):
-        script = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.js",
-        ).read_text()
+        script = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
 
         start = script.index(
             "function syncStatistics()"
@@ -354,23 +328,11 @@ class MolecularWorkspaceFrontendTests(TestCase):
             "molecular_sequence_detail.html",
         ).read_text()
 
-        workspace = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.js",
-        ).read_text()
+        workspace = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
 
-        adapter = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_seqviz.js",
-        ).read_text()
+        adapter = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js').read_text()
 
-        stylesheet = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.css",
-        ).read_text()
+        stylesheet = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.css').read_text()
 
         self.assertIn(
             "function initializeUnifiedWorkspace()",
@@ -454,11 +416,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
         )
 
     def test_feature_colors_refresh_all_molecular_views(self):
-        script = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.js",
-        ).read_text()
+        script = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
 
         palette_start = script.index(
             "const FEATURE_COLORS"
@@ -516,11 +474,7 @@ class MolecularWorkspaceFrontendTests(TestCase):
             script,
         )
 
-        adapter = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_seqviz.js",
-        ).read_text()
+        adapter = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js').read_text()
 
         self.assertIn(
             "biobank:molecular-workspace-change",

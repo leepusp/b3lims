@@ -16,18 +16,15 @@ TEMPLATE = (
 )
 
 STRUCTURE_SCRIPT = (
-    BASE
-    / "molecular_protein_structure.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure.js'
 )
 
 PREVIEW_SCRIPT = (
-    BASE
-    / "molecular_protein_pdb_preview.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_preview.js'
 )
 
 PREVIEW_STYLE = (
-    BASE
-    / "molecular_protein_pdb_preview.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_preview.css'
 )
 
 

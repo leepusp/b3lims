@@ -16,8 +16,7 @@ TEMPLATE = (
 )
 
 SCRIPT = (
-    BASE
-    / "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 

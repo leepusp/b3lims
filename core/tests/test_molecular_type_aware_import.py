@@ -29,8 +29,6 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix(
-        "/biobank"
     )
 
 
@@ -536,15 +534,13 @@ class MolecularTypeAwareFrontendTests(
         )
 
         self.registry_js = (
-            base
-            / "molecular_registry_import.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_registry_import.js'
         ).read_text(
             encoding="utf-8"
         )
 
         self.registry_css = (
-            base
-            / "molecular_registry_import.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_registry_import.css'
         ).read_text(
             encoding="utf-8"
         )
@@ -557,8 +553,7 @@ class MolecularTypeAwareFrontendTests(
         )
 
         self.workspace_js = (
-            base
-            / "molecular_workspace.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
         ).read_text(
             encoding="utf-8"
         )

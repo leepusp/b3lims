@@ -2119,7 +2119,7 @@ def sample_qr_scan_view(request, uuid):
     """
     sample = get_object_or_404(Sample, uuid=uuid)
 
-    # Validação de Segurança e Redirecionamento Dinâmico (Usa o reverse para não perder o prefixo /biobank/)
+    # Use named routes so redirects preserve the configured C3 LIMS script prefix.
     sample_is_publicly_accessible = (
         sample.is_active
         and sample.is_public

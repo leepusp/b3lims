@@ -20,28 +20,23 @@ DETAIL = (
 )
 
 MAPPING = (
-    BASE
-    / "molecular_protein_structure_mapping.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.js'
 )
 
 SYNC = (
-    BASE
-    / "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 PREDICTED = (
-    BASE
-    / "molecular_protein_predicted_preview.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_predicted_preview.js'
 )
 
 FINDER = (
-    BASE
-    / "molecular_protein_pdb_search.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_search.js'
 )
 
 STRUCTURE = (
-    BASE
-    / "molecular_protein_structure.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure.js'
 )
 
 

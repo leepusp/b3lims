@@ -150,10 +150,7 @@ class SampleMetadataRefinementTests(TestCase):
     def test_phage_create_ui_uses_strain_not_legacy_name(
         self,
     ):
-        source = Path(
-            "core/interfaces/internal/samples/"
-            "samples.js"
-        ).read_text()
+        source = (Path(__file__).resolve().parents[2] / 'core/static/internal/samples/samples.js').read_text()
 
         phage_template = next(
             line

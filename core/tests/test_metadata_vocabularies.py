@@ -13,7 +13,7 @@ from core.services.metadata_vocabularies import (
 
 def request_path(name, args=None):
     """Return a test-client path without the production Apache prefix."""
-    return reverse(name, args=args).removeprefix("/biobank")
+    return reverse(name, args=args)
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)

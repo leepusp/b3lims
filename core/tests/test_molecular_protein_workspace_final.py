@@ -28,15 +28,13 @@ class MolecularProteinFinalWorkspaceTests(
         )
 
         cls.js = (
-            BASE
-            / "molecular_protein_alignment.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.js'
         ).read_text(
             encoding="utf-8"
         )
 
         cls.css = (
-            BASE
-            / "molecular_protein_alignment.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.css'
         ).read_text(
             encoding="utf-8"
         )
@@ -268,8 +266,7 @@ class MolecularProteinFinalCleanupTests(
         self,
     ):
         js = (
-            BASE
-            / "molecular_protein_alignment.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.js'
         ).read_text(
             encoding="utf-8"
         )
@@ -298,15 +295,13 @@ class MolecularProteinResiduePaletteTests(
         super().setUpClass()
 
         cls.js = (
-            BASE
-            / "molecular_protein_alignment.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.js'
         ).read_text(
             encoding="utf-8"
         )
 
         cls.css = (
-            BASE
-            / "molecular_protein_alignment.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.css'
         ).read_text(
             encoding="utf-8"
         )

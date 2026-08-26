@@ -43,7 +43,7 @@ TERMINAL_STATUSES = {
 
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 SAFE_BASE_URL_RE = re.compile(
-    r"^/biobank/internal/lab-tools/jupyter/[0-9]+/node/[A-Za-z0-9_.-]+/[0-9]{1,5}/$"
+    r"^/c3-lims/internal/lab-tools/jupyter/[0-9]+/node/[A-Za-z0-9_.-]+/[0-9]{1,5}/$"
 )
 
 
@@ -895,7 +895,7 @@ def connection_target(
         ) from exc
 
     expected_base = (
-        "/biobank/internal/lab-tools/"
+        "/c3-lims/internal/lab-tools/"
         f"jupyter/{session.notebook_id}/"
         f"node/{host}/{port}/"
     )

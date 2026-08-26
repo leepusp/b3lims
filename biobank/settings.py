@@ -37,7 +37,8 @@ CSRF_TRUSTED_ORIGINS = ['https://davinci.icb.usp.br']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # 3. Avisa o Django que ele está rodando atrás de um subdiretório no Apache
-FORCE_SCRIPT_NAME = '/biobank'
+C3_LIMS_URL_PREFIX = "/c3-lims"
+FORCE_SCRIPT_NAME = C3_LIMS_URL_PREFIX
 
 # =========================
 # APLICAÇÕES
@@ -198,11 +199,10 @@ DATABASES = {
 # STATIC FILES (CSS, JS, IMAGES) - CONFIGURAÇÃO APACHE
 # =========================
 # URL base que o navegador vai procurar
-STATIC_URL = "/biobank/static/"
+STATIC_URL = f"{C3_LIMS_URL_PREFIX}/static/"
 
 # Onde o Django vai procurar seus arquivos CSS/JS durante o desenvolvimento
 STATICFILES_DIRS = [
-    BASE_DIR / "core" / "interfaces",
     BASE_DIR / "static",
 ]
 
@@ -227,7 +227,7 @@ STORAGES = {
 # =========================
 # MEDIA (UPLOADS DE AMOSTRAS E ARQUIVOS)
 # =========================
-MEDIA_URL = "/biobank/data/"
+MEDIA_URL = f"{C3_LIMS_URL_PREFIX}/data/"
 MEDIA_ROOT = os.environ.get("BIOBANK_MEDIA_ROOT", "/home/public/apps/biobank/storage/data")
 
 # Aumenta o limite de upload para arquivos científicos (ex: 50MB)
@@ -244,10 +244,10 @@ USE_TZ = True
 # =========================
 # AUTENTICAÇÃO
 # =========================
-LOGIN_URL = "/biobank/login/"
-LOGOUT_URL = "/biobank/logout/"
-LOGIN_REDIRECT_URL = "/biobank/"
-LOGOUT_REDIRECT_URL = "/biobank/login/"
+LOGIN_URL = f"{C3_LIMS_URL_PREFIX}/login/"
+LOGOUT_URL = f"{C3_LIMS_URL_PREFIX}/logout/"
+LOGIN_REDIRECT_URL = f"{C3_LIMS_URL_PREFIX}/workspace/"
+LOGOUT_REDIRECT_URL = LOGIN_URL
 
 # =========================
 # DEFAULTS

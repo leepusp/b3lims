@@ -19,23 +19,23 @@ class MolecularRnaWorkspaceRefinementTests(SimpleTestCase):
         ).read_text(encoding="utf-8")
 
         cls.workspace = (
-            base / "molecular_workspace.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
         ).read_text(encoding="utf-8")
 
         cls.workspace_css = (
-            base / "molecular_workspace.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.css'
         ).read_text(encoding="utf-8")
 
         cls.seqviz = (
-            base / "molecular_seqviz.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js'
         ).read_text(encoding="utf-8")
 
         cls.rna = (
-            base / "molecular_rna_secondary_structure.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_rna_secondary_structure.js'
         ).read_text(encoding="utf-8")
 
         cls.rna_css = (
-            base / "molecular_rna_secondary_structure.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_rna_secondary_structure.css'
         ).read_text(encoding="utf-8")
 
     def test_secondary_structure_is_main_view(self):

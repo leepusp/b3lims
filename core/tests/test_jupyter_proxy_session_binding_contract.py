@@ -301,7 +301,7 @@ class JupyterIndependentProxyContractTests(
         )
 
         pam_pattern = re.compile(
-            r"^/biobank"
+            r"^/c3-lims"
             r"($|/(?!"
             r"static/"
             r"|internal/lab-tools/jupyter/"
@@ -312,18 +312,18 @@ class JupyterIndependentProxyContractTests(
         )
 
         protected = (
-            "/biobank",
-            "/biobank/",
-            "/biobank/internal/lab-tools/jupyter/19/",
-            "/biobank/internal/lab-tools/jupyter/19/connect",
-            "/biobank/internal/lab-tools/jupyter/19/node/bad/51993/",
-            "/biobank/internal/lab-tools/jupyter/19/node/gn02/notaport/",
-            "/biobank/internal/lab-tools/jupyter/19/node/gn02/51993",
+            "/c3-lims",
+            "/c3-lims/",
+            "/c3-lims/internal/lab-tools/jupyter/19/",
+            "/c3-lims/internal/lab-tools/jupyter/19/connect",
+            "/c3-lims/internal/lab-tools/jupyter/19/node/bad/51993/",
+            "/c3-lims/internal/lab-tools/jupyter/19/node/gn02/notaport/",
+            "/c3-lims/internal/lab-tools/jupyter/19/node/gn02/51993",
         )
 
         excluded = (
-            "/biobank/internal/lab-tools/jupyter/19/node/gn02/51993/",
-            "/biobank/internal/lab-tools/jupyter/19/node/gn02/51993/api",
+            "/c3-lims/internal/lab-tools/jupyter/19/node/gn02/51993/",
+            "/c3-lims/internal/lab-tools/jupyter/19/node/gn02/51993/api",
         )
 
         for path in protected:

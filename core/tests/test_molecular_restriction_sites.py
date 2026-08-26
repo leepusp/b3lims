@@ -34,7 +34,7 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix("/biobank")
+    )
 
 
 class MolecularRestrictionSiteServiceTests(

@@ -15,7 +15,7 @@ from core.permissions.chemicals import visible_chemicals_for_user
 
 def request_path(name, args=None):
     """Test client path without the production Apache script prefix."""
-    return reverse(name, args=args).removeprefix("/biobank")
+    return reverse(name, args=args)
 
 
 class ChemicalWorkflowTests(TestCase):

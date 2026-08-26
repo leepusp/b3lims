@@ -24,8 +24,6 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix(
-        "/biobank"
     )
 
 
@@ -39,15 +37,13 @@ class MolecularLinearBrowserStaticTests(
         )
 
         self.js = (
-            base
-            / "molecular_linear_browser.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_linear_browser.js'
         ).read_text(
             encoding="utf-8"
         )
 
         self.css = (
-            base
-            / "molecular_linear_browser.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_linear_browser.css'
         ).read_text(
             encoding="utf-8"
         )

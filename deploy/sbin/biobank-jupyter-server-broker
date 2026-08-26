@@ -529,7 +529,7 @@ if not 1024 <= port <= 65535:
     )
 
 expected_base = (
-    "/biobank/internal/lab-tools/"
+    "/c3-lims/internal/lab-tools/"
     f"jupyter/{notebook_id}/"
     f"node/{host}/{port}/"
 )
@@ -556,7 +556,7 @@ PYTHON
     host="${endpoint[0]}"
     port="${endpoint[1]}"
 
-    expected_base="/biobank/internal/lab-tools/jupyter/${notebook_id}/node/${host}/${port}/"
+    expected_base="/c3-lims/internal/lab-tools/jupyter/${notebook_id}/node/${host}/${port}/"
 
     owner="$(active_job_owner "$job_id")"
 

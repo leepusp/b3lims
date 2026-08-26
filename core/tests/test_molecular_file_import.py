@@ -35,7 +35,7 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix("/biobank")
+    )
 
 
 def genbank_payload() -> bytes:
@@ -418,11 +418,7 @@ class MolecularFileImportTests(TestCase):
             "molecular_workspace.js?v=",
         )
 
-        workspace = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_workspace.js",
-        ).read_text()
+        workspace = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js').read_text()
 
         self.assertIn(
             "async function importMolecularFile(file)",

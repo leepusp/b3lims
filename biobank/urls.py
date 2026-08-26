@@ -164,7 +164,15 @@ urlpatterns = [
 
     # ---------------- INTERNAL: DASHBOARD & SYSTEM ----------------
     path("healthz/", healthz_view, name="healthz"),
-    path("", home, name="workspace"),
+    path(
+        "",
+        RedirectView.as_view(
+            pattern_name="workspace",
+            permanent=False,
+        ),
+        name="root_redirect",
+    ),
+    path("workspace/", home, name="workspace"),
 
     # USER TOOLS
     path("profile/", profile_view, name="user_profile"),

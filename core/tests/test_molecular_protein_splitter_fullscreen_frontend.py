@@ -15,13 +15,11 @@ BASE = (
 )
 
 SCRIPT = (
-    BASE
-    / "molecular_protein_splitter.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_splitter.js'
 )
 
 STYLE = (
-    BASE
-    / "molecular_protein_splitter.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_splitter.css'
 )
 
 TEMPLATE = (

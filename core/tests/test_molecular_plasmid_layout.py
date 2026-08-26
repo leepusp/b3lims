@@ -16,15 +16,13 @@ class MolecularPlasmidLayoutTests(
         )
 
         self.js = (
-            base
-            / "molecular_plasmid_layout.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_layout.js'
         ).read_text(
             encoding="utf-8"
         )
 
         self.css = (
-            base
-            / "molecular_plasmid_layout.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_layout.css'
         ).read_text(
             encoding="utf-8"
         )

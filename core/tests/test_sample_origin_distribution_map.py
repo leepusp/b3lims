@@ -179,7 +179,7 @@ class SampleOriginDistributionMapTests(TestCase):
 
     def test_dedicated_map_route_has_expected_prefix(self):
         with override_script_prefix(
-            "/biobank/"
+            "/c3-lims/"
         ):
             route = reverse(
                 "samples_origin_map"
@@ -187,5 +187,5 @@ class SampleOriginDistributionMapTests(TestCase):
 
         self.assertEqual(
             route,
-            "/biobank/samples/map/",
+            "/c3-lims/samples/map/",
         )

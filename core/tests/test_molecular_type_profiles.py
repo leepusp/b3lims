@@ -23,8 +23,6 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix(
-        "/biobank"
     )
 
 
@@ -38,15 +36,13 @@ class MolecularTypeProfileStaticTests(
         )
 
         self.js = (
-            base
-            / "molecular_type_profiles.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_type_profiles.js'
         ).read_text(
             encoding="utf-8"
         )
 
         self.css = (
-            base
-            / "molecular_type_profiles.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_type_profiles.css'
         ).read_text(
             encoding="utf-8"
         )

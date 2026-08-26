@@ -11,7 +11,7 @@ def request_path(name, args=None):
     return reverse(
         name,
         args=args,
-    ).removeprefix("/biobank")
+    )
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)

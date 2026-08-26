@@ -21,15 +21,13 @@ class MolecularProteinResponsiveLayoutTests(
         super().setUpClass()
 
         cls.css = (
-            BASE
-            / "molecular_protein_alignment.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.css'
         ).read_text(
             encoding="utf-8"
         )
 
         cls.workspace_js = (
-            BASE
-            / "molecular_workspace.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
         ).read_text(
             encoding="utf-8"
         )

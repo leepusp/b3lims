@@ -871,7 +871,10 @@
 
             document.cookie = [
                 `${encodeURIComponent(root.dataset.viewStorageKey)}=${encodeURIComponent(resolved)}`,
-                "Path=/biobank",
+                `Path=${(
+                    window.location.pathname.match(/^\/[^/]+/)
+                    || ["/"]
+                )[0]}`,
                 "Max-Age=31536000",
                 "SameSite=Lax",
             ].join("; ");

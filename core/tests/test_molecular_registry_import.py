@@ -28,7 +28,7 @@ def request_path(name, args=None):
     return reverse(
         name,
         args=args,
-    ).removeprefix("/biobank")
+    )
 
 
 def registry_genbank_payload() -> bytes:
@@ -357,11 +357,7 @@ class MolecularRegistryFileImportTests(TestCase):
             "registry-type-aware-import-u1",
         )
 
-        script = Path(
-            settings.BASE_DIR,
-            "core/interfaces/internal/lab_tools/"
-            "molecular_registry_import.js",
-        ).read_text(encoding="utf-8")
+        script = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_registry_import.js').read_text(encoding="utf-8")
 
         self.assertIn(
             "Import sequence file",

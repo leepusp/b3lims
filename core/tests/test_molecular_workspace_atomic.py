@@ -11,7 +11,7 @@ from core.models.lab_tools.notebook import (
 
 
 def request_path(name, args=None):
-    return reverse(name, args=args).removeprefix("/biobank")
+    return reverse(name, args=args)
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)

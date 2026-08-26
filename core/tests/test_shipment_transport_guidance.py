@@ -14,7 +14,7 @@ from core.services.shipment_requirements_engine import (
 
 
 def request_path(name, args=None):
-    return reverse(name, args=args).removeprefix("/biobank")
+    return reverse(name, args=args)
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)

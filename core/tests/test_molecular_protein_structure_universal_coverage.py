@@ -18,33 +18,23 @@ DETAIL = (
 )
 
 TRACK = (
-    ROOT
-    / "core/interfaces/internal/lab_tools/"
-    "molecular_sequence_track.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_sequence_track.js'
 )
 
 WORKSPACE = (
-    ROOT
-    / "core/interfaces/internal/lab_tools/"
-    "molecular_workspace.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
 )
 
 MAPPING = (
-    ROOT
-    / "core/interfaces/internal/lab_tools/"
-    "molecular_protein_structure_mapping.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.js'
 )
 
 MAPPING_CSS = (
-    ROOT
-    / "core/interfaces/internal/lab_tools/"
-    "molecular_protein_structure_mapping.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.css'
 )
 
 SYNC = (
-    ROOT
-    / "core/interfaces/internal/lab_tools/"
-    "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 VIEW = (

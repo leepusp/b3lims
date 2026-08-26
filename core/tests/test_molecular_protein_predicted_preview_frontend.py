@@ -22,23 +22,19 @@ DETAIL = (
 )
 
 PREDICTED = (
-    LAB_TOOLS
-    / "molecular_protein_predicted_preview.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_predicted_preview.js'
 )
 
 STRUCTURE = (
-    LAB_TOOLS
-    / "molecular_protein_structure.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure.js'
 )
 
 MAPPING = (
-    LAB_TOOLS
-    / "molecular_protein_structure_mapping.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.js'
 )
 
 SYNC = (
-    LAB_TOOLS
-    / "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 

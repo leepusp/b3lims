@@ -20,13 +20,11 @@ DETAIL = (
 )
 
 MAPPING = (
-    BASE
-    / "molecular_protein_structure_mapping.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.js'
 )
 
 SYNC = (
-    BASE
-    / "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 

@@ -110,7 +110,7 @@ class InternalShellBrandingTests(SimpleTestCase):
         )
 
         self.assertIn(
-            'LOGOUT_URL = "/biobank/logout/"',
+            'LOGOUT_URL = f"{C3_LIMS_URL_PREFIX}/logout/"',
             settings_source,
         )
         self.assertIn(

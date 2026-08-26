@@ -24,8 +24,6 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix(
-        "/biobank"
     )
 
 
@@ -39,15 +37,13 @@ class MolecularPlasmidMapStaticTests(
         )
 
         self.js = (
-            base
-            / "molecular_plasmid_map.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_map.js'
         ).read_text(
             encoding="utf-8"
         )
 
         self.css = (
-            base
-            / "molecular_plasmid_map.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_map.css'
         ).read_text(
             encoding="utf-8"
         )

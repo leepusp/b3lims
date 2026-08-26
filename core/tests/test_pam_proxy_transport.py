@@ -14,7 +14,7 @@ class PamProxyTransportTrustTests(SimpleTestCase):
         self.factory = RequestFactory()
 
     def request_with_remote_addr(self, remote_addr):
-        request = self.factory.get("/biobank/")
+        request = self.factory.get("/c3-lims/workspace/")
         request.META["REMOTE_ADDR"] = remote_addr
         return request
 

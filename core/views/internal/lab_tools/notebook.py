@@ -108,7 +108,7 @@ def _chemical_detail_url(chemical):
         except Exception:
             pass
 
-    return "/biobank/internal/chemicals/"
+    return reverse("chemicals_list")
 
 
 def build_chemical_snapshot(chemical):

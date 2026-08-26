@@ -1,4 +1,4 @@
-{% extends "internal/base.html" %}
+{% extends "internal/common/base.html" %}
 {% load static %}
 {% block title %}Manage Members{% endblock %}
 
@@ -79,17 +79,9 @@
     {% endif %}
 </div>
 
-<a href="/?page=collections" class="btn btn-outline-secondary" style="margin-top:20px;">
+<a href="{% url 'collections_list' %}" class="btn btn-outline-secondary" style="margin-top:20px;">
     ← Back to Collections
 </a>
 
-{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/css/collection_members.css' %}">
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'core/js/collection_members.js' %}"></script>
 {% endblock %}
 

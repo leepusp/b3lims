@@ -22,43 +22,35 @@ class MolecularWorkspaceFinalRefinementTests(
         ).read_text()
 
         cls.workspace = (
-            base
-            / "molecular_workspace.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
         ).read_text()
 
         cls.workspace_css = (
-            base
-            / "molecular_workspace.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.css'
         ).read_text()
 
         cls.seqviz = (
-            base
-            / "molecular_seqviz.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_seqviz.js'
         ).read_text()
 
         cls.map_js = (
-            base
-            / "molecular_plasmid_map.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_map.js'
         ).read_text()
 
         cls.map_css = (
-            base
-            / "molecular_plasmid_map.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_plasmid_map.css'
         ).read_text()
 
         cls.linear = (
-            base
-            / "molecular_linear_browser.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_linear_browser.js'
         ).read_text()
 
         cls.linear_css = (
-            base
-            / "molecular_linear_browser.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_linear_browser.css'
         ).read_text()
 
         cls.protein_css = (
-            base
-            / "molecular_protein_alignment.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.css'
         ).read_text()
 
     def test_creation_surfaces(self):

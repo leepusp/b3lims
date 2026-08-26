@@ -18,21 +18,11 @@ DETAIL = (
 )
 
 FINDER_JS = (
-    ROOT
-    / "core"
-    / "interfaces"
-    / "internal"
-    / "lab_tools"
-    / "molecular_protein_pdb_search.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_search.js'
 )
 
 FINDER_CSS = (
-    ROOT
-    / "core"
-    / "interfaces"
-    / "internal"
-    / "lab_tools"
-    / "molecular_protein_pdb_search.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_search.css'
 )
 
 

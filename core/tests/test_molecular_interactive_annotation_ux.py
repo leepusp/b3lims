@@ -22,13 +22,11 @@ class MolecularInteractiveAnnotationUxTests(
         ).read_text()
 
         cls.workspace = (
-            base
-            / "molecular_workspace.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.js'
         ).read_text()
 
         cls.stylesheet = (
-            base
-            / "molecular_workspace.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.css'
         ).read_text()
 
     def test_selected_feature_uses_one_shared_editor(self):

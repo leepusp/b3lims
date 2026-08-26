@@ -16,23 +16,19 @@ TEMPLATE = (
 )
 
 SYNC = (
-    BASE
-    / "molecular_protein_structure_sync.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_sync.js'
 )
 
 PREVIEW = (
-    BASE
-    / "molecular_protein_pdb_preview.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_pdb_preview.js'
 )
 
 MAPPING = (
-    BASE
-    / "molecular_protein_structure_mapping.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.js'
 )
 
 MAPPING_CSS = (
-    BASE
-    / "molecular_protein_structure_mapping.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure_mapping.css'
 )
 
 

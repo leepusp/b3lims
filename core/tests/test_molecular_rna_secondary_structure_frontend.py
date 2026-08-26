@@ -28,36 +28,29 @@ class MolecularRnaSecondaryStructureFrontendTests(
         )
 
         self.javascript = (
-            BASE
-            / "molecular_rna_secondary_structure.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_rna_secondary_structure.js'
         ).read_text(
             encoding="utf-8",
         )
 
         self.styles = (
-            BASE
-            / "molecular_rna_secondary_structure.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_rna_secondary_structure.css'
         ).read_text(
             encoding="utf-8",
         )
 
         self.profile = (
-            BASE
-            / "molecular_type_profiles.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_type_profiles.js'
         ).read_text(
             encoding="utf-8",
         )
 
         self.vendor_path = (
-            BASE
-            / "vendor"
-            / "fornac-1.1.8.min.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/vendor/fornac-1.1.8.min.js'
         )
 
         self.notices = (
-            BASE
-            / "vendor"
-            / "fornac-1.1.8.LICENSES.txt"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/vendor/fornac-1.1.8.LICENSES.txt'
         ).read_text(
             encoding="utf-8",
         )

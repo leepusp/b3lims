@@ -17,18 +17,16 @@ TEMPLATE = (
 )
 
 SCRIPT = (
-    BASE
-    / "molecular_protein_structure.js"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure.js'
 )
 
 STYLE = (
-    BASE
-    / "molecular_protein_structure.css"
+    Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_structure.css'
 )
 
 VENDOR = (
-    BASE
-    / "vendor"
+    Path(__file__).resolve().parents[2]
+    / "core/static/internal/lab_tools/vendor"
 )
 
 

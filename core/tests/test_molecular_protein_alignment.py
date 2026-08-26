@@ -30,8 +30,6 @@ def request_path(
     return reverse(
         name,
         args=args,
-    ).removeprefix(
-        "/biobank"
     )
 
 
@@ -542,15 +540,13 @@ class MolecularAlignmentFrontendTests(
         )
 
         cls.js = (
-            cls.base
-            / "molecular_protein_alignment.js"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.js'
         ).read_text(
             encoding="utf-8"
         )
 
         cls.css = (
-            cls.base
-            / "molecular_protein_alignment.css"
+            Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_protein_alignment.css'
         ).read_text(
             encoding="utf-8"
         )
