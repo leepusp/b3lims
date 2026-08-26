@@ -9,6 +9,8 @@ PYTHON="$ENV_ROOT/bin/python"
 RUNTIME_ROOT="/home/public/apps/biobank/runtime"
 SERVER_SCRIPT="$RUNTIME_ROOT/notebook_server.sh"
 STORAGE_HELPER="/usr/local/sbin/biobank-user-storage-broker"
+PROXY_BINDING_ROOT="/run/biobank-jupyter-proxy"
+PROXY_BINDING_GROUP="biobank-proxy"
 
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
@@ -232,6 +234,401 @@ remove_run_directory() {
     remove_user_directory "$job_root"
 }
 
+
+proxy_binding_path() {
+    local notebook_id="$1"
+
+    validate_numeric_id \
+        "Notebook ID" \
+        "$notebook_id"
+
+    printf '%s/notebook_%s.binding\n' \
+        "$PROXY_BINDING_ROOT" \
+        "$notebook_id"
+}
+
+ensure_proxy_binding_root() {
+    if test -e "$PROXY_BINDING_ROOT"
+    then
+        test -d "$PROXY_BINDING_ROOT" ||
+            fail "Jupyter proxy binding root is not a directory."
+
+        test ! -L "$PROXY_BINDING_ROOT" ||
+            fail "Jupyter proxy binding root may not be a symbolic link."
+    else
+        /usr/bin/install \
+            -d \
+            -m 0750 \
+            -o root \
+            -g "$PROXY_BINDING_GROUP" \
+            "$PROXY_BINDING_ROOT"
+    fi
+
+    /usr/bin/chown \
+        root:"$PROXY_BINDING_GROUP" \
+        "$PROXY_BINDING_ROOT"
+
+    /usr/bin/chmod \
+        0750 \
+        "$PROXY_BINDING_ROOT"
+}
+
+proxy_lease_path() {
+    local notebook_id="$1"
+
+    validate_numeric_id \
+        "Notebook ID" \
+        "$notebook_id"
+
+    printf '%s/notebook_%s.lease\n' \
+        "$PROXY_BINDING_ROOT" \
+        "$notebook_id"
+}
+
+remove_proxy_binding() {
+    local notebook_id="$1"
+    local path lease owner_marker
+
+    path="$(proxy_binding_path "$notebook_id")"
+    lease="$(proxy_lease_path "$notebook_id")"
+
+    if test -e "$path" ||
+       test -L "$path"
+    then
+        test ! -L "$path" ||
+            fail "Jupyter proxy binding may not be a symbolic link."
+
+        test -f "$path" ||
+            fail "Jupyter proxy binding is not a regular file."
+
+        owner_marker="$(
+            /usr/bin/awk \
+                -F= \
+                '$1 == "owner" {
+                    print substr(
+                        $0,
+                        index($0, "=") + 1
+                    );
+                    exit
+                }' \
+                "$path"
+        )"
+
+        test -n "$owner_marker" ||
+            fail "Jupyter proxy binding owner is missing."
+
+        test "$owner_marker" = "$APP_USER" ||
+            fail "Jupyter proxy binding belongs to another user."
+
+        /usr/bin/rm \
+            -f \
+            -- \
+            "$path"
+    fi
+
+    if test -e "$lease" ||
+       test -L "$lease"
+    then
+        test ! -L "$lease" ||
+            fail "Jupyter proxy lease may not be a symbolic link."
+
+        test -f "$lease" ||
+            fail "Jupyter proxy lease is not a regular file."
+
+        /usr/bin/rm \
+            -f \
+            -- \
+            "$lease"
+    fi
+}
+
+write_proxy_lease() {
+    test "$#" -eq 5 ||
+        fail "write_proxy_lease requires NOTEBOOK_ID RUN_ID JOB_ID HOST PORT."
+
+    local notebook_id="$1"
+    local run_id="$2"
+    local job_id="$3"
+    local host="$4"
+    local port="$5"
+
+    local path temporary validated_at
+
+    validate_numeric_id \
+        "Notebook ID" \
+        "$notebook_id"
+
+    validate_run_id "$run_id"
+
+    [[ "$job_id" =~ ^[0-9]+$ ]] ||
+        fail "Invalid Slurm job ID for proxy lease."
+
+    case "$host" in
+        n01|gn01|gn02|gn03)
+            ;;
+        *)
+            fail "Invalid Jupyter proxy lease host."
+            ;;
+    esac
+
+    [[ "$port" =~ ^[0-9]+$ ]] ||
+        fail "Invalid Jupyter proxy lease port."
+
+    (( port >= 1024 && port <= 65535 )) ||
+        fail "Jupyter proxy lease port is outside the allowed range."
+
+    ensure_proxy_binding_root
+
+    path="$(proxy_lease_path "$notebook_id")"
+
+    if test -e "$path" ||
+       test -L "$path"
+    then
+        test ! -L "$path" ||
+            fail "Jupyter proxy lease may not be a symbolic link."
+
+        test -f "$path" ||
+            fail "Jupyter proxy lease is not a regular file."
+    fi
+
+    validated_at="$(/usr/bin/date +%s)"
+
+    [[ "$validated_at" =~ ^[0-9]+$ ]] ||
+        fail "Unable to determine Jupyter proxy lease timestamp."
+
+    temporary="$(
+        /usr/bin/mktemp \
+            "${PROXY_BINDING_ROOT}/.notebook_${notebook_id}.lease.XXXXXX"
+    )"
+
+    if ! {
+        printf '%s\n' \
+            "version=1" \
+            "notebook_id=${notebook_id}" \
+            "owner=${APP_USER}" \
+            "run_id=${run_id}" \
+            "job_id=${job_id}" \
+            "host=${host}" \
+            "port=${port}" \
+            "validated_at=${validated_at}" \
+            > "$temporary"
+
+        /usr/bin/chown \
+            root:"$PROXY_BINDING_GROUP" \
+            "$temporary"
+
+        /usr/bin/chmod \
+            0640 \
+            "$temporary"
+
+        /usr/bin/mv \
+            -fT \
+            -- \
+            "$temporary" \
+            "$path"
+    }
+    then
+        /usr/bin/rm \
+            -f \
+            -- \
+            "$temporary"
+
+        fail "Jupyter proxy lease could not be installed."
+    fi
+
+    test -f "$path" &&
+    test ! -L "$path" ||
+        fail "Jupyter proxy lease installation failed."
+}
+
+active_job_node() {
+    /usr/bin/squeue \
+        --noheader \
+        --jobs="$1" \
+        --user="$APP_USER" \
+        --format='%N' |
+        /usr/bin/head -n 1 |
+        /usr/bin/xargs
+}
+
+active_job_state() {
+    /usr/bin/squeue \
+        --noheader \
+        --jobs="$1" \
+        --user="$APP_USER" \
+        --format='%T' |
+        /usr/bin/head -n 1 |
+        /usr/bin/xargs
+}
+
+sync_proxy_binding() {
+    test "$#" -eq 4 ||
+        fail "sync_proxy_binding requires NOTEBOOK_ID RUN_ID JOB_ID SERVER_JSON."
+
+    local notebook_id="$1"
+    local run_id="$2"
+    local job_id="$3"
+    local server_json="$4"
+
+    local host port expected_base
+    local owner node state
+    local path temporary
+    local -a endpoint=()
+
+    validate_numeric_id \
+        "Notebook ID" \
+        "$notebook_id"
+
+    validate_run_id "$run_id"
+
+    [[ "$job_id" =~ ^[0-9]+$ ]] ||
+        fail "Invalid Slurm job ID for proxy binding."
+
+    mapfile -t endpoint < <(
+        "$PYTHON" \
+            - \
+            "$server_json" \
+            "$notebook_id" <<'PYTHON'
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+notebook_id = sys.argv[2]
+
+host = str(payload.get("host") or "")
+status = str(payload.get("status") or "")
+base_url = str(payload.get("base_url") or "")
+
+try:
+    port = int(payload.get("port"))
+except (TypeError, ValueError):
+    raise SystemExit(
+        "Invalid Jupyter proxy port."
+    )
+
+allowed_hosts = {
+    "n01",
+    "gn01",
+    "gn02",
+    "gn03",
+}
+
+if host not in allowed_hosts:
+    raise SystemExit(
+        "Invalid Jupyter proxy host."
+    )
+
+if not 1024 <= port <= 65535:
+    raise SystemExit(
+        "Invalid Jupyter proxy port."
+    )
+
+expected_base = (
+    "/biobank/internal/lab-tools/"
+    f"jupyter/{notebook_id}/"
+    f"node/{host}/{port}/"
+)
+
+if status != "ready":
+    raise SystemExit(
+        "Jupyter server is not ready."
+    )
+
+if base_url != expected_base:
+    raise SystemExit(
+        "Jupyter base URL does not match "
+        "the proxy binding."
+    )
+
+print(host)
+print(port)
+PYTHON
+    )
+
+    test "${#endpoint[@]}" -eq 2 ||
+        fail "Invalid Jupyter endpoint metadata."
+
+    host="${endpoint[0]}"
+    port="${endpoint[1]}"
+
+    expected_base="/biobank/internal/lab-tools/jupyter/${notebook_id}/node/${host}/${port}/"
+
+    owner="$(active_job_owner "$job_id")"
+
+    test "$owner" = "$APP_USER" ||
+        fail "Slurm job owner does not match proxy binding."
+
+    state="$(active_job_state "$job_id")"
+
+    test "$state" = "RUNNING" ||
+        fail "Only a running Slurm job may receive a proxy binding."
+
+    node="$(active_job_node "$job_id")"
+
+    test "$node" = "$host" ||
+        fail "Allocated Slurm node does not match Jupyter host."
+
+    ensure_proxy_binding_root
+
+    path="$(proxy_binding_path "$notebook_id")"
+
+    if test -e "$path" ||
+       test -L "$path"
+    then
+        remove_proxy_binding "$notebook_id"
+    fi
+
+    temporary="$(
+        /usr/bin/mktemp \
+            "${PROXY_BINDING_ROOT}/.notebook_${notebook_id}.XXXXXX"
+    )"
+
+    if ! {
+        printf '%s\n' \
+            "version=1" \
+            "notebook_id=${notebook_id}" \
+            "owner=${APP_USER}" \
+            "run_id=${run_id}" \
+            "job_id=${job_id}" \
+            "host=${host}" \
+            "port=${port}" \
+            > "$temporary"
+
+        /usr/bin/chown \
+            root:"$PROXY_BINDING_GROUP" \
+            "$temporary"
+
+        /usr/bin/chmod \
+            0640 \
+            "$temporary"
+
+        /usr/bin/mv \
+            -fT \
+            -- \
+            "$temporary" \
+            "$path"
+    }
+    then
+        /usr/bin/rm \
+            -f \
+            -- \
+            "$temporary"
+
+        fail "Jupyter proxy binding could not be installed."
+    fi
+
+    test -f "$path" &&
+    test ! -L "$path" ||
+        fail "Jupyter proxy binding installation failed."
+
+    write_proxy_lease \
+        "$notebook_id" \
+        "$run_id" \
+        "$job_id" \
+        "$host" \
+        "$port"
+}
+
 server_start() {
     test "$#" -eq 8 ||
         fail "server-start requires NOTEBOOK_ID USER_ID USER CPUS MEMORY MINUTES PARTITION NODE."
@@ -260,6 +657,7 @@ server_start() {
         node_arguments=("--nodelist=$node")
     fi
     load_user "$username"
+    remove_proxy_binding "$notebook_id"
     ensure_runtime_access
     "$STORAGE_HELPER" ensure "$APP_USER" >/dev/null
 
@@ -407,6 +805,18 @@ PY
         fi
     fi
 
+    if test "$state" = "RUNNING" &&
+       test "$ready" = true
+    then
+        sync_proxy_binding \
+            "$notebook_id" \
+            "$run_id" \
+            "$job_id" \
+            "$server_json"
+    else
+        remove_proxy_binding "$notebook_id"
+    fi
+
     if is_terminal_state "$state"
     then
         remove_run_directory "$notebook_id" "$run_id"
@@ -430,6 +840,7 @@ server_stop() {
     run_dir="$(session_directory "$notebook_id" "$run_id")"
     validate_session_owner "$run_dir"
     job_id="$(stored_job_id "$run_dir")"
+    remove_proxy_binding "$notebook_id"
     owner="$(active_job_owner "$job_id")"
 
     if test -z "$owner"
@@ -477,6 +888,8 @@ session_cleanup() {
     then
         validate_session_owner "$run_dir"
     fi
+
+    remove_proxy_binding "$notebook_id"
 
     if test -e "$run_dir/job_id"
     then

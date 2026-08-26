@@ -1,0 +1,564 @@
+#!/usr/bin/python3
+
+from __future__ import annotations
+
+import grp
+import os
+import re
+import stat
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+
+
+BINDING_ROOT = Path(
+    "/run/biobank-jupyter-proxy"
+)
+
+BINDING_GROUP = "biobank-proxy"
+
+ALLOWED_HOSTS = {
+    "n01",
+    "gn01",
+    "gn02",
+    "gn03",
+}
+
+BINDING_KEYS = {
+    "version",
+    "notebook_id",
+    "owner",
+    "run_id",
+    "job_id",
+    "host",
+    "port",
+}
+
+LEASE_KEYS = {
+    "version",
+    "notebook_id",
+    "owner",
+    "run_id",
+    "job_id",
+    "host",
+    "port",
+    "validated_at",
+}
+
+BINDING_NAME = re.compile(
+    r"^notebook_([0-9]+)\.binding$"
+)
+
+LEASE_NAME = re.compile(
+    r"^notebook_([0-9]+)\.lease$"
+)
+
+OWNER_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+)
+
+RUN_ID_RE = re.compile(
+    r"^[A-Za-z0-9_-]+$"
+)
+
+DIGITS_RE = re.compile(
+    r"^[0-9]+$"
+)
+
+
+class InvalidRecord(Exception):
+    pass
+
+
+def validate_root(root: Path, group_gid: int) -> None:
+    if not root.exists():
+        return
+
+    metadata = root.lstat()
+
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise InvalidRecord(
+            "Proxy authorization root is not a directory."
+        )
+
+    if stat.S_ISLNK(metadata.st_mode):
+        raise InvalidRecord(
+            "Proxy authorization root may not be a symlink."
+        )
+
+    if metadata.st_uid != 0:
+        raise InvalidRecord(
+            "Proxy authorization root is not root-owned."
+        )
+
+    if metadata.st_gid != group_gid:
+        raise InvalidRecord(
+            "Proxy authorization root group is invalid."
+        )
+
+    if stat.S_IMODE(metadata.st_mode) != 0o750:
+        raise InvalidRecord(
+            "Proxy authorization root mode is invalid."
+        )
+
+
+def parse_secure_record(
+    path: Path,
+    *,
+    expected_keys: set[str],
+    group_gid: int,
+) -> tuple[dict[str, str], tuple[int, int, int]]:
+    metadata = path.lstat()
+
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or stat.S_ISLNK(metadata.st_mode)
+    ):
+        raise InvalidRecord(
+            f"{path.name}: not a regular file."
+        )
+
+    if metadata.st_uid != 0:
+        raise InvalidRecord(
+            f"{path.name}: not root-owned."
+        )
+
+    if metadata.st_gid != group_gid:
+        raise InvalidRecord(
+            f"{path.name}: unexpected group."
+        )
+
+    if stat.S_IMODE(metadata.st_mode) != 0o640:
+        raise InvalidRecord(
+            f"{path.name}: unexpected mode."
+        )
+
+    values: dict[str, str] = {}
+
+    for raw_line in path.read_text().splitlines():
+        if "=" not in raw_line:
+            raise InvalidRecord(
+                f"{path.name}: malformed record."
+            )
+
+        key, value = raw_line.split("=", 1)
+
+        if (
+            key not in expected_keys
+            or key in values
+        ):
+            raise InvalidRecord(
+                f"{path.name}: invalid key."
+            )
+
+        values[key] = value
+
+    if set(values) != expected_keys:
+        raise InvalidRecord(
+            f"{path.name}: incomplete record."
+        )
+
+    fingerprint = (
+        metadata.st_ino,
+        metadata.st_mtime_ns,
+        metadata.st_size,
+    )
+
+    return values, fingerprint
+
+
+def validate_binding(
+    path: Path,
+    values: dict[str, str],
+) -> None:
+    match = BINDING_NAME.fullmatch(
+        path.name
+    )
+
+    if not match:
+        raise InvalidRecord(
+            f"{path.name}: invalid filename."
+        )
+
+    notebook_id = match.group(1)
+
+    if values["version"] != "1":
+        raise InvalidRecord(
+            f"{path.name}: invalid version."
+        )
+
+    if values["notebook_id"] != notebook_id:
+        raise InvalidRecord(
+            f"{path.name}: notebook mismatch."
+        )
+
+    if not OWNER_RE.fullmatch(
+        values["owner"]
+    ):
+        raise InvalidRecord(
+            f"{path.name}: invalid owner."
+        )
+
+    if not RUN_ID_RE.fullmatch(
+        values["run_id"]
+    ):
+        raise InvalidRecord(
+            f"{path.name}: invalid run ID."
+        )
+
+    if not DIGITS_RE.fullmatch(
+        values["job_id"]
+    ):
+        raise InvalidRecord(
+            f"{path.name}: invalid job ID."
+        )
+
+    if values["host"] not in ALLOWED_HOSTS:
+        raise InvalidRecord(
+            f"{path.name}: invalid host."
+        )
+
+    if not DIGITS_RE.fullmatch(
+        values["port"]
+    ):
+        raise InvalidRecord(
+            f"{path.name}: invalid port."
+        )
+
+    port = int(values["port"])
+
+    if not 1024 <= port <= 65535:
+        raise InvalidRecord(
+            f"{path.name}: invalid port range."
+        )
+
+
+def binding_unchanged(
+    path: Path,
+    fingerprint: tuple[int, int, int],
+) -> bool:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+
+    current = (
+        metadata.st_ino,
+        metadata.st_mtime_ns,
+        metadata.st_size,
+    )
+
+    return current == fingerprint
+
+
+def running_jobs() -> dict[str, tuple[str, str]]:
+    result = subprocess.run(
+        [
+            "/usr/bin/squeue",
+            "--noheader",
+            "--states=RUNNING",
+            "--format=%i|%u|%N",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+
+    jobs: dict[str, tuple[str, str]] = {}
+
+    for raw_line in result.stdout.splitlines():
+        fields = raw_line.strip().split("|")
+
+        if len(fields) != 3:
+            continue
+
+        job_id, owner, node = fields
+
+        if not DIGITS_RE.fullmatch(job_id):
+            continue
+
+        jobs[job_id] = (
+            owner,
+            node,
+        )
+
+    return jobs
+
+
+def remove_lease(root: Path, notebook_id: str) -> None:
+    path = (
+        root
+        / f"notebook_{notebook_id}.lease"
+    )
+
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return
+
+    if (
+        stat.S_ISREG(metadata.st_mode)
+        or stat.S_ISLNK(metadata.st_mode)
+    ):
+        path.unlink(missing_ok=True)
+
+
+def write_lease(
+    root: Path,
+    values: dict[str, str],
+    *,
+    group_gid: int,
+    validated_at: int,
+) -> None:
+    notebook_id = values["notebook_id"]
+
+    lease_path = (
+        root
+        / f"notebook_{notebook_id}.lease"
+    )
+
+    payload = "\n".join(
+        (
+            "version=1",
+            f"notebook_id={notebook_id}",
+            f"owner={values['owner']}",
+            f"run_id={values['run_id']}",
+            f"job_id={values['job_id']}",
+            f"host={values['host']}",
+            f"port={values['port']}",
+            f"validated_at={validated_at}",
+            "",
+        )
+    )
+
+    descriptor, temporary_name = (
+        tempfile.mkstemp(
+            prefix=(
+                f".notebook_{notebook_id}"
+                ".lease."
+            ),
+            dir=root,
+            text=True,
+        )
+    )
+
+    temporary = Path(
+        temporary_name
+    )
+
+    try:
+        os.fchmod(
+            descriptor,
+            0o640,
+        )
+
+        os.fchown(
+            descriptor,
+            0,
+            group_gid,
+        )
+
+        with os.fdopen(
+            descriptor,
+            "w",
+            encoding="utf-8",
+        ) as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(
+                handle.fileno()
+            )
+
+        os.replace(
+            temporary,
+            lease_path,
+        )
+
+    finally:
+        temporary.unlink(
+            missing_ok=True
+        )
+
+
+def reconcile() -> int:
+    try:
+        group_gid = (
+            grp.getgrnam(
+                BINDING_GROUP
+            ).gr_gid
+        )
+    except KeyError:
+        print(
+            "status=error "
+            "reason=binding_group_missing"
+        )
+        return 1
+
+    if not BINDING_ROOT.exists():
+        print(
+            "status=ok "
+            "bindings=0 renewed=0 denied=0"
+        )
+        return 0
+
+    try:
+        validate_root(
+            BINDING_ROOT,
+            group_gid,
+        )
+    except InvalidRecord as exc:
+        print(
+            "status=error "
+            f"reason={exc}"
+        )
+        return 1
+
+    try:
+        jobs = running_jobs()
+    except (
+        subprocess.SubprocessError,
+        OSError,
+    ) as exc:
+        # Do NOT refresh leases if Slurm cannot be
+        # authoritatively queried. Existing leases
+        # naturally expire and authorization fails closed.
+        print(
+            "status=error "
+            "reason=squeue_failed "
+            f"detail={type(exc).__name__}"
+        )
+        return 1
+
+    now = int(
+        time.time()
+    )
+
+    total = 0
+    renewed = 0
+    denied = 0
+    live_notebooks: set[str] = set()
+
+    for path in sorted(
+        BINDING_ROOT.glob(
+            "notebook_*.binding"
+        )
+    ):
+        total += 1
+
+        try:
+            values, fingerprint = (
+                parse_secure_record(
+                    path,
+                    expected_keys=BINDING_KEYS,
+                    group_gid=group_gid,
+                )
+            )
+
+            validate_binding(
+                path,
+                values,
+            )
+
+        except (
+            InvalidRecord,
+            OSError,
+            UnicodeError,
+        ):
+            match = BINDING_NAME.fullmatch(
+                path.name
+            )
+
+            if match:
+                remove_lease(
+                    BINDING_ROOT,
+                    match.group(1),
+                )
+
+            denied += 1
+            continue
+
+        notebook_id = (
+            values["notebook_id"]
+        )
+
+        live_notebooks.add(
+            notebook_id
+        )
+
+        job = jobs.get(
+            values["job_id"]
+        )
+
+        valid_job = (
+            job is not None
+            and job[0] == values["owner"]
+            and job[1] == values["host"]
+        )
+
+        if not valid_job:
+            if binding_unchanged(
+                path,
+                fingerprint,
+            ):
+                remove_lease(
+                    BINDING_ROOT,
+                    notebook_id,
+                )
+
+            denied += 1
+            continue
+
+        if not binding_unchanged(
+            path,
+            fingerprint,
+        ):
+            # A new broker binding won the race.
+            # Its identity must be reconciled on the
+            # next timer invocation.
+            denied += 1
+            continue
+
+        write_lease(
+            BINDING_ROOT,
+            values,
+            group_gid=group_gid,
+            validated_at=now,
+        )
+
+        renewed += 1
+
+    for lease in sorted(
+        BINDING_ROOT.glob(
+            "notebook_*.lease"
+        )
+    ):
+        match = LEASE_NAME.fullmatch(
+            lease.name
+        )
+
+        if (
+            match
+            and match.group(1)
+            not in live_notebooks
+        ):
+            remove_lease(
+                BINDING_ROOT,
+                match.group(1),
+            )
+
+    print(
+        "status=ok "
+        f"bindings={total} "
+        f"renewed={renewed} "
+        f"denied={denied}"
+    )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        reconcile()
+    )

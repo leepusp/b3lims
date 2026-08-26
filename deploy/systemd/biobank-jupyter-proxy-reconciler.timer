@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Biobank Jupyter proxy authorization leases
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=5s
+RandomizedDelaySec=2s
+Unit=biobank-jupyter-proxy-reconciler.service
+
+[Install]
+WantedBy=timers.target
