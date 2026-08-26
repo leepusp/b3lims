@@ -142,6 +142,38 @@ class IndependentJupyterViewTests(TestCase):
             node="gn03",
         )
 
+    @patch(
+        "core.views.internal.lab_tools.jupyter."
+        "start_session"
+    )
+    def test_launch_does_not_show_redundant_submission_banner(
+        self,
+        mocked_start_session,
+    ):
+        response = self.client.post(
+            reverse("jupyter_launch"),
+            {
+                "title": "Quiet cluster analysis",
+                "partition": "basic",
+                "node": "gn03",
+                "cpus": "2",
+                "memory_mb": "8192",
+                "hours": "1",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertNotContains(
+            response,
+            "Persistent Jupyter session submitted to Slurm.",
+        )
+
+        mocked_start_session.assert_called_once()
+
     def test_launch_form_exposes_compute_node_selection(self):
         response = self.client.get(
             reverse("jupyter_launch")

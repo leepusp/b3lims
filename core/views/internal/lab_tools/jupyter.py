@@ -415,11 +415,6 @@ def jupyter_launch(request):
                 partition=launch["partition"],
                 node=launch["node"],
             )
-            messages.success(
-                request,
-                "Persistent Jupyter session submitted "
-                "to Slurm.",
-            )
     except JupyterNotebookError as exc:
         if created and not notebook.sessions.exists():
             try:
