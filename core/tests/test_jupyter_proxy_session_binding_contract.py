@@ -100,6 +100,70 @@ class JupyterIndependentProxyContractTests(
             source,
         )
 
+    def test_binding_removal_uses_shell_owner_parser(
+        self,
+    ):
+        source = BROKER.read_text()
+
+        start = source.index(
+            "remove_proxy_binding() {"
+        )
+        end = source.index(
+            "\n}\n\nwrite_proxy_lease()",
+            start,
+        )
+
+        block = source[
+            start:end
+        ]
+
+        self.assertNotIn(
+            "/usr/bin/awk",
+            block,
+        )
+        self.assertIn(
+            "while IFS= read -r line",
+            block,
+        )
+        self.assertIn(
+            'owner_marker="${line#owner=}"',
+            block,
+        )
+        self.assertIn(
+            "owner_seen=1",
+            block,
+        )
+        self.assertIn(
+            "Jupyter proxy binding owner is duplicated.",
+            block,
+        )
+        self.assertIn(
+            'test "$owner_marker" = "$APP_USER"',
+            block,
+        )
+
+    def test_broker_shell_source_is_parseable(
+        self,
+    ):
+        import subprocess
+
+        result = subprocess.run(
+            [
+                "/usr/bin/bash",
+                "-n",
+                str(BROKER),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            result.stderr,
+        )
+
     def test_broker_validates_slurm_identity_and_node(
         self,
     ):

@@ -287,7 +287,8 @@ proxy_lease_path() {
 
 remove_proxy_binding() {
     local notebook_id="$1"
-    local path lease owner_marker
+    local path lease owner_marker line
+    local owner_seen=0
 
     path="$(proxy_binding_path "$notebook_id")"
     lease="$(proxy_lease_path "$notebook_id")"
@@ -301,19 +302,23 @@ remove_proxy_binding() {
         test -f "$path" ||
             fail "Jupyter proxy binding is not a regular file."
 
-        owner_marker="$(
-            /usr/bin/awk \
-                -F= \
-                '$1 == "owner" {
-                    print substr(
-                        $0,
-                        index($0, "=") + 1
-                    );
-                    exit
-                }' \
-                "$path"
-        )"
+        owner_marker=""
 
+        while IFS= read -r line ||
+              test -n "$line"
+        do
+            case "$line" in
+                owner=*)
+                    test "$owner_seen" -eq 0 ||
+                        fail "Jupyter proxy binding owner is duplicated."
+
+                    owner_marker="${line#owner=}"
+                    owner_seen=1
+                    ;;
+            esac
+        done < "$path"
+
+        test "$owner_seen" -eq 1 &&
         test -n "$owner_marker" ||
             fail "Jupyter proxy binding owner is missing."
 
