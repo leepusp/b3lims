@@ -391,3 +391,95 @@ class JupyterProxyLeaseContractTests(
             "ReadWritePaths=-/run/biobank-jupyter-proxy",
             unit,
         )
+
+class JupyterProxyLogHygieneContractTests(
+    SimpleTestCase
+):
+    def test_jupyter_proxy_suppresses_ood_info_request_logger(
+        self,
+    ):
+        proxy = (
+            ROOT
+            / "deploy"
+            / "ood"
+            / "biobank-node-proxy.conf"
+        ).read_text()
+
+        self.assertIn(
+            "LogLevel lua_module:warn",
+            proxy,
+        )
+
+        # Keep the suppression scoped to the Biobank Jupyter
+        # LocationMatch rather than modifying the OOD vendor logger.
+        location_start = proxy.index(
+            '<LocationMatch "^/biobank/internal/'
+            'lab-tools/jupyter/'
+        )
+        location_end = proxy.index(
+            "</LocationMatch>",
+            location_start,
+        )
+
+        location = proxy[
+            location_start:location_end
+        ]
+
+        self.assertIn(
+            "LogLevel lua_module:warn",
+            location,
+        )
+
+        self.assertNotRegex(
+            location,
+            r"(?m)^[ \\t]*LuaHookLog\\b",
+        )
+
+    def test_ood_access_log_contract_omits_query_string(
+        self,
+    ):
+        contract = (
+            ROOT
+            / "deploy"
+            / "ood"
+            / "biobank-ood-log-hygiene.yml"
+        ).read_text()
+
+        self.assertIn(
+            "%m %U %H",
+            contract,
+        )
+
+        self.assertNotIn(
+            "%r",
+            contract.split(
+                "logformat:",
+                1,
+            )[1],
+        )
+
+        self.assertNotIn(
+            "%q",
+            contract.split(
+                "logformat:",
+                1,
+            )[1],
+        )
+
+        self.assertNotIn(
+            "QUERY_STRING",
+            contract.split(
+                "logformat:",
+                1,
+            )[1],
+        )
+
+        self.assertIn(
+            "%{Referer}i",
+            contract,
+        )
+
+        self.assertIn(
+            "%{User-Agent}i",
+            contract,
+        )

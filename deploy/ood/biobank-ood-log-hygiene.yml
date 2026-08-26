@@ -1,0 +1,17 @@
+# Biobank/Open OnDemand logging deployment contract.
+#
+# Merge the active setting below into:
+#   /etc/ood/config/ood_portal.yml
+#
+# The Open OnDemand portal generator uses this value to emit:
+#
+#   LogFormat <value>
+#   TransferLog <accesslog>
+#
+# The format intentionally uses %m %U %H rather than %r.
+#
+# %U records the requested URL path without the query string.
+# This prevents bearer tokens and other query-string credentials
+# from being persisted in the portal access log.
+
+logformat: '"%h %l %u %t \"%m %U %H\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\""'
