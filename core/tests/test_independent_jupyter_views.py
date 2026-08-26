@@ -530,17 +530,16 @@ class IndependentJupyterViewTests(TestCase):
 
     @patch(
         "core.views.internal.lab_tools.jupyter."
-        "connection_redirect_path",
-        return_value="/managed-jupyterlab",
+        "connection_target"
     )
     @patch(
         "core.views.internal.lab_tools.jupyter."
-        "active_session_for_notebook",
+        "active_session_for_notebook"
     )
     def test_connect_forwards_managed_lab_interface(
         self,
         mocked_active_session,
-        mocked_redirect_path,
+        mocked_target,
     ):
         notebook = JupyterNotebook.objects.create(
             title="Managed lab redirect",
@@ -555,6 +554,16 @@ class IndependentJupyterViewTests(TestCase):
         session = object()
         mocked_active_session.return_value = session
 
+        target = mocked_target.return_value
+        target.redirect_path = "/managed-jupyterlab"
+        target.cookie_path = (
+            "/biobank/internal/lab-tools/jupyter/"
+            f"{notebook.id}/node/gn03/45679/"
+        )
+        target.token = (
+            "protected-lab-token-value-1234567890"
+        )
+
         response = self.client.get(
             reverse(
                 "jupyter_connect",
@@ -563,12 +572,32 @@ class IndependentJupyterViewTests(TestCase):
             {"interface": "lab"},
         )
 
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
         self.assertEqual(
             response.url,
             "/managed-jupyterlab",
         )
-        mocked_redirect_path.assert_called_once_with(
+        self.assertNotIn(
+            "?token=",
+            response.url,
+        )
+
+        cookie = response.cookies[
+            "__Secure-biobank-jupyter-token"
+        ]
+        self.assertEqual(
+            cookie.value,
+            target.token,
+        )
+        self.assertEqual(
+            cookie["path"],
+            target.cookie_path,
+        )
+
+        mocked_target.assert_called_once_with(
             session,
             interface="lab",
         )

@@ -12,7 +12,7 @@ from core.models.lab_tools.notebook import (
 )
 from core.services.jupyter_server import (
     _validate_resources,
-    connection_redirect_path,
+    connection_target,
     delete_notebook_workspace,
     load_notebook_document,
     notebook_file_for_notebook,
@@ -368,8 +368,10 @@ class OfficialJupyterServerTests(TestCase):
         )
 
         connection_file = (
-            run_directory / "connection.json"
+            run_directory
+            / "connection.json"
         )
+
         connection_file.write_text(
             json.dumps(
                 {
@@ -377,13 +379,16 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
+                        f"/biobank/internal/lab-tools/"
+                        f"jupyter/{self.notebook.id}/"
+                        "node/gn03/45678/"
                     ),
                     "default_url": (
                         "/tree/notebook.ipynb"
                     ),
                     "token": (
-                        "protected-token-value"
+                        "protected-token-value-"
+                        "abcdefghijklmnopqrstuvwxyz123456"
                     ),
                 }
             )
@@ -400,7 +405,9 @@ class OfficialJupyterServerTests(TestCase):
             cpus=2,
             memory_mb=4096,
             time_minutes=60,
-            run_directory=str(run_directory),
+            run_directory=str(
+                run_directory
+            ),
             ready_at=timezone.now(),
             kernel_info={
                 "official_server": True,
@@ -408,7 +415,9 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
+                        f"/biobank/internal/lab-tools/"
+                        f"jupyter/{self.notebook.id}/"
+                        "node/gn03/45678/"
                     ),
                 },
             },
@@ -419,34 +428,48 @@ class OfficialJupyterServerTests(TestCase):
             "refresh_session",
             return_value=session,
         ):
-            redirect_path = (
-                connection_redirect_path(
-                    session
-                )
+            target = connection_target(
+                session
             )
-            lab_redirect_path = (
-                connection_redirect_path(
-                    session,
-                    interface="lab",
-                )
+            lab_target = connection_target(
+                session,
+                interface="lab",
             )
 
-        self.assertEqual(
-            redirect_path,
-            (
-                f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
-                "tree/notebook.ipynb"
-                "?token=protected-token-value"
-            ),
+        expected_base = (
+            f"/biobank/internal/lab-tools/"
+            f"jupyter/{self.notebook.id}/"
+            "node/gn03/45678/"
         )
 
         self.assertEqual(
-            lab_redirect_path,
+            target.redirect_path,
             (
-                f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45678/"
-                "lab/tree/notebook.ipynb"
-                "?token=protected-token-value"
+                expected_base
+                + "tree/notebook.ipynb"
             ),
+        )
+        self.assertEqual(
+            lab_target.redirect_path,
+            (
+                expected_base
+                + "lab/tree/notebook.ipynb"
+            ),
+        )
+        self.assertEqual(
+            target.cookie_path,
+            expected_base,
+        )
+        self.assertEqual(
+            target.token,
+            (
+                "protected-token-value-"
+                "abcdefghijklmnopqrstuvwxyz123456"
+            ),
+        )
+        self.assertNotIn(
+            "?token=",
+            target.redirect_path,
         )
 
         session.refresh_from_db()

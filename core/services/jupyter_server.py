@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
-from urllib.parse import quote
 
 from django.conf import settings
 from django.utils import timezone
@@ -816,7 +816,28 @@ def stop_session(session, user):
     return session
 
 
-def connection_redirect_path(
+JUPYTER_PROXY_COOKIE_NAME = (
+    "__Secure-biobank-jupyter-token"
+)
+
+_ALLOWED_JUPYTER_PROXY_HOSTS = frozenset(
+    {
+        "n01",
+        "gn01",
+        "gn02",
+        "gn03",
+    }
+)
+
+
+@dataclass(frozen=True)
+class JupyterConnectionTarget:
+    redirect_path: str
+    cookie_path: str
+    token: str = field(repr=False)
+
+
+def connection_target(
     session,
     *,
     interface="notebook",
@@ -850,7 +871,8 @@ def connection_redirect_path(
         ValueError,
     ) as exc:
         raise JupyterNotebookError(
-            "The protected Jupyter connection is unavailable."
+            "The protected Jupyter connection "
+            "is unavailable."
         ) from exc
 
     host = str(connection.get("host") or "")
@@ -868,27 +890,39 @@ def connection_redirect_path(
         port = int(port)
     except (TypeError, ValueError) as exc:
         raise JupyterNotebookError(
-            "The protected connection port is invalid."
+            "The protected connection port "
+            "is invalid."
         ) from exc
 
-    expected_base = f"/biobank/internal/lab-tools/jupyter/{session.notebook_id}/node/{host}/{port}/"
+    expected_base = (
+        "/biobank/internal/lab-tools/"
+        f"jupyter/{session.notebook_id}/"
+        f"node/{host}/{port}/"
+    )
 
     if (
-        not host
-        or not 1 <= port <= 65535
+        host not in _ALLOWED_JUPYTER_PROXY_HOSTS
+        or not 1024 <= port <= 65535
         or base_url != expected_base
-        or not SAFE_BASE_URL_RE.fullmatch(base_url)
-        or not token
+        or not SAFE_BASE_URL_RE.fullmatch(
+            base_url
+        )
+        or not re.fullmatch(
+            r"[A-Za-z0-9_-]{32,256}",
+            token,
+        )
         or not default_url.startswith("/")
         or default_url.startswith("//")
+        or "?" in default_url
+        or "#" in default_url
     ):
         raise JupyterNotebookError(
-            "The protected Jupyter connection is invalid."
+            "The protected Jupyter connection "
+            "is invalid."
         )
 
     safe_server = (
-        session.kernel_info
-        .get("server", {})
+        session.kernel_info.get("server", {})
         if isinstance(
             session.kernel_info,
             dict,
@@ -897,26 +931,49 @@ def connection_redirect_path(
     )
 
     if safe_server:
+        try:
+            safe_port = int(
+                safe_server.get("port")
+            )
+        except (
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise JupyterNotebookError(
+                "The Jupyter connection metadata "
+                "does not match."
+            ) from exc
+
         if (
-            str(safe_server.get("host")) != host
-            or int(safe_server.get("port")) != port
+            str(
+                safe_server.get("host")
+            ) != host
+            or safe_port != port
             or str(
                 safe_server.get("base_url")
             ) != base_url
         ):
             raise JupyterNotebookError(
-                "The Jupyter connection metadata does not match."
+                "The Jupyter connection metadata "
+                "does not match."
             )
 
     target_url = default_url
 
     if interface == "lab":
-        target_url = "/lab/tree/notebook.ipynb"
+        target_url = (
+            "/lab/tree/notebook.ipynb"
+        )
 
-    return (
+    redirect_path = (
         f"{base_url.rstrip('/')}"
         f"{target_url}"
-        f"?token={quote(token, safe='')}"
+    )
+
+    return JupyterConnectionTarget(
+        redirect_path=redirect_path,
+        cookie_path=base_url,
+        token=token,
     )
 
 

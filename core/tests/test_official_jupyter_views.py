@@ -98,7 +98,7 @@ class OfficialJupyterViewTests(TestCase):
 
     @patch(
         "core.views.internal.lab_tools.jupyter."
-        "connection_redirect_path"
+        "connection_target"
     )
     @patch(
         "core.views.internal.lab_tools.jupyter."
@@ -110,11 +110,18 @@ class OfficialJupyterViewTests(TestCase):
         mocked_connection,
     ):
         mocked_active.return_value = self.session
-        mocked_connection.return_value = (
-            f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
+
+        target = mocked_connection.return_value
+        target.redirect_path = (
+            f"/biobank/internal/lab-tools/jupyter/"
+            f"{self.notebook.id}/node/gn03/45679/"
             "tree/notebook.ipynb"
-            "?token=protected-connect-token"
         )
+        target.cookie_path = (
+            f"/biobank/internal/lab-tools/jupyter/"
+            f"{self.notebook.id}/node/gn03/45679/"
+        )
+        target.token = "protected-connect-token-value-1234567890"
 
         response = self.client.get(
             reverse(
@@ -129,12 +136,36 @@ class OfficialJupyterViewTests(TestCase):
         )
         self.assertEqual(
             response["Location"],
-            (
-                f"/biobank/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
-                "tree/notebook.ipynb"
-                "?token=protected-connect-token"
-            ),
+            target.redirect_path,
         )
+        self.assertNotIn(
+            "?token=",
+            response["Location"],
+        )
+
+        cookie = response.cookies[
+            "__Secure-biobank-jupyter-token"
+        ]
+
+        self.assertEqual(
+            cookie.value,
+            target.token,
+        )
+        self.assertEqual(
+            cookie["path"],
+            target.cookie_path,
+        )
+        self.assertTrue(
+            cookie["secure"]
+        )
+        self.assertTrue(
+            cookie["httponly"]
+        )
+        self.assertEqual(
+            cookie["samesite"],
+            "Strict",
+        )
+
         self.assertIn(
             "no-store",
             response["Cache-Control"],

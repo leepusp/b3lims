@@ -1,0 +1,5 @@
+Defaults!/usr/local/sbin/biobank-user-storage-broker !requiretty
+Defaults!/usr/local/sbin/biobank-jupyter-server-broker !requiretty
+
+biobank ALL=(root) NOPASSWD: /usr/local/sbin/biobank-user-storage-broker *
+biobank ALL=(root) NOPASSWD: /usr/local/sbin/biobank-jupyter-server-broker *

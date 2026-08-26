@@ -29,7 +29,8 @@ from core.services.jupyter_server import (
     ACTIVE_STATUSES,
     active_session_for_notebook,
     can_edit_notebook,
-    connection_redirect_path,
+    JUPYTER_PROXY_COOKIE_NAME,
+    connection_target,
     delete_notebook_workspace,
     load_notebook_document,
     refresh_session,
@@ -527,7 +528,7 @@ def jupyter_connect(request, notebook_id):
                 "Slurm session."
             )
 
-        redirect_path = connection_redirect_path(
+        target = connection_target(
             session,
             interface=request.GET.get(
                 "interface",
@@ -537,26 +538,51 @@ def jupyter_connect(request, notebook_id):
     except JupyterNotebookError as exc:
         response = HttpResponse(
             str(exc),
-            content_type="text/plain; charset=utf-8",
+            content_type=(
+                "text/plain; charset=utf-8"
+            ),
             status=409,
         )
         response["Cache-Control"] = (
-            "no-store, no-cache, must-revalidate, private"
+            "no-store, no-cache, "
+            "must-revalidate, private"
         )
         response["Pragma"] = "no-cache"
-        response["Referrer-Policy"] = "no-referrer"
-        response["X-Robots-Tag"] = "noindex, nofollow"
+        response["Referrer-Policy"] = (
+            "no-referrer"
+        )
+        response["X-Robots-Tag"] = (
+            "noindex, nofollow"
+        )
         return response
 
     response = HttpResponseRedirect(
-        redirect_path
+        target.redirect_path
     )
+
+    # Bootstrap the native Jupyter bearer credential without
+    # exposing it in the URL, JavaScript, or local storage.
+    # The cookie is limited to this exact active Jupyter base path.
+    response.set_cookie(
+        JUPYTER_PROXY_COOKIE_NAME,
+        target.token,
+        secure=True,
+        httponly=True,
+        samesite="Strict",
+        path=target.cookie_path,
+    )
+
     response["Cache-Control"] = (
-        "no-store, no-cache, must-revalidate, private"
+        "no-store, no-cache, "
+        "must-revalidate, private"
     )
     response["Pragma"] = "no-cache"
-    response["Referrer-Policy"] = "no-referrer"
-    response["X-Robots-Tag"] = "noindex, nofollow"
+    response["Referrer-Policy"] = (
+        "no-referrer"
+    )
+    response["X-Robots-Tag"] = (
+        "noindex, nofollow"
+    )
 
     return response
 
