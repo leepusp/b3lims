@@ -156,8 +156,110 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             apache,
         )
 
-        # Public is intentionally still PAM-protected in this
-        # migration candidate.
+        # The PAM service namespace is intentionally unchanged
+        # during the public informational boundary phase.
+        self.assertIn(
+            "AuthPAMService galaxy",
+            apache,
+        )
+
+    def test_public_informational_boundary_is_explicit(self):
+        apache = (
+            Path(settings.BASE_DIR)
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        self.assertIn(
+            '<LocationMatch "^/c3-lims(?:$|/)">',
+            apache,
+        )
+        self.assertIn(
+            "RequestHeader unset X-Biobank-Pam-User",
+            apache,
+        )
+        self.assertIn(
+            "public/(?:$|about/$|governance/$|"
+            "collections/$|collections/[0-9]+/$)",
+            apache,
+        )
+
+        # Shipment routes must not be part of the anonymous
+        # informational whitelist.
+        self.assertNotIn(
+            "public/shipments",
+            apache.split(
+                "<LocationMatch",
+            )[2].split(
+                ">",
+                1,
+            )[0],
+        )
+
+    def test_public_boundary_sanitizes_before_authentication(self):
+        apache = (
+            Path(settings.BASE_DIR)
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        sanitize = apache.index(
+            '<LocationMatch "^/c3-lims(?:$|/)">'
+        )
+        unset_identity = apache.index(
+            "RequestHeader unset X-Biobank-Pam-User",
+            sanitize,
+        )
+        authenticated = apache.index(
+            "AuthType Basic",
+            unset_identity,
+        )
+        set_identity = apache.index(
+            'RequestHeader set X-Biobank-Pam-User '
+            '"expr=%{REMOTE_USER}"',
+            authenticated,
+        )
+
+        self.assertLess(
+            sanitize,
+            unset_identity,
+        )
+        self.assertLess(
+            unset_identity,
+            authenticated,
+        )
+        self.assertLess(
+            authenticated,
+            set_identity,
+        )
+
+    def test_public_shipments_remain_pam_protected(self):
+        apache = (
+            Path(settings.BASE_DIR)
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        authentication_match = next(
+            line
+            for line in apache.splitlines()
+            if line.startswith(
+                '<LocationMatch "^/c3-lims($|/'
+            )
+        )
+
+        self.assertIn(
+            "public/(?:$|about/$|governance/$|"
+            "collections/$|collections/[0-9]+/$)",
+            authentication_match,
+        )
+        self.assertNotIn(
+            "shipments",
+            authentication_match,
+        )
         self.assertIn(
             "AuthPAMService galaxy",
             apache,
