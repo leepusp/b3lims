@@ -11,7 +11,11 @@
 # The format intentionally uses %m %U %H rather than %r.
 #
 # %U records the requested URL path without the query string.
-# This prevents bearer tokens and other query-string credentials
-# from being persisted in the portal access log.
+# Raw Referer logging is intentionally omitted because a Referer
+# may itself contain a credential-bearing URL.
+#
+# Together these controls prevent Jupyter bearer tokens and other
+# query-string credentials from being persisted in the portal
+# access log through either the request target or Referer header.
 
-logformat: '"%h %l %u %t \"%m %U %H\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\""'
+logformat: '"%h %l %u %t \"%m %U %H\" %>s %b \"%{User-Agent}i\""'

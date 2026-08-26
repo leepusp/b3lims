@@ -474,12 +474,17 @@ class JupyterProxyLogHygieneContractTests(
             )[1],
         )
 
-        self.assertIn(
+        logformat = contract.split(
+            "logformat:",
+            1,
+        )[1]
+
+        self.assertNotIn(
             "%{Referer}i",
-            contract,
+            logformat,
         )
 
         self.assertIn(
             "%{User-Agent}i",
-            contract,
+            logformat,
         )
