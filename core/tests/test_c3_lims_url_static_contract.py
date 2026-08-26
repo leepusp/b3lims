@@ -156,10 +156,10 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             apache,
         )
 
-        # The PAM service namespace is intentionally unchanged
-        # during the public informational boundary phase.
+        # C3 LIMS uses its own PAM service namespace while
+        # preserving the validated PAM policy stack.
         self.assertIn(
-            "AuthPAMService galaxy",
+            "AuthPAMService biobank",
             apache,
         )
 
@@ -261,9 +261,55 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             authentication_match,
         )
         self.assertIn(
+            "AuthPAMService biobank",
+            apache,
+        )
+
+    def test_c3_lims_uses_dedicated_pam_service(self):
+        base = Path(settings.BASE_DIR)
+
+        apache = (
+            base
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        pam_service = (
+            base
+            / "deploy"
+            / "pam"
+            / "biobank"
+        )
+
+        self.assertIn(
+            "AuthPAMService biobank",
+            apache,
+        )
+        self.assertNotIn(
             "AuthPAMService galaxy",
             apache,
         )
+
+        self.assertTrue(
+            pam_service.is_file(),
+        )
+
+        pam = pam_service.read_text()
+
+        for directive in (
+            "auth       substack     system-auth",
+            "auth       include      postlogin",
+            "account    required     pam_nologin.so",
+            "account    include      system-auth",
+            "password   include      system-auth",
+            "session    include      system-auth",
+            "session    include      postlogin",
+        ):
+            self.assertIn(
+                directive,
+                pam,
+            )
 
     def test_only_controlled_old_navigation_redirects_remain(self):
         apache = (
