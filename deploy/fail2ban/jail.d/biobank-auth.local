@@ -1,0 +1,20 @@
+[biobank-auth]
+
+enabled = true
+
+filter = biobank-auth
+backend = systemd
+
+# Prevent administrative localhost probes from creating a local ban.
+ignoreip = 127.0.0.0/8 ::1
+
+# Five failed PAM authentications within ten minutes result in a
+# one-hour C3 LIMS private-control-plane ban.
+maxretry = 5
+findtime = 600
+bantime = 3600
+
+usedns = no
+
+# Explicit custom action: no inherited firewall action is used.
+action = biobank-path-state

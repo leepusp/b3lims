@@ -1,0 +1,554 @@
+#!/usr/bin/env python3
+
+import grp
+import ipaddress
+import os
+import re
+import stat
+import sys
+import tempfile
+import time
+from decimal import (
+    Decimal,
+    InvalidOperation,
+    ROUND_CEILING,
+)
+from pathlib import Path
+
+
+DEFAULT_STATE_ROOT = Path(
+    "/run/biobank-auth-guard"
+)
+
+STATE_ROOT = Path(
+    os.environ.get(
+        "BIOBANK_AUTH_GUARD_STATE_ROOT",
+        str(DEFAULT_STATE_ROOT),
+    )
+)
+
+READER_GROUP = os.environ.get(
+    "BIOBANK_AUTH_GUARD_READER_GROUP",
+    "apache",
+)
+
+DIRECTORY_MODE = 0o750
+FILE_MODE = 0o640
+
+SAFE_IP = re.compile(
+    r"^[0-9A-Fa-f:.]+$"
+)
+
+SAFE_INTEGER = re.compile(
+    r"^[0-9]+$"
+)
+
+SAFE_TIMESTAMP = re.compile(
+    r"^[0-9]+(?:\.[0-9]+)?$"
+)
+
+
+def fail(message):
+    print(
+        f"ERROR: {message}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+
+def ensure_root():
+    if os.geteuid() != 0:
+        fail(
+            "state helper must run as root."
+        )
+
+
+def reader_gid():
+    try:
+        return grp.getgrnam(
+            READER_GROUP
+        ).gr_gid
+    except KeyError:
+        fail(
+            "reader group does not exist: "
+            f"{READER_GROUP}"
+        )
+
+
+def validate_ip(raw):
+    if not raw:
+        fail(
+            "IP address is empty."
+        )
+
+    if len(raw) > 64:
+        fail(
+            "IP address is too long."
+        )
+
+    if not SAFE_IP.fullmatch(
+        raw
+    ):
+        fail(
+            "IP address contains invalid characters."
+        )
+
+    try:
+        ipaddress.ip_address(
+            raw
+        )
+    except ValueError:
+        fail(
+            f"invalid IP address: {raw}"
+        )
+
+    return raw.lower()
+
+
+def parse_integer(
+    raw,
+    label,
+    *,
+    minimum=0,
+):
+    if not SAFE_INTEGER.fullmatch(
+        str(raw or "")
+    ):
+        fail(
+            f"{label} must be an integer."
+        )
+
+    value = int(
+        raw
+    )
+
+    if value < minimum:
+        fail(
+            f"{label} is below its minimum."
+        )
+
+    return value
+
+
+def parse_timestamp(
+    raw,
+    label,
+):
+    text = str(
+        raw or ""
+    )
+
+    if len(text) > 32:
+        fail(
+            f"{label} is too long."
+        )
+
+    if not SAFE_TIMESTAMP.fullmatch(
+        text
+    ):
+        fail(
+            f"{label} must be a positive "
+            "Unix timestamp."
+        )
+
+    try:
+        value = Decimal(
+            text
+        )
+    except InvalidOperation:
+        fail(
+            f"{label} is not a valid timestamp."
+        )
+
+    if (
+        not value.is_finite()
+        or value < 1
+    ):
+        fail(
+            f"{label} must be positive."
+        )
+
+    return value
+
+
+def ensure_directory():
+    ensure_root()
+
+    gid = reader_gid()
+
+    if STATE_ROOT.exists():
+        info = os.lstat(
+            STATE_ROOT
+        )
+
+        if not stat.S_ISDIR(
+            info.st_mode
+        ):
+            fail(
+                "state root exists but is not "
+                "a directory."
+            )
+
+        if info.st_uid != 0:
+            fail(
+                "state root is not owned by root."
+            )
+
+        os.chown(
+            STATE_ROOT,
+            0,
+            gid,
+        )
+
+        os.chmod(
+            STATE_ROOT,
+            DIRECTORY_MODE,
+        )
+
+        return
+
+    STATE_ROOT.mkdir(
+        parents=True,
+        mode=DIRECTORY_MODE,
+    )
+
+    os.chown(
+        STATE_ROOT,
+        0,
+        gid,
+    )
+
+    os.chmod(
+        STATE_ROOT,
+        DIRECTORY_MODE,
+    )
+
+
+def check_directory():
+    ensure_root()
+
+    if not STATE_ROOT.exists():
+        raise SystemExit(1)
+
+    info = os.lstat(
+        STATE_ROOT
+    )
+
+    if not stat.S_ISDIR(
+        info.st_mode
+    ):
+        raise SystemExit(1)
+
+    if info.st_uid != 0:
+        raise SystemExit(1)
+
+    if info.st_gid != reader_gid():
+        raise SystemExit(1)
+
+    if stat.S_IMODE(
+        info.st_mode
+    ) != DIRECTORY_MODE:
+        raise SystemExit(1)
+
+
+def state_path(ip):
+    return STATE_ROOT / ip
+
+
+def parse_state(
+    path,
+    expected_ip,
+):
+    values = {}
+
+    try:
+        text = path.read_text(
+            encoding="utf-8"
+        )
+    except OSError as exc:
+        fail(
+            f"cannot read state file "
+            f"{path}: {exc}"
+        )
+
+    for line in text.splitlines():
+        if "=" not in line:
+            fail(
+                f"invalid state line in {path}"
+            )
+
+        key, value = line.split(
+            "=",
+            1,
+        )
+
+        if key in values:
+            fail(
+                f"duplicate state key in {path}: "
+                f"{key}"
+            )
+
+        values[key] = value
+
+    if values.get(
+        "version"
+    ) != "1":
+        fail(
+            f"unsupported state version in {path}"
+        )
+
+    if values.get(
+        "ip"
+    ) != expected_ip:
+        fail(
+            f"state IP mismatch in {path}"
+        )
+
+    expires_at = parse_integer(
+        values.get(
+            "expires_at",
+            "",
+        ),
+        "expires_at",
+        minimum=1,
+    )
+
+    return expires_at
+
+
+def prune_expired():
+    ensure_root()
+
+    if not STATE_ROOT.exists():
+        return
+
+    now = int(
+        time.time()
+    )
+
+    for entry in STATE_ROOT.iterdir():
+        if entry.name.startswith(
+            ".ban."
+        ):
+            entry.unlink(
+                missing_ok=True
+            )
+            continue
+
+        ip = validate_ip(
+            entry.name
+        )
+
+        expires_at = parse_state(
+            entry,
+            ip,
+        )
+
+        if expires_at <= now:
+            entry.unlink()
+
+
+def ban(
+    raw_ip,
+    raw_time,
+    raw_bantime,
+):
+    ensure_directory()
+
+    ip = validate_ip(
+        raw_ip
+    )
+
+    banned_at = parse_timestamp(
+        raw_time,
+        "ban time",
+    )
+
+    bantime = parse_integer(
+        raw_bantime,
+        "ban duration",
+        minimum=1,
+    )
+
+    # Fail2ban <time> is a fractional Unix timestamp.
+    # Store an integer expiration rounded upward so the
+    # local guard never shortens the configured ban.
+    expires_at = int(
+        (
+            banned_at
+            + Decimal(
+                bantime
+            )
+        ).to_integral_value(
+            rounding=ROUND_CEILING,
+        )
+    )
+
+    destination = state_path(
+        ip
+    )
+
+    gid = reader_gid()
+
+    fd, temporary = tempfile.mkstemp(
+        prefix=".ban.",
+        dir=STATE_ROOT,
+        text=True,
+    )
+
+    temporary_path = Path(
+        temporary
+    )
+
+    try:
+        with os.fdopen(
+            fd,
+            "w",
+            encoding="utf-8",
+        ) as handle:
+            handle.write(
+                "version=1\n"
+            )
+            handle.write(
+                f"ip={ip}\n"
+            )
+            handle.write(
+                f"expires_at={expires_at}\n"
+            )
+
+            handle.flush()
+
+            os.fsync(
+                handle.fileno()
+            )
+
+        os.chown(
+            temporary_path,
+            0,
+            gid,
+        )
+
+        os.chmod(
+            temporary_path,
+            FILE_MODE,
+        )
+
+        os.replace(
+            temporary_path,
+            destination,
+        )
+
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
+def unban(raw_ip):
+    ensure_root()
+
+    ip = validate_ip(
+        raw_ip
+    )
+
+    try:
+        state_path(
+            ip
+        ).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def flush():
+    ensure_root()
+
+    if not STATE_ROOT.exists():
+        return
+
+    for entry in STATE_ROOT.iterdir():
+        if entry.name.startswith(
+            ".ban."
+        ):
+            entry.unlink(
+                missing_ok=True
+            )
+            continue
+
+        validate_ip(
+            entry.name
+        )
+
+        entry.unlink()
+
+
+def stop():
+    ensure_root()
+
+    if not STATE_ROOT.exists():
+        return
+
+    flush()
+
+    STATE_ROOT.rmdir()
+
+
+def main():
+    if len(sys.argv) < 2:
+        fail(
+            "usage: biobank-auth-guard-state "
+            "{start|check|flush|stop|ban|unban} "
+            "[arguments]"
+        )
+
+    command = sys.argv[1]
+
+    if command == "start":
+        ensure_directory()
+        prune_expired()
+        return
+
+    if command == "check":
+        check_directory()
+        return
+
+    if command == "flush":
+        flush()
+        return
+
+    if command == "stop":
+        stop()
+        return
+
+    if command == "ban":
+        if len(sys.argv) != 5:
+            fail(
+                "ban requires IP, ban time, "
+                "and ban duration."
+            )
+
+        ban(
+            sys.argv[2],
+            sys.argv[3],
+            sys.argv[4],
+        )
+
+        return
+
+    if command == "unban":
+        if len(sys.argv) != 3:
+            fail(
+                "unban requires exactly one IP."
+            )
+
+        unban(
+            sys.argv[2]
+        )
+
+        return
+
+    fail(
+        f"unknown command: {command}"
+    )
+
+
+if __name__ == "__main__":
+    main()
