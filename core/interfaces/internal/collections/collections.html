@@ -141,7 +141,14 @@
                 {% for collection in collections %}
                     <tr>
                         <td>
-                            <div class="collection-name">{{ collection.name }}</div>
+                            <div class="collection-name">
+                                    <a
+                                        href="{% url 'collection_detail' collection.id %}"
+                                        class="text-decoration-none"
+                                    >
+                                        {{ collection.name }}
+                                    </a>
+                                </div>
                             <div class="collection-description">
                                 {{ collection.description|default:"No description registered."|truncatechars:100 }}
                             </div>

@@ -23,6 +23,8 @@ from core.permissions.collections import (
     visible_collections_for_user,
 )
 
+from core.permissions.samples import visible_samples_for_user
+
 
 @login_required
 def collections_dashboard_view(request):
@@ -165,4 +167,242 @@ def collection_create_view(request):
     return collections_list_view(
         request,
         template_name="internal/collections/collection_create.html",
+    )
+
+@login_required
+def collection_detail_view(
+    request,
+    collection_id,
+):
+    """
+    Interactive scientific overview for one Collection.
+
+    Collection authorization controls access to the Collection itself.
+    Sample-level authorization is evaluated independently before any
+    Sample metadata or aggregate is exposed.
+    """
+    collection = get_object_or_404(
+        Collection.objects
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "tags",
+            "keywords",
+        ),
+        pk=collection_id,
+        is_active=True,
+    )
+
+    if not can_view_collection(
+        request.user,
+        collection,
+    ):
+        raise PermissionDenied
+
+    samples_qs = (
+        visible_samples_for_user(
+            request.user
+        )
+        .filter(
+            collections=collection,
+        )
+        .select_related(
+            "biobank",
+            "owner",
+            "research_group",
+        )
+        .distinct()
+        .order_by(
+            "sample_id",
+            "pk",
+        )
+    )
+
+    total_samples = samples_qs.count()
+
+    sample_type_distribution = list(
+        samples_qs
+        .values(
+            "sample_type",
+        )
+        .annotate(
+            total=Count(
+                "id",
+            )
+        )
+        .order_by(
+            "-total",
+            "sample_type",
+        )
+    )
+
+    for row in sample_type_distribution:
+        row["label"] = (
+            row["sample_type"]
+            or "Unspecified"
+        )
+        row["filter_value"] = (
+            row["sample_type"]
+            or "__blank__"
+        )
+        row["percent"] = (
+            round(
+                (
+                    row["total"]
+                    / total_samples
+                )
+                * 100
+            )
+            if total_samples
+            else 0
+        )
+
+    biobank_distribution = list(
+        samples_qs
+        .values(
+            "biobank_id",
+            "biobank__name",
+        )
+        .annotate(
+            total=Count(
+                "id",
+            )
+        )
+        .order_by(
+            "-total",
+            "biobank__name",
+        )
+    )
+
+    for row in biobank_distribution:
+        row["label"] = (
+            row["biobank__name"]
+            or "Unassigned"
+        )
+        row["filter_value"] = (
+            str(
+                row["biobank_id"]
+            )
+            if row["biobank_id"]
+            is not None
+            else "__none__"
+        )
+        row["percent"] = (
+            round(
+                (
+                    row["total"]
+                    / total_samples
+                )
+                * 100
+            )
+            if total_samples
+            else 0
+        )
+
+    taxonomy_count = (
+        samples_qs
+        .filter(
+            taxonomy_assignments__isnull=False,
+        )
+        .distinct()
+        .count()
+    )
+
+    genome_count = (
+        samples_qs
+        .filter(
+            genome_assembly_assignments__isnull=False,
+        )
+        .distinct()
+        .count()
+    )
+
+    origin_count = (
+        samples_qs
+        .filter(
+            origin__isnull=False,
+        )
+        .distinct()
+        .count()
+    )
+
+    mapped_count = (
+        samples_qs
+        .filter(
+            origin__latitude__isnull=False,
+            origin__longitude__isnull=False,
+        )
+        .distinct()
+        .count()
+    )
+
+    def coverage_percent(
+        value,
+    ):
+        if not total_samples:
+            return 0
+
+        return round(
+            (
+                value
+                / total_samples
+            )
+            * 100
+        )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx.update({
+        "collection": collection,
+        "collection_samples": list(
+            samples_qs
+        ),
+        "collection_stats": {
+            "samples": total_samples,
+            "sample_types": len(
+                sample_type_distribution
+            ),
+            "biobanks": len([
+                row
+                for row
+                in biobank_distribution
+                if row["biobank_id"]
+                is not None
+            ]),
+            "taxonomy": taxonomy_count,
+            "taxonomy_percent": coverage_percent(
+                taxonomy_count
+            ),
+            "genomes": genome_count,
+            "genomes_percent": coverage_percent(
+                genome_count
+            ),
+            "origins": origin_count,
+            "origins_percent": coverage_percent(
+                origin_count
+            ),
+            "mapped": mapped_count,
+            "mapped_percent": coverage_percent(
+                mapped_count
+            ),
+        },
+        "sample_type_distribution":
+            sample_type_distribution,
+        "biobank_distribution":
+            biobank_distribution,
+        "can_edit_collection":
+            can_edit_collection(
+                request.user,
+                collection,
+            ),
+    })
+
+    return render(
+        request,
+        "internal/collections/detail.html",
+        ctx,
     )

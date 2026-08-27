@@ -1,0 +1,729 @@
+{% extends "internal/common/base.html" %}
+
+{% block content %}
+<style>
+.collection-explorer-page {
+    padding: 24px 28px 32px;
+}
+
+.collection-explorer-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.collection-explorer-eyebrow {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.collection-explorer-title {
+    color: #0f172a;
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 0;
+}
+
+.collection-explorer-description {
+    color: #64748b;
+    font-size: 13px;
+    max-width: 820px;
+    margin: 7px 0 0;
+}
+
+.collection-explorer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.collection-explorer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.collection-explorer-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.collection-explorer-metrics {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.collection-explorer-card,
+.collection-explorer-metric {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.collection-explorer-metric {
+    padding: 14px 15px;
+}
+
+.collection-explorer-metric-label {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.collection-explorer-metric-value {
+    color: #0f172a;
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 1;
+    margin-top: 5px;
+}
+
+.collection-explorer-metric-note {
+    color: #94a3b8;
+    font-size: 10px;
+    margin-top: 5px;
+}
+
+.collection-explorer-distributions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.collection-explorer-card {
+    padding: 16px;
+}
+
+.collection-explorer-card-title {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.collection-explorer-card-help {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-bottom: 14px;
+}
+
+.collection-explorer-bar {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    display: grid;
+    grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) 46px;
+    gap: 10px;
+    align-items: center;
+    padding: 5px 0;
+    text-align: left;
+}
+
+.collection-explorer-bar:hover .collection-explorer-bar-track {
+    background: #cbd5e1;
+}
+
+.collection-explorer-bar-label {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.collection-explorer-bar-track {
+    height: 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+    transition: background .15s ease;
+}
+
+.collection-explorer-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #16a34a;
+}
+
+.collection-explorer-bar-value {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: right;
+}
+
+.collection-explorer-workspace {
+    padding: 0;
+    overflow: hidden;
+}
+
+.collection-explorer-workspace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #e8edf3;
+}
+
+.collection-explorer-workspace-title {
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.collection-explorer-visible-count {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.collection-explorer-filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) minmax(180px, 1fr) auto;
+    gap: 10px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e8edf3;
+}
+
+.collection-explorer-filters label {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.collection-explorer-filter-reset {
+    display: flex;
+    align-items: flex-end;
+}
+
+.collection-explorer-table-wrap {
+    overflow-x: auto;
+}
+
+.collection-explorer-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.collection-explorer-table th {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e8edf3;
+    background: #fff;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.collection-explorer-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.collection-explorer-sample-id {
+    color: #0f172a;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.collection-explorer-sample-id:hover {
+    color: #16a34a;
+}
+
+.collection-explorer-empty {
+    padding: 34px 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+}
+
+@media (max-width: 1250px) {
+    .collection-explorer-metrics {
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .collection-explorer-header,
+    .collection-explorer-workspace-header {
+        flex-direction: column;
+    }
+
+    .collection-explorer-distributions {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-explorer-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-explorer-metrics {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+}
+</style>
+
+<div class="collection-explorer-page">
+    <header class="collection-explorer-header">
+        <div>
+            <div class="collection-explorer-eyebrow">
+                Collection Explorer
+            </div>
+
+            <h1 class="collection-explorer-title">
+                {{ collection.name }}
+            </h1>
+
+            <p class="collection-explorer-description">
+                {{ collection.description|default:"No scientific description has been registered for this Collection." }}
+            </p>
+
+            <div class="collection-explorer-meta">
+                {% if collection.research_group %}
+                    <span class="collection-explorer-badge">
+                        <i class="bi bi-people"></i>
+                        {{ collection.research_group.name }}
+                    </span>
+                {% endif %}
+
+                <span class="collection-explorer-badge">
+                    <i class="bi bi-person"></i>
+                    {{ collection.owner.username }}
+                </span>
+
+                {% if collection.is_public %}
+                    <span class="collection-explorer-badge text-success">
+                        <i class="bi bi-globe2"></i>
+                        Public
+                    </span>
+                {% else %}
+                    <span class="collection-explorer-badge">
+                        <i class="bi bi-lock"></i>
+                        Restricted
+                    </span>
+                {% endif %}
+
+                {% for tag in collection.tags.all %}
+                    <span class="collection-explorer-badge">
+                        {{ tag.name }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="collection-explorer-actions">
+            <a
+                href="{% url 'collections_list' %}"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                &larr; Collections
+            </a>
+
+            {% if can_edit_collection %}
+                <span
+                    class="btn btn-sm btn-outline-primary disabled"
+                    title="Collection editing will be added in a dedicated changeset."
+                >
+                    Edit
+                </span>
+            {% endif %}
+        </div>
+    </header>
+
+    <section class="collection-explorer-metrics">
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Visible Samples</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.samples }}
+            </div>
+            <div class="collection-explorer-metric-note">
+                Authorized for your account
+            </div>
+        </article>
+
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Sample Types</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.sample_types }}
+            </div>
+            <div class="collection-explorer-metric-note">
+                Types represented
+            </div>
+        </article>
+
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Biobanks</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.biobanks }}
+            </div>
+            <div class="collection-explorer-metric-note">
+                Physical repositories
+            </div>
+        </article>
+
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Taxonomy</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.taxonomy_percent }}%
+            </div>
+            <div class="collection-explorer-metric-note">
+                {{ collection_stats.taxonomy }} with assignments
+            </div>
+        </article>
+
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Genome Data</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.genomes_percent }}%
+            </div>
+            <div class="collection-explorer-metric-note">
+                {{ collection_stats.genomes }} with assemblies
+            </div>
+        </article>
+
+        <article class="collection-explorer-metric">
+            <div class="collection-explorer-metric-label">Origin Metadata</div>
+            <div class="collection-explorer-metric-value">
+                {{ collection_stats.origins_percent }}%
+            </div>
+            <div class="collection-explorer-metric-note">
+                {{ collection_stats.mapped }} mapped · {{ collection_stats.mapped_percent }}%
+            </div>
+        </article>
+    </section>
+
+    <section class="collection-explorer-distributions">
+        <article class="collection-explorer-card">
+            <div class="collection-explorer-card-title">
+                Sample type distribution
+            </div>
+            <div class="collection-explorer-card-help">
+                Select a category to drill down into the Sample table.
+            </div>
+
+            {% for row in sample_type_distribution %}
+                <button
+                    type="button"
+                    class="collection-explorer-bar"
+                    data-collection-type-filter="{{ row.filter_value }}"
+                >
+                    <span class="collection-explorer-bar-label">
+                        {{ row.label }}
+                    </span>
+                    <span class="collection-explorer-bar-track">
+                        <span
+                            class="collection-explorer-bar-fill"
+                            style="width: {{ row.percent }}%"
+                        ></span>
+                    </span>
+                    <span class="collection-explorer-bar-value">
+                        {{ row.total }}
+                    </span>
+                </button>
+            {% empty %}
+                <div class="text-muted small">
+                    No visible Samples are assigned to this Collection.
+                </div>
+            {% endfor %}
+        </article>
+
+        <article class="collection-explorer-card">
+            <div class="collection-explorer-card-title">
+                Biobank distribution
+            </div>
+            <div class="collection-explorer-card-help">
+                Collections may span multiple physical Biobanks.
+            </div>
+
+            {% for row in biobank_distribution %}
+                <button
+                    type="button"
+                    class="collection-explorer-bar"
+                    data-collection-biobank-filter="{{ row.filter_value }}"
+                >
+                    <span class="collection-explorer-bar-label">
+                        {{ row.label }}
+                    </span>
+                    <span class="collection-explorer-bar-track">
+                        <span
+                            class="collection-explorer-bar-fill"
+                            style="width: {{ row.percent }}%"
+                        ></span>
+                    </span>
+                    <span class="collection-explorer-bar-value">
+                        {{ row.total }}
+                    </span>
+                </button>
+            {% empty %}
+                <div class="text-muted small">
+                    No Biobank distribution is available.
+                </div>
+            {% endfor %}
+        </article>
+    </section>
+
+    <section class="collection-explorer-card collection-explorer-workspace">
+        <div class="collection-explorer-workspace-header">
+            <div>
+                <div class="collection-explorer-workspace-title">
+                    Explore Samples
+                </div>
+                <div class="text-muted small">
+                    Search and filter only the Samples you are authorized to view.
+                </div>
+            </div>
+
+            <div
+                class="collection-explorer-visible-count"
+                id="collection-visible-count"
+            >
+                {{ collection_stats.samples }} visible
+            </div>
+        </div>
+
+        <div class="collection-explorer-filters">
+            <div>
+                <label for="collection-search">Search</label>
+                <input
+                    id="collection-search"
+                    type="search"
+                    class="form-control form-control-sm"
+                    placeholder="Sample ID, organism, owner or Biobank..."
+                >
+            </div>
+
+            <div>
+                <label for="collection-type-filter">Sample type</label>
+                <select
+                    id="collection-type-filter"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All types</option>
+                    {% for row in sample_type_distribution %}
+                        <option value="{{ row.filter_value }}">
+                            {{ row.label }} ({{ row.total }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="collection-biobank-filter">Biobank</label>
+                <select
+                    id="collection-biobank-filter"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All Biobanks</option>
+                    {% for row in biobank_distribution %}
+                        <option value="{{ row.filter_value }}">
+                            {{ row.label }} ({{ row.total }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="collection-explorer-filter-reset">
+                <button
+                    id="collection-filter-reset"
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="collection-explorer-table-wrap">
+            <table class="collection-explorer-table">
+                <thead>
+                    <tr>
+                        <th>Sample</th>
+                        <th>Organism</th>
+                        <th>Type</th>
+                        <th>Biobank</th>
+                        <th>Research Group</th>
+                        <th>Status</th>
+                        <th>Owner</th>
+                    </tr>
+                </thead>
+                <tbody id="collection-sample-rows">
+                    {% for sample in collection_samples %}
+                        <tr
+                            data-collection-sample-row
+                            data-search="{{ sample.sample_id }} {{ sample.organism_name|default:'' }} {{ sample.owner.username }} {{ sample.biobank.name|default:'' }} {{ sample.research_group.name|default:'' }}"
+                            data-sample-type="{% if sample.sample_type %}{{ sample.sample_type }}{% else %}__blank__{% endif %}"
+                            data-biobank="{% if sample.biobank_id %}{{ sample.biobank_id }}{% else %}__none__{% endif %}"
+                        >
+                            <td>
+                                <a
+                                    href="{% url 'sample_detail' sample.id %}"
+                                    class="collection-explorer-sample-id"
+                                >
+                                    {{ sample.sample_id }}
+                                </a>
+                            </td>
+                            <td>
+                                {{ sample.organism_name|default:"—" }}
+                            </td>
+                            <td>
+                                {{ sample.sample_type|default:"Unspecified" }}
+                            </td>
+                            <td>
+                                {{ sample.biobank.name|default:"Unassigned" }}
+                            </td>
+                            <td>
+                                {{ sample.research_group.name|default:"Unassigned" }}
+                            </td>
+                            <td>
+                                {{ sample.get_status_display }}
+                            </td>
+                            <td>
+                                {{ sample.owner.username }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div
+                id="collection-filter-empty"
+                class="collection-explorer-empty"
+                hidden
+            >
+                No Samples match the current filters.
+            </div>
+
+            {% if not collection_samples %}
+                <div class="collection-explorer-empty">
+                    No Samples visible to your account are currently assigned
+                    to this Collection.
+                </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("collection-search");
+    const typeSelect = document.getElementById("collection-type-filter");
+    const biobankSelect = document.getElementById("collection-biobank-filter");
+    const resetButton = document.getElementById("collection-filter-reset");
+    const countNode = document.getElementById("collection-visible-count");
+    const emptyNode = document.getElementById("collection-filter-empty");
+    const rows = Array.from(
+        document.querySelectorAll("[data-collection-sample-row]")
+    );
+
+    function normalize(value) {
+        return String(value || "").trim().toLocaleLowerCase();
+    }
+
+    function applyFilters() {
+        const query = normalize(searchInput.value);
+        const typeValue = typeSelect.value;
+        const biobankValue = biobankSelect.value;
+
+        let visible = 0;
+
+        rows.forEach(function (row) {
+            const matchesSearch =
+                !query ||
+                normalize(row.dataset.search).includes(query);
+
+            const matchesType =
+                !typeValue ||
+                row.dataset.sampleType === typeValue;
+
+            const matchesBiobank =
+                !biobankValue ||
+                row.dataset.biobank === biobankValue;
+
+            const show =
+                matchesSearch &&
+                matchesType &&
+                matchesBiobank;
+
+            row.hidden = !show;
+
+            if (show) {
+                visible += 1;
+            }
+        });
+
+        countNode.textContent = `${visible} visible`;
+
+        if (emptyNode) {
+            emptyNode.hidden = !(rows.length > 0 && visible === 0);
+        }
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    typeSelect.addEventListener("change", applyFilters);
+    biobankSelect.addEventListener("change", applyFilters);
+
+    resetButton.addEventListener("click", function () {
+        searchInput.value = "";
+        typeSelect.value = "";
+        biobankSelect.value = "";
+        applyFilters();
+        searchInput.focus();
+    });
+
+    document
+        .querySelectorAll("[data-collection-type-filter]")
+        .forEach(function (button) {
+            button.addEventListener("click", function () {
+                typeSelect.value =
+                    button.dataset.collectionTypeFilter || "";
+                applyFilters();
+            });
+        });
+
+    document
+        .querySelectorAll("[data-collection-biobank-filter]")
+        .forEach(function (button) {
+            button.addEventListener("click", function () {
+                biobankSelect.value =
+                    button.dataset.collectionBiobankFilter || "";
+                applyFilters();
+            });
+        });
+});
+</script>
+{% endblock %}

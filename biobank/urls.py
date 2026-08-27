@@ -45,7 +45,12 @@ from core.views.internal.biobanks.views import (
     biobanks_dashboard_view,
 )
 from core.views.internal.biobanks.members import biobank_members_view
-from core.views.internal.collections.views import collections_list_view, collection_create_view, collections_dashboard_view
+from core.views.internal.collections.views import (
+    collections_list_view,
+    collection_create_view,
+    collections_dashboard_view,
+    collection_detail_view,
+)
 
 # 5. SAMPLES (AMOSTRAS)
 from core.views.internal.samples.views import (
@@ -186,6 +191,11 @@ urlpatterns = [
     path("collections/", collections_list_view, name="collections_list"),
     path("collections/add/", collection_create_view, name="collection_create"),
     path("collections/dashboard/", collections_dashboard_view, name="collections_dashboard"),
+    path(
+        "collections/<int:collection_id>/",
+        collection_detail_view,
+        name="collection_detail",
+    ),
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------
     path("shipments/", shipments_list_view, name="shipments"),
