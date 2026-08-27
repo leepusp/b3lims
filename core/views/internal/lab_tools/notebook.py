@@ -32,6 +32,7 @@ from core.models.lab_tools.notebook import (
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
 from core.permissions.samples import can_edit_sample, can_view_sample, visible_samples_for_user
+from core.permissions.chemicals import visible_chemicals_for_user
 from core.permissions.notebook import (
     can_edit_notebook_entry,
     can_view_notebook_entry,
@@ -420,7 +421,12 @@ def notebook_index(request):
         blocks = active_entry.blocks.all()
         attachments = active_entry.attachments.all()
 
-        protocol_chemicals = Chemical.objects.all().order_by("name", "id")[:200]
+        protocol_chemicals = (
+            visible_chemicals_for_user(
+                request.user
+            )
+            .order_by("name", "id")[:200]
+        )
         linked_molecular_links = (
             active_entry.molecular_links
             .select_related(
@@ -842,7 +848,12 @@ def search_chemicals_api(request):
     if len(query) < 1:
         return JsonResponse({"results": []})
 
-    chemicals = Chemical.objects.all().order_by("name", "id")
+    chemicals = (
+        visible_chemicals_for_user(
+            request.user
+        )
+        .order_by("name", "id")
+    )
 
     chemicals = chemicals.filter(
         Q(name__icontains=query)
@@ -874,7 +885,12 @@ def notebook_link_chemical_api(request, entry_id):
         return JsonResponse({"status": "error", "message": "Invalid JSON."}, status=400)
 
     chemical_id = data.get("chemical_id")
-    chemical = get_object_or_404(Chemical, id=chemical_id)
+    chemical = get_object_or_404(
+        visible_chemicals_for_user(
+            request.user
+        ),
+        id=chemical_id,
+    )
 
     link, created = NotebookChemicalLink.objects.get_or_create(
         entry=entry,

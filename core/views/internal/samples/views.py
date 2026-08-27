@@ -1418,6 +1418,42 @@ def sample_create_view(request):
 
         if action == "add_sample":
             try:
+                intake_record = None
+                intake_record_id = str(
+                    request.POST.get(
+                        "intake_record_id",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if intake_record_id:
+                    if not intake_record_id.isdigit():
+                        raise ValueError(
+                            "Invalid Sample Intake Record."
+                        )
+
+                    intake_record = get_object_or_404(
+                        SampleIntakeRecord.objects
+                        .select_related(
+                            "batch"
+                        ),
+                        pk=int(
+                            intake_record_id
+                        ),
+                    )
+
+                    if (
+                        intake_record.batch.uploaded_by_id
+                        != user.id
+                        and not user.is_superuser
+                    ):
+                        # Do not disclose whether another user's
+                        # intake record exists.
+                        return HttpResponse(
+                            status=404
+                        )
+
                 if not origin_form.is_valid():
                     origin_errors = []
 
@@ -2002,11 +2038,14 @@ def sample_create_view(request):
                                     level_index=level_index,
                                 )
 
-                intake_record_id = request.POST.get("intake_record_id")
-                if intake_record_id and created_samples:
-                    SampleIntakeRecord.objects.filter(id=intake_record_id).update(
-                        sample=created_samples[0],
-                        status="used_for_sample",
+                if intake_record is not None and created_samples:
+                    intake_record.sample = created_samples[0]
+                    intake_record.status = "used_for_sample"
+                    intake_record.save(
+                        update_fields=[
+                            "sample",
+                            "status",
+                        ]
                     )
 
                 total_aliquots = sum(
@@ -3964,7 +4003,14 @@ def sample_relate_view(request, sample_id):
         try:
             with transaction.atomic():
                 for t_id in target_ids:
-                    target_sample = Sample.objects.get(id=t_id)
+                    target_sample = (
+                        visible_samples_for_user(
+                            request.user
+                        )
+                        .get(
+                            id=t_id
+                        )
+                    )
                     if current_sample == target_sample: continue
 
                     direction = request.POST.get(f"direction_{t_id}") or request.POST.get("direction", "out")

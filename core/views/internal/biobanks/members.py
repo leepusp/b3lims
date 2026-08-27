@@ -63,7 +63,11 @@ def biobank_members_view(request, biobank_id):
         role_id = request.POST.get("role_id")
         new_role = request.POST.get("role")
 
-        role_obj = get_object_or_404(BiobankUserRole, id=role_id)
+        role_obj = get_object_or_404(
+            BiobankUserRole,
+            id=role_id,
+            biobank=biobank,
+        )
 
         # Extra safety check.
         if role_obj.user == biobank.owner:
