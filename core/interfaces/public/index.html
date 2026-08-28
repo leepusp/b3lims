@@ -5,134 +5,442 @@
 
 {% block extra_css %}
 <style>
+    /*
+     * B3 LIMS Public Home V3.2
+     *
+     * Visual composition derived from the approved portal prototype,
+     * while all scientific values remain sourced from the canonical
+     * publication-safe Django projection.
+     */
+
     .portal-welcome {
-        border: 1px solid #d8e6f0;
-        border-radius: 1.3rem;
+        position: relative;
+        overflow: hidden;
+
+        max-width: 1120px;
+        margin-left: auto;
+        margin-right: auto;
+
+        border: 1px solid #e3e8f0;
+        border-radius: 22px;
 
         background:
+            radial-gradient(
+                120% 140% at 12% 0%,
+                rgba(229, 239, 255, 0.95) 0%,
+                transparent 55%
+            ),
+            radial-gradient(
+                120% 140% at 88% 0%,
+                rgba(245, 239, 231, 0.9) 0%,
+                transparent 55%
+            ),
             linear-gradient(
-                135deg,
-                #f4f9fd 0%,
-                #fbfbf7 52%,
-                #eef6fb 100%
+                180deg,
+                #f5f9fd 0%,
+                #fbfaf6 58%,
+                #ffffff 100%
             );
 
-        box-shadow:
-            0 1rem 3rem
-            rgba(
-                23,
-                79,
-                126,
-                0.055
-            );
+        box-shadow: var(--b3-shadow);
+    }
+
+    #microbes {
+        position: absolute;
+        inset: 0;
+
+        display: block;
+
+        width: 100%;
+        height: 100%;
+
+        z-index: 0;
+        pointer-events: none;
     }
 
     .portal-welcome-inner {
-        max-width: 900px;
+        position: relative;
+        z-index: 1;
+
+        max-width: 930px;
         margin: 0 auto;
+
+        padding: 58px 32px 48px;
+
         text-align: center;
     }
 
-    .portal-kicker {
-        color: var(--cepid-blue-light);
-        font-size: 0.78rem;
+    .portal-kicker,
+    .portal-section-label {
+        color: var(--b3-accent);
+
+        font-size: 0.76rem;
         font-weight: 700;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.16em;
+
         text-transform: uppercase;
     }
 
+    .portal-kicker {
+        margin-bottom: 0.9rem;
+    }
+
     .portal-title {
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
-        font-size: clamp(2rem, 4vw, 3.5rem);
-        line-height: 1.07;
+        max-width: 13ch;
+
+        margin: 0 auto 1.15rem;
+
+        color: #1b2a4a;
+
+        font-size:
+            clamp(
+                2.55rem,
+                6vw,
+                4.25rem
+            );
+
+        font-weight: 800;
+        line-height: 1.03;
         letter-spacing: -0.035em;
     }
 
     .portal-lead {
-        max-width: 760px;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: 52ch;
+
+        margin: 0 auto 1.8rem;
+
+        color: #6f7d92;
+
+        font-size:
+            clamp(
+                0.98rem,
+                1.6vw,
+                1.12rem
+            );
     }
 
     .portal-search {
-        max-width: 760px;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 0.5rem;
-        border: 1px solid #d7dee6;
-        border-radius: 0.85rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+
+        max-width: 650px;
+        margin: 0 auto;
+
+        padding:
+            0.5rem
+            0.5rem
+            0.5rem
+            1rem;
+
+        border: 1px solid #e3e8f0;
+        border-radius: 14px;
+
         background: #ffffff;
-        box-shadow: 0 0.7rem 2rem rgba(10, 47, 90, 0.08);
+
+        box-shadow:
+            0 10px 30px -18px
+            rgba(
+                27,
+                42,
+                74,
+                0.35
+            );
+    }
+
+    .portal-search-icon {
+        flex: none;
+        color: #9aa6ba;
     }
 
     .portal-search .form-control {
+        min-width: 0;
+
         border: 0;
+
+        color: #3a4a63;
+        background: transparent;
+
         box-shadow: none;
     }
 
-    .portal-search-hints {
-        font-size: 0.78rem;
-        color: var(--cepid-muted);
+    .portal-search .form-control::placeholder {
+        color: #9aa6ba;
     }
 
-    .portal-section-label {
-        color: var(--cepid-blue-light);
-        font-size: 0.74rem;
+    .portal-search .btn {
+        flex: none;
+
+        padding:
+            0.65rem
+            1.35rem;
+
+        border-radius: 10px;
+
+        font-weight: 600;
+    }
+
+    .portal-search-hints {
+        margin-top: 0.7rem;
+
+        color: #9aa6ba;
+
+        font-size: 0.78rem;
+    }
+
+    .portal-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        justify-content: center;
+
+        margin-top: 1.6rem;
+    }
+
+    .portal-navchip {
+        display: inline-flex;
+        gap: 0.55rem;
+        align-items: center;
+
+        padding:
+            0.68rem
+            1rem;
+
+        border: 1px solid #e3e8f0;
+        border-radius: 11px;
+
+        color: #2b3c5e;
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.92
+            );
+
+        font-size: 0.86rem;
+        font-weight: 600;
+
+        text-decoration: none;
+
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease,
+            transform 0.1s ease;
+    }
+
+    .portal-navchip i {
+        color: #3b82f6;
+    }
+
+    .portal-navchip:hover {
+        color: #1b2a4a;
+
+        border-color: #c9d6ea;
+
+        box-shadow:
+            0 6px 18px -12px
+            rgba(
+                27,
+                42,
+                74,
+                0.4
+            );
+
+        transform: translateY(-1px);
+    }
+
+    .portal-section {
+        margin-top: 2.8rem;
+    }
+
+    .portal-section-heading {
+        margin-bottom: 1rem;
+
+        color: #1b2a4a;
+
+        font-weight: 800;
+    }
+
+    .portal-section-copy {
+        max-width: 760px;
+
+        color: var(--b3-muted);
+    }
+
+    .portal-stats-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+
+        gap: 1rem;
+    }
+
+    .portal-stat {
+        display: flex;
+        gap: 0.85rem;
+        align-items: flex-start;
+
+        min-width: 0;
+
+        padding: 1.25rem;
+
+        border: 1px solid #e7ecf3;
+        border-radius: var(--b3-radius);
+
+        background: #ffffff;
+
+        box-shadow: var(--b3-shadow);
+    }
+
+    .portal-stat-icon {
+        display: grid;
+        flex: none;
+        place-items: center;
+
+        width: 46px;
+        height: 46px;
+
+        border-radius: 12px;
+
+        color: #ffffff;
+
+        background:
+            linear-gradient(
+                160deg,
+                #3b82f6,
+                #2f6bde
+            );
+
+        box-shadow:
+            0 8px 16px -8px
+            rgba(
+                47,
+                107,
+                222,
+                0.6
+            );
+    }
+
+    .portal-stat-label {
+        color: #8290a6;
+
+        font-size: 0.7rem;
         font-weight: 700;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.055em;
+
         text-transform: uppercase;
     }
 
-    .portal-gateway-card {
-        display: block;
-        height: 100%;
-        padding: 1.5rem;
-        border: 1px solid #dfe6ed;
-        border-radius: 0.95rem;
-        color: inherit;
+    .portal-stat-value {
+        margin:
+            0.2rem
+            0
+            0.12rem;
+
+        color: #1b2a4a;
+
+        font-size: 1.8rem;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+    }
+
+    .portal-stat-subtitle {
+        color: #8290a6;
+
+        font-size: 0.76rem;
+        line-height: 1.35;
+    }
+
+    .portal-charts-grid {
+        display: grid;
+
+        grid-template-columns:
+            minmax(
+                0,
+                0.9fr
+            )
+            minmax(
+                0,
+                1.35fr
+            );
+
+        gap: 1.25rem;
+    }
+
+    .portal-panel {
+        min-width: 0;
+
+        padding:
+            1.35rem
+            1.45rem;
+
+        border: 1px solid #e7ecf3;
+        border-radius: var(--b3-radius);
+
         background: #ffffff;
-        text-decoration: none;
-        transition:
-            transform 0.15s ease,
-            box-shadow 0.15s ease,
-            border-color 0.15s ease;
+
+        box-shadow: var(--b3-shadow);
     }
 
-    .portal-gateway-card:hover {
-        color: inherit;
-        transform: translateY(-2px);
-        border-color: #c5d3e0;
-        box-shadow: 0 0.8rem 1.8rem rgba(10, 47, 90, 0.08);
+    .portal-panel-heading {
+        color: #2f6bde;
+
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+
+        text-transform: uppercase;
     }
 
-    .portal-icon {
-        display: inline-flex;
-        width: 2.9rem;
-        height: 2.9rem;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        color: var(--cepid-blue);
-        background: #edf4fa;
-        font-size: 1.2rem;
+    .portal-panel-title {
+        margin-top: 0.45rem;
+
+        color: #1b2a4a;
+
+        font-size: 1.05rem;
+        font-weight: 700;
     }
 
-    .portal-card-arrow {
-        color: var(--cepid-blue-light);
+    .portal-panel-description {
+        color: var(--b3-muted);
+
+        font-size: 0.84rem;
+    }
+
+    .portal-chart {
+        width: 100%;
+        height: 315px;
+    }
+
+    .portal-chart-help {
+        color: #8290a6;
+
+        font-size: 0.76rem;
     }
 
     .portal-guide {
-        border: 1px solid #dfe6ed;
-        border-radius: 0.9rem;
         overflow: hidden;
+
+        border: 1px solid #e7ecf3;
+        border-radius: var(--b3-radius);
+
         background: #ffffff;
+
+        box-shadow: var(--b3-shadow);
     }
 
     .portal-guide .accordion-item {
         border: 0;
-        border-bottom: 1px solid #e7ecf1;
+        border-bottom: 1px solid #e7ecf3;
     }
 
     .portal-guide .accordion-item:last-child {
@@ -140,133 +448,189 @@
     }
 
     .portal-guide .accordion-button {
-        font-weight: 600;
+        color: #2b3c5e;
         background: #ffffff;
+
+        font-weight: 600;
     }
 
     .portal-guide .accordion-button:not(.collapsed) {
-        color: var(--cepid-blue);
-        background: #f7fafc;
+        color: #1b2a4a;
+        background: #f6f9fd;
+
         box-shadow: none;
     }
 
-    .portal-kpi {
-        height: 100%;
-        padding: 1.35rem;
-        border: 1px solid #e1e8ef;
-        border-radius: 0.9rem;
-        background: #ffffff;
+    .portal-feature-grid,
+    .portal-explorer-grid,
+    .portal-resource-grid {
+        display: grid;
+        gap: 1rem;
     }
 
-    .portal-kpi-value {
-        color: var(--cepid-blue);
-        font-size: 1.9rem;
+    .portal-feature-grid {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+    .portal-explorer-grid,
+    .portal-resource-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+    .portal-card {
+        height: 100%;
+
+        padding: 1.35rem;
+
+        border: 1px solid #e7ecf3;
+        border-radius: var(--b3-radius);
+
+        background: #ffffff;
+
+        box-shadow: var(--b3-shadow);
+    }
+
+    .portal-card-icon {
+        display: grid;
+        place-items: center;
+
+        width: 42px;
+        height: 42px;
+
+        margin-bottom: 0.9rem;
+
+        border-radius: 11px;
+
+        color: #2f6bde;
+
+        background: #eaf2ff;
+    }
+
+    .portal-card-title {
+        color: #1b2a4a;
         font-weight: 700;
-        line-height: 1;
-    }
-
-    .portal-chart-card {
-        height: 100%;
-        border: 1px solid #e0e7ee;
-        border-radius: 1rem;
-        background: #ffffff;
-        box-shadow: 0 0.5rem 1.5rem rgba(10, 47, 90, 0.045);
-    }
-
-    .portal-chart {
-        width: 100%;
-        height: 350px;
-    }
-
-    .portal-chart-help {
-        font-size: 0.78rem;
-        color: var(--cepid-muted);
-    }
-
-    .portal-feature-card {
-        height: 100%;
-        padding: 1.35rem;
-        border: 1px solid #e0e7ee;
-        border-radius: 0.9rem;
-        background: #ffffff;
-    }
-
-    .portal-explorer-card {
-        height: 100%;
-        padding: 1.5rem;
-        border: 1px solid #e0e7ee;
-        border-radius: 0.95rem;
-        background: #f9fbfd;
-    }
-
-    .portal-resource-card {
-        height: 100%;
-        padding: 1.5rem;
-        border: 1px solid #e0e7ee;
-        border-radius: 0.95rem;
-        background: #ffffff;
     }
 
     .portal-empty-state {
+        padding: 1.2rem;
+
         border: 1px dashed #cfd9e3;
-        border-radius: 0.9rem;
-        background: #fafcfd;
+        border-radius: var(--b3-radius);
+
+        color: var(--b3-muted);
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.68
+            );
     }
 
     .portal-disclosure {
-        border-left: 4px solid var(--cepid-blue-light);
-        background: #f7f9fc;
-    }
+        padding: 1.3rem;
 
-    .portal-hero-actions {
-        max-width: 1050px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+        border:
+            1px solid
+            #dce8f2;
 
-    .portal-hero-actions .portal-gateway-card {
-        display: flex;
-        min-height: 58px;
-        align-items: center;
-        justify-content: center;
-        gap: 0.65rem;
+        border-left:
+            4px solid
+            #3b82f6;
 
-        padding: 0.85rem 1rem;
-
-        border-color: #cbddea;
-        border-radius: 0.75rem;
-
-        color: var(--b3-primary);
+        border-radius: 12px;
 
         background:
             rgba(
                 255,
                 255,
                 255,
-                0.72
+                0.68
             );
-
-        font-size: 0.9rem;
-        font-weight: 600;
     }
 
-    .portal-hero-actions .portal-icon {
-        width: auto;
-        height: auto;
+    @media (max-width: 991.98px) {
+        .portal-stats-grid {
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+        }
 
-        margin: 0 !important;
+        .portal-charts-grid {
+            grid-template-columns: 1fr;
+        }
 
-        border-radius: 0;
-
-        color: var(--b3-accent);
-        background: transparent;
-
-        font-size: 1.05rem;
+        .portal-feature-grid {
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+        }
     }
 
     @media (max-width: 767.98px) {
+        .portal-welcome-inner {
+            padding:
+                42px
+                20px
+                36px;
+        }
+
+        .portal-title {
+            font-size:
+                clamp(
+                    2.2rem,
+                    11vw,
+                    3.25rem
+                );
+        }
+
+        .portal-search {
+            flex-wrap: wrap;
+        }
+
+        .portal-search .btn {
+            width: 100%;
+        }
+
+        .portal-stats-grid,
+        .portal-feature-grid,
+        .portal-explorer-grid,
+        .portal-resource-grid {
+            grid-template-columns: 1fr;
+        }
+
         .portal-chart {
-            height: 300px;
+            height: 285px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .portal-navchip {
+            transition: none;
         }
     }
 </style>
@@ -275,29 +639,41 @@
 
 {% block content %}
 
-<section class="portal-welcome mb-5">
-    <div class="portal-welcome-inner px-4 py-5 px-md-5">
+<header class="portal-welcome">
 
-        <div class="portal-kicker mb-3">
+    <canvas
+        id="microbes"
+        aria-hidden="true"
+    ></canvas>
+
+    <div class="portal-welcome-inner">
+
+        <div class="portal-kicker">
             CEPID B3 RESEARCH NETWORK
         </div>
 
-        <h1 class="portal-title fw-bold mb-3">
+        <h1 class="portal-title">
             Welcome to the B3 LIMS public catalog
         </h1>
 
-        <p class="portal-lead fs-5 text-muted mb-4">
+        <p class="portal-lead">
             Search and explore publication-approved metadata
             describing biological resources maintained by the
             CEPID B3 research network.
         </p>
 
+
         <form
             method="get"
             action="{% url 'public_collections' %}"
-            class="portal-search d-flex align-items-center"
+            class="portal-search"
+            role="search"
         >
-            <i class="bi bi-search ms-2 text-muted"></i>
+
+            <i
+                class="bi bi-search portal-search-icon"
+                aria-hidden="true"
+            ></i>
 
             <input
                 type="search"
@@ -309,114 +685,329 @@
 
             <button
                 type="submit"
-                class="btn btn-primary px-4"
+                class="btn btn-primary"
             >
                 Search
             </button>
+
         </form>
 
-        <div class="portal-search-hints mt-2">
-            Search by Collection name, organism, Sample type
-            or public Tag.
+
+        <div class="portal-search-hints">
+            Try searching by Collection name, organism,
+            Sample type or public Tag.
         </div>
 
 
-        <div class="row g-2 portal-hero-actions mt-4">
+        <nav
+            class="portal-hero-actions"
+            aria-label="B3 LIMS public portal shortcuts"
+        >
 
-            <div class="col-6 col-md">
-                <a
-                    href="{% url 'public_collections' %}"
-                    class="portal-gateway-card"
-                >
-                    <span class="portal-icon">
-                        <i class="bi bi-folder2-open"></i>
-                    </span>
+            <a
+                href="{% url 'public_collections' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-folder2-open"></i>
+                Browse Collections
+            </a>
 
-                    <span>
-                        Browse Collections
-                    </span>
-                </a>
+
+            <a
+                href="{% url 'public_about' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-info-circle"></i>
+                About B3 LIMS
+            </a>
+
+
+            <a
+                href="{% url 'public_governance' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-shield-check"></i>
+                Governance
+            </a>
+
+
+            <a
+                href="{% url 'public_shipments_portal' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-truck"></i>
+                Shipments
+            </a>
+
+
+            <a
+                href="{% url 'login' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-lock"></i>
+                Internal Area
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+<section class="portal-section">
+
+    <div class="portal-section-label">
+        B3 LIMS at a glance
+    </div>
+
+    <h2 class="h4 portal-section-heading mt-1">
+        Catalog at a glance
+    </h2>
+
+
+    <div class="portal-stats-grid">
+
+        <div class="portal-stat">
+
+            <div class="portal-stat-icon">
+                <i class="bi bi-box-seam"></i>
             </div>
 
+            <div>
+                <div class="portal-stat-label">
+                    Public Samples
+                </div>
 
-            <div class="col-6 col-md">
-                <a
-                    href="{% url 'public_about' %}"
-                    class="portal-gateway-card"
-                >
-                    <span class="portal-icon">
-                        <i class="bi bi-info-circle"></i>
-                    </span>
+                <div class="portal-stat-value">
+                    {{ public_metrics.public_samples }}
+                </div>
 
-                    <span>
-                        About B3 LIMS
-                    </span>
-                </a>
+                <div class="portal-stat-subtitle">
+                    Publication-approved Samples
+                </div>
             </div>
 
+        </div>
 
-            <div class="col-6 col-md">
-                <a
-                    href="{% url 'public_governance' %}"
-                    class="portal-gateway-card"
-                >
-                    <span class="portal-icon">
-                        <i class="bi bi-shield-check"></i>
-                    </span>
 
-                    <span>
-                        Governance
-                    </span>
-                </a>
+        <div class="portal-stat">
+
+            <div class="portal-stat-icon">
+                <i class="bi bi-folder2-open"></i>
             </div>
 
+            <div>
+                <div class="portal-stat-label">
+                    Public Collections
+                </div>
 
-            <div class="col-6 col-md">
-                <a
-                    href="{% url 'public_shipments_portal' %}"
-                    class="portal-gateway-card"
-                >
-                    <span class="portal-icon">
-                        <i class="bi bi-truck"></i>
-                    </span>
+                <div class="portal-stat-value">
+                    {{ public_metrics.public_collections }}
+                </div>
 
-                    <span>
-                        Shipments
-                    </span>
-                </a>
+                <div class="portal-stat-subtitle">
+                    Published catalog Collections
+                </div>
             </div>
 
+        </div>
 
-            <div class="col-6 col-md">
-                <a
-                    href="{% url 'login' %}"
-                    class="portal-gateway-card"
-                >
-                    <span class="portal-icon">
-                        <i class="bi bi-lock"></i>
-                    </span>
 
-                    <span>
-                        Internal Area
-                    </span>
-                </a>
+        <div class="portal-stat">
+
+            <div class="portal-stat-icon">
+                <i class="bi bi-diagram-3"></i>
+            </div>
+
+            <div>
+                <div class="portal-stat-label">
+                    Organisms
+                </div>
+
+                <div class="portal-stat-value">
+                    {{ public_metrics.organisms }}
+                </div>
+
+                <div class="portal-stat-subtitle">
+                    Organism names represented
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="portal-stat">
+
+            <div class="portal-stat-icon">
+                <i class="bi bi-globe-americas"></i>
+            </div>
+
+            <div>
+                <div class="portal-stat-label">
+                    Geographic Origins
+                </div>
+
+                <div class="portal-stat-value">
+                    {{ public_metrics.geographic_origins }}
+                </div>
+
+                <div class="portal-stat-subtitle">
+                    Privacy-approved public origins
+                </div>
             </div>
 
         </div>
 
     </div>
+
 </section>
 
 
-<section class="mb-5">
+<section class="portal-section">
 
-    <div class="portal-section-label mb-1">
+    <div class="portal-section-label">
+        Interactive data views
+    </div>
+
+    <h2 class="h4 portal-section-heading mt-1 mb-2">
+        Public catalog exploration
+    </h2>
+
+    <p class="portal-section-copy mb-4">
+        Interactive summaries use only publication-approved
+        records from the canonical B3 LIMS public projection.
+    </p>
+
+
+    <div class="portal-charts-grid">
+
+        <div class="portal-panel">
+
+            <div class="portal-panel-heading">
+                Public Samples
+            </div>
+
+            <h3 class="portal-panel-title">
+                Sample type composition
+            </h3>
+
+            <p class="portal-panel-description">
+                Distribution of publication-approved Samples
+                by Sample type.
+            </p>
+
+
+            {% if sample_type_distribution %}
+
+                <div
+                    id="publicSampleTypeChart"
+                    class="portal-chart"
+                    role="img"
+                    aria-label="Interactive donut chart showing public Samples by Sample type"
+                ></div>
+
+                <ul class="visually-hidden">
+
+                    {% for item in sample_type_distribution %}
+
+                        <li>
+                            {{ item.sample_type }}:
+                            {{ item.total }}
+                            public Sample{{ item.total|pluralize }}
+                        </li>
+
+                    {% endfor %}
+
+                </ul>
+
+                <div class="portal-chart-help">
+                    Hover over a segment for details.
+                    Use the legend to focus categories.
+                </div>
+
+            {% else %}
+
+                <div class="portal-empty-state">
+                    Sample type composition will appear when
+                    publication-approved Samples are available.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <div class="portal-panel">
+
+            <div class="portal-panel-heading">
+                Scientific representation
+            </div>
+
+            <h3 class="portal-panel-title">
+                Organism representation
+            </h3>
+
+            <p class="portal-panel-description">
+                Relative representation of organism names among
+                publication-approved Samples.
+            </p>
+
+
+            {% if organism_distribution %}
+
+                <div
+                    id="publicOrganismChart"
+                    class="portal-chart"
+                    role="img"
+                    aria-label="Interactive treemap showing organism representation among public Samples"
+                ></div>
+
+                <ul class="visually-hidden">
+
+                    {% for item in organism_distribution %}
+
+                        <li>
+                            {{ item.organism_name }}:
+                            {{ item.total }}
+                            public Sample{{ item.total|pluralize }}
+                        </li>
+
+                    {% endfor %}
+
+                </ul>
+
+                <div class="portal-chart-help">
+                    Hover over a tile to inspect its public
+                    Sample count.
+                </div>
+
+            {% else %}
+
+                <div class="portal-empty-state">
+                    Organism composition will appear when public
+                    organism metadata are available.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="portal-section">
+
+    <div class="portal-section-label">
         Getting started
     </div>
 
-    <h2 class="h4 fw-bold mb-3">
+    <h2 class="h4 portal-section-heading mt-1">
         Explore and understand the catalog
     </h2>
+
 
     <div
         class="accordion portal-guide"
@@ -424,6 +1015,7 @@
     >
 
         <div class="accordion-item">
+
             <h3
                 class="accordion-header"
                 id="portalGuideBrowseHeading"
@@ -453,10 +1045,12 @@
                     access.
                 </div>
             </div>
+
         </div>
 
 
         <div class="accordion-item">
+
             <h3
                 class="accordion-header"
                 id="portalGuideMetadataHeading"
@@ -481,15 +1075,17 @@
             >
                 <div class="accordion-body text-muted">
                     Public statistics and visualizations include only
-                    records that have passed the canonical public
-                    disclosure boundary. Private, embargoed, inactive
-                    and trashed Samples are excluded before aggregation.
+                    records that have passed the canonical disclosure
+                    boundary. Private, embargoed, inactive and trashed
+                    Samples are excluded before aggregation.
                 </div>
             </div>
+
         </div>
 
 
         <div class="accordion-item">
+
             <h3
                 class="accordion-header"
                 id="portalGuideMaterialHeading"
@@ -513,235 +1109,32 @@
                 data-bs-parent="#publicPortalGuide"
             >
                 <div class="accordion-body text-muted">
-                    Public metadata does not represent authorization
+                    Public metadata do not represent authorization
                     to receive biological material. Material access
                     and Shipment intake remain governed workflows.
                 </div>
             </div>
+
         </div>
 
     </div>
-</section>
 
-
-<section class="mb-5">
-
-    <div class="portal-section-label mb-1">
-        Public catalog
-    </div>
-
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <h2 class="h4 fw-bold mb-0">
-            Catalog at a glance
-        </h2>
-
-        <span class="small text-muted">
-            Publication-approved records only
-        </span>
-    </div>
-
-    <div class="row g-3">
-
-        <div class="col-6 col-lg-3">
-            <div class="portal-kpi">
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-box-seam"></i>
-                </div>
-
-                <div class="portal-kpi-value">
-                    {{ public_metrics.public_samples }}
-                </div>
-
-                <div class="small text-muted mt-2">
-                    Public Samples
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="portal-kpi">
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-collection"></i>
-                </div>
-
-                <div class="portal-kpi-value">
-                    {{ public_metrics.public_collections }}
-                </div>
-
-                <div class="small text-muted mt-2">
-                    Public Collections
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="portal-kpi">
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-diagram-3"></i>
-                </div>
-
-                <div class="portal-kpi-value">
-                    {{ public_metrics.organisms }}
-                </div>
-
-                <div class="small text-muted mt-2">
-                    Organisms represented
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="portal-kpi">
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-globe-americas"></i>
-                </div>
-
-                <div class="portal-kpi-value">
-                    {{ public_metrics.geographic_origins }}
-                </div>
-
-                <div class="small text-muted mt-2">
-                    Public geographic origins
-                </div>
-            </div>
-        </div>
-
-    </div>
-</section>
-
-
-<section class="mb-5">
-
-    <div class="portal-section-label mb-1">
-        Interactive data views
-    </div>
-
-    <h2 class="h4 fw-bold mb-2">
-        Explore public catalog composition
-    </h2>
-
-    <p class="text-muted mb-4">
-        Interactive summaries are generated from the same
-        publication-safe catalog projection used throughout the
-        public portal.
-    </p>
-
-    <div class="row g-4">
-
-        <div class="col-lg-5">
-            <div class="portal-chart-card p-4">
-
-                <h3 class="h5 fw-bold mb-1">
-                    Sample type composition
-                </h3>
-
-                <p class="small text-muted mb-3">
-                    Distribution of publicly accessible Samples by
-                    material type.
-                </p>
-
-                {% if sample_type_distribution %}
-
-                    <div
-                        id="publicSampleTypeChart"
-                        class="portal-chart"
-                        role="img"
-                        aria-label="Interactive donut chart showing public Samples by Sample type"
-                    ></div>
-
-                    <ul class="visually-hidden">
-                        {% for item in sample_type_distribution %}
-                            <li>
-                                {{ item.sample_type }}:
-                                {{ item.total }}
-                                public Sample{{ item.total|pluralize }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-
-                    <div class="portal-chart-help mt-2">
-                        Hover over a segment for details. Use the
-                        legend to focus individual categories.
-                    </div>
-
-                {% else %}
-
-                    <div class="portal-empty-state p-4 text-muted">
-                        Sample-type composition will appear when
-                        publication-approved Samples are available.
-                    </div>
-
-                {% endif %}
-
-            </div>
-        </div>
-
-
-        <div class="col-lg-7">
-            <div class="portal-chart-card p-4">
-
-                <h3 class="h5 fw-bold mb-1">
-                    Organism representation
-                </h3>
-
-                <p class="small text-muted mb-3">
-                    Relative representation of organism names among
-                    publication-approved Samples.
-                </p>
-
-                {% if organism_distribution %}
-
-                    <div
-                        id="publicOrganismChart"
-                        class="portal-chart"
-                        role="img"
-                        aria-label="Interactive treemap showing organism representation among public Samples"
-                    ></div>
-
-                    <ul class="visually-hidden">
-                        {% for item in organism_distribution %}
-                            <li>
-                                {{ item.organism_name }}:
-                                {{ item.total }}
-                                public Sample{{ item.total|pluralize }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-
-                    <div class="portal-chart-help mt-2">
-                        Hover over a tile to inspect the public Sample
-                        count represented by that organism.
-                    </div>
-
-                {% else %}
-
-                    <div class="portal-empty-state p-4 text-muted">
-                        Organism composition will appear when public
-                        organism metadata is available.
-                    </div>
-
-                {% endif %}
-
-            </div>
-        </div>
-
-    </div>
 </section>
 
 
 {% if featured_collections %}
-<section class="mb-5">
+
+<section class="portal-section">
+
+    <div class="portal-section-label">
+        Collections
+    </div>
 
     <div class="d-flex justify-content-between align-items-end mb-3">
-        <div>
-            <div class="portal-section-label mb-1">
-                Collections
-            </div>
 
-            <h2 class="h4 fw-bold mb-0">
-                Featured public Collections
-            </h2>
-        </div>
+        <h2 class="h4 portal-section-heading mb-0">
+            Featured public Collections
+        </h2>
 
         <a
             href="{% url 'public_collections' %}"
@@ -750,76 +1143,90 @@
             View catalog
             <i class="bi bi-arrow-right"></i>
         </a>
+
     </div>
 
-    <div class="row g-3">
+
+    <div class="portal-feature-grid">
 
         {% for collection in featured_collections %}
-            <div class="col-md-6 col-xl-4">
-                <div class="portal-feature-card d-flex flex-column">
 
-                    <span class="badge bg-success align-self-start mb-3">
-                        Public Collection
-                    </span>
+            <article class="portal-card d-flex flex-column">
 
-                    <h3 class="h5 fw-bold">
-                        {{ collection.name }}
-                    </h3>
+                <span class="badge bg-success align-self-start mb-3">
+                    Public Collection
+                </span>
 
-                    <p class="small text-muted flex-grow-1">
-                        {{ collection.description|default:"No public description provided."|truncatechars:150 }}
-                    </p>
+                <h3 class="h5 portal-card-title">
+                    {{ collection.name }}
+                </h3>
 
-                    <div class="small text-muted mb-3">
-                        <i class="bi bi-box-seam me-1"></i>
+                <p class="small text-muted flex-grow-1">
+                    {{ collection.description|default:"No public description provided."|truncatechars:150 }}
+                </p>
 
-                        {{ collection.public_sample_count }}
-                        public Sample{{ collection.public_sample_count|pluralize }}
+                <div class="small text-muted mb-3">
+                    <i class="bi bi-box-seam me-1"></i>
+
+                    {{ collection.public_sample_count }}
+                    public Sample{{ collection.public_sample_count|pluralize }}
+                </div>
+
+
+                {% if collection.public_tags %}
+
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+
+                        {% for tag in collection.public_tags|slice:":4" %}
+
+                            <span class="badge bg-light text-dark border">
+                                {{ tag.name }}
+                            </span>
+
+                        {% endfor %}
+
                     </div>
 
-                    {% if collection.public_tags %}
-                        <div class="d-flex flex-wrap gap-1 mb-3">
-                            {% for tag in collection.public_tags|slice:":4" %}
-                                <span class="badge bg-light text-dark border">
-                                    {{ tag.name }}
-                                </span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                {% endif %}
 
-                    <a
-                        href="{% url 'public_collection_detail' collection.id %}"
-                        class="btn btn-outline-primary btn-sm align-self-start"
-                    >
-                        Open Collection
-                    </a>
 
-                </div>
-            </div>
+                <a
+                    href="{% url 'public_collection_detail' collection.id %}"
+                    class="btn btn-outline-primary btn-sm align-self-start"
+                >
+                    Open Collection
+                </a>
+
+            </article>
+
         {% endfor %}
 
     </div>
+
 </section>
+
 
 {% else %}
 
-<section class="mb-5">
+<section class="portal-section">
 
-    <div class="portal-section-label mb-1">
+    <div class="portal-section-label">
         Collections
     </div>
 
-    <div class="portal-empty-state p-4">
-        <h2 class="h6 fw-bold mb-2">
-            No public Collections are currently published
-        </h2>
+    <h2 class="h4 portal-section-heading mt-1">
+        Featured public Collections
+    </h2>
 
-        <p class="small text-muted mb-0">
-            This area will populate automatically when a Collection
-            is approved for public release. Public Sample statistics
-            remain governed independently by the Sample publication
-            policy.
-        </p>
+    <div class="portal-empty-state">
+
+        <strong class="d-block text-dark mb-1">
+            No public Collections are currently published
+        </strong>
+
+        This section will populate automatically when a
+        Collection is approved for public release.
+
     </div>
 
 </section>
@@ -827,176 +1234,176 @@
 {% endif %}
 
 
-<section class="mb-5">
+<section class="portal-section">
 
-    <div class="portal-section-label mb-1">
+    <div class="portal-section-label">
         Scientific exploration
     </div>
 
-    <h2 class="h4 fw-bold mb-3">
+    <h2 class="h4 portal-section-heading mt-1">
         Explore the scientific context
     </h2>
 
-    <div class="row g-3">
 
-        <div class="col-md-6">
-            <div class="portal-explorer-card">
+    <div class="portal-explorer-grid">
 
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-geo-alt"></i>
-                </div>
+        <article class="portal-card">
 
-                <h3 class="h5 fw-bold">
-                    Geographic Explorer
-                </h3>
-
-                {% if public_metrics.geographic_origins %}
-
-                    <p class="text-muted mb-2">
-                        Public geographic metadata is available and
-                        will support a privacy-aware interactive map.
-                    </p>
-
-                    <span class="badge bg-light text-dark border">
-                        {{ public_metrics.geographic_origins }}
-                        public geographic origin{{ public_metrics.geographic_origins|pluralize }}
-                    </span>
-
-                {% else %}
-
-                    <p class="text-muted mb-2">
-                        No geographic origin is currently eligible for
-                        public visualization.
-                    </p>
-
-                    <span class="badge bg-light text-dark border">
-                        Awaiting public geographic metadata
-                    </span>
-
-                {% endif %}
-
+            <div class="portal-card-icon">
+                <i class="bi bi-geo-alt"></i>
             </div>
-        </div>
+
+            <h3 class="h5 portal-card-title">
+                Geographic Explorer
+            </h3>
 
 
-        <div class="col-md-6">
-            <div class="portal-explorer-card">
+            {% if public_metrics.geographic_origins %}
 
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-share"></i>
-                </div>
-
-                <h3 class="h5 fw-bold">
-                    Taxonomy Explorer
-                </h3>
-
-                <p class="text-muted mb-2">
-                    A hierarchical public taxonomy view will connect
-                    verified taxonomic assignments to scientific
-                    catalog discovery.
+                <p class="text-muted">
+                    Privacy-approved geographic metadata are
+                    available for future interactive spatial
+                    exploration.
                 </p>
 
                 <span class="badge bg-light text-dark border">
-                    Taxonomic hierarchy · next phase
+                    {{ public_metrics.geographic_origins }}
+                    public geographic origin{{ public_metrics.geographic_origins|pluralize }}
                 </span>
 
+            {% else %}
+
+                <p class="text-muted">
+                    No geographic origin is currently eligible
+                    for public visualization.
+                </p>
+
+                <span class="badge bg-light text-dark border">
+                    Awaiting public geographic metadata
+                </span>
+
+            {% endif %}
+
+        </article>
+
+
+        <article class="portal-card">
+
+            <div class="portal-card-icon">
+                <i class="bi bi-share"></i>
             </div>
-        </div>
+
+            <h3 class="h5 portal-card-title">
+                Taxonomy Explorer
+            </h3>
+
+            <p class="text-muted">
+                A hierarchical public taxonomy view will connect
+                verified taxonomic assignments with scientific
+                catalog discovery.
+            </p>
+
+            <span class="badge bg-light text-dark border">
+                Taxonomic hierarchy · next phase
+            </span>
+
+        </article>
 
     </div>
+
 </section>
 
 
-<section class="mb-5">
+<section class="portal-section">
 
-    <div class="portal-section-label mb-1">
+    <div class="portal-section-label">
         Resources and governance
     </div>
 
-    <h2 class="h4 fw-bold mb-3">
+    <h2 class="h4 portal-section-heading mt-1">
         Work with B3 LIMS
     </h2>
 
-    <div class="row g-3">
 
-        <div class="col-md-6">
-            <div class="portal-resource-card">
+    <div class="portal-resource-grid">
 
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-truck"></i>
-                </div>
+        <article class="portal-card">
 
-                <h3 class="h5 fw-bold">
-                    Submit biological material
-                </h3>
-
-                <p class="text-muted">
-                    Start a Shipment submission and follow the material
-                    intake workflow before internal review and receipt.
-                </p>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <a
-                        href="{% url 'public_shipments_portal' %}"
-                        class="btn btn-primary btn-sm"
-                    >
-                        Shipment portal
-                    </a>
-
-                    <a
-                        href="{% url 'public_shipment_new' %}"
-                        class="btn btn-outline-primary btn-sm"
-                    >
-                        New submission
-                    </a>
-                </div>
-
+            <div class="portal-card-icon">
+                <i class="bi bi-truck"></i>
             </div>
-        </div>
 
+            <h3 class="h5 portal-card-title">
+                Submit biological material
+            </h3>
 
-        <div class="col-md-6">
-            <div class="portal-resource-card">
+            <p class="text-muted">
+                Start a Shipment submission and follow the material
+                intake workflow before internal review and receipt.
+            </p>
 
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-shield-lock"></i>
-                </div>
-
-                <h3 class="h5 fw-bold">
-                    Governance and material access
-                </h3>
-
-                <p class="text-muted">
-                    Review how public metadata, institutional
-                    authorization and biological material transfer
-                    are governed.
-                </p>
+            <div class="d-flex flex-wrap gap-2">
 
                 <a
-                    href="{% url 'public_governance' %}"
-                    class="btn btn-outline-secondary btn-sm"
+                    href="{% url 'public_shipments_portal' %}"
+                    class="btn btn-primary btn-sm"
                 >
-                    Governance and access
+                    Shipment Portal
+                </a>
+
+                <a
+                    href="{% url 'public_shipment_new' %}"
+                    class="btn btn-outline-primary btn-sm"
+                >
+                    New submission
                 </a>
 
             </div>
-        </div>
+
+        </article>
+
+
+        <article class="portal-card">
+
+            <div class="portal-card-icon">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+
+            <h3 class="h5 portal-card-title">
+                Governance and material access
+            </h3>
+
+            <p class="text-muted">
+                Review how public metadata, institutional
+                authorization and biological material transfer
+                are governed.
+            </p>
+
+            <a
+                href="{% url 'public_governance' %}"
+                class="btn btn-outline-primary btn-sm"
+            >
+                Governance and access
+            </a>
+
+        </article>
 
     </div>
+
 </section>
 
 
-<section class="portal-disclosure rounded-3 p-4">
+<section class="portal-section portal-disclosure">
 
     <h2 class="h6 fw-bold mb-2">
-        Public metadata does not imply material access
+        Public metadata do not imply material access
     </h2>
 
     <p class="small text-muted mb-0">
-        This portal exposes selected metadata approved for public
-        dissemination. Biological material remains controlled and may
-        require institutional authorization, governance review and the
-        applicable material transfer process.
+        B3 LIMS exposes selected metadata approved for public
+        dissemination. Biological material remains controlled
+        and may require institutional authorization, governance
+        review and the applicable material transfer process.
     </p>
 
 </section>
@@ -1009,9 +1416,1218 @@
 {{ sample_type_distribution|json_script:"public-sample-type-data" }}
 {{ organism_distribution|json_script:"public-organism-data" }}
 
+
 <script
     src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js">
 </script>
+
+
+<script>
+(function () {
+    "use strict";
+
+    /*
+     * Decorative biological hero animation.
+     *
+     * This canvas is presentation-only. It has no network access,
+     * receives no Sample data and is excluded from the accessibility
+     * tree. Reduced-motion preferences produce a static frame.
+     */
+
+    const canvas = document.getElementById(
+        "microbes"
+    );
+
+    if (
+        !canvas ||
+        !canvas.getContext
+    ) {
+        return;
+    }
+
+    const context = canvas.getContext(
+        "2d"
+    );
+
+    const reducedMotion = (
+        window.matchMedia &&
+        window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches
+    );
+
+    const palette = [
+        "#4d84c9",
+        "#6ba0d6",
+        "#88b6df",
+        "#5aa6b3",
+        "#79bfb8",
+        "#a7c4e2"
+    ];
+
+    const organisms = [];
+
+    let width = 0;
+    let height = 0;
+    let deviceScale = 1;
+    let lastFrame = performance.now();
+
+
+    function randomBetween(
+        minimum,
+        maximum
+    ) {
+        return (
+            minimum
+            +
+            Math.random()
+            *
+            (
+                maximum
+                -
+                minimum
+            )
+        );
+    }
+
+
+    function pick(
+        values
+    ) {
+        return values[
+            (
+                Math.random()
+                *
+                values.length
+            )
+            |
+            0
+        ];
+    }
+
+
+    function makeCoccusCluster() {
+        const patterns = [
+            [
+                [
+                    0,
+                    0,
+                    1
+                ]
+            ],
+            [
+                [
+                    -0.55,
+                    0,
+                    1
+                ],
+                [
+                    0.55,
+                    0,
+                    1
+                ]
+            ],
+            [
+                [
+                    -0.55,
+                    -0.5,
+                    1
+                ],
+                [
+                    0.55,
+                    -0.5,
+                    1
+                ],
+                [
+                    -0.5,
+                    0.55,
+                    1
+                ],
+                [
+                    0.5,
+                    0.55,
+                    1
+                ]
+            ],
+            [
+                [
+                    0,
+                    -0.6,
+                    1
+                ],
+                [
+                    -0.6,
+                    0.2,
+                    1
+                ],
+                [
+                    0.6,
+                    0.2,
+                    1
+                ],
+                [
+                    0,
+                    0.55,
+                    0.9
+                ]
+            ]
+        ];
+
+        return pick(
+            patterns
+        ).map(
+            function (
+                entry
+            ) {
+                return {
+                    x: entry[0],
+                    y: entry[1],
+                    r: entry[2] * 0.7,
+                    phase:
+                        Math.random()
+                        *
+                        Math.PI
+                        *
+                        2
+                };
+            }
+        );
+    }
+
+
+    function spawnOrganism(
+        type
+    ) {
+        const organism = {
+            type: type,
+
+            x:
+                randomBetween(
+                    0,
+                    width
+                ),
+
+            y:
+                randomBetween(
+                    0,
+                    height
+                ),
+
+            size:
+                randomBetween(
+                    8,
+                    14
+                ),
+
+            angle:
+                randomBetween(
+                    0,
+                    Math.PI * 2
+                ),
+
+            spin:
+                randomBetween(
+                    -0.12,
+                    0.12
+                ),
+
+            speed:
+                randomBetween(
+                    4,
+                    11
+                ),
+
+            direction:
+                randomBetween(
+                    0,
+                    Math.PI * 2
+                ),
+
+            phase:
+                randomBetween(
+                    0,
+                    Math.PI * 2
+                ),
+
+            color:
+                pick(
+                    palette
+                ),
+
+            alpha:
+                randomBetween(
+                    0.18,
+                    0.34
+                )
+        };
+
+
+        if (
+            type === "phage"
+        ) {
+            organism.size = (
+                randomBetween(
+                    10,
+                    15
+                )
+            );
+
+            organism.speed = (
+                randomBetween(
+                    3,
+                    7
+                )
+            );
+
+            organism.spin = (
+                randomBetween(
+                    -0.2,
+                    0.2
+                )
+            );
+        }
+
+
+        if (
+            type === "coccus"
+        ) {
+            organism.cluster = (
+                makeCoccusCluster()
+            );
+
+            organism.size = (
+                randomBetween(
+                    6,
+                    10
+                )
+            );
+        }
+
+
+        if (
+            type === "spirillum"
+        ) {
+            organism.size = (
+                randomBetween(
+                    6,
+                    9
+                )
+            );
+        }
+
+
+        return organism;
+    }
+
+
+    function drawBacillus(
+        organism,
+        time
+    ) {
+        const length = (
+            organism.size
+            *
+            2.4
+        );
+
+        const bodyWidth = (
+            organism.size
+            *
+            0.95
+        );
+
+        const radius = (
+            bodyWidth
+            /
+            2
+        );
+
+
+        context.save();
+
+        context.strokeStyle = (
+            organism.color
+        );
+
+        context.lineWidth = 1;
+        context.lineCap = "round";
+
+
+        for (
+            let flagellum = -1;
+            flagellum <= 1;
+            flagellum += 1
+        ) {
+            context.beginPath();
+
+            const yStart = (
+                flagellum
+                *
+                bodyWidth
+                *
+                0.35
+            );
+
+
+            for (
+                let index = 0;
+                index <= 20;
+                index += 1
+            ) {
+                const progress = (
+                    index
+                    /
+                    20
+                );
+
+                const x = (
+                    -length
+                    /
+                    2
+                    -
+                    progress
+                    *
+                    length
+                    *
+                    0.75
+                );
+
+                const y = (
+                    yStart
+                    +
+                    Math.sin(
+                        progress
+                        *
+                        7
+                        +
+                        time
+                        *
+                        2
+                        +
+                        organism.phase
+                        +
+                        flagellum
+                    )
+                    *
+                    bodyWidth
+                    *
+                    0.45
+                    *
+                    progress
+                );
+
+
+                if (
+                    index
+                ) {
+                    context.lineTo(
+                        x,
+                        y
+                    );
+                } else {
+                    context.moveTo(
+                        x,
+                        y
+                    );
+                }
+            }
+
+            context.globalAlpha = (
+                organism.alpha
+                *
+                0.75
+            );
+
+            context.stroke();
+        }
+
+
+        context.beginPath();
+
+        context.moveTo(
+            -length / 2 + radius,
+            -radius
+        );
+
+        context.lineTo(
+            length / 2 - radius,
+            -radius
+        );
+
+        context.arc(
+            length / 2 - radius,
+            0,
+            radius,
+            -Math.PI / 2,
+            Math.PI / 2
+        );
+
+        context.lineTo(
+            -length / 2 + radius,
+            radius
+        );
+
+        context.arc(
+            -length / 2 + radius,
+            0,
+            radius,
+            Math.PI / 2,
+            -Math.PI / 2
+        );
+
+        context.closePath();
+
+        context.globalAlpha = (
+            organism.alpha
+            *
+            0.45
+        );
+
+        context.fillStyle = (
+            organism.color
+        );
+
+        context.fill();
+
+        context.globalAlpha = (
+            organism.alpha
+        );
+
+        context.lineWidth = 1.3;
+
+        context.stroke();
+
+
+        context.restore();
+    }
+
+
+    function drawCoccus(
+        organism,
+        time
+    ) {
+        context.save();
+
+        context.lineWidth = 1.3;
+        context.strokeStyle = (
+            organism.color
+        );
+
+
+        organism.cluster.forEach(
+            function (
+                cell
+            ) {
+                const radius = (
+                    organism.size
+                    *
+                    cell.r
+                );
+
+                const movement = (
+                    Math.sin(
+                        time
+                        *
+                        1.7
+                        +
+                        organism.phase
+                        +
+                        cell.phase
+                    )
+                    *
+                    organism.size
+                    *
+                    0.04
+                );
+
+
+                context.beginPath();
+
+                context.arc(
+                    cell.x
+                    *
+                    organism.size,
+
+                    cell.y
+                    *
+                    organism.size
+                    +
+                    movement,
+
+                    radius,
+                    0,
+                    Math.PI * 2
+                );
+
+                context.globalAlpha = (
+                    organism.alpha
+                    *
+                    0.42
+                );
+
+                context.fillStyle = (
+                    organism.color
+                );
+
+                context.fill();
+
+                context.globalAlpha = (
+                    organism.alpha
+                );
+
+                context.stroke();
+            }
+        );
+
+
+        context.restore();
+    }
+
+
+    function drawSpirillum(
+        organism,
+        time
+    ) {
+        const length = (
+            organism.size
+            *
+            3.2
+        );
+
+        const amplitude = (
+            organism.size
+            *
+            0.65
+        );
+
+
+        context.save();
+
+        context.strokeStyle = (
+            organism.color
+        );
+
+        context.lineCap = "round";
+
+        context.globalAlpha = (
+            organism.alpha
+        );
+
+        context.lineWidth = (
+            organism.size
+            *
+            0.48
+        );
+
+        context.beginPath();
+
+
+        for (
+            let index = 0;
+            index <= 38;
+            index += 1
+        ) {
+            const progress = (
+                index
+                /
+                38
+            );
+
+            const x = (
+                -length
+                /
+                2
+                +
+                progress
+                *
+                length
+            );
+
+            const y = (
+                Math.sin(
+                    progress
+                    *
+                    Math.PI
+                    *
+                    3
+                    +
+                    time
+                    *
+                    1.7
+                    +
+                    organism.phase
+                )
+                *
+                amplitude
+            );
+
+
+            if (
+                index
+            ) {
+                context.lineTo(
+                    x,
+                    y
+                );
+            } else {
+                context.moveTo(
+                    x,
+                    y
+                );
+            }
+        }
+
+
+        context.stroke();
+
+        context.restore();
+    }
+
+
+    function drawPhage(
+        organism
+    ) {
+        const size = organism.size;
+
+        const headRadius = (
+            size
+            *
+            1.05
+        );
+
+        const headY = (
+            -size
+            *
+            1.45
+        );
+
+
+        context.save();
+
+        context.strokeStyle = (
+            organism.color
+        );
+
+        context.fillStyle = (
+            organism.color
+        );
+
+        context.lineJoin = "round";
+        context.lineCap = "round";
+
+
+        context.beginPath();
+
+
+        for (
+            let index = 0;
+            index < 6;
+            index += 1
+        ) {
+            const angle = (
+                -Math.PI
+                /
+                2
+                +
+                index
+                *
+                Math.PI
+                /
+                3
+            );
+
+            const x = (
+                Math.cos(
+                    angle
+                )
+                *
+                headRadius
+            );
+
+            const y = (
+                headY
+                +
+                Math.sin(
+                    angle
+                )
+                *
+                headRadius
+            );
+
+
+            if (
+                index
+            ) {
+                context.lineTo(
+                    x,
+                    y
+                );
+            } else {
+                context.moveTo(
+                    x,
+                    y
+                );
+            }
+        }
+
+
+        context.closePath();
+
+        context.globalAlpha = (
+            organism.alpha
+            *
+            0.42
+        );
+
+        context.fill();
+
+        context.globalAlpha = (
+            organism.alpha
+        );
+
+        context.lineWidth = 1.3;
+
+        context.stroke();
+
+
+        const tailStart = (
+            headY
+            +
+            headRadius
+            *
+            0.85
+        );
+
+        const tailEnd = (
+            size
+            *
+            0.9
+        );
+
+        const tailWidth = (
+            size
+            *
+            0.3
+        );
+
+
+        context.beginPath();
+
+        context.rect(
+            -tailWidth,
+            tailStart,
+            tailWidth * 2,
+            tailEnd - tailStart
+        );
+
+        context.globalAlpha = (
+            organism.alpha
+            *
+            0.35
+        );
+
+        context.fill();
+
+        context.globalAlpha = (
+            organism.alpha
+        );
+
+        context.stroke();
+
+
+        context.beginPath();
+
+        context.moveTo(
+            -tailWidth * 1.6,
+            tailEnd
+        );
+
+        context.lineTo(
+            tailWidth * 1.6,
+            tailEnd
+        );
+
+        context.stroke();
+
+
+        for (
+            const direction of [
+                -1,
+                1
+            ]
+        ) {
+            for (
+                let leg = 0;
+                leg < 3;
+                leg += 1
+            ) {
+                context.beginPath();
+
+                context.moveTo(
+                    direction
+                    *
+                    tailWidth
+                    *
+                    1.2,
+
+                    tailEnd
+                );
+
+                context.lineTo(
+                    direction
+                    *
+                    (
+                        tailWidth
+                        *
+                        1.8
+                        +
+                        size
+                        *
+                        leg
+                        *
+                        0.18
+                    ),
+
+                    tailEnd
+                    +
+                    size
+                    *
+                    (
+                        0.8
+                        +
+                        leg
+                        *
+                        0.22
+                    )
+                );
+
+                context.stroke();
+            }
+        }
+
+
+        context.restore();
+    }
+
+
+    const drawers = {
+        bacillus: drawBacillus,
+        coccus: drawCoccus,
+        spirillum: drawSpirillum,
+        phage: drawPhage
+    };
+
+
+    function rebuildOrganisms() {
+        organisms.length = 0;
+
+        const area = (
+            width
+            *
+            height
+            /
+            1000
+        );
+
+        const counts = {
+            bacillus:
+                Math.max(
+                    4,
+                    Math.round(
+                        area
+                        /
+                        95
+                    )
+                ),
+
+            coccus:
+                Math.max(
+                    3,
+                    Math.round(
+                        area
+                        /
+                        120
+                    )
+                ),
+
+            spirillum:
+                Math.max(
+                    2,
+                    Math.round(
+                        area
+                        /
+                        180
+                    )
+                ),
+
+            phage:
+                Math.max(
+                    3,
+                    Math.round(
+                        area
+                        /
+                        145
+                    )
+                )
+        };
+
+
+        Object.entries(
+            counts
+        ).forEach(
+            function (
+                entry
+            ) {
+                const type = entry[0];
+                const count = entry[1];
+
+                for (
+                    let index = 0;
+                    index < count;
+                    index += 1
+                ) {
+                    organisms.push(
+                        spawnOrganism(
+                            type
+                        )
+                    );
+                }
+            }
+        );
+    }
+
+
+    function resizeCanvas() {
+        const rectangle = (
+            canvas.getBoundingClientRect()
+        );
+
+        width = Math.max(
+            1,
+            rectangle.width
+        );
+
+        height = Math.max(
+            1,
+            rectangle.height
+        );
+
+        deviceScale = Math.min(
+            window.devicePixelRatio
+            ||
+            1,
+            2
+        );
+
+        canvas.width = Math.round(
+            width
+            *
+            deviceScale
+        );
+
+        canvas.height = Math.round(
+            height
+            *
+            deviceScale
+        );
+
+        context.setTransform(
+            deviceScale,
+            0,
+            0,
+            deviceScale,
+            0,
+            0
+        );
+
+        rebuildOrganisms();
+
+        renderOrganisms(
+            0
+        );
+    }
+
+
+    function moveOrganisms(
+        delta
+    ) {
+        organisms.forEach(
+            function (
+                organism
+            ) {
+                organism.angle += (
+                    organism.spin
+                    *
+                    delta
+                );
+
+                organism.x += (
+                    Math.cos(
+                        organism.direction
+                    )
+                    *
+                    organism.speed
+                    *
+                    delta
+                );
+
+                organism.y += (
+                    Math.sin(
+                        organism.direction
+                    )
+                    *
+                    organism.speed
+                    *
+                    delta
+                );
+
+
+                const margin = (
+                    organism.size
+                    *
+                    4
+                );
+
+
+                if (
+                    organism.x
+                    <
+                    -margin
+                ) {
+                    organism.x = (
+                        width
+                        +
+                        margin
+                    );
+                } else if (
+                    organism.x
+                    >
+                    width
+                    +
+                    margin
+                ) {
+                    organism.x = (
+                        -margin
+                    );
+                }
+
+
+                if (
+                    organism.y
+                    <
+                    -margin
+                ) {
+                    organism.y = (
+                        height
+                        +
+                        margin
+                    );
+                } else if (
+                    organism.y
+                    >
+                    height
+                    +
+                    margin
+                ) {
+                    organism.y = (
+                        -margin
+                    );
+                }
+            }
+        );
+    }
+
+
+    function renderOrganisms(
+        time
+    ) {
+        context.clearRect(
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        organisms.forEach(
+            function (
+                organism
+            ) {
+                context.save();
+
+                context.translate(
+                    organism.x,
+                    organism.y
+                );
+
+                context.rotate(
+                    organism.angle
+                );
+
+                drawers[
+                    organism.type
+                ](
+                    organism,
+                    time
+                );
+
+                context.restore();
+            }
+        );
+    }
+
+
+    function animationLoop(
+        now
+    ) {
+        const delta = Math.min(
+            (
+                now
+                -
+                lastFrame
+            )
+            /
+            1000,
+            0.05
+        );
+
+        lastFrame = now;
+
+        moveOrganisms(
+            delta
+        );
+
+        renderOrganisms(
+            now
+            /
+            1000
+        );
+
+        window.requestAnimationFrame(
+            animationLoop
+        );
+    }
+
+
+    window.addEventListener(
+        "resize",
+        resizeCanvas
+    );
+
+
+    resizeCanvas();
+
+
+    if (
+        !reducedMotion
+    ) {
+        window.requestAnimationFrame(
+            animationLoop
+        );
+    }
+})();
+</script>
+
 
 <script>
 (function () {
@@ -1025,13 +2641,20 @@
         "public-organism-data"
     );
 
+
     const sampleTypeData = sampleTypeElement
-        ? JSON.parse(sampleTypeElement.textContent)
+        ? JSON.parse(
+            sampleTypeElement.textContent
+        )
         : [];
 
+
     const organismData = organismElement
-        ? JSON.parse(organismElement.textContent)
+        ? JSON.parse(
+            organismElement.textContent
+        )
         : [];
+
 
     const charts = [];
 
@@ -1041,20 +2664,34 @@
             "publicSampleTypeChart"
         );
 
+
         if (
-            !element ||
-            !window.echarts ||
+            !element
+            ||
+            !window.echarts
+            ||
             !sampleTypeData.length
         ) {
             return;
         }
 
+
         const chart = window.echarts.init(
             element
         );
 
+
         chart.setOption({
             animationDuration: 500,
+
+            color: [
+                "#3b82f6",
+                "#37c4a6",
+                "#8fe0c4",
+                "#8b82d8",
+                "#94a3b8",
+                "#60a5fa"
+            ],
 
             tooltip: {
                 trigger: "item",
@@ -1064,25 +2701,34 @@
             legend: {
                 type: "scroll",
                 bottom: 0,
-                left: "center"
+                left: "center",
+
+                textStyle: {
+                    color: "#64748b",
+                    fontSize: 11
+                }
             },
 
             series: [
                 {
                     name: "Public Samples",
+
                     type: "pie",
+
                     radius: [
                         "48%",
                         "72%"
                     ],
+
                     center: [
                         "50%",
                         "43%"
                     ],
+
                     avoidLabelOverlap: true,
 
                     itemStyle: {
-                        borderRadius: 6,
+                        borderRadius: 5,
                         borderWidth: 2,
                         borderColor: "#ffffff"
                     },
@@ -1092,24 +2738,33 @@
                     },
 
                     emphasis: {
+                        scale: true,
+
                         label: {
                             show: true,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: "bold"
                         }
                     },
 
-                    data: sampleTypeData.map(
-                        function (row) {
-                            return {
-                                name: row.sample_type,
-                                value: row.total
-                            };
-                        }
-                    )
+                    data:
+                        sampleTypeData.map(
+                            function (
+                                row
+                            ) {
+                                return {
+                                    name:
+                                        row.sample_type,
+
+                                    value:
+                                        row.total
+                                };
+                            }
+                        )
                 }
             ]
         });
+
 
         charts.push(
             chart
@@ -1122,20 +2777,34 @@
             "publicOrganismChart"
         );
 
+
         if (
-            !element ||
-            !window.echarts ||
+            !element
+            ||
+            !window.echarts
+            ||
             !organismData.length
         ) {
             return;
         }
 
+
         const chart = window.echarts.init(
             element
         );
 
+
         chart.setOption({
             animationDuration: 500,
+
+            color: [
+                "#3b82f6",
+                "#37c4a6",
+                "#8fe0c4",
+                "#8b82d8",
+                "#94a3b8",
+                "#60a5fa"
+            ],
 
             tooltip: {
                 trigger: "item",
@@ -1144,8 +2813,11 @@
 
             series: [
                 {
-                    name: "Public organism representation",
+                    name:
+                        "Public organism representation",
+
                     type: "treemap",
+
                     roam: false,
                     nodeClick: false,
 
@@ -1155,6 +2827,13 @@
 
                     label: {
                         show: true,
+
+                        color: "#ffffff",
+
+                        fontSize: 11,
+
+                        fontWeight: 600,
+
                         overflow: "truncate"
                     },
 
@@ -1162,17 +2841,30 @@
                         show: false
                     },
 
-                    data: organismData.map(
-                        function (row) {
-                            return {
-                                name: row.organism_name,
-                                value: row.total
-                            };
-                        }
-                    )
+                    itemStyle: {
+                        borderColor: "#ffffff",
+                        borderWidth: 2,
+                        gapWidth: 2
+                    },
+
+                    data:
+                        organismData.map(
+                            function (
+                                row
+                            ) {
+                                return {
+                                    name:
+                                        row.organism_name,
+
+                                    value:
+                                        row.total
+                                };
+                            }
+                        )
                 }
             ]
         });
+
 
         charts.push(
             chart
@@ -1186,7 +2878,11 @@
     }
 
 
-    if (document.readyState === "loading") {
+    if (
+        document.readyState
+        ===
+        "loading"
+    ) {
         document.addEventListener(
             "DOMContentLoaded",
             initializePublicCharts
@@ -1200,7 +2896,9 @@
         "resize",
         function () {
             charts.forEach(
-                function (chart) {
+                function (
+                    chart
+                ) {
                     chart.resize();
                 }
             );
