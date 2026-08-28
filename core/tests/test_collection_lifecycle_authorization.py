@@ -274,7 +274,7 @@ class CollectionLifecycleAuthorizationTests(
 
         self.assertContains(
             listing,
-            "No lifecycle actions",
+            "Open Explorer",
         )
 
         response = self.deactivate(
@@ -382,7 +382,7 @@ class CollectionLifecycleAuthorizationTests(
 
                 self.assertContains(
                     listing,
-                    "No lifecycle actions",
+                    "Open Explorer",
                 )
 
                 response = (

@@ -32,14 +32,77 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
+.collection-filter-card,
 .collection-card {
     background: #fff;
     border: 1px solid #e8edf3;
     border-radius: 14px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.collection-filter-card {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+}
+
+.collection-filter-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(240px, 2fr)
+        minmax(170px, 1fr)
+        minmax(160px, 1fr)
+        minmax(150px, .85fr)
+        auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.collection-filter-field label {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.collection-filter-actions {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+}
+
+.collection-filter-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px solid #eef2f7;
+}
+
+.collection-visible-count {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.collection-filter-note {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.collection-card {
     overflow: hidden;
+}
+
+.collection-table-wrap {
+    overflow-x: auto;
 }
 
 .collection-table {
@@ -48,13 +111,14 @@
 }
 
 .collection-table th {
-    font-size: 11px;
+    font-size: 10px;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: .04em;
     border-bottom: 1px solid #e8edf3;
-    padding: 12px 14px;
+    padding: 11px 14px;
     background: #f8fafc;
+    white-space: nowrap;
 }
 
 .collection-table td {
@@ -74,10 +138,19 @@
     color: #0f172a;
 }
 
+.collection-name a {
+    color: #0f172a;
+}
+
+.collection-name a:hover {
+    color: #16a34a;
+}
+
 .collection-description {
     color: #64748b;
     font-size: 12px;
     margin-top: 2px;
+    max-width: 480px;
 }
 
 .collection-badge {
@@ -103,8 +176,93 @@
     border-color: #fde68a;
 }
 
-.collection-muted {
+.collection-sample-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: 3px 8px;
+    border: 1px solid #dbe3ec;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.collection-actions .dropdown-menu {
+    min-width: 190px;
+}
+
+.collection-actions .dropdown-item {
+    font-size: 12px;
+}
+
+.collection-actions .dropdown-item form {
+    margin: 0;
+}
+
+.collection-actions .dropdown-item-button {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+}
+
+.collection-empty {
+    padding: 36px 20px;
+    text-align: center;
+}
+
+.collection-empty-icon {
+    margin-bottom: 8px;
+    color: #94a3b8;
+    font-size: 30px;
+}
+
+.collection-empty-title {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.collection-empty-help {
+    margin: 4px auto 14px;
+    max-width: 480px;
     color: #64748b;
+    font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+    .collection-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .collection-filter-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .collection-list-page {
+        padding: 18px 16px 24px;
+    }
+
+    .collection-section-header,
+    .collection-filter-summary {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .collection-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-filter-actions {
+        grid-column: auto;
+    }
 }
 </style>
 
@@ -116,80 +274,363 @@
         </h1>
 
         <div class="collection-section-actions">
-            <a href="{% url 'collections_dashboard' %}" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+            <a
+                href="{% url 'collections_dashboard' %}"
+                class="btn btn-sm btn-outline-success"
+            >
+                <i class="bi bi-speedometer2 me-1"></i>
+                Dashboard
             </a>
-            <a href="{% url 'collection_archive' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-archive me-1"></i>Archived
+
+            <a
+                href="{% url 'collection_archive' %}"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                <i class="bi bi-archive me-1"></i>
+                Archived
             </a>
-            <a href="{% url 'collection_create' %}" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>New Collection
+
+            <a
+                href="{% url 'collection_create' %}"
+                class="btn btn-sm btn-primary"
+            >
+                <i class="bi bi-plus-lg me-1"></i>
+                New Collection
             </a>
         </div>
     </div>
 
+    <form
+        method="get"
+        action="{% url 'collections_list' %}"
+        class="collection-filter-card"
+    >
+        <div class="collection-filter-grid">
+            <div class="collection-filter-field">
+                <label for="collectionSearch">
+                    Search
+                </label>
+
+                <input
+                    id="collectionSearch"
+                    type="search"
+                    name="q"
+                    value="{{ collection_search_query }}"
+                    class="form-control form-control-sm"
+                    placeholder="Collection name or description"
+                >
+            </div>
+
+            <div class="collection-filter-field">
+                <label for="collectionResearchGroup">
+                    Research Group
+                </label>
+
+                <select
+                    id="collectionResearchGroup"
+                    name="research_group"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">
+                        All groups
+                    </option>
+
+                    {% for group in collection_filter_groups %}
+                        <option
+                            value="{{ group.pk }}"
+                            {% if collection_filter_group_id == group.pk %}selected{% endif %}
+                        >
+                            {{ group.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="collection-filter-field">
+                <label for="collectionOwner">
+                    Owner
+                </label>
+
+                <select
+                    id="collectionOwner"
+                    name="owner"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">
+                        All owners
+                    </option>
+
+                    {% for owner in collection_filter_owners %}
+                        <option
+                            value="{{ owner.pk }}"
+                            {% if collection_filter_owner_id == owner.pk %}selected{% endif %}
+                        >
+                            {{ owner.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="collection-filter-field">
+                <label for="collectionVisibility">
+                    Visibility
+                </label>
+
+                <select
+                    id="collectionVisibility"
+                    name="visibility"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">
+                        Any
+                    </option>
+
+                    <option
+                        value="public"
+                        {% if collection_visibility_filter == "public" %}selected{% endif %}
+                    >
+                        Public
+                    </option>
+
+                    <option
+                        value="restricted"
+                        {% if collection_visibility_filter == "restricted" %}selected{% endif %}
+                    >
+                        Restricted
+                    </option>
+                </select>
+            </div>
+
+            <div class="collection-filter-actions">
+                <button
+                    type="submit"
+                    class="btn btn-sm btn-primary"
+                >
+                    <i class="bi bi-funnel me-1"></i>
+                    Apply
+                </button>
+
+                {% if collection_filters_active %}
+                    <a
+                        href="{% url 'collections_list' %}"
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="collection-filter-summary">
+            <div class="collection-visible-count">
+                {{ collection_visible_count }}
+                visible Collection{{ collection_visible_count|pluralize }}
+            </div>
+
+            <div class="collection-filter-note">
+                Sample totals include only Samples visible to your account.
+            </div>
+        </div>
+    </form>
+
     <div class="collection-card">
-        <table class="collection-table">
-            <thead>
-                <tr>
-                    <th>Collection</th>
-                    <th>Research group</th>
-                    <th>Owner</th>
-                    <th>Visibility</th>
-                    <th>Created</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for collection in collections %}
-                    <tr>
-                        <td>
-                            <div class="collection-name">
-                                    <a
-                                        href="{% url 'collection_detail' collection.id %}"
-                                        class="text-decoration-none"
+        {% if collections %}
+            <div class="collection-table-wrap">
+                <table class="collection-table">
+                    <thead>
+                        <tr>
+                            <th>Collection</th>
+                            <th>Research Group</th>
+                            <th>Owner</th>
+                            <th>Visible Samples</th>
+                            <th>Visibility</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for collection in collections %}
+                            <tr>
+                                <td>
+                                    <div class="collection-name">
+                                        <a
+                                            href="{% url 'collection_detail' collection.id %}"
+                                            class="text-decoration-none"
+                                        >
+                                            {{ collection.name }}
+                                        </a>
+                                    </div>
+
+                                    <div class="collection-description">
+                                        {{ collection.description|default:"No description registered."|truncatechars:100 }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {{ collection.research_group.name|default:"Unassigned" }}
+                                </td>
+
+                                <td>
+                                    {{ collection.owner.username|default:"No owner" }}
+                                </td>
+
+                                <td>
+                                    <span
+                                        class="collection-sample-count"
+                                        title="Samples visible to your account"
                                     >
-                                        {{ collection.name }}
-                                    </a>
-                                </div>
-                            <div class="collection-description">
-                                {{ collection.description|default:"No description registered."|truncatechars:100 }}
-                            </div>
-                        </td>
-                        <td>{{ collection.research_group.name|default:"Unassigned" }}</td>
-                        <td>{{ collection.owner.username|default:"No owner" }}</td>
-                        <td>
-                            {% if collection.is_public %}
-                                <span class="collection-badge collection-badge-public">Public</span>
-                            {% else %}
-                                <span class="collection-badge collection-badge-restricted">Restricted</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ collection.created_at|date:"d/m/Y" }}</td>
-                        <td class="text-end">
-                            {% if collection.can_delete %}
-                                <form method="post" action="{% url 'collections_list' %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="deactivate_collection">
-                                    <input type="hidden" name="collection_id" value="{{ collection.id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        Deactivate
-                                    </button>
-                                </form>
-                            {% else %}
-                                <span class="collection-muted small">No lifecycle actions</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            No collections registered yet.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                                        {{ collection.visible_sample_count }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if collection.is_public %}
+                                        <span
+                                            class="collection-badge collection-badge-public"
+                                        >
+                                            <i class="bi bi-globe2 me-1"></i>
+                                            Public
+                                        </span>
+                                    {% else %}
+                                        <span
+                                            class="collection-badge collection-badge-restricted"
+                                        >
+                                            <i class="bi bi-lock me-1"></i>
+                                            Restricted
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ collection.created_at|date:"d/m/Y" }}
+                                </td>
+
+                                <td class="text-end collection-actions">
+                                    <div class="dropdown d-inline-block">
+                                        <button
+                                            class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                        >
+                                            Actions
+                                        </button>
+
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="{% url 'collection_detail' collection.id %}"
+                                                >
+                                                    <i class="bi bi-grid me-2"></i>
+                                                    Open Explorer
+                                                </a>
+                                            </li>
+
+                                            {% if collection.can_edit %}
+                                                <li>
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{% url 'collection_edit' collection.id %}"
+                                                    >
+                                                        <i class="bi bi-pencil-square me-2"></i>
+                                                        Edit Collection
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+
+                                            {% if collection.can_manage %}
+                                                <li>
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{% url 'collection_detail' collection.id %}#collection-sharing-panel"
+                                                    >
+                                                        <i class="bi bi-share me-2"></i>
+                                                        Manage Sharing
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+
+                                            {% if collection.can_delete %}
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+
+                                                <li>
+                                                    <div
+                                                        class="dropdown-item text-danger"
+                                                    >
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'collections_list' %}"
+                                                            onsubmit="return confirm('Deactivate this Collection? It will move to Archived and can be reactivated later.');"
+                                                        >
+                                                            {% csrf_token %}
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="action"
+                                                                value="deactivate_collection"
+                                                            >
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="collection_id"
+                                                                value="{{ collection.id }}"
+                                                            >
+
+                                                            <button
+                                                                type="submit"
+                                                                class="dropdown-item-button"
+                                                            >
+                                                                <i class="bi bi-archive me-2"></i>
+                                                                Deactivate
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="collection-empty">
+                <div class="collection-empty-icon">
+                    <i class="bi bi-collection"></i>
+                </div>
+
+                <div class="collection-empty-title">
+                    No Collections match this view.
+                </div>
+
+                <div class="collection-empty-help">
+                    Adjust the current filters or create a new scientific Collection.
+                </div>
+
+                {% if collection_filters_active %}
+                    <a
+                        href="{% url 'collections_list' %}"
+                        class="btn btn-sm btn-outline-secondary me-1"
+                    >
+                        Clear Filters
+                    </a>
+                {% endif %}
+
+                <a
+                    href="{% url 'collection_create' %}"
+                    class="btn btn-sm btn-primary"
+                >
+                    <i class="bi bi-plus-lg me-1"></i>
+                    New Collection
+                </a>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

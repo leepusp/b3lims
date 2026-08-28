@@ -2,7 +2,7 @@ from core.services.metadata_vocabularies import active_tags_from_ids, get_or_cre
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
@@ -186,15 +186,276 @@ def collections_list_view(request, template_name="internal/collections/collectio
     )
     ctx["collection_form"] = CollectionForm()
 
-    collections_qs = visible_collections_for_user(user).order_by("-created_at")
+    # Start exclusively from the canonical Collection
+    # authorization boundary. Filter facets are also derived only
+    # from Collections already visible to this user.
+    collections_base_qs = (
+        visible_collections_for_user(
+            user
+        )
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .order_by(
+            "-created_at",
+            "-pk",
+        )
+    )
+
+    collection_filter_groups = (
+        ResearchGroup.objects
+        .filter(
+            collections__in=collections_base_qs,
+        )
+        .distinct()
+        .order_by(
+            "name",
+            "pk",
+        )
+    )
+
+    collection_filter_owners = (
+        get_user_model()
+        .objects
+        .filter(
+            owned_collections__in=collections_base_qs,
+        )
+        .distinct()
+        .order_by(
+            "username",
+            "pk",
+        )
+    )
+
+    search_query = str(
+        request.GET.get(
+            "q",
+            "",
+        )
+        or ""
+    ).strip()
+
+    research_group_raw = str(
+        request.GET.get(
+            "research_group",
+            "",
+        )
+        or ""
+    ).strip()
+
+    owner_raw = str(
+        request.GET.get(
+            "owner",
+            "",
+        )
+        or ""
+    ).strip()
+
+    visibility_filter = str(
+        request.GET.get(
+            "visibility",
+            "",
+        )
+        or ""
+    ).strip().lower()
+
+    research_group_id = (
+        int(
+            research_group_raw
+        )
+        if (
+            research_group_raw.isdigit()
+            and int(
+                research_group_raw
+            ) > 0
+        )
+        else None
+    )
+
+    owner_id = (
+        int(
+            owner_raw
+        )
+        if (
+            owner_raw.isdigit()
+            and int(
+                owner_raw
+            ) > 0
+        )
+        else None
+    )
+
+    collections_qs = (
+        collections_base_qs
+    )
+
+    if search_query:
+        collections_qs = (
+            collections_qs
+            .filter(
+                Q(
+                    name__icontains=search_query,
+                )
+                | Q(
+                    description__icontains=search_query,
+                )
+            )
+        )
+
+    if research_group_raw:
+        if research_group_id is None:
+            collections_qs = (
+                collections_qs.none()
+            )
+        else:
+            collections_qs = (
+                collections_qs.filter(
+                    research_group_id=(
+                        research_group_id
+                    ),
+                )
+            )
+
+    if owner_raw:
+        if owner_id is None:
+            collections_qs = (
+                collections_qs.none()
+            )
+        else:
+            collections_qs = (
+                collections_qs.filter(
+                    owner_id=owner_id,
+                )
+            )
+
+    if visibility_filter:
+        if visibility_filter == "public":
+            collections_qs = (
+                collections_qs.filter(
+                    is_public=True,
+                )
+            )
+        elif visibility_filter == "restricted":
+            collections_qs = (
+                collections_qs.filter(
+                    is_public=False,
+                )
+            )
+        else:
+            collections_qs = (
+                collections_qs.none()
+            )
+
+    collection_ids = list(
+        collections_qs.values_list(
+            "pk",
+            flat=True,
+        )
+    )
+
+    # SECURITY:
+    #
+    # Collection visibility never expands Sample visibility.
+    # Counts must begin at visible_samples_for_user() and then
+    # intersect the currently visible Collection set.
+    visible_sample_counts = {}
+
+    if collection_ids:
+        visible_sample_counts = {
+            row["collections"]: row["total"]
+            for row in (
+                visible_samples_for_user(
+                    user
+                )
+                .filter(
+                    collections__pk__in=(
+                        collection_ids
+                    ),
+                )
+                .values(
+                    "collections",
+                )
+                .annotate(
+                    total=Count(
+                        "pk",
+                        distinct=True,
+                    ),
+                )
+            )
+        }
 
     visible_collections = []
-    for c in collections_qs:
-        c.can_edit = can_edit_collection(user, c)
-        c.can_delete = can_delete_collection(user, c)
-        visible_collections.append(c)
 
-    ctx["collections"] = visible_collections
+    for collection in collections_qs:
+        collection.can_edit = (
+            can_edit_collection(
+                user,
+                collection,
+            )
+        )
+
+        collection.can_manage = (
+            can_manage_collection_permissions(
+                user,
+                collection,
+            )
+        )
+
+        collection.can_delete = (
+            can_delete_collection(
+                user,
+                collection,
+            )
+        )
+
+        collection.visible_sample_count = (
+            visible_sample_counts.get(
+                collection.pk,
+                0,
+            )
+        )
+
+        visible_collections.append(
+            collection
+        )
+
+    ctx.update(
+        {
+            "collections": (
+                visible_collections
+            ),
+            "collection_visible_count": (
+                len(
+                    visible_collections
+                )
+            ),
+            "collection_filter_groups": (
+                collection_filter_groups
+            ),
+            "collection_filter_owners": (
+                collection_filter_owners
+            ),
+            "collection_search_query": (
+                search_query
+            ),
+            "collection_filter_group_id": (
+                research_group_id
+            ),
+            "collection_filter_owner_id": (
+                owner_id
+            ),
+            "collection_visibility_filter": (
+                visibility_filter
+            ),
+            "collection_filters_active": bool(
+                search_query
+                or research_group_raw
+                or owner_raw
+                or visibility_filter
+            ),
+        }
+    )
 
     return render(request, template_name, ctx)
 
