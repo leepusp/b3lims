@@ -1,5 +1,4 @@
 {% extends "public/base.html" %}
-{% load static %}
 
 {% block title %}
     {{ collection.name }} | Biobank CEPID B3
@@ -8,55 +7,56 @@
 {% block content %}
 <div class="container my-5">
 
-    <!-- ================= HEADER ================= -->
     <div class="mb-4">
-        <h1 class="fw-bold">
+        <div class="mb-2">
+            <span class="badge bg-success">
+                Coleção pública
+            </span>
+        </div>
+
+        <h1 class="fw-bold mb-2">
             {{ collection.name }}
         </h1>
 
-        {% if collection.biobank %}
-            <span class="badge bg-primary mt-2">
-                {{ collection.biobank.name }}
-            </span>
-        {% endif %}
+        <p class="text-muted mb-0">
+            Metadados selecionados para divulgação no catálogo
+            público do Biobank CEPID B3.
+        </p>
     </div>
 
-    <!-- ================= DESCRIPTION ================= -->
     {% if collection.description %}
         <div class="card mb-4">
             <div class="card-body">
-                <h5 class="card-title">Descrição</h5>
-                <p class="card-text text-muted">
+                <h5 class="card-title">
+                    Descrição
+                </h5>
+
+                <p class="card-text text-muted mb-0">
                     {{ collection.description }}
                 </p>
             </div>
         </div>
     {% endif %}
 
-    <!-- ================= METADATA ================= -->
     <div class="row">
 
-        <!-- INFO -->
         <div class="col-md-6 mb-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <h6 class="card-title">Informações</h6>
+                    <h6 class="card-title">
+                        Informações públicas
+                    </h6>
 
                     <ul class="list-unstyled mb-0">
                         <li>
-                            <strong>Visibilidade:</strong>
-                            {{ collection.get_visibility_display }}
+                            <strong>Status:</strong>
+                            Publicada
                         </li>
 
-                        {% if collection.owner %}
                         <li>
-                            <strong>Responsável:</strong>
-                            {{ collection.owner.get_full_name|default:collection.owner.username }}
-                        </li>
-                        {% endif %}
-
-                        <li>
-                            <strong>Criada em:</strong>
+                            <strong>
+                                Data de inclusão:
+                            </strong>
                             {{ collection.created_at|date:"d/m/Y" }}
                         </li>
                     </ul>
@@ -64,23 +64,28 @@
             </div>
         </div>
 
-        <!-- TAGS -->
         <div class="col-md-6 mb-3">
             <div class="card h-100">
                 <div class="card-body">
-                    <h6 class="card-title">Tags</h6>
+                    <h6 class="card-title">
+                        Tags públicas
+                    </h6>
 
-                    {% if collection.tags.exists %}
-                        <div class="d-flex flex-wrap gap-2 mt-2">
-                            {% for tag in collection.tags.all %}
-                                <span class="badge bg-secondary">
+                    {% if collection.public_tags %}
+                        <div
+                            class="d-flex flex-wrap gap-2 mt-2"
+                        >
+                            {% for tag in collection.public_tags %}
+                                <span
+                                    class="badge bg-secondary"
+                                >
                                     {{ tag.name }}
                                 </span>
                             {% endfor %}
                         </div>
                     {% else %}
                         <p class="text-muted mb-0">
-                            Nenhuma tag associada.
+                            Nenhuma tag pública associada.
                         </p>
                     {% endif %}
                 </div>
@@ -89,18 +94,29 @@
 
     </div>
 
-    <!-- ================= CTA ================= -->
-    <div class="mt-4 d-flex justify-content-between">
+    <div class="card border-0 bg-light mt-3">
+        <div class="card-body">
+            <h6 class="fw-semibold mb-2">
+                Acesso ao material biológico
+            </h6>
 
-        <a href="{% url 'public_collections' %}"
-           class="btn btn-outline-secondary">
+            <p class="text-muted small mb-0">
+                A disponibilidade pública destes metadados não
+                representa autorização para acesso ou transferência
+                do material. Solicitações permanecem sujeitas à
+                governança institucional e aos procedimentos
+                aplicáveis.
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a
+            href="{% url 'public_collections' %}"
+            class="btn btn-outline-secondary"
+        >
             ← Voltar ao catálogo
         </a>
-
-        <button class="btn btn-primary" disabled>
-            Solicitar acesso à coleção
-        </button>
-
     </div>
 
 </div>

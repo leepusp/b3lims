@@ -4,167 +4,152 @@
 
 {% block content %}
 
-<!-- ================= HEADER ================= -->
 <section class="mb-4">
     <h1 class="fw-bold mb-2">
         Catálogo de Coleções
     </h1>
-    <p class="text-muted">
-        Explore as coleções científicas disponíveis no Biobank CEPID B3.
-        O acesso às amostras é restrito a pesquisadores autorizados.
+
+    <p class="text-muted mb-2">
+        Explore os metadados publicados das coleções científicas
+        disponíveis no Biobank CEPID B3.
+    </p>
+
+    <p class="text-muted small mb-0">
+        A publicação de metadados não implica acesso automático
+        ao material biológico, que permanece sujeito à governança
+        e às autorizações aplicáveis.
     </p>
 </section>
 
 <div class="row">
 
-    <!-- ================= FILTERS ================= -->
     <aside class="col-lg-3 mb-4">
-
         <div class="card shadow-sm">
             <div class="card-body">
 
                 <h5 class="fw-bold mb-3">
-                    Filtros
+                    Buscar
                 </h5>
 
-                <form method="get">
-
-                    <!-- Search -->
+                <form
+                    method="get"
+                    action="{% url 'public_collections' %}"
+                >
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Busca livre
+                        <label
+                            for="publicCollectionSearch"
+                            class="form-label fw-semibold"
+                        >
+                            Catálogo público
                         </label>
-                        <input type="text"
-                               name="q"
-                               value="{{ query }}"
-                               class="form-control"
-                               placeholder="Nome, descrição ou tag">
+
+                        <input
+                            id="publicCollectionSearch"
+                            type="search"
+                            name="q"
+                            value="{{ query }}"
+                            class="form-control"
+                            placeholder="Coleção, organismo, tipo ou tag"
+                        >
                     </div>
 
-                    <!-- Module -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Módulo
-                        </label>
-                        <select name="module" class="form-select">
-                            <option value="">Todos</option>
-                            <option value="vectors">Vetores & Construções</option>
-                            <option value="bacteria">Bactérias</option>
-                            <option value="phages">Bacteriófagos</option>
-                        </select>
-                    </div>
-
-                    <!-- Type -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Tipo de material
-                        </label>
-                        <select name="type" class="form-select">
-                            <option value="">Todos</option>
-                            <option>Plasmídeo</option>
-                            <option>Linhagem bacteriana</option>
-                            <option>Bacteriófago</option>
-                        </select>
-                    </div>
-
-                    <!-- Tags -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">
-                            Tags
-                        </label>
-                        <input type="text"
-                               name="tag"
-                               class="form-control"
-                               placeholder="Ex: E. coli, clínico">
-                    </div>
-
-                    <button class="btn btn-primary w-100">
-                        Aplicar filtros
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
+                        Buscar
                     </button>
 
+                    {% if query %}
+                        <a
+                            href="{% url 'public_collections' %}"
+                            class="btn btn-outline-secondary w-100 mt-2"
+                        >
+                            Limpar busca
+                        </a>
+                    {% endif %}
                 </form>
 
             </div>
         </div>
-
     </aside>
 
-    <!-- ================= RESULTS ================= -->
     <section class="col-lg-9">
 
-        <!-- Results header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div
+            class="d-flex justify-content-between align-items-center mb-3"
+        >
             <p class="mb-0 text-muted">
-                {{ collections|length }} coleção(ões) encontrada(s)
+                {{ collections|length }}
+                coleção(ões) pública(s) encontrada(s)
             </p>
         </div>
 
         {% if collections %}
-        <div class="row g-4">
+            <div class="row g-4">
 
-            {% for collection in collections %}
-            <div class="col-md-6 col-xl-4">
+                {% for collection in collections %}
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card h-100 shadow-sm">
 
-                <div class="card h-100 shadow-sm">
+                            <div
+                                class="card-body d-flex flex-column"
+                            >
+                                <div class="mb-2">
+                                    <span class="badge bg-success">
+                                        Pública
+                                    </span>
+                                </div>
 
-                    <div class="card-body d-flex flex-column">
+                                <h5 class="fw-bold mb-2">
+                                    {{ collection.name }}
+                                </h5>
 
-                        <!-- Title -->
-                        <h5 class="fw-bold mb-2">
-                            {{ collection.name }}
-                        </h5>
+                                <p
+                                    class="text-muted small flex-grow-1"
+                                >
+                                    {{ collection.description|default:"Sem descrição."|truncatechars:130 }}
+                                </p>
 
-                        <!-- Module badge -->
-                        {% if collection.biobank %}
-                        <span class="badge bg-primary mb-2 align-self-start">
-                            {{ collection.biobank.name }}
-                        </span>
-                        {% endif %}
+                                <ul
+                                    class="list-unstyled small mb-3"
+                                >
+                                    <li>
+                                        <strong>
+                                            Publicada no catálogo:
+                                        </strong>
+                                        {{ collection.created_at|date:"d/m/Y" }}
+                                    </li>
+                                </ul>
 
-                        <!-- Description -->
-                        <p class="text-muted small flex-grow-1">
-                            {{ collection.description|default:"Sem descrição."|truncatechars:130 }}
-                        </p>
+                                {% if collection.public_tags %}
+                                    <div class="mb-3">
+                                        {% for tag in collection.public_tags %}
+                                            <span
+                                                class="badge bg-secondary"
+                                            >
+                                                {{ tag.name }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
 
-                        <!-- Metadata -->
-                        <ul class="list-unstyled small mb-3">
-                            <li>
-                                <strong>Visibilidade:</strong>
-                                {{ collection.get_visibility_display }}
-                            </li>
-                            <li>
-                                <strong>Criada em:</strong>
-                                {{ collection.created_at|date:"d/m/Y" }}
-                            </li>
-                        </ul>
+                                <a
+                                    href="{% url 'public_collection_detail' collection.id %}"
+                                    class="btn btn-outline-primary btn-sm mt-auto"
+                                >
+                                    Ver detalhes
+                                </a>
 
-                        <!-- Tags -->
-                        {% if collection.tags.exists %}
-                        <div class="mb-3">
-                            {% for tag in collection.tags.all %}
-                                <span class="badge bg-secondary">
-                                    {{ tag.name }}
-                                </span>
-                            {% endfor %}
+                            </div>
                         </div>
-                        {% endif %}
-
-                        <!-- CTA -->
-                        <a href="{% url 'public_collection_detail' collection.id %}"
-                           class="btn btn-outline-primary btn-sm mt-auto">
-                            Ver detalhes
-                        </a>
-
                     </div>
-                </div>
+                {% endfor %}
 
             </div>
-            {% endfor %}
-
-        </div>
         {% else %}
-            <div class="alert alert-warning">
-                Nenhuma coleção encontrada com os critérios informados.
+            <div class="alert alert-light border">
+                Nenhuma coleção pública corresponde à busca informada.
             </div>
         {% endif %}
 
