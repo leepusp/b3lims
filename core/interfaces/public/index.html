@@ -684,6 +684,168 @@
         color: var(--b3-muted);
     }
 
+    .portal-control-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                5,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+
+        gap: 0.75rem;
+
+        margin:
+            1rem
+            0
+            0.75rem;
+
+        padding: 0.9rem;
+
+        border:
+            1px solid
+            #e4ebf2;
+
+        border-radius: 12px;
+
+        background: #f8fafc;
+    }
+
+    .portal-control-grid-compact {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+    .portal-control-label {
+        display: block;
+
+        margin-bottom: 0.32rem;
+
+        color: #64748b;
+
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.045em;
+
+        text-transform: uppercase;
+    }
+
+    .portal-control-grid .form-control,
+    .portal-control-grid .form-select {
+        min-height: 38px;
+
+        border-color: #dbe4ee;
+
+        color: #334155;
+        background: #ffffff;
+
+        font-size: 0.8rem;
+    }
+
+    .portal-network-summary {
+        min-height: 1.2rem;
+
+        margin-bottom: 0.3rem;
+
+        color: #8290a6;
+
+        font-size: 0.76rem;
+    }
+
+    .portal-ranking-details {
+        margin-top: 1rem;
+
+        padding: 1rem;
+
+        border:
+            1px solid
+            #e4ebf2;
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                180deg,
+                #fbfdff,
+                #f8fafc
+            );
+    }
+
+    .portal-ranking-detail-list {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+
+        gap: 0.55rem;
+
+        margin-top: 0.8rem;
+    }
+
+    .portal-ranking-candidate {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        justify-content: space-between;
+
+        padding:
+            0.6rem
+            0.7rem;
+
+        border:
+            1px solid
+            #e6edf4;
+
+        border-radius: 9px;
+
+        background: #ffffff;
+    }
+
+    .portal-ranking-candidate-name {
+        min-width: 0;
+
+        overflow: hidden;
+
+        color: #334155;
+
+        font-size: 0.8rem;
+        font-weight: 600;
+
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .portal-ranking-candidate-meta {
+        flex: none;
+
+        color: #8290a6;
+
+        font-size: 0.72rem;
+    }
+
+    .portal-sankey-note {
+        margin-top: 0.75rem;
+
+        color: #8290a6;
+
+        font-size: 0.76rem;
+    }
+
     @media (max-width: 991.98px) {
         .portal-stats-grid {
             grid-template-columns:
@@ -699,6 +861,23 @@
         .portal-charts-grid {
             grid-template-columns: 1fr;
         }
+
+        .portal-control-grid,
+        .portal-control-grid-compact {
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+        }
+
+        .portal-ranking-detail-list {
+            grid-template-columns: 1fr;
+        }
+
 
         .portal-feature-grid {
             grid-template-columns:
@@ -743,6 +922,12 @@
         .portal-resource-grid {
             grid-template-columns: 1fr;
         }
+
+        .portal-control-grid,
+        .portal-control-grid-compact {
+            grid-template-columns: 1fr;
+        }
+
 
         .portal-chart {
             height: 285px;
@@ -1074,17 +1259,17 @@
 
         <button
             class="nav-link"
-            id="publicViewBubbleTab"
+            id="publicViewSankeyTab"
             data-bs-toggle="pill"
-            data-bs-target="#publicViewBubble"
+            data-bs-target="#publicViewSankey"
             type="button"
             role="tab"
-            aria-controls="publicViewBubble"
+            aria-controls="publicViewSankey"
             aria-selected="false"
-            data-public-view="bubble"
+            data-public-view="sankey"
         >
-            <i class="bi bi-circle-square"></i>
-            Bubbles
+            <i class="bi bi-bezier2"></i>
+            Taxonomy Flow
         </button>
 
     </div>
@@ -1301,23 +1486,171 @@
                 </h3>
 
                 <p class="portal-panel-description">
-                    Interactive associations derived only from public
-                    Samples. Node size reflects the number of
-                    publication-approved Samples represented.
+                    Filter and reorganize publication-safe associations
+                    between public organism candidates and Sample types.
                 </p>
 
+
                 {% if organism_sample_type_network %}
+
+                    <div class="portal-control-grid">
+
+                        <div>
+                            <label
+                                for="publicNetworkSearch"
+                                class="portal-control-label"
+                            >
+                                Organism search
+                            </label>
+
+                            <input
+                                id="publicNetworkSearch"
+                                type="search"
+                                class="form-control form-control-sm"
+                                placeholder="Search candidates"
+                            >
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicNetworkSampleType"
+                                class="portal-control-label"
+                            >
+                                Sample type
+                            </label>
+
+                            <select
+                                id="publicNetworkSampleType"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="">
+                                    All Sample types
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicNetworkMinimum"
+                                class="portal-control-label"
+                            >
+                                Minimum count
+                            </label>
+
+                            <select
+                                id="publicNetworkMinimum"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="1">
+                                    ≥ 1 public Sample
+                                </option>
+
+                                <option value="2">
+                                    ≥ 2 public Samples
+                                </option>
+
+                                <option value="3">
+                                    ≥ 3 public Samples
+                                </option>
+
+                                <option value="5">
+                                    ≥ 5 public Samples
+                                </option>
+
+                                <option value="10">
+                                    ≥ 10 public Samples
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicNetworkLayout"
+                                class="portal-control-label"
+                            >
+                                Layout
+                            </label>
+
+                            <select
+                                id="publicNetworkLayout"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="force">
+                                    Force-directed
+                                </option>
+
+                                <option value="circular">
+                                    Circular
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicNetworkLabels"
+                                class="portal-control-label"
+                            >
+                                Labels
+                            </label>
+
+                            <select
+                                id="publicNetworkLabels"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="all">
+                                    All labels
+                                </option>
+
+                                <option value="organisms">
+                                    Organisms only
+                                </option>
+
+                                <option value="sample-types">
+                                    Sample types only
+                                </option>
+
+                                <option value="none">
+                                    Hide labels
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+
+
+                    <div class="d-flex justify-content-between gap-3">
+
+                        <div
+                            id="publicNetworkResultSummary"
+                            class="portal-network-summary"
+                            aria-live="polite"
+                        ></div>
+
+                        <button
+                            id="publicNetworkReset"
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary mb-1"
+                        >
+                            Reset filters
+                        </button>
+
+                    </div>
+
 
                     <div
                         id="publicNetworkChart"
                         class="portal-chart portal-chart-wide"
                         role="img"
-                        aria-label="Interactive network linking public organism names and Sample types"
+                        aria-label="Interactive filterable network linking public organism names and Sample types"
                     ></div>
 
                     <div class="portal-chart-help">
-                        Drag nodes, zoom and hover over relationships
-                        to inspect public aggregate counts.
+                        Drag nodes, zoom, change layout or filter the
+                        public aggregate network.
                     </div>
 
                 {% else %}
@@ -1345,32 +1678,149 @@
             <div class="portal-panel portal-view-panel">
 
                 <div class="portal-panel-heading">
-                    Ranking View
+                    Taxonomic Ranking
                 </div>
 
                 <h3 class="portal-panel-title">
-                    Most represented organisms
+                    Most represented taxonomic groups
                 </h3>
 
                 <p class="portal-panel-description">
-                    Ranked by the number of publication-approved
-                    Samples contributing each organism name.
+                    Species is the default level. Select a bar, sector
+                    or tile to inspect the public organism candidates
+                    contributing to that taxonomic group.
                 </p>
 
-                {% if organism_distribution %}
+
+                {% if taxonomy_records %}
+
+                    <div
+                        class="portal-control-grid portal-control-grid-compact"
+                    >
+
+                        <div>
+                            <label
+                                for="publicRankingSource"
+                                class="portal-control-label"
+                            >
+                                Taxonomy source
+                            </label>
+
+                            <select
+                                id="publicRankingSource"
+                                class="form-select form-select-sm"
+                            ></select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicRankingRank"
+                                class="portal-control-label"
+                            >
+                                Rank
+                            </label>
+
+                            <select
+                                id="publicRankingRank"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="species" selected>
+                                    Species
+                                </option>
+
+                                <option value="genus">
+                                    Genus
+                                </option>
+
+                                <option value="family">
+                                    Family
+                                </option>
+
+                                <option value="phylum">
+                                    Phylum
+                                </option>
+
+                                <option value="candidate">
+                                    Candidate
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicRankingStyle"
+                                class="portal-control-label"
+                            >
+                                Chart style
+                            </label>
+
+                            <select
+                                id="publicRankingStyle"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="horizontal">
+                                    Horizontal bars
+                                </option>
+
+                                <option value="vertical">
+                                    Columns
+                                </option>
+
+                                <option value="donut">
+                                    Donut
+                                </option>
+
+                                <option value="treemap">
+                                    Treemap
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+
 
                     <div
                         id="publicRankingChart"
                         class="portal-chart portal-chart-wide"
                         role="img"
-                        aria-label="Interactive horizontal bar chart ranking organisms in the public catalog"
+                        aria-label="Interactive taxonomic ranking of public Samples"
                     ></div>
+
+
+                    <div
+                        id="publicRankingDetails"
+                        class="portal-ranking-details"
+                        aria-live="polite"
+                    >
+                        <strong
+                            id="publicRankingDetailsTitle"
+                            class="d-block"
+                        >
+                            Candidate details
+                        </strong>
+
+                        <div
+                            id="publicRankingDetailsSummary"
+                            class="small text-muted mt-1"
+                        >
+                            Select a ranking element to inspect the
+                            public candidates represented in that group.
+                        </div>
+
+                        <div
+                            id="publicRankingDetailsList"
+                            class="portal-ranking-detail-list"
+                        ></div>
+                    </div>
 
                 {% else %}
 
                     <div class="portal-empty-state">
-                        Organism rankings will appear when public
-                        organism metadata are available.
+                        Taxonomic ranking will appear when
+                        publication-approved organism metadata are
+                        available.
                     </div>
 
                 {% endif %}
@@ -1382,41 +1832,113 @@
 
         <div
             class="tab-pane fade"
-            id="publicViewBubble"
+            id="publicViewSankey"
             role="tabpanel"
-            aria-labelledby="publicViewBubbleTab"
+            aria-labelledby="publicViewSankeyTab"
             tabindex="0"
         >
 
             <div class="portal-panel portal-view-panel">
 
                 <div class="portal-panel-heading">
-                    Association Matrix
+                    Taxonomy Flow
                 </div>
 
                 <h3 class="portal-panel-title">
-                    Organism × Sample type bubbles
+                    Taxonomic hierarchy Sankey
                 </h3>
 
                 <p class="portal-panel-description">
-                    Bubble size represents the public Sample count for
-                    each Organism and Sample type association.
+                    Follow public Samples from Sample type through
+                    available taxonomic ranks to their public organism
+                    candidates. Verified external taxonomy remains
+                    source-specific and never silently replaces curated
+                    metadata.
                 </p>
 
-                {% if organism_sample_type_network %}
+
+                {% if taxonomy_records %}
 
                     <div
-                        id="publicBubbleChart"
+                        class="portal-control-grid portal-control-grid-compact"
+                    >
+
+                        <div>
+                            <label
+                                for="publicSankeySource"
+                                class="portal-control-label"
+                            >
+                                Taxonomy source
+                            </label>
+
+                            <select
+                                id="publicSankeySource"
+                                class="form-select form-select-sm"
+                            ></select>
+                        </div>
+
+
+                        <div>
+                            <label
+                                for="publicSankeyDepth"
+                                class="portal-control-label"
+                            >
+                                Hierarchy view
+                            </label>
+
+                            <select
+                                id="publicSankeyDepth"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="full">
+                                    Full available lineage
+                                </option>
+
+                                <option value="genus">
+                                    Genus → Species → Candidate
+                                </option>
+
+                                <option value="species">
+                                    Species → Candidate
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <div>
+                            <span class="portal-control-label">
+                                Evidence policy
+                            </span>
+
+                            <div class="small text-muted pt-2">
+                                Curated metadata is the default.
+                                Only current + verified external
+                                assignments are selectable.
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="publicSankeyChart"
                         class="portal-chart portal-chart-wide"
                         role="img"
-                        aria-label="Interactive bubble matrix comparing organisms and Sample types"
+                        aria-label="Interactive Sankey plot showing the public taxonomic hierarchy"
                     ></div>
+
+                    <div class="portal-sankey-note">
+                        Missing ranks are skipped rather than inferred.
+                        As verified taxonomy is added to B3 LIMS,
+                        additional lineage levels appear automatically.
+                    </div>
 
                 {% else %}
 
                     <div class="portal-empty-state">
-                        Association bubbles will appear when public
-                        Organism and Sample type metadata coexist.
+                        Taxonomy Flow will appear when
+                        publication-approved organism metadata are
+                        available.
                     </div>
 
                 {% endif %}
@@ -1849,6 +2371,7 @@
 {{ organism_distribution|json_script:"public-organism-data" }}
 {{ geographic_distribution|json_script:"public-geographic-data" }}
 {{ organism_sample_type_network|json_script:"public-network-data" }}
+{{ taxonomy_records|json_script:"public-taxonomy-data" }}
 
 
 <script
@@ -3641,8 +4164,8 @@
         "public-network-data"
     );
 
-    const organismElement = document.getElementById(
-        "public-organism-data"
+    const taxonomyElement = document.getElementById(
+        "public-taxonomy-data"
     );
 
 
@@ -3660,14 +4183,34 @@
         : [];
 
 
-    const organismData = organismElement
+    const taxonomyData = taxonomyElement
         ? JSON.parse(
-            organismElement.textContent
+            taxonomyElement.textContent
         )
         : [];
 
 
     const charts = new Map();
+
+    let rankingGroups = new Map();
+
+
+    const TAXONOMY_SOURCE_LABELS = {
+        curated: "Curated metadata",
+        ncbi: "NCBI",
+        gtdb: "GTDB",
+        ictv: "ICTV",
+        bacdive: "BacDive"
+    };
+
+
+    const RANK_LABELS = {
+        species: "Species",
+        genus: "Genus",
+        family: "Family",
+        phylum: "Phylum",
+        candidate: "Candidate"
+    };
 
 
     function getOrCreateChart(
@@ -3711,6 +4254,137 @@
 
 
         return chart;
+    }
+
+
+    function taxonomySourceLabel(
+        source
+    ) {
+        return (
+            TAXONOMY_SOURCE_LABELS[
+                source
+            ]
+            ||
+            source.toUpperCase()
+        );
+    }
+
+
+    function availableTaxonomySources() {
+        const sources = [
+            ...new Set(
+                taxonomyData.map(
+                    function (
+                        row
+                    ) {
+                        return row.source;
+                    }
+                )
+            )
+        ];
+
+
+        return sources.sort(
+            function (
+                left,
+                right
+            ) {
+                if (
+                    left === "curated"
+                ) {
+                    return -1;
+                }
+
+                if (
+                    right === "curated"
+                ) {
+                    return 1;
+                }
+
+                return left.localeCompare(
+                    right
+                );
+            }
+        );
+    }
+
+
+    function populateTaxonomySourceSelect(
+        select
+    ) {
+        if (
+            !select
+        ) {
+            return;
+        }
+
+
+        const current = select.value;
+
+        select.replaceChildren();
+
+
+        availableTaxonomySources().forEach(
+            function (
+                source
+            ) {
+                const option = (
+                    document.createElement(
+                        "option"
+                    )
+                );
+
+                option.value = source;
+
+                option.textContent = (
+                    taxonomySourceLabel(
+                        source
+                    )
+                );
+
+                select.appendChild(
+                    option
+                );
+            }
+        );
+
+
+        if (
+            current
+            &&
+            [
+                ...select.options
+            ].some(
+                function (
+                    option
+                ) {
+                    return (
+                        option.value
+                        ===
+                        current
+                    );
+                }
+            )
+        ) {
+            select.value = current;
+
+        } else if (
+            [
+                ...select.options
+            ].some(
+                function (
+                    option
+                ) {
+                    return (
+                        option.value
+                        ===
+                        "curated"
+                    );
+                }
+            )
+        ) {
+            select.value = "curated";
+        }
     }
 
 
@@ -3771,143 +4445,149 @@
         );
 
 
-        chart.setOption({
-            animationDuration: 450,
+        chart.setOption(
+            {
+                animationDuration: 450,
 
-            tooltip: {
-                trigger: "item",
-                renderMode: "richText",
+                tooltip: {
+                    trigger: "item",
+                    renderMode: "richText",
 
-                formatter: function (
-                    params
-                ) {
-                    const value = (
-                        params.value
-                        ||
-                        0
-                    );
+                    formatter: function (
+                        params
+                    ) {
+                        const value = (
+                            params.value
+                            ||
+                            0
+                        );
 
-                    return (
-                        params.name
-                        +
-                        ": "
-                        +
-                        value
-                        +
-                        " public Sample"
-                        +
-                        (
-                            value === 1
-                            ? ""
-                            : "s"
-                        )
-                    );
-                }
-            },
-
-            visualMap: {
-                show:
-                    geographicData.length
-                    >
-                    0,
-
-                min: 0,
-                max: maximum,
-
-                left: 10,
-                bottom: 10,
-
-                calculable: true,
-
-                inRange: {
-                    color: [
-                        "#e8f1fb",
-                        "#93c5fd",
-                        "#3b82f6",
-                        "#1d4ed8"
-                    ]
+                        return (
+                            params.name
+                            +
+                            ": "
+                            +
+                            value
+                            +
+                            " public Sample"
+                            +
+                            (
+                                value === 1
+                                ?
+                                ""
+                                :
+                                "s"
+                            )
+                        );
+                    }
                 },
 
-                textStyle: {
-                    color: "#64748b"
-                }
-            },
+                visualMap: {
+                    show:
+                        geographicData.length
+                        >
+                        0,
 
-            series: [
-                {
-                    type: "map",
-                    map: "world",
+                    min: 0,
+                    max: maximum,
 
-                    roam: true,
+                    left: 10,
+                    bottom: 10,
 
-                    scaleLimit: {
-                        min: 1,
-                        max: 8
+                    calculable: true,
+
+                    inRange: {
+                        color: [
+                            "#e8f1fb",
+                            "#93c5fd",
+                            "#3b82f6",
+                            "#1d4ed8"
+                        ]
                     },
 
-                    emphasis: {
-                        label: {
-                            show: true
+                    textStyle: {
+                        color: "#64748b"
+                    }
+                },
+
+                series: [
+                    {
+                        type: "map",
+                        map: "world",
+                        roam: true,
+
+                        scaleLimit: {
+                            min: 1,
+                            max: 8
+                        },
+
+                        emphasis: {
+                            label: {
+                                show: true
+                            },
+
+                            itemStyle: {
+                                areaColor: "#60a5fa"
+                            }
                         },
 
                         itemStyle: {
-                            areaColor: "#60a5fa"
-                        }
-                    },
+                            areaColor: "#edf3f9",
+                            borderColor: "#ffffff",
+                            borderWidth: 0.7
+                        },
 
-                    itemStyle: {
-                        areaColor: "#edf3f9",
-                        borderColor: "#ffffff",
-                        borderWidth: 0.7
-                    },
+                        data:
+                            geographicData.map(
+                                function (
+                                    row
+                                ) {
+                                    return {
+                                        name:
+                                            row.location,
 
-                    data:
-                        geographicData.map(
-                            function (
-                                row
-                            ) {
-                                return {
-                                    name:
-                                        row.location,
-
-                                    value:
-                                        row.total
-                                };
-                            }
-                        )
-                }
-            ],
-
-            graphic:
-                geographicData.length
-                ?
-                []
-                :
-                [
-                    {
-                        type: "text",
-
-                        left: "center",
-                        bottom: 20,
-
-                        style: {
-                            text:
-                                "No public geographic "
-                                +
-                                "origin is currently "
-                                +
-                                "available.",
-
-                            fill: "#64748b",
-                            fontSize: 12
-                        }
+                                        value:
+                                            row.total
+                                    };
+                                }
+                            )
                     }
-                ]
-        });
+                ],
+
+                graphic:
+                    geographicData.length
+                    ?
+                    []
+                    :
+                    [
+                        {
+                            type: "text",
+
+                            left: "center",
+                            bottom: 20,
+
+                            style: {
+                                text:
+                                    "No public geographic "
+                                    +
+                                    "origin is currently "
+                                    +
+                                    "available.",
+
+                                fill: "#64748b",
+                                fontSize: 12
+                            }
+                        }
+                    ]
+            },
+            true
+        );
     }
 
 
-    function buildNetworkModel() {
+    function buildNetworkModel(
+        rows
+    ) {
         const nodes = new Map();
         const links = [];
 
@@ -3939,7 +4619,7 @@
         }
 
 
-        networkData.forEach(
+        rows.forEach(
             function (
                 row
             ) {
@@ -3998,272 +4678,16 @@
     }
 
 
-    function initializeNetwork() {
-        if (
-            !networkData.length
-        ) {
-            return;
-        }
-
-
-        const chart = getOrCreateChart(
-            "network",
-            "publicNetworkChart"
+    function populateNetworkSampleTypes() {
+        const select = document.getElementById(
+            "publicNetworkSampleType"
         );
 
 
         if (
-            !chart
-        ) {
-            return;
-        }
-
-
-        const model = buildNetworkModel();
-
-
-        chart.setOption({
-            animationDuration: 550,
-
-            tooltip: {
-                trigger: "item",
-                renderMode: "richText"
-            },
-
-            legend: {
-                top: 4,
-
-                data: [
-                    "Organism",
-                    "Sample type"
-                ],
-
-                textStyle: {
-                    color: "#64748b"
-                }
-            },
-
-            series: [
-                {
-                    type: "graph",
-                    layout: "force",
-
-                    roam: true,
-                    draggable: true,
-
-                    categories: [
-                        {
-                            name: "Organism"
-                        },
-                        {
-                            name: "Sample type"
-                        }
-                    ],
-
-                    force: {
-                        repulsion: 250,
-                        edgeLength: [
-                            90,
-                            170
-                        ],
-                        gravity: 0.08
-                    },
-
-                    label: {
-                        show: true,
-                        position: "right",
-
-                        formatter: function (
-                            params
-                        ) {
-                            const name = (
-                                params.data.name
-                            );
-
-                            return (
-                                name.length
-                                >
-                                24
-                                ?
-                                (
-                                    name.slice(
-                                        0,
-                                        22
-                                    )
-                                    +
-                                    "…"
-                                )
-                                :
-                                name
-                            );
-                        }
-                    },
-
-                    lineStyle: {
-                        color: "source",
-                        curveness: 0.08,
-                        opacity: 0.48
-                    },
-
-                    emphasis: {
-                        focus: "adjacency"
-                    },
-
-                    data:
-                        model.nodes.map(
-                            function (
-                                node
-                            ) {
-                                return {
-                                    id: node.id,
-                                    name: node.name,
-                                    category: node.category,
-                                    value: node.total,
-
-                                    symbolSize:
-                                        22
-                                        +
-                                        Math.sqrt(
-                                            node.total
-                                        )
-                                        *
-                                        10
-                                };
-                            }
-                        ),
-
-                    links:
-                        model.links
-                }
-            ]
-        });
-    }
-
-
-    function initializeRanking() {
-        if (
-            !organismData.length
-        ) {
-            return;
-        }
-
-
-        const chart = getOrCreateChart(
-            "ranking",
-            "publicRankingChart"
-        );
-
-
-        if (
-            !chart
-        ) {
-            return;
-        }
-
-
-        const ranked = [
-            ...organismData
-        ].reverse();
-
-
-        chart.setOption({
-            animationDuration: 450,
-
-            grid: {
-                left: 30,
-                right: 30,
-                top: 20,
-                bottom: 25,
-                containLabel: true
-            },
-
-            tooltip: {
-                trigger: "axis",
-                axisPointer: {
-                    type: "shadow"
-                },
-                renderMode: "richText"
-            },
-
-            xAxis: {
-                type: "value",
-
-                axisLine: {
-                    show: false
-                },
-
-                splitLine: {
-                    lineStyle: {
-                        color: "#edf2f7"
-                    }
-                }
-            },
-
-            yAxis: {
-                type: "category",
-
-                data:
-                    ranked.map(
-                        function (
-                            row
-                        ) {
-                            return row.organism_name;
-                        }
-                    ),
-
-                axisLabel: {
-                    color: "#64748b",
-                    width: 190,
-                    overflow: "truncate"
-                }
-            },
-
-            series: [
-                {
-                    type: "bar",
-
-                    barMaxWidth: 28,
-
-                    itemStyle: {
-                        color: "#3b82f6",
-                        borderRadius: [
-                            0,
-                            6,
-                            6,
-                            0
-                        ]
-                    },
-
-                    data:
-                        ranked.map(
-                            function (
-                                row
-                            ) {
-                                return row.total;
-                            }
-                        )
-                }
-            ]
-        });
-    }
-
-
-    function initializeBubbleMatrix() {
-        if (
-            !networkData.length
-        ) {
-            return;
-        }
-
-
-        const chart = getOrCreateChart(
-            "bubble",
-            "publicBubbleChart"
-        );
-
-
-        if (
-            !chart
+            !select
+            ||
+            select.dataset.populated
         ) {
             return;
         }
@@ -4279,108 +4703,1067 @@
                     }
                 )
             )
-        ];
+        ].sort();
 
 
-        const organisms = [
-            ...new Set(
-                networkData.map(
-                    function (
-                        row
-                    ) {
-                        return row.organism_name;
-                    }
-                )
-            )
-        ];
-
-
-        const data = networkData.map(
+        sampleTypes.forEach(
             function (
-                row
+                sampleType
             ) {
-                return [
-                    sampleTypes.indexOf(
-                        row.sample_type
-                    ),
+                const option = (
+                    document.createElement(
+                        "option"
+                    )
+                );
 
-                    organisms.indexOf(
-                        row.organism_name
-                    ),
+                option.value = sampleType;
+                option.textContent = sampleType;
 
-                    row.total,
-
-                    row.sample_type,
-                    row.organism_name
-                ];
+                select.appendChild(
+                    option
+                );
             }
         );
 
 
-        chart.setOption({
+        select.dataset.populated = "true";
+    }
+
+
+    function filteredNetworkRows() {
+        const searchElement = document.getElementById(
+            "publicNetworkSearch"
+        );
+
+        const typeElement = document.getElementById(
+            "publicNetworkSampleType"
+        );
+
+        const minimumElement = document.getElementById(
+            "publicNetworkMinimum"
+        );
+
+
+        const search = (
+            searchElement
+            ?
+            searchElement.value
+                .trim()
+                .toLocaleLowerCase()
+            :
+            ""
+        );
+
+        const sampleType = (
+            typeElement
+            ?
+            typeElement.value
+            :
+            ""
+        );
+
+        const minimum = Number(
+            minimumElement
+            ?
+            minimumElement.value
+            :
+            1
+        );
+
+
+        return networkData.filter(
+            function (
+                row
+            ) {
+                if (
+                    search
+                    &&
+                    !row.organism_name
+                        .toLocaleLowerCase()
+                        .includes(
+                            search
+                        )
+                ) {
+                    return false;
+                }
+
+
+                if (
+                    sampleType
+                    &&
+                    row.sample_type
+                    !==
+                    sampleType
+                ) {
+                    return false;
+                }
+
+
+                if (
+                    row.total
+                    <
+                    minimum
+                ) {
+                    return false;
+                }
+
+
+                return true;
+            }
+        );
+    }
+
+
+    function refreshNetwork() {
+        const chart = getOrCreateChart(
+            "network",
+            "publicNetworkChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const rows = (
+            filteredNetworkRows()
+        );
+
+        const model = (
+            buildNetworkModel(
+                rows
+            )
+        );
+
+
+        const layoutElement = document.getElementById(
+            "publicNetworkLayout"
+        );
+
+        const labelsElement = document.getElementById(
+            "publicNetworkLabels"
+        );
+
+        const summaryElement = document.getElementById(
+            "publicNetworkResultSummary"
+        );
+
+
+        const layout = (
+            layoutElement
+            ?
+            layoutElement.value
+            :
+            "force"
+        );
+
+        const labelMode = (
+            labelsElement
+            ?
+            labelsElement.value
+            :
+            "all"
+        );
+
+
+        if (
+            summaryElement
+        ) {
+            summaryElement.textContent = (
+                model.nodes.length
+                +
+                " nodes · "
+                +
+                model.links.length
+                +
+                " relationships"
+            );
+        }
+
+
+        if (
+            !rows.length
+        ) {
+            chart.clear();
+
+            chart.setOption({
+                graphic: [
+                    {
+                        type: "text",
+                        left: "center",
+                        top: "middle",
+
+                        style: {
+                            text:
+                                "No relationships match "
+                                +
+                                "the current filters.",
+
+                            fill: "#64748b",
+                            fontSize: 13
+                        }
+                    }
+                ]
+            });
+
+            return;
+        }
+
+
+        function labelVisible(
+            category
+        ) {
+            if (
+                labelMode
+                ===
+                "none"
+            ) {
+                return false;
+            }
+
+            if (
+                labelMode
+                ===
+                "organisms"
+            ) {
+                return (
+                    category === 0
+                );
+            }
+
+            if (
+                labelMode
+                ===
+                "sample-types"
+            ) {
+                return (
+                    category === 1
+                );
+            }
+
+            return true;
+        }
+
+
+        chart.setOption(
+            {
+                animationDuration: 500,
+
+                tooltip: {
+                    trigger: "item",
+                    renderMode: "richText"
+                },
+
+                legend: {
+                    top: 4,
+
+                    data: [
+                        "Organism",
+                        "Sample type"
+                    ],
+
+                    textStyle: {
+                        color: "#64748b"
+                    }
+                },
+
+                series: [
+                    {
+                        type: "graph",
+                        layout: layout,
+
+                        roam: true,
+
+                        draggable:
+                            layout
+                            ===
+                            "force",
+
+                        circular:
+                            layout
+                            ===
+                            "circular"
+                            ?
+                            {
+                                rotateLabel: false
+                            }
+                            :
+                            undefined,
+
+                        categories: [
+                            {
+                                name: "Organism"
+                            },
+                            {
+                                name: "Sample type"
+                            }
+                        ],
+
+                        force:
+                            layout
+                            ===
+                            "force"
+                            ?
+                            {
+                                repulsion: 270,
+
+                                edgeLength: [
+                                    90,
+                                    180
+                                ],
+
+                                gravity: 0.07
+                            }
+                            :
+                            undefined,
+
+                        label: {
+                            show: true,
+                            position: "right",
+
+                            formatter: function (
+                                params
+                            ) {
+                                if (
+                                    !labelVisible(
+                                        params.data.category
+                                    )
+                                ) {
+                                    return "";
+                                }
+
+                                const name = (
+                                    params.data.name
+                                );
+
+                                return (
+                                    name.length
+                                    >
+                                    30
+                                    ?
+                                    (
+                                        name.slice(
+                                            0,
+                                            28
+                                        )
+                                        +
+                                        "…"
+                                    )
+                                    :
+                                    name
+                                );
+                            }
+                        },
+
+                        lineStyle: {
+                            color: "source",
+
+                            curveness:
+                                layout
+                                ===
+                                "force"
+                                ?
+                                0.08
+                                :
+                                0.03,
+
+                            opacity: 0.5
+                        },
+
+                        emphasis: {
+                            focus: "adjacency"
+                        },
+
+                        data:
+                            model.nodes.map(
+                                function (
+                                    node
+                                ) {
+                                    return {
+                                        id: node.id,
+                                        name: node.name,
+                                        category: node.category,
+                                        value: node.total,
+
+                                        symbolSize:
+                                            22
+                                            +
+                                            Math.sqrt(
+                                                node.total
+                                            )
+                                            *
+                                            10
+                                    };
+                                }
+                            ),
+
+                        links:
+                            model.links
+                    }
+                ]
+            },
+            true
+        );
+    }
+
+
+    function initializeNetwork() {
+        if (
+            !networkData.length
+        ) {
+            return;
+        }
+
+
+        populateNetworkSampleTypes();
+
+
+        const controls = [
+            "publicNetworkSearch",
+            "publicNetworkSampleType",
+            "publicNetworkMinimum",
+            "publicNetworkLayout",
+            "publicNetworkLabels"
+        ];
+
+
+        controls.forEach(
+            function (
+                id
+            ) {
+                const element = (
+                    document.getElementById(
+                        id
+                    )
+                );
+
+                if (
+                    element
+                    &&
+                    !element.dataset.listenerBound
+                ) {
+                    element.addEventListener(
+                        id
+                        ===
+                        "publicNetworkSearch"
+                        ?
+                        "input"
+                        :
+                        "change",
+                        refreshNetwork
+                    );
+
+                    element.dataset.listenerBound = (
+                        "true"
+                    );
+                }
+            }
+        );
+
+
+        const reset = document.getElementById(
+            "publicNetworkReset"
+        );
+
+
+        if (
+            reset
+            &&
+            !reset.dataset.listenerBound
+        ) {
+            reset.addEventListener(
+                "click",
+                function () {
+                    document.getElementById(
+                        "publicNetworkSearch"
+                    ).value = "";
+
+                    document.getElementById(
+                        "publicNetworkSampleType"
+                    ).value = "";
+
+                    document.getElementById(
+                        "publicNetworkMinimum"
+                    ).value = "1";
+
+                    document.getElementById(
+                        "publicNetworkLayout"
+                    ).value = "force";
+
+                    document.getElementById(
+                        "publicNetworkLabels"
+                    ).value = "all";
+
+                    refreshNetwork();
+                }
+            );
+
+            reset.dataset.listenerBound = (
+                "true"
+            );
+        }
+
+
+        refreshNetwork();
+    }
+
+
+    function taxonomyRecordsForSource(
+        source
+    ) {
+        return taxonomyData.filter(
+            function (
+                row
+            ) {
+                return (
+                    row.source
+                    ===
+                    source
+                );
+            }
+        );
+    }
+
+
+    function rankingLabelForRecord(
+        row,
+        rank
+    ) {
+        if (
+            rank
+            ===
+            "candidate"
+        ) {
+            return row.candidate;
+        }
+
+
+        const value = (
+            row[
+                rank
+            ]
+            ||
+            ""
+        ).trim();
+
+
+        if (
+            value
+        ) {
+            return value;
+        }
+
+
+        return (
+            "Unresolved "
+            +
+            (
+                RANK_LABELS[
+                    rank
+                ]
+                ||
+                rank
+            ).toLowerCase()
+        );
+    }
+
+
+    function buildRankingGroups(
+        rows,
+        rank
+    ) {
+        const groups = new Map();
+
+
+        rows.forEach(
+            function (
+                row
+            ) {
+                const label = (
+                    rankingLabelForRecord(
+                        row,
+                        rank
+                    )
+                );
+
+
+                if (
+                    !groups.has(
+                        label
+                    )
+                ) {
+                    groups.set(
+                        label,
+                        {
+                            key: label,
+                            label: label,
+                            total: 0,
+                            candidates: new Map()
+                        }
+                    );
+                }
+
+
+                const group = groups.get(
+                    label
+                );
+
+                group.total += (
+                    row.total
+                );
+
+
+                const candidateKey = (
+                    row.candidate
+                    +
+                    "\u0000"
+                    +
+                    row.sample_type
+                );
+
+
+                if (
+                    !group.candidates.has(
+                        candidateKey
+                    )
+                ) {
+                    group.candidates.set(
+                        candidateKey,
+                        {
+                            candidate:
+                                row.candidate,
+
+                            sample_type:
+                                row.sample_type,
+
+                            total: 0
+                        }
+                    );
+                }
+
+
+                group.candidates.get(
+                    candidateKey
+                ).total += (
+                    row.total
+                );
+            }
+        );
+
+
+        return [
+            ...groups.values()
+        ]
+            .map(
+                function (
+                    group
+                ) {
+                    return {
+                        ...group,
+
+                        candidates:
+                            [
+                                ...group.candidates.values()
+                            ].sort(
+                                function (
+                                    left,
+                                    right
+                                ) {
+                                    return (
+                                        right.total
+                                        -
+                                        left.total
+                                        ||
+                                        left.candidate.localeCompare(
+                                            right.candidate
+                                        )
+                                    );
+                                }
+                            )
+                    };
+                }
+            )
+            .sort(
+                function (
+                    left,
+                    right
+                ) {
+                    return (
+                        right.total
+                        -
+                        left.total
+                        ||
+                        left.label.localeCompare(
+                            right.label
+                        )
+                    );
+                }
+            );
+    }
+
+
+    function renderRankingDetails(
+        group
+    ) {
+        const title = document.getElementById(
+            "publicRankingDetailsTitle"
+        );
+
+        const summary = document.getElementById(
+            "publicRankingDetailsSummary"
+        );
+
+        const list = document.getElementById(
+            "publicRankingDetailsList"
+        );
+
+
+        if (
+            !title
+            ||
+            !summary
+            ||
+            !list
+        ) {
+            return;
+        }
+
+
+        list.replaceChildren();
+
+
+        if (
+            !group
+        ) {
+            title.textContent = (
+                "Candidate details"
+            );
+
+            summary.textContent = (
+                "Select a ranking element to inspect "
+                +
+                "the public candidates represented "
+                +
+                "in that group."
+            );
+
+            return;
+        }
+
+
+        title.textContent = (
+            group.label
+        );
+
+
+        summary.textContent = (
+            group.total
+            +
+            " public Sample"
+            +
+            (
+                group.total === 1
+                ?
+                ""
+                :
+                "s"
+            )
+            +
+            " · "
+            +
+            group.candidates.length
+            +
+            " candidate"
+            +
+            (
+                group.candidates.length === 1
+                ?
+                ""
+                :
+                "s"
+            )
+        );
+
+
+        group.candidates.forEach(
+            function (
+                candidate
+            ) {
+                const item = document.createElement(
+                    "div"
+                );
+
+                item.className = (
+                    "portal-ranking-candidate"
+                );
+
+
+                const name = document.createElement(
+                    "span"
+                );
+
+                name.className = (
+                    "portal-ranking-candidate-name"
+                );
+
+                name.textContent = (
+                    candidate.candidate
+                );
+
+
+                const meta = document.createElement(
+                    "span"
+                );
+
+                meta.className = (
+                    "portal-ranking-candidate-meta"
+                );
+
+                meta.textContent = (
+                    candidate.sample_type
+                    +
+                    " · "
+                    +
+                    candidate.total
+                );
+
+
+                item.append(
+                    name,
+                    meta
+                );
+
+                list.appendChild(
+                    item
+                );
+            }
+        );
+    }
+
+
+    function rankingOption(
+        groups,
+        style
+    ) {
+        const categories = groups.map(
+            function (
+                group
+            ) {
+                return group.label;
+            }
+        );
+
+
+        const data = groups.map(
+            function (
+                group
+            ) {
+                return {
+                    name: group.label,
+                    value: group.total,
+                    groupKey: group.key
+                };
+            }
+        );
+
+
+        if (
+            style
+            ===
+            "vertical"
+        ) {
+            return {
+                animationDuration: 450,
+
+                grid: {
+                    left: 25,
+                    right: 20,
+                    top: 20,
+                    bottom: 85,
+                    containLabel: true
+                },
+
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: {
+                        type: "shadow"
+                    },
+                    renderMode: "richText"
+                },
+
+                xAxis: {
+                    type: "category",
+                    data: categories,
+
+                    axisLabel: {
+                        color: "#64748b",
+
+                        rotate:
+                            categories.length
+                            >
+                            4
+                            ?
+                            25
+                            :
+                            0
+                    }
+                },
+
+                yAxis: {
+                    type: "value",
+
+                    splitLine: {
+                        lineStyle: {
+                            color: "#edf2f7"
+                        }
+                    }
+                },
+
+                series: [
+                    {
+                        type: "bar",
+                        data: data,
+
+                        barMaxWidth: 52,
+
+                        itemStyle: {
+                            color: "#3b82f6",
+
+                            borderRadius: [
+                                6,
+                                6,
+                                0,
+                                0
+                            ]
+                        }
+                    }
+                ]
+            };
+        }
+
+
+        if (
+            style
+            ===
+            "donut"
+        ) {
+            return {
+                animationDuration: 450,
+
+                tooltip: {
+                    trigger: "item",
+                    renderMode: "richText"
+                },
+
+                legend: {
+                    type: "scroll",
+                    bottom: 0
+                },
+
+                series: [
+                    {
+                        type: "pie",
+
+                        radius: [
+                            "45%",
+                            "72%"
+                        ],
+
+                        center: [
+                            "50%",
+                            "44%"
+                        ],
+
+                        data: data,
+
+                        label: {
+                            formatter:
+                                "{b}: {c}"
+                        },
+
+                        emphasis: {
+                            scale: true
+                        }
+                    }
+                ]
+            };
+        }
+
+
+        if (
+            style
+            ===
+            "treemap"
+        ) {
+            return {
+                animationDuration: 450,
+
+                tooltip: {
+                    trigger: "item",
+                    renderMode: "richText"
+                },
+
+                series: [
+                    {
+                        type: "treemap",
+                        roam: false,
+                        nodeClick: false,
+
+                        breadcrumb: {
+                            show: false
+                        },
+
+                        label: {
+                            show: true,
+
+                            formatter:
+                                "{b}\n{c}",
+
+                            color: "#ffffff",
+                            fontWeight: 600
+                        },
+
+                        itemStyle: {
+                            borderColor: "#ffffff",
+                            borderWidth: 2,
+                            gapWidth: 2
+                        },
+
+                        data: data
+                    }
+                ]
+            };
+        }
+
+
+        return {
             animationDuration: 450,
 
             grid: {
                 left: 30,
                 right: 30,
-                top: 25,
-                bottom: 35,
+                top: 20,
+                bottom: 25,
                 containLabel: true
             },
 
             tooltip: {
-                trigger: "item",
-                renderMode: "richText",
+                trigger: "axis",
 
-                formatter: function (
-                    params
-                ) {
-                    const value = (
-                        params.data
-                    );
+                axisPointer: {
+                    type: "shadow"
+                },
 
-                    return (
-                        value[4]
-                        +
-                        " × "
-                        +
-                        value[3]
-                        +
-                        ": "
-                        +
-                        value[2]
-                        +
-                        " public Sample"
-                        +
-                        (
-                            value[2] === 1
-                            ? ""
-                            : "s"
-                        )
-                    );
-                }
+                renderMode: "richText"
             },
 
             xAxis: {
-                type: "category",
-                data: sampleTypes,
-
-                axisLabel: {
-                    color: "#64748b",
-                    interval: 0,
-                    rotate:
-                        sampleTypes.length
-                        >
-                        5
-                        ?
-                        25
-                        :
-                        0
-                },
+                type: "value",
 
                 splitLine: {
-                    show: true,
-
                     lineStyle: {
                         color: "#edf2f7"
                     }
@@ -4389,54 +5772,699 @@
 
             yAxis: {
                 type: "category",
-                data: organisms,
+                inverse: true,
+                data: categories,
 
                 axisLabel: {
                     color: "#64748b",
-                    width: 180,
+                    width: 230,
                     overflow: "truncate"
-                },
-
-                splitLine: {
-                    show: true,
-
-                    lineStyle: {
-                        color: "#edf2f7"
-                    }
                 }
             },
 
             series: [
                 {
-                    type: "scatter",
+                    type: "bar",
 
-                    data: data,
+                    barMaxWidth: 30,
 
                     itemStyle: {
                         color: "#3b82f6",
-                        opacity: 0.82
+
+                        borderRadius: [
+                            0,
+                            6,
+                            6,
+                            0
+                        ]
                     },
 
-                    symbolSize: function (
-                        value
-                    ) {
-                        return (
-                            18
-                            +
-                            Math.sqrt(
-                                value[2]
-                            )
-                            *
-                            15
-                        );
-                    },
-
-                    emphasis: {
-                        scale: 1.25
-                    }
+                    data: data
                 }
             ]
-        });
+        };
+    }
+
+
+    function refreshRanking() {
+        const chart = getOrCreateChart(
+            "ranking",
+            "publicRankingChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const sourceElement = document.getElementById(
+            "publicRankingSource"
+        );
+
+        const rankElement = document.getElementById(
+            "publicRankingRank"
+        );
+
+        const styleElement = document.getElementById(
+            "publicRankingStyle"
+        );
+
+
+        const source = (
+            sourceElement
+            ?
+            sourceElement.value
+            :
+            "curated"
+        );
+
+        const rank = (
+            rankElement
+            ?
+            rankElement.value
+            :
+            "species"
+        );
+
+        const style = (
+            styleElement
+            ?
+            styleElement.value
+            :
+            "horizontal"
+        );
+
+
+        const groups = (
+            buildRankingGroups(
+                taxonomyRecordsForSource(
+                    source
+                ),
+                rank
+            )
+        );
+
+
+        rankingGroups = new Map(
+            groups.map(
+                function (
+                    group
+                ) {
+                    return [
+                        group.key,
+                        group
+                    ];
+                }
+            )
+        );
+
+
+        chart.clear();
+
+
+        if (
+            !groups.length
+        ) {
+            chart.setOption({
+                graphic: [
+                    {
+                        type: "text",
+                        left: "center",
+                        top: "middle",
+
+                        style: {
+                            text:
+                                "No taxonomy records are "
+                                +
+                                "available for this source.",
+
+                            fill: "#64748b",
+                            fontSize: 13
+                        }
+                    }
+                ]
+            });
+
+            renderRankingDetails(
+                null
+            );
+
+            return;
+        }
+
+
+        chart.setOption(
+            rankingOption(
+                groups,
+                style
+            ),
+            true
+        );
+
+
+        chart.off(
+            "click"
+        );
+
+
+        chart.on(
+            "click",
+            function (
+                params
+            ) {
+                const key = (
+                    params.data
+                    &&
+                    params.data.groupKey
+                );
+
+
+                if (
+                    key
+                    &&
+                    rankingGroups.has(
+                        key
+                    )
+                ) {
+                    renderRankingDetails(
+                        rankingGroups.get(
+                            key
+                        )
+                    );
+                }
+            }
+        );
+
+
+        renderRankingDetails(
+            groups[
+                0
+            ]
+        );
+    }
+
+
+    function initializeRanking() {
+        if (
+            !taxonomyData.length
+        ) {
+            return;
+        }
+
+
+        const source = document.getElementById(
+            "publicRankingSource"
+        );
+
+        const rank = document.getElementById(
+            "publicRankingRank"
+        );
+
+        const style = document.getElementById(
+            "publicRankingStyle"
+        );
+
+
+        populateTaxonomySourceSelect(
+            source
+        );
+
+
+        [
+            source,
+            rank,
+            style
+        ].forEach(
+            function (
+                element
+            ) {
+                if (
+                    element
+                    &&
+                    !element.dataset.listenerBound
+                ) {
+                    element.addEventListener(
+                        "change",
+                        refreshRanking
+                    );
+
+                    element.dataset.listenerBound = (
+                        "true"
+                    );
+                }
+            }
+        );
+
+
+        refreshRanking();
+    }
+
+
+    function sankeyRanks(
+        depth
+    ) {
+        if (
+            depth
+            ===
+            "species"
+        ) {
+            return [
+                "sample_type",
+                "species",
+                "candidate"
+            ];
+        }
+
+
+        if (
+            depth
+            ===
+            "genus"
+        ) {
+            return [
+                "sample_type",
+                "genus",
+                "species",
+                "candidate"
+            ];
+        }
+
+
+        return [
+            "sample_type",
+            "domain_or_realm",
+            "kingdom",
+            "phylum",
+            "class_name",
+            "order_name",
+            "family",
+            "genus",
+            "species",
+            "candidate"
+        ];
+    }
+
+
+    function sankeyRankLabel(
+        rank
+    ) {
+        const labels = {
+            sample_type: "Sample type",
+            domain_or_realm: "Domain / realm",
+            kingdom: "Kingdom",
+            phylum: "Phylum",
+            class_name: "Class",
+            order_name: "Order",
+            family: "Family",
+            genus: "Genus",
+            species: "Species",
+            candidate: "Candidate"
+        };
+
+
+        return (
+            labels[
+                rank
+            ]
+            ||
+            rank
+        );
+    }
+
+
+    function buildSankeyModel(
+        rows,
+        depth
+    ) {
+        const ranks = (
+            sankeyRanks(
+                depth
+            )
+        );
+
+        const nodes = new Map();
+        const links = new Map();
+
+
+        rows.forEach(
+            function (
+                row
+            ) {
+                const path = [];
+
+
+                ranks.forEach(
+                    function (
+                        rank
+                    ) {
+                        const value = (
+                            row[
+                                rank
+                            ]
+                            ||
+                            ""
+                        ).trim();
+
+
+                        if (
+                            !value
+                        ) {
+                            return;
+                        }
+
+
+                        const key = (
+                            rank
+                            +
+                            "::"
+                            +
+                            value
+                        );
+
+
+                        if (
+                            !nodes.has(
+                                key
+                            )
+                        ) {
+                            nodes.set(
+                                key,
+                                {
+                                    name: key,
+                                    display_name: value,
+                                    rank: rank,
+
+                                    rank_label:
+                                        sankeyRankLabel(
+                                            rank
+                                        )
+                                }
+                            );
+                        }
+
+
+                        path.push(
+                            key
+                        );
+                    }
+                );
+
+
+                for (
+                    let index = 0;
+                    index
+                    <
+                    path.length - 1;
+                    index += 1
+                ) {
+                    const source = (
+                        path[
+                            index
+                        ]
+                    );
+
+                    const target = (
+                        path[
+                            index + 1
+                        ]
+                    );
+
+                    const key = (
+                        source
+                        +
+                        "\u0000"
+                        +
+                        target
+                    );
+
+
+                    if (
+                        !links.has(
+                            key
+                        )
+                    ) {
+                        links.set(
+                            key,
+                            {
+                                source: source,
+                                target: target,
+                                value: 0
+                            }
+                        );
+                    }
+
+
+                    links.get(
+                        key
+                    ).value += (
+                        row.total
+                    );
+                }
+            }
+        );
+
+
+        return {
+            nodes:
+                [
+                    ...nodes.values()
+                ],
+
+            links:
+                [
+                    ...links.values()
+                ]
+        };
+    }
+
+
+    function refreshSankey() {
+        const chart = getOrCreateChart(
+            "sankey",
+            "publicSankeyChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const sourceElement = document.getElementById(
+            "publicSankeySource"
+        );
+
+        const depthElement = document.getElementById(
+            "publicSankeyDepth"
+        );
+
+
+        const source = (
+            sourceElement
+            ?
+            sourceElement.value
+            :
+            "curated"
+        );
+
+        const depth = (
+            depthElement
+            ?
+            depthElement.value
+            :
+            "full"
+        );
+
+
+        const model = (
+            buildSankeyModel(
+                taxonomyRecordsForSource(
+                    source
+                ),
+                depth
+            )
+        );
+
+
+        chart.clear();
+
+
+        if (
+            !model.links.length
+        ) {
+            chart.setOption({
+                graphic: [
+                    {
+                        type: "text",
+                        left: "center",
+                        top: "middle",
+
+                        style: {
+                            text:
+                                "Not enough taxonomy "
+                                +
+                                "information is available "
+                                +
+                                "for this flow.",
+
+                            fill: "#64748b",
+                            fontSize: 13
+                        }
+                    }
+                ]
+            });
+
+            return;
+        }
+
+
+        chart.setOption(
+            {
+                animationDuration: 550,
+
+                tooltip: {
+                    trigger: "item",
+                    renderMode: "richText",
+
+                    formatter: function (
+                        params
+                    ) {
+                        if (
+                            params.dataType
+                            ===
+                            "edge"
+                        ) {
+                            return (
+                                params.data.value
+                                +
+                                " public Sample"
+                                +
+                                (
+                                    params.data.value
+                                    ===
+                                    1
+                                    ?
+                                    ""
+                                    :
+                                    "s"
+                                )
+                            );
+                        }
+
+
+                        return (
+                            params.data.rank_label
+                            +
+                            ": "
+                            +
+                            params.data.display_name
+                        );
+                    }
+                },
+
+                series: [
+                    {
+                        type: "sankey",
+
+                        left: 30,
+                        right: 160,
+                        top: 25,
+                        bottom: 25,
+
+                        nodeWidth: 18,
+                        nodeGap: 12,
+
+                        layoutIterations: 32,
+
+                        emphasis: {
+                            focus: "adjacency"
+                        },
+
+                        lineStyle: {
+                            color: "gradient",
+                            curveness: 0.5,
+                            opacity: 0.35
+                        },
+
+                        label: {
+                            color: "#475569",
+                            fontSize: 11,
+
+                            formatter: function (
+                                params
+                            ) {
+                                return (
+                                    params.data.display_name
+                                );
+                            }
+                        },
+
+                        data:
+                            model.nodes,
+
+                        links:
+                            model.links
+                    }
+                ]
+            },
+            true
+        );
+    }
+
+
+    function initializeSankey() {
+        if (
+            !taxonomyData.length
+        ) {
+            return;
+        }
+
+
+        const source = document.getElementById(
+            "publicSankeySource"
+        );
+
+        const depth = document.getElementById(
+            "publicSankeyDepth"
+        );
+
+
+        populateTaxonomySourceSelect(
+            source
+        );
+
+
+        [
+            source,
+            depth
+        ].forEach(
+            function (
+                element
+            ) {
+                if (
+                    element
+                    &&
+                    !element.dataset.listenerBound
+                ) {
+                    element.addEventListener(
+                        "change",
+                        refreshSankey
+                    );
+
+                    element.dataset.listenerBound = (
+                        "true"
+                    );
+                }
+            }
+        );
+
+
+        refreshSankey();
     }
 
 
@@ -4451,6 +6479,7 @@
             initializeGeography();
         }
 
+
         if (
             viewName
             ===
@@ -4458,6 +6487,7 @@
         ) {
             initializeNetwork();
         }
+
 
         if (
             viewName
@@ -4467,12 +6497,13 @@
             initializeRanking();
         }
 
+
         if (
             viewName
             ===
-            "bubble"
+            "sankey"
         ) {
-            initializeBubbleMatrix();
+            initializeSankey();
         }
 
 

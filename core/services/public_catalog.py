@@ -16,9 +16,12 @@ from django.db.models import (
 )
 
 from core.models import (
+    Bacteria,
     Collection,
+    Phage,
     Sample,
     SampleOrigin,
+    SampleTaxonomyAssignment,
     Tag,
 )
 
@@ -431,6 +434,431 @@ def public_organism_sample_type_network(
         ]
     )
 
+
+def _clean_public_taxonomy_value(
+    value,
+):
+    """
+    Normalize one taxonomy display value for a public aggregate.
+
+    This helper performs display normalization only. It never changes
+    stored Sample or external taxonomy evidence.
+    """
+    return " ".join(
+        str(
+            value
+            or ""
+        ).split()
+    )
+
+
+def _public_species_name(
+    genus,
+    species,
+):
+    """
+    Produce a species-level display name without appending strain.
+
+    Examples:
+
+    genus=Pseudomonas, species=aeruginosa
+        -> Pseudomonas aeruginosa
+
+    genus=Pseudomonas, species=Pseudomonas aeruginosa
+        -> Pseudomonas aeruginosa
+    """
+    genus = _clean_public_taxonomy_value(
+        genus
+    )
+
+    species = _clean_public_taxonomy_value(
+        species
+    )
+
+    if not species:
+        return ""
+
+    if (
+        genus
+        and not species.casefold().startswith(
+            genus.casefold()
+            + " "
+        )
+    ):
+        return (
+            genus
+            + " "
+            + species
+        )
+
+    return species
+
+
+def public_taxonomy_records(
+    limit=500,
+):
+    """
+    Return publication-safe taxonomy records for interactive public
+    ranking and Sankey visualizations.
+
+    Two evidence classes may be returned:
+
+    ``curated``
+        Taxonomy fields already curated in the B3 LIMS Sample subtype.
+
+    external source
+        Exactly one current + verified SampleTaxonomyAssignment for a
+        given Sample/source pair. Candidate, unresolved, conflict and
+        stale assignments never participate.
+
+    External evidence is source-labelled and does not replace curated
+    metadata. If more than one current verified assignment exists for
+    the same Sample/source pair, that source is treated as ambiguous
+    and omitted from this public aggregate.
+
+    No Sample primary key, Sample ID, UUID, owner, Research Group,
+    storage location or other internal identifier is returned.
+    """
+    verified_current_taxonomy = (
+        SampleTaxonomyAssignment.objects
+        .filter(
+            is_current=True,
+            match_status=(
+                SampleTaxonomyAssignment.STATUS_VERIFIED
+            ),
+        )
+        .order_by(
+            "source",
+            "pk",
+        )
+    )
+
+    samples = (
+        public_samples_queryset()
+        .exclude(
+            organism_name__isnull=True,
+        )
+        .exclude(
+            organism_name="",
+        )
+        .select_related(
+            "bacteria",
+            "phage",
+        )
+        .prefetch_related(
+            Prefetch(
+                "taxonomy_assignments",
+                queryset=(
+                    verified_current_taxonomy
+                ),
+                to_attr=(
+                    "public_verified_taxonomy"
+                ),
+            )
+        )
+        .order_by(
+            "pk",
+        )
+    )
+
+    aggregated = {}
+
+
+    def add_record(
+        *,
+        source,
+        sample_type,
+        candidate,
+        domain_or_realm="",
+        kingdom="",
+        phylum="",
+        class_name="",
+        order_name="",
+        family="",
+        genus="",
+        species="",
+    ):
+        source = (
+            _clean_public_taxonomy_value(
+                source
+            )
+            or
+            "curated"
+        )
+
+        sample_type = (
+            _clean_public_taxonomy_value(
+                sample_type
+            )
+            or
+            "Unspecified Sample type"
+        )
+
+        candidate = (
+            _clean_public_taxonomy_value(
+                candidate
+            )
+        )
+
+        if not candidate:
+            return
+
+        record = {
+            "source": source,
+            "sample_type": sample_type,
+            "domain_or_realm": (
+                _clean_public_taxonomy_value(
+                    domain_or_realm
+                )
+            ),
+            "kingdom": (
+                _clean_public_taxonomy_value(
+                    kingdom
+                )
+            ),
+            "phylum": (
+                _clean_public_taxonomy_value(
+                    phylum
+                )
+            ),
+            "class_name": (
+                _clean_public_taxonomy_value(
+                    class_name
+                )
+            ),
+            "order_name": (
+                _clean_public_taxonomy_value(
+                    order_name
+                )
+            ),
+            "family": (
+                _clean_public_taxonomy_value(
+                    family
+                )
+            ),
+            "genus": (
+                _clean_public_taxonomy_value(
+                    genus
+                )
+            ),
+            "species": (
+                _public_species_name(
+                    genus,
+                    species,
+                )
+            ),
+            "candidate": candidate,
+        }
+
+        key = tuple(
+            record[
+                field
+            ]
+            for field in (
+                "source",
+                "sample_type",
+                "domain_or_realm",
+                "kingdom",
+                "phylum",
+                "class_name",
+                "order_name",
+                "family",
+                "genus",
+                "species",
+                "candidate",
+            )
+        )
+
+        if key not in aggregated:
+            aggregated[
+                key
+            ] = {
+                **record,
+                "total": 0,
+            }
+
+        aggregated[
+            key
+        ][
+            "total"
+        ] += 1
+
+
+    for sample in samples:
+        candidate = (
+            sample.organism_name
+        )
+
+        sample_type = (
+            sample.sample_type
+        )
+
+        curated = {
+            "family": "",
+            "genus": "",
+            "species": "",
+        }
+
+
+        try:
+            bacteria = (
+                sample.bacteria
+            )
+        except Bacteria.DoesNotExist:
+            bacteria = None
+
+
+        if bacteria is not None:
+            curated[
+                "genus"
+            ] = (
+                bacteria.genus
+                or
+                ""
+            )
+
+            curated[
+                "species"
+            ] = (
+                bacteria.species
+                or
+                ""
+            )
+
+
+        try:
+            phage = (
+                sample.phage
+            )
+        except Phage.DoesNotExist:
+            phage = None
+
+
+        if phage is not None:
+            curated[
+                "family"
+            ] = (
+                phage.taxonomy
+                or
+                ""
+            )
+
+            curated[
+                "genus"
+            ] = (
+                phage.genus
+                or
+                ""
+            )
+
+
+        add_record(
+            source="curated",
+            sample_type=sample_type,
+            candidate=candidate,
+            family=curated[
+                "family"
+            ],
+            genus=curated[
+                "genus"
+            ],
+            species=curated[
+                "species"
+            ],
+        )
+
+
+        assignments_by_source = {}
+
+        for assignment in getattr(
+            sample,
+            "public_verified_taxonomy",
+            (),
+        ):
+            assignments_by_source.setdefault(
+                assignment.source,
+                [],
+            ).append(
+                assignment
+            )
+
+
+        for (
+            source,
+            assignments
+        ) in assignments_by_source.items():
+
+            if len(
+                assignments
+            ) != 1:
+                # Fail closed for ambiguous same-source evidence.
+                continue
+
+            assignment = (
+                assignments[
+                    0
+                ]
+            )
+
+            add_record(
+                source=source,
+                sample_type=sample_type,
+                candidate=candidate,
+                domain_or_realm=(
+                    assignment.domain_or_realm
+                ),
+                kingdom=(
+                    assignment.kingdom
+                ),
+                phylum=(
+                    assignment.phylum
+                ),
+                class_name=(
+                    assignment.class_name
+                ),
+                order_name=(
+                    assignment.order_name
+                ),
+                family=(
+                    assignment.family
+                ),
+                genus=(
+                    assignment.genus
+                ),
+                species=(
+                    assignment.species
+                ),
+            )
+
+
+    records = sorted(
+        aggregated.values(),
+        key=lambda row: (
+            row[
+                "source"
+            ] != "curated",
+            row[
+                "source"
+            ],
+            -row[
+                "total"
+            ],
+            row[
+                "species"
+            ],
+            row[
+                "genus"
+            ],
+            row[
+                "candidate"
+            ],
+        ),
+    )
+
+    return records[
+        :limit
+    ]
+
 def featured_public_collections(
     limit=3,
 ):
@@ -511,6 +939,9 @@ def public_home_context():
         ),
         "organism_sample_type_network": (
             public_organism_sample_type_network()
+        ),
+        "taxonomy_records": (
+            public_taxonomy_records()
         ),
         "featured_collections": (
             featured_public_collections()

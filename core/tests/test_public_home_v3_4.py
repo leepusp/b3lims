@@ -182,12 +182,12 @@ class PublicHomeV34InteractionTests(
             "publicViewGeographyTab",
             "publicViewNetworkTab",
             "publicViewRankingTab",
-            "publicViewBubbleTab",
+            "publicViewSankeyTab",
             'type: "pie"',
             'type: "treemap"',
             'type: "graph"',
             'type: "bar"',
-            'type: "scatter"',
+            'type: "sankey"',
         ):
             self.assertIn(
                 token,

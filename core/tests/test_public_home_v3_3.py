@@ -353,12 +353,12 @@ class PublicHomeV33Tests(
             "publicViewGeographyTab",
             "publicViewNetworkTab",
             "publicViewRankingTab",
-            "publicViewBubbleTab",
+            "publicViewSankeyTab",
             "Overview",
             "Geography",
             "Network",
             "Rankings",
-            "Bubbles",
+            "Taxonomy Flow",
         ):
             self.assertIn(
                 token,
