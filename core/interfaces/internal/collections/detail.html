@@ -622,6 +622,18 @@
                 &larr; Collections
             </a>
 
+            {% if can_manage_collection_permissions %}
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#shareCollectionModal"
+                >
+                    <i class="bi bi-share me-1"></i>
+                    Share
+                </button>
+            {% endif %}
+
             {% if can_edit_collection %}
                 <span
                     class="btn btn-sm btn-outline-primary disabled"
@@ -632,6 +644,259 @@
             {% endif %}
         </div>
     </header>
+
+    {% if can_manage_collection_permissions %}
+        <section
+            id="collection-sharing-panel"
+            class="collection-explorer-card mb-3"
+        >
+            <div
+                class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+            >
+                <div>
+                    <div class="collection-explorer-card-title">
+                        Collection Access
+                    </div>
+
+                    <div class="collection-explorer-card-help">
+                        Explicit Collection grants are independent of
+                        Research Group membership and do not grant access
+                        to private Samples automatically.
+                    </div>
+                </div>
+
+                <span class="collection-explorer-badge">
+                    {{ collection_access_grants|length }}
+                    active grant{{ collection_access_grants|length|pluralize }}
+                </span>
+            </div>
+
+            {% if collection_access_grants %}
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Principal</th>
+                                <th>Type</th>
+                                <th>Access</th>
+                                <th>Expires</th>
+                                <th>Granted by</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grant in collection_access_grants %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {{ grant.principal_label }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        {% if grant.user %}
+                                            User
+                                        {% else %}
+                                            Research Group
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ grant.get_access_level_display }}
+                                    </td>
+                                    <td>
+                                        {% if grant.expires_at %}
+                                            {{ grant.expires_at|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            No expiration
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if grant.granted_by %}
+                                            {{ grant.granted_by.username }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form
+                                            method="post"
+                                            action="{% url 'collection_share_revoke' collection.pk grant.pk %}"
+                                            class="d-inline"
+                                        >
+                                            {% csrf_token %}
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                            >
+                                                Revoke
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted small mt-3">
+                    This Collection has no active explicit access grants.
+                </div>
+            {% endif %}
+        </section>
+
+        <div
+            class="modal fade"
+            id="shareCollectionModal"
+            tabindex="-1"
+            aria-labelledby="shareCollectionModalLabel"
+            aria-hidden="true"
+        >
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form
+                        method="post"
+                        action="{% url 'collection_share' collection.pk %}"
+                    >
+                        {% csrf_token %}
+
+                        <div class="modal-header">
+                            <h5
+                                class="modal-title"
+                                id="shareCollectionModalLabel"
+                            >
+                                Share {{ collection.name }}
+                            </h5>
+
+                            <button
+                                type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"
+                            ></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label
+                                    for="shareCollectionPrincipal"
+                                    class="form-label"
+                                >
+                                    Principal
+                                </label>
+
+                                <select
+                                    id="shareCollectionPrincipal"
+                                    name="principal"
+                                    class="form-select"
+                                    required
+                                >
+                                    <option value="">
+                                        Select a user or Research Group
+                                    </option>
+
+                                    {% if collection_share_users %}
+                                        <optgroup label="Users">
+                                            {% for share_user in collection_share_users %}
+                                                <option
+                                                    value="user:{{ share_user.pk }}"
+                                                >
+                                                    {{ share_user.username }}
+                                                    {% if share_user.get_full_name %}
+                                                        — {{ share_user.get_full_name }}
+                                                    {% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    {% endif %}
+
+                                    {% if collection_share_groups %}
+                                        <optgroup label="Research Groups">
+                                            {% for share_group in collection_share_groups %}
+                                                <option
+                                                    value="group:{{ share_group.pk }}"
+                                                >
+                                                    {{ share_group.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    {% endif %}
+                                </select>
+
+                                <div class="form-text">
+                                    Sharing does not change Research Group
+                                    or Unix group membership.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label
+                                    for="shareCollectionAccessLevel"
+                                    class="form-label"
+                                >
+                                    Access level
+                                </label>
+
+                                <select
+                                    id="shareCollectionAccessLevel"
+                                    name="access_level"
+                                    class="form-select"
+                                    required
+                                >
+                                    {% for value, label in collection_access_levels %}
+                                        <option value="{{ value }}">
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+
+                                <div class="form-text">
+                                    Manage permits access delegation.
+                                    It does not grant delete authority.
+                                </div>
+                            </div>
+
+                            <div class="mb-0">
+                                <label
+                                    for="shareCollectionExpiresAt"
+                                    class="form-label"
+                                >
+                                    Expiration
+                                </label>
+
+                                <input
+                                    id="shareCollectionExpiresAt"
+                                    type="datetime-local"
+                                    name="expires_at"
+                                    class="form-control"
+                                >
+
+                                <div class="form-text">
+                                    Optional. Leave empty for no expiration.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                Share Collection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
     <section class="collection-explorer-metrics">
         <article class="collection-explorer-metric">

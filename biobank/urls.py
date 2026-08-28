@@ -50,6 +50,8 @@ from core.views.internal.collections.views import (
     collection_create_view,
     collections_dashboard_view,
     collection_detail_view,
+    collection_share_view,
+    collection_share_revoke_view,
 )
 
 # 5. SAMPLES (AMOSTRAS)
@@ -195,6 +197,16 @@ urlpatterns = [
         "collections/<int:collection_id>/",
         collection_detail_view,
         name="collection_detail",
+    ),
+    path(
+        "collections/<int:collection_id>/share/",
+        collection_share_view,
+        name="collection_share",
+    ),
+    path(
+        "collections/<int:collection_id>/share/<int:grant_id>/revoke/",
+        collection_share_revoke_view,
+        name="collection_share_revoke",
     ),
 
     # ---------------- SAMPLES (AMOSTRAS) ----------------

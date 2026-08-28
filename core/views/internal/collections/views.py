@@ -3,8 +3,15 @@ from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db import transaction
 from django.db.models import Count
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import (
+    PermissionDenied,
+    ValidationError,
+)
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_POST
 
 from core.context import base_context
 from core.forms import CollectionForm
@@ -16,11 +23,14 @@ from core.models import (
     Keyword,
     KeywordValue,
     SampleTaxonomyAssignment,
+    ResearchGroup,
+    ResourceAccessGrant,
 )
 
 from core.permissions.collections import (
     can_view_collection,
     can_edit_collection,
+    can_manage_collection_permissions,
     visible_collections_for_user,
 )
 
@@ -30,6 +40,11 @@ from core.services.sample_origin_map import (
 )
 from core.services.sample_network import (
     build_sample_network_context,
+)
+from core.services.collection_sharing import (
+    active_collection_access_grants,
+    grant_collection_access,
+    revoke_collection_access,
 )
 
 
@@ -175,6 +190,275 @@ def collection_create_view(request):
         request,
         template_name="internal/collections/collection_create.html",
     )
+
+def _collection_share_error_message(
+    exc,
+):
+    return (
+        "; ".join(
+            getattr(
+                exc,
+                "messages",
+                [],
+            )
+        )
+        or str(
+            exc
+        )
+    )
+
+
+def _parse_collection_share_expiry(
+    request,
+):
+    raw = str(
+        request.POST.get(
+            "expires_at",
+            "",
+        )
+        or ""
+    ).strip()
+
+    if not raw:
+        return None
+
+    value = parse_datetime(
+        raw
+    )
+
+    if value is None:
+        raise ValidationError(
+            "Enter a valid access expiration date and time."
+        )
+
+    if timezone.is_naive(
+        value
+    ):
+        value = timezone.make_aware(
+            value,
+            timezone.get_current_timezone(),
+        )
+
+    if value <= timezone.now():
+        raise ValidationError(
+            "Access expiration must be in the future."
+        )
+
+    return value
+
+
+def _parse_collection_share_principal(
+    request,
+):
+    raw = str(
+        request.POST.get(
+            "principal",
+            "",
+        )
+        or ""
+    ).strip()
+
+    try:
+        principal_type, raw_pk = raw.split(
+            ":",
+            1,
+        )
+
+        principal_pk = int(
+            raw_pk
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        raise ValidationError(
+            "Select a valid sharing principal."
+        )
+
+    if principal_type == "user":
+        user = get_object_or_404(
+            get_user_model(),
+            pk=principal_pk,
+            is_active=True,
+        )
+
+        return {
+            "user": user,
+            "research_group": None,
+        }
+
+    if principal_type == "group":
+        research_group = get_object_or_404(
+            ResearchGroup,
+            pk=principal_pk,
+        )
+
+        return {
+            "user": None,
+            "research_group": research_group,
+        }
+
+    raise ValidationError(
+        "Select a valid sharing principal."
+    )
+
+
+@login_required
+@require_POST
+def collection_share_view(
+    request,
+    collection_id,
+):
+    collection = get_object_or_404(
+        Collection.objects
+        .select_related(
+            "owner",
+            "research_group",
+        ),
+        pk=collection_id,
+        is_active=True,
+    )
+
+    if not can_manage_collection_permissions(
+        request.user,
+        collection,
+    ):
+        raise PermissionDenied
+
+    try:
+        principal = (
+            _parse_collection_share_principal(
+                request
+            )
+        )
+
+        access_level = str(
+            request.POST.get(
+                "access_level",
+                ResourceAccessGrant
+                .AccessLevel
+                .VIEW,
+            )
+            or ResourceAccessGrant
+            .AccessLevel
+            .VIEW
+        ).strip()
+
+        grant = grant_collection_access(
+            collection=collection,
+            access_level=access_level,
+            granted_by=request.user,
+            user=principal[
+                "user"
+            ],
+            research_group=principal[
+                "research_group"
+            ],
+            expires_at=(
+                _parse_collection_share_expiry(
+                    request
+                )
+            ),
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            _collection_share_error_message(
+                exc
+            ),
+        )
+
+        return redirect(
+            "collection_detail",
+            collection_id=collection.pk,
+        )
+
+    messages.success(
+        request,
+        (
+            f"{grant.get_access_level_display()} access "
+            f"for {grant.principal_label} is active."
+        ),
+    )
+
+    return redirect(
+        "collection_detail",
+        collection_id=collection.pk,
+    )
+
+
+@login_required
+@require_POST
+def collection_share_revoke_view(
+    request,
+    collection_id,
+    grant_id,
+):
+    collection = get_object_or_404(
+        Collection.objects
+        .select_related(
+            "owner",
+            "research_group",
+        ),
+        pk=collection_id,
+        is_active=True,
+    )
+
+    if not can_manage_collection_permissions(
+        request.user,
+        collection,
+    ):
+        raise PermissionDenied
+
+    grant = get_object_or_404(
+        active_collection_access_grants(
+            collection
+        )
+        .select_related(
+            "user",
+            "research_group",
+        ),
+        pk=grant_id,
+    )
+
+    principal_label = (
+        grant.principal_label
+    )
+
+    try:
+        revoke_collection_access(
+            collection=collection,
+            grant=grant,
+            revoked_by=request.user,
+        )
+
+    except ValidationError as exc:
+        messages.error(
+            request,
+            _collection_share_error_message(
+                exc
+            ),
+        )
+
+        return redirect(
+            "collection_detail",
+            collection_id=collection.pk,
+        )
+
+    messages.success(
+        request,
+        (
+            f"Access for {principal_label} was revoked."
+        ),
+    )
+
+    return redirect(
+        "collection_detail",
+        collection_id=collection.pk,
+    )
+
 
 @login_required
 def collection_detail_view(
@@ -692,6 +976,60 @@ def collection_detail_view(
         )
     )
 
+    can_manage_permissions = (
+        can_manage_collection_permissions(
+            request.user,
+            collection,
+        )
+    )
+
+    if can_manage_permissions:
+        collection_access_grants = list(
+            active_collection_access_grants(
+                collection
+            )
+            .select_related(
+                "user",
+                "research_group",
+                "granted_by",
+            )
+            .order_by(
+                "id"
+            )
+        )
+
+        collection_share_users = list(
+            get_user_model()
+            .objects
+            .filter(
+                is_active=True,
+            )
+            .exclude(
+                pk=collection.owner_id,
+            )
+            .exclude(
+                pk=request.user.pk,
+            )
+            .order_by(
+                "username",
+                "pk",
+            )
+        )
+
+        collection_share_groups = list(
+            ResearchGroup.objects
+            .all()
+            .order_by(
+                "name",
+                "pk",
+            )
+        )
+
+    else:
+        collection_access_grants = []
+        collection_share_users = []
+        collection_share_groups = []
+
     ctx = base_context(
         request
     )
@@ -791,6 +1129,18 @@ def collection_detail_view(
                 request.user,
                 collection,
             ),
+        "can_manage_collection_permissions":
+            can_manage_permissions,
+        "collection_access_grants":
+            collection_access_grants,
+        "collection_share_users":
+            collection_share_users,
+        "collection_share_groups":
+            collection_share_groups,
+        "collection_access_levels":
+            ResourceAccessGrant
+            .AccessLevel
+            .choices,
     })
 
     return render(
