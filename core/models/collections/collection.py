@@ -57,6 +57,7 @@ class Collection(models.Model):
     # =========================
     is_active = models.BooleanField(
         default=True,
+        editable=False,
         help_text="Indica se a Collection está ativa para novos cadastros",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -82,3 +83,69 @@ class Collection(models.Model):
     # =========================
     def __str__(self):
         return self.name
+
+
+class CollectionLifecycleEvent(models.Model):
+    """
+    Append-only audit record for Collection lifecycle transitions.
+
+    The Collection boolean stores the current materialized state.
+    This model preserves who performed each audited transition and
+    when it occurred.
+    """
+
+    class EventType(models.TextChoices):
+        DEACTIVATED = (
+            "deactivated",
+            "Deactivated",
+        )
+        REACTIVATED = (
+            "reactivated",
+            "Reactivated",
+        )
+
+    collection = models.ForeignKey(
+        Collection,
+        on_delete=models.PROTECT,
+        related_name="lifecycle_events",
+    )
+
+    event_type = models.CharField(
+        max_length=20,
+        choices=EventType.choices,
+    )
+
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collection_lifecycle_events",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    notes = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "created_at",
+            "pk",
+        ]
+        verbose_name = (
+            "Collection lifecycle event"
+        )
+        verbose_name_plural = (
+            "Collection lifecycle events"
+        )
+
+    def __str__(self):
+        return (
+            f"{self.collection} - "
+            f"{self.get_event_type_display()}"
+        )

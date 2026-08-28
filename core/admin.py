@@ -8,6 +8,7 @@ from import_export.admin import ImportExportModelAdmin
 from core.models import (
     Biobank,
     Collection,
+    CollectionLifecycleEvent,
     Sample,
     SampleFile,
     Event,
@@ -44,8 +45,79 @@ class BiobankAdmin(admin.ModelAdmin):
 
 @admin.register(Collection)
 class CollectionAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "is_public")
-    filter_horizontal = ("tags", "keywords")
+    list_display = (
+        "name",
+        "owner",
+        "is_public",
+        "is_active",
+    )
+    list_filter = (
+        "is_active",
+        "is_public",
+    )
+    readonly_fields = (
+        "is_active",
+    )
+    filter_horizontal = (
+        "tags",
+        "keywords",
+    )
+
+    def has_delete_permission(
+        self,
+        request,
+        obj=None,
+    ):
+        # Collection lifecycle is governed by the application
+        # service; Django Admin must not hard-delete Collections.
+        return False
+
+
+@admin.register(CollectionLifecycleEvent)
+class CollectionLifecycleEventAdmin(
+    admin.ModelAdmin
+):
+    list_display = (
+        "collection",
+        "event_type",
+        "actor",
+        "created_at",
+    )
+    list_filter = (
+        "event_type",
+        "created_at",
+    )
+    search_fields = (
+        "collection__name",
+        "actor__username",
+    )
+    readonly_fields = (
+        "collection",
+        "event_type",
+        "actor",
+        "created_at",
+        "notes",
+    )
+
+    def has_add_permission(
+        self,
+        request,
+    ):
+        return False
+
+    def has_change_permission(
+        self,
+        request,
+        obj=None,
+    ):
+        return False
+
+    def has_delete_permission(
+        self,
+        request,
+        obj=None,
+    ):
+        return False
 
 @admin.register(Sample)
 class SampleAdmin(ImportExportModelAdmin):

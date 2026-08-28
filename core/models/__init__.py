@@ -1,6 +1,9 @@
 from core.models.samples.storage import StorageLocation, SampleStorageAssignment
 from .biobanks.biobank import Biobank
-from .collections.collection import Collection
+from .collections.collection import (
+    Collection,
+    CollectionLifecycleEvent,
+)
 from .tags.model import Tag
 from .keywords.model import Keyword, KeywordValue
 

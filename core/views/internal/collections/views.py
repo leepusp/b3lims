@@ -50,6 +50,9 @@ from core.services.collection_sharing import (
     grant_collection_access,
     revoke_collection_access,
 )
+from core.services.collection_lifecycle import (
+    deactivate_collection,
+)
 
 
 @login_required
@@ -151,15 +154,24 @@ def collections_list_view(request, template_name="internal/collections/collectio
     # 2. DEACTIVATE
     elif action == "deactivate_collection":
         cid = request.POST.get("collection_id")
-        collection = get_object_or_404(Collection, id=cid)
+        collection = get_object_or_404(
+            Collection,
+            id=cid,
+        )
 
-        if not can_delete_collection(user, collection):
-            raise PermissionDenied
+        deactivate_collection(
+            collection=collection,
+            actor=user,
+        )
 
-        collection.is_active = False
-        collection.save(update_fields=["is_active"])
-        messages.success(request, "Collection deactivated successfully.")
-        return redirect("collections_list")
+        messages.success(
+            request,
+            "Collection deactivated successfully.",
+        )
+
+        return redirect(
+            "collections_list"
+        )
 
     # 3. LISTAGEM (GET)
     ctx = base_context(request)
