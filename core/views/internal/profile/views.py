@@ -8,6 +8,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from core.forms_profile import UserProfileForm
 from core.models import Biobank, Collection, ResearchGroup, UserProfile
 from core.context import base_context
+from core.services.profile_access import (
+    build_profile_collection_access_context,
+)
 
 
 User = get_user_model()
@@ -121,4 +124,11 @@ def profile_view(request):
             ).select_related("coordinator").prefetch_related("members"),
         }
     )
+
+    context.update(
+        build_profile_collection_access_context(
+            request.user
+        )
+    )
+
     return render(request, "internal/profile/profile.html", context)

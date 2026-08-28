@@ -190,6 +190,138 @@
                     </div>
                 </div>
             </div>
+
+            <h2 class="h5 fw-bold mb-3 mt-5 text-secondary">
+                <i class="bi bi-share me-2"></i>
+                Shared Access
+            </h2>
+
+            <div class="row g-4">
+                <div class="col-xl-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">
+                                Access Received
+                            </span>
+
+                            <span class="badge bg-light text-dark border">
+                                {{ profile_access_received|length }}
+                            </span>
+                        </div>
+
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for entry in profile_access_received %}
+                                    <div class="list-group-item py-3">
+                                        <div class="d-flex justify-content-between gap-3 align-items-start">
+                                            <div>
+                                                <a
+                                                    href="{% url 'collection_detail' entry.collection.pk %}"
+                                                    class="fw-bold text-decoration-none"
+                                                >
+                                                    {{ entry.collection.name }}
+                                                </a>
+
+                                                <div class="text-muted small mt-1">
+                                                    {% if entry.source_type == "Direct" %}
+                                                        Direct grant
+                                                    {% else %}
+                                                        Research Group · {{ entry.source_label }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <span class="badge bg-light text-dark border">
+                                                {{ entry.access_label }}
+                                            </span>
+                                        </div>
+
+                                        <div class="small text-muted mt-2">
+                                            {% if entry.expires_at %}
+                                                Expires {{ entry.expires_at|date:"Y-m-d H:i" }}
+                                            {% else %}
+                                                No expiration
+                                            {% endif %}
+
+                                            · Granted by
+
+                                            {% if entry.grantor %}
+                                                {{ entry.grantor.get_full_name|default:entry.grantor.username }}
+                                            {% else %}
+                                                unavailable
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <div class="list-group-item text-muted small py-4 text-center">
+                                        No active Collection access has been shared with you.
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">
+                                Access Managed by You
+                            </span>
+
+                            <span class="badge bg-light text-dark border">
+                                {{ profile_access_managed|length }}
+                            </span>
+                        </div>
+
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for entry in profile_access_managed %}
+                                    <div class="list-group-item py-3">
+                                        <div class="d-flex justify-content-between gap-3 align-items-start">
+                                            <div>
+                                                <a
+                                                    href="{% url 'collection_detail' entry.collection.pk %}"
+                                                    class="fw-bold text-decoration-none"
+                                                >
+                                                    {{ entry.collection.name }}
+                                                </a>
+
+                                                <div class="text-muted small mt-1">
+                                                    Owner:
+                                                    {{ entry.collection.owner.get_full_name|default:entry.collection.owner.username }}
+
+                                                    {% if entry.collection.research_group %}
+                                                        · {{ entry.collection.research_group.name }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <span class="badge bg-light text-dark border">
+                                                {{ entry.active_grant_count }}
+                                                active grant{{ entry.active_grant_count|pluralize }}
+                                            </span>
+                                        </div>
+
+                                        <div class="mt-2">
+                                            <a
+                                                href="{% url 'collection_detail' entry.collection.pk %}#collection-sharing-panel"
+                                                class="btn btn-sm btn-outline-primary"
+                                            >
+                                                Manage Access
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <div class="list-group-item text-muted small py-4 text-center">
+                                        You do not currently manage Collection sharing permissions.
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
