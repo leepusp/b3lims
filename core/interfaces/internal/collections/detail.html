@@ -14,6 +14,14 @@
     rel="stylesheet"
     href="{% static 'internal/samples/sample_origin_distribution_map.css' %}?v=20260821-map3"
 >
+<link
+    rel="stylesheet"
+    href="{% static 'internal/samples/sample_network.css' %}?v=20260821-network2"
+>
+<script
+    type="text/javascript"
+    src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+></script>
 {% endblock %}
 
 {% block content %}
@@ -486,6 +494,52 @@
     }
 }
 
+
+.collection-explorer-network-card {
+    margin-bottom: 16px;
+}
+
+.collection-explorer-network-card .sample-network-metrics {
+    margin-top: 14px;
+}
+
+.collection-explorer-network-card .sample-network-workspace {
+    min-height: 610px;
+    grid-template-columns:
+        240px
+        minmax(0, 1fr)
+        270px;
+}
+
+.collection-explorer-network-card #network-container {
+    height: 560px;
+}
+
+.collection-explorer-network-empty-note {
+    margin-top: 10px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+@media (max-width: 1200px) {
+    .collection-explorer-network-card .sample-network-workspace {
+        grid-template-columns:
+            220px
+            minmax(0, 1fr)
+            245px;
+    }
+}
+
+@media (max-width: 1050px) {
+    .collection-explorer-network-card .sample-network-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-explorer-network-card #network-container {
+        height: 520px;
+    }
+}
+
 @media (max-width: 1250px) {
     .collection-explorer-metrics {
         grid-template-columns: repeat(3, minmax(120px, 1fr));
@@ -926,6 +980,358 @@
         </article>
     </section>
 
+
+    <section class="collection-explorer-card collection-explorer-network-card">
+        <div class="collection-explorer-section-head">
+            <div>
+                <div class="collection-explorer-section-eyebrow">
+                    Biological Relationships
+                </div>
+
+                <div class="collection-explorer-section-title">
+                    Relationship Network
+                </div>
+
+                <div class="collection-explorer-section-help">
+                    Explore lineage, derivation, storage associations and
+                    host-range interactions among Samples visible inside
+                    this Collection. Relationships with an endpoint outside
+                    the authorized Collection scope are not exposed.
+                </div>
+            </div>
+
+            <span class="collection-explorer-badge">
+                {{ network_stats.relationships }}
+                relationships
+            </span>
+        </div>
+
+        <div class="sample-network-metrics">
+            <div class="sample-network-metric">
+                <div class="sample-network-metric-value">
+                    {{ network_stats.visible_samples }}
+                </div>
+                <div class="sample-network-metric-label">
+                    Collection Samples
+                </div>
+            </div>
+
+            <div class="sample-network-metric">
+                <div class="sample-network-metric-value">
+                    {{ network_stats.connected_samples }}
+                </div>
+                <div class="sample-network-metric-label">
+                    Connected Samples
+                </div>
+            </div>
+
+            <div class="sample-network-metric">
+                <div class="sample-network-metric-value">
+                    {{ network_stats.relationships }}
+                </div>
+                <div class="sample-network-metric-label">
+                    Relationships
+                </div>
+            </div>
+
+            <div class="sample-network-metric">
+                <div class="sample-network-metric-value">
+                    {{ network_stats.isolated_samples }}
+                </div>
+                <div class="sample-network-metric-label">
+                    Isolated Samples
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-network-workspace">
+
+            <aside class="sample-network-panel sample-network-filter-panel">
+                <div class="sample-network-panel-title">
+                    Network Filters
+                </div>
+
+                <div class="sample-network-panel-help">
+                    Refine Samples and relationships rendered in this Collection.
+                </div>
+
+                <div class="sample-network-section">
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-search">
+                            Search
+                        </label>
+                        <input
+                            id="network-filter-search"
+                            type="search"
+                            class="form-control form-control-sm"
+                            placeholder="Sample ID, organism..."
+                        >
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-type">
+                            Sample Type
+                        </label>
+                        <select
+                            id="network-filter-type"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All types</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-status">
+                            Status
+                        </label>
+                        <select
+                            id="network-filter-status"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All statuses</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-biosafety">
+                            Biosafety Level
+                        </label>
+                        <select
+                            id="network-filter-biosafety"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All biosafety levels</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-owner">
+                            Owner
+                        </label>
+                        <select
+                            id="network-filter-owner"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All owners</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-biobank">
+                            Biobank
+                        </label>
+                        <select
+                            id="network-filter-biobank"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All Biobanks</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-group">
+                            Research Group
+                        </label>
+                        <select
+                            id="network-filter-group"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All groups</option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-field">
+                        <label for="network-filter-collection">
+                            Collection
+                        </label>
+                        <select
+                            id="network-filter-collection"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">All collections</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sample-network-section">
+                    <div class="sample-network-section-label">
+                        Relationships
+                    </div>
+
+                    <label class="sample-network-toggle">
+                        <span>Lineage / Derivation</span>
+                        <input
+                            id="network-edge-lineage"
+                            type="checkbox"
+                            checked
+                        >
+                    </label>
+
+                    <label class="sample-network-toggle">
+                        <span>Storage / Association</span>
+                        <input
+                            id="network-edge-storage"
+                            type="checkbox"
+                            checked
+                        >
+                    </label>
+
+                    <label class="sample-network-toggle">
+                        <span>Infection / Host Range</span>
+                        <input
+                            id="network-edge-infection"
+                            type="checkbox"
+                            checked
+                        >
+                    </label>
+
+                    <label class="sample-network-toggle">
+                        <span>Other Relationships</span>
+                        <input
+                            id="network-edge-other"
+                            type="checkbox"
+                            checked
+                        >
+                    </label>
+                </div>
+
+                <div class="sample-network-section">
+                    <label class="sample-network-toggle">
+                        <span>Connected Samples only</span>
+                        <input
+                            id="network-connected-only"
+                            type="checkbox"
+                        >
+                    </label>
+
+                    <button
+                        id="network-reset-filters"
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary w-100 mt-2"
+                    >
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        Reset Filters
+                    </button>
+                </div>
+            </aside>
+
+            <section class="sample-network-panel sample-network-main">
+                <div class="sample-network-toolbar">
+                    <div class="sample-network-toolbar-group">
+                        <span class="sample-network-toolbar-label">
+                            Layout
+                        </span>
+
+                        <select
+                            id="network-layout"
+                            class="form-select form-select-sm"
+                            style="width: 145px;"
+                        >
+                            <option value="force">
+                                Force-directed
+                            </option>
+                            <option value="hierarchical">
+                                Hierarchical
+                            </option>
+                        </select>
+
+                        <span class="sample-network-toolbar-label ms-2">
+                            Group by
+                        </span>
+
+                        <select
+                            id="network-cluster-by"
+                            class="form-select form-select-sm"
+                            style="width: 165px;"
+                        >
+                            <option value="">None</option>
+                            <option value="node_type">Sample Type</option>
+                            <option value="status_label">Status</option>
+                            <option value="biosafety_level">Biosafety</option>
+                            <option value="owner">Owner</option>
+                            <option value="research_group">Research Group</option>
+                            <option value="biobank">Biobank</option>
+                            <option value="connected_component">
+                                Connected Component
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="sample-network-toolbar-group">
+                        <button
+                            id="network-fit"
+                            type="button"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            <i class="bi bi-arrows-fullscreen me-1"></i>
+                            Fit
+                        </button>
+
+                        <button
+                            id="network-reset-view"
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            Reset View
+                        </button>
+                    </div>
+                </div>
+
+                <div id="network-container"></div>
+
+                <div class="sample-network-footer">
+                    <span>
+                        <span class="sample-network-legend-line"></span>
+                        Lineage / Derivation
+                    </span>
+
+                    <span>
+                        <span class="sample-network-legend-line storage"></span>
+                        Storage / Association
+                    </span>
+
+                    <span>
+                        <span class="sample-network-legend-line infection"></span>
+                        Infection / Host Range
+                    </span>
+
+                    <span class="ms-auto">
+                        Double-click a Sample to open its detail page.
+                    </span>
+                </div>
+            </section>
+
+            <aside class="sample-network-panel sample-network-inspector">
+                <div class="sample-network-panel-title">
+                    Inspector
+                </div>
+
+                <div class="sample-network-panel-help">
+                    Select a Sample or relationship in the graph.
+                </div>
+
+                <div
+                    id="network-inspector"
+                    class="sample-network-inspector-empty"
+                >
+                    Nothing selected.
+                </div>
+            </aside>
+
+        </div>
+
+        {% if not network_stats.relationships %}
+            <div class="collection-explorer-network-empty-note">
+                No relationships currently connect Samples visible inside
+                this Collection. Isolated Samples remain available in the graph.
+            </div>
+        {% endif %}
+
+        {{ network_nodes|json_script:"sample-network-nodes-json" }}
+        {{ network_edges|json_script:"sample-network-edges-json" }}
+    </section>
+
     <section class="collection-explorer-card collection-explorer-workspace">
         <div class="collection-explorer-workspace-header">
             <div>
@@ -1357,4 +1763,5 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260821-map3"></script>
+<script src="{% static 'internal/samples/sample_network.js' %}?v=20260821-network2"></script>
 {% endblock %}

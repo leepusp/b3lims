@@ -28,6 +28,9 @@ from core.permissions.samples import visible_samples_for_user
 from core.services.sample_origin_map import (
     build_sample_origin_distribution_context,
 )
+from core.services.sample_network import (
+    build_sample_network_context,
+)
 
 
 @login_required
@@ -627,6 +630,20 @@ def collection_detail_view(
         ]
     )
 
+    # ---------------------------------------------------------
+    # Biological relationships
+    #
+    # samples_qs is already restricted by both Sample visibility
+    # and Collection membership. The shared serializer therefore
+    # cannot expose nodes or edges outside this Collection scope.
+    # ---------------------------------------------------------
+
+    network_context = (
+        build_sample_network_context(
+            samples_qs
+        )
+    )
+
     country_sample_ids = {}
 
     for sample in collection_samples:
@@ -681,6 +698,10 @@ def collection_detail_view(
 
     ctx.update(
         origin_context
+    )
+
+    ctx.update(
+        network_context
     )
 
     ctx.update({

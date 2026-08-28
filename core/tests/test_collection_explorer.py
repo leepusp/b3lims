@@ -11,6 +11,9 @@ from core.models import (
     SampleOrigin,
     SampleTaxonomyAssignment,
 )
+from core.models.samples.relationship import (
+    SampleRelationship,
+)
 from core.services.resource_access import (
     grant_resource_access,
 )
@@ -125,6 +128,39 @@ class CollectionExplorerTests(TestCase):
                 .STATUS_VERIFIED
             ),
             is_current=True,
+        )
+
+        cls.outside_sample = Sample.objects.create(
+            sample_id="COL-OUTSIDE-001",
+            sample_type="Plasmid",
+            organism_name="Outside Collection organism",
+            owner=cls.owner,
+            is_public=True,
+            is_active=True,
+        )
+
+        cls.internal_relationship = (
+            SampleRelationship.objects.create(
+                source_sample=cls.private_sample,
+                target_sample=cls.public_sample,
+                relationship_type="other",
+                notes=(
+                    "Internal Collection relationship"
+                ),
+                created_by=cls.owner,
+            )
+        )
+
+        cls.outside_relationship = (
+            SampleRelationship.objects.create(
+                source_sample=cls.public_sample,
+                target_sample=cls.outside_sample,
+                relationship_type="other",
+                notes=(
+                    "Outside Collection relationship"
+                ),
+                created_by=cls.owner,
+            )
         )
 
     def detail_url(self):
@@ -380,6 +416,185 @@ class CollectionExplorerTests(TestCase):
         self.assertNotContains(
             response,
             "São Paulo isolate site",
+        )
+
+    def test_owner_explorer_builds_collection_relationship_network(self):
+        self.client.force_login(
+            self.owner
+        )
+
+        response = self.client.get(
+            self.detail_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "Relationship Network",
+        )
+        self.assertContains(
+            response,
+            'id="network-container"',
+        )
+        self.assertContains(
+            response,
+            "sample-network-nodes-json",
+        )
+        self.assertContains(
+            response,
+            "sample-network-edges-json",
+        )
+
+        nodes = response.context[
+            "network_nodes"
+        ]
+
+        self.assertEqual(
+            {
+                node["sample_id"]
+                for node in nodes
+            },
+            {
+                "COL-PRIVATE-001",
+                "COL-PUBLIC-001",
+            },
+        )
+
+        edges = response.context[
+            "network_edges"
+        ]
+
+        self.assertEqual(
+            {
+                edge["id"]
+                for edge in edges
+            },
+            {
+                (
+                    "relationship-"
+                    f"{self.internal_relationship.pk}"
+                ),
+            },
+        )
+
+        self.assertNotIn(
+            (
+                "relationship-"
+                f"{self.outside_relationship.pk}"
+            ),
+            {
+                edge["id"]
+                for edge in edges
+            },
+        )
+
+        self.assertEqual(
+            response.context[
+                "network_stats"
+            ][
+                "visible_samples"
+            ],
+            2,
+        )
+
+        self.assertEqual(
+            response.context[
+                "network_stats"
+            ][
+                "relationships"
+            ],
+            1,
+        )
+
+        self.assertNotContains(
+            response,
+            "COL-OUTSIDE-001",
+        )
+
+        self.assertNotContains(
+            response,
+            "Outside Collection relationship",
+        )
+
+    def test_collection_grant_does_not_leak_relationship_network(self):
+        grant_resource_access(
+            resource=self.collection,
+            access_level=(
+                ResourceAccessGrant
+                .AccessLevel
+                .VIEW
+            ),
+            granted_by=self.owner,
+            user=self.outsider,
+        )
+
+        self.client.force_login(
+            self.outsider
+        )
+
+        response = self.client.get(
+            self.detail_url()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        nodes = response.context[
+            "network_nodes"
+        ]
+
+        self.assertEqual(
+            [
+                node["sample_id"]
+                for node in nodes
+            ],
+            [
+                "COL-PUBLIC-001",
+            ],
+        )
+
+        self.assertEqual(
+            response.context[
+                "network_edges"
+            ],
+            [],
+        )
+
+        self.assertEqual(
+            response.context[
+                "network_stats"
+            ][
+                "relationships"
+            ],
+            0,
+        )
+
+        self.assertNotContains(
+            response,
+            "COL-PRIVATE-001",
+        )
+
+        self.assertNotContains(
+            response,
+            "Internal Collection relationship",
+        )
+
+        # The outside Sample is public and independently visible,
+        # but still must not enter a Collection-scoped network.
+        self.assertNotContains(
+            response,
+            "COL-OUTSIDE-001",
+        )
+
+        self.assertNotContains(
+            response,
+            "Outside Collection relationship",
         )
 
     def test_inactive_collection_is_not_available_in_explorer(self):
