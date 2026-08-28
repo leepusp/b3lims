@@ -301,7 +301,7 @@ class PublicHomeV33Tests(
             home,
         )
 
-    def test_microorganism_canvas_reacts_to_pointer(
+    def test_microorganism_canvas_reacts_to_pointer_individually(
         self,
     ):
         source = Path(
@@ -311,8 +311,11 @@ class PublicHomeV33Tests(
         for token in (
             '"pointermove"',
             '"pointerleave"',
-            "translate3d(",
-            "scale(1.035)",
+            "POINTER_BASE_RADIUS",
+            "POINTER_FORCE",
+            "interactionVelocityX",
+            "interactionScale",
+            "context.scale(",
             (
                 "(prefers-reduced-motion: "
                 "reduce)"
@@ -322,6 +325,21 @@ class PublicHomeV33Tests(
                 token,
                 source,
             )
+
+        self.assertNotIn(
+            "canvas.style.transform",
+            source,
+        )
+
+        self.assertNotIn(
+            "scale(1.035)",
+            source,
+        )
+
+        self.assertNotIn(
+            "translate3d(",
+            source,
+        )
 
     def test_visualization_tabs_exist(
         self,

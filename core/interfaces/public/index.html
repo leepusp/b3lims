@@ -8,7 +8,7 @@
 {% block extra_css %}
 <style>
     /*
-     * B3 LIMS Public Home V3.2
+     * B3 LIMS Public Home V3.4
      *
      * Visual composition derived from the approved portal prototype,
      * while all scientific values remain sourced from the canonical
@@ -682,15 +682,6 @@
         min-height: 300px;
 
         color: var(--b3-muted);
-    }
-
-    #microbes {
-        will-change: transform;
-
-        transition:
-            transform
-            180ms
-            ease-out;
     }
 
     @media (max-width: 991.98px) {
@@ -1896,6 +1887,10 @@
         "2d"
     );
 
+    const hero = canvas.closest(
+        ".portal-welcome"
+    );
+
     const reducedMotion = (
         window.matchMedia &&
         window.matchMedia(
@@ -1913,6 +1908,18 @@
     ];
 
     const organisms = [];
+
+    const pointer = {
+        active: false,
+        x: 0,
+        y: 0
+    };
+
+    const POINTER_BASE_RADIUS = 72;
+    const POINTER_FORCE = 240;
+    const POINTER_DAMPING = 5.5;
+    const POINTER_SCALE_BOOST = 0.20;
+    const POINTER_SCALE_EASING = 10;
 
     let width = 0;
     let height = 0;
@@ -2080,8 +2087,8 @@
 
             speed:
                 randomBetween(
-                    4,
-                    11
+                    5.5,
+                    13.5
                 ),
 
             direction:
@@ -2105,7 +2112,11 @@
                 randomBetween(
                     0.18,
                     0.34
-                )
+                ),
+
+            interactionVelocityX: 0,
+            interactionVelocityY: 0,
+            interactionScale: 1
         };
 
 
@@ -2121,8 +2132,8 @@
 
             organism.speed = (
                 randomBetween(
-                    3,
-                    7
+                    4,
+                    8.5
                 )
             );
 
@@ -2164,6 +2175,204 @@
 
 
         return organism;
+    }
+
+
+    function updatePointerPosition(
+        event
+    ) {
+        if (
+            !hero
+            ||
+            reducedMotion
+        ) {
+            return;
+        }
+
+        const bounds = (
+            canvas.getBoundingClientRect()
+        );
+
+        if (
+            !bounds.width
+            ||
+            !bounds.height
+        ) {
+            return;
+        }
+
+        pointer.active = true;
+
+        pointer.x = (
+            (
+                event.clientX
+                -
+                bounds.left
+            )
+            *
+            (
+                width
+                /
+                bounds.width
+            )
+        );
+
+        pointer.y = (
+            (
+                event.clientY
+                -
+                bounds.top
+            )
+            *
+            (
+                height
+                /
+                bounds.height
+            )
+        );
+    }
+
+
+    function clearPointer() {
+        pointer.active = false;
+    }
+
+
+    function applyPointerInteraction(
+        organism,
+        delta
+    ) {
+        const damping = Math.exp(
+            -POINTER_DAMPING
+            *
+            delta
+        );
+
+        organism.interactionVelocityX *= (
+            damping
+        );
+
+        organism.interactionVelocityY *= (
+            damping
+        );
+
+
+        let targetScale = 1;
+
+
+        if (
+            pointer.active
+        ) {
+            const dx = (
+                organism.x
+                -
+                pointer.x
+            );
+
+            const dy = (
+                organism.y
+                -
+                pointer.y
+            );
+
+            const distance = Math.hypot(
+                dx,
+                dy
+            );
+
+            const interactionRadius = (
+                POINTER_BASE_RADIUS
+                +
+                organism.size
+                *
+                2.2
+            );
+
+
+            if (
+                distance
+                <
+                interactionRadius
+            ) {
+                const proximity = (
+                    1
+                    -
+                    distance
+                    /
+                    interactionRadius
+                );
+
+                const direction = (
+                    distance
+                    >
+                    0.001
+                    ?
+                    Math.atan2(
+                        dy,
+                        dx
+                    )
+                    :
+                    organism.phase
+                );
+
+                const force = (
+                    POINTER_FORCE
+                    *
+                    proximity
+                    *
+                    proximity
+                );
+
+
+                organism.interactionVelocityX += (
+                    Math.cos(
+                        direction
+                    )
+                    *
+                    force
+                    *
+                    delta
+                );
+
+                organism.interactionVelocityY += (
+                    Math.sin(
+                        direction
+                    )
+                    *
+                    force
+                    *
+                    delta
+                );
+
+
+                targetScale = (
+                    1
+                    +
+                    POINTER_SCALE_BOOST
+                    *
+                    proximity
+                );
+            }
+        }
+
+
+        const scaleEasing = Math.min(
+            1,
+            POINTER_SCALE_EASING
+            *
+            delta
+        );
+
+
+        organism.interactionScale += (
+            (
+                targetScale
+                -
+                organism.interactionScale
+            )
+            *
+            scaleEasing
+        );
     }
 
 
@@ -2902,28 +3111,52 @@
             function (
                 organism
             ) {
+                applyPointerInteraction(
+                    organism,
+                    delta
+                );
+
+
                 organism.angle += (
                     organism.spin
                     *
                     delta
                 );
 
-                organism.x += (
+
+                const baseVelocityX = (
                     Math.cos(
                         organism.direction
                     )
                     *
                     organism.speed
-                    *
-                    delta
                 );
 
-                organism.y += (
+                const baseVelocityY = (
                     Math.sin(
                         organism.direction
                     )
                     *
                     organism.speed
+                );
+
+
+                organism.x += (
+                    (
+                        baseVelocityX
+                        +
+                        organism.interactionVelocityX
+                    )
+                    *
+                    delta
+                );
+
+                organism.y += (
+                    (
+                        baseVelocityY
+                        +
+                        organism.interactionVelocityY
+                    )
                     *
                     delta
                 );
@@ -2946,6 +3179,8 @@
                         +
                         margin
                     );
+
+                    organism.interactionVelocityX = 0;
                 } else if (
                     organism.x
                     >
@@ -2956,6 +3191,8 @@
                     organism.x = (
                         -margin
                     );
+
+                    organism.interactionVelocityX = 0;
                 }
 
 
@@ -2969,6 +3206,8 @@
                         +
                         margin
                     );
+
+                    organism.interactionVelocityY = 0;
                 } else if (
                     organism.y
                     >
@@ -2979,6 +3218,8 @@
                     organism.y = (
                         -margin
                     );
+
+                    organism.interactionVelocityY = 0;
                 }
             }
         );
@@ -3005,6 +3246,11 @@
                 context.translate(
                     organism.x,
                     organism.y
+                );
+
+                context.scale(
+                    organism.interactionScale,
+                    organism.interactionScale
                 );
 
                 context.rotate(
@@ -3056,6 +3302,31 @@
     }
 
 
+    if (
+        hero
+        &&
+        !reducedMotion
+    ) {
+        hero.addEventListener(
+            "pointermove",
+            updatePointerPosition,
+            {
+                passive: true
+            }
+        );
+
+        hero.addEventListener(
+            "pointerleave",
+            clearPointer
+        );
+
+        hero.addEventListener(
+            "pointercancel",
+            clearPointer
+        );
+    }
+
+
     window.addEventListener(
         "resize",
         resizeCanvas
@@ -3076,126 +3347,7 @@
 </script>
 
 
-<script>
-(function () {
-    "use strict";
 
-    const hero = document.querySelector(
-        ".portal-welcome"
-    );
-
-    const canvas = document.getElementById(
-        "microbes"
-    );
-
-    if (
-        !hero
-        ||
-        !canvas
-        ||
-        !window.matchMedia
-    ) {
-        return;
-    }
-
-
-    const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-
-    if (
-        reducedMotion
-    ) {
-        return;
-    }
-
-
-    function resetParallax() {
-        canvas.style.transform = (
-            "translate3d(0px, 0px, 0px) "
-            +
-            "scale(1)"
-        );
-    }
-
-
-    hero.addEventListener(
-        "pointermove",
-        function (
-            event
-        ) {
-            const bounds = (
-                hero.getBoundingClientRect()
-            );
-
-            const x = (
-                (
-                    event.clientX
-                    -
-                    bounds.left
-                )
-                /
-                bounds.width
-                -
-                0.5
-            );
-
-            const y = (
-                (
-                    event.clientY
-                    -
-                    bounds.top
-                )
-                /
-                bounds.height
-                -
-                0.5
-            );
-
-
-            const offsetX = (
-                x
-                *
-                -20
-            );
-
-            const offsetY = (
-                y
-                *
-                -14
-            );
-
-
-            canvas.style.transform = (
-                "translate3d("
-                +
-                offsetX.toFixed(2)
-                +
-                "px, "
-                +
-                offsetY.toFixed(2)
-                +
-                "px, 0px) "
-                +
-                "scale(1.035)"
-            );
-        }
-    );
-
-
-    hero.addEventListener(
-        "pointerleave",
-        resetParallax
-    );
-
-
-    hero.addEventListener(
-        "pointercancel",
-        resetParallax
-    );
-})();
-</script>
 
 
 <script>
