@@ -1,213 +1,641 @@
 {% extends "public/base.html" %}
 
-{% block title %}Biobank CEPID B3
-<hr class="mb-5">
+{% block title %}Biobank CEPID B3 | Public Catalog{% endblock %}
 
-<!-- ================= SHIPMENTS ================= -->
+{% block extra_css %}
+<style>
+    .public-hero {
+        border: 1px solid #dbe4ee;
+        border-radius: 1.25rem;
+        background:
+            linear-gradient(
+                135deg,
+                #f7fbff 0%,
+                #ffffff 58%,
+                #f4f8fb 100%
+            );
+        overflow: hidden;
+    }
+
+    .public-hero-kicker {
+        color: var(--cepid-blue-light);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .public-hero-title {
+        max-width: 760px;
+        font-size: clamp(2.1rem, 4vw, 3.8rem);
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+    }
+
+    .public-search-shell {
+        max-width: 820px;
+        padding: 0.55rem;
+        border: 1px solid #d5dee8;
+        border-radius: 0.9rem;
+        background: #ffffff;
+        box-shadow: 0 0.7rem 2rem rgba(10, 47, 90, 0.08);
+    }
+
+    .public-search-shell .form-control {
+        border: 0;
+        box-shadow: none;
+    }
+
+    .public-kpi {
+        height: 100%;
+        border: 1px solid #e1e8ef;
+        border-radius: 1rem;
+        background: #ffffff;
+    }
+
+    .public-kpi-value {
+        color: var(--cepid-blue);
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .public-section-label {
+        color: var(--cepid-blue-light);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .composition-row + .composition-row {
+        margin-top: 1.1rem;
+    }
+
+    .composition-track {
+        height: 0.72rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #edf2f7;
+    }
+
+    .composition-fill {
+        min-width: 0.35rem;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--cepid-blue-light);
+    }
+
+    .featured-card {
+        height: 100%;
+        border: 1px solid #e1e8ef;
+        border-radius: 1rem;
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .featured-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.8rem 2rem rgba(10, 47, 90, 0.08);
+    }
+
+    .explorer-card {
+        height: 100%;
+        border: 1px solid #e1e8ef;
+        border-radius: 1rem;
+        background: #fbfcfe;
+    }
+
+    .public-icon {
+        display: inline-flex;
+        width: 2.8rem;
+        height: 2.8rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.8rem;
+        color: var(--cepid-blue);
+        background: #edf4fa;
+        font-size: 1.2rem;
+    }
+
+    .public-disclosure-note {
+        border-left: 4px solid var(--cepid-blue-light);
+        background: #f7f9fc;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<section class="public-hero mb-5">
+    <div class="p-4 p-md-5">
+
+        <div class="public-hero-kicker mb-3">
+            CEPID B3 · Public Biobank Catalog
+        </div>
+
+        <h1 class="public-hero-title fw-bold mb-4">
+            Explore the biological resources of the B3 Biobank
+        </h1>
+
+        <p class="fs-5 text-muted mb-4" style="max-width: 850px;">
+            Discover publication-approved metadata describing
+            bacterial strains, bacteriophages, molecular constructs
+            and scientific Collections maintained by the CEPID B3
+            research network.
+        </p>
+
+        <form
+            method="get"
+            action="{% url 'public_collections' %}"
+            class="public-search-shell d-flex align-items-center mb-4"
+        >
+            <i class="bi bi-search ms-2 text-muted"></i>
+
+            <input
+                type="search"
+                name="q"
+                class="form-control form-control-lg"
+                placeholder="Search Collections, organisms, Sample types or public Tags"
+                aria-label="Search the public B3 Biobank catalog"
+            >
+
+            <button
+                type="submit"
+                class="btn btn-primary px-4"
+            >
+                Search
+            </button>
+        </form>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a
+                href="{% url 'public_collections' %}"
+                class="btn btn-outline-primary"
+            >
+                Browse public Collections
+            </a>
+
+            <a
+                href="{% url 'public_about' %}"
+                class="btn btn-outline-secondary"
+            >
+                About the Biobank
+            </a>
+        </div>
+
+    </div>
+</section>
+
+
+<section class="mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+            <div class="public-section-label mb-1">
+                Public catalog
+            </div>
+
+            <h2 class="h4 fw-bold mb-0">
+                Catalog at a glance
+            </h2>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <div class="col-6 col-lg-3">
+            <div class="public-kpi p-4">
+                <div class="public-icon mb-3">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+
+                <div class="public-kpi-value">
+                    {{ public_metrics.public_samples }}
+                </div>
+
+                <div class="text-muted small mt-2">
+                    Public Samples
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="public-kpi p-4">
+                <div class="public-icon mb-3">
+                    <i class="bi bi-collection"></i>
+                </div>
+
+                <div class="public-kpi-value">
+                    {{ public_metrics.public_collections }}
+                </div>
+
+                <div class="text-muted small mt-2">
+                    Public Collections
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="public-kpi p-4">
+                <div class="public-icon mb-3">
+                    <i class="bi bi-diagram-3"></i>
+                </div>
+
+                <div class="public-kpi-value">
+                    {{ public_metrics.organisms }}
+                </div>
+
+                <div class="text-muted small mt-2">
+                    Organisms represented
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="public-kpi p-4">
+                <div class="public-icon mb-3">
+                    <i class="bi bi-globe-americas"></i>
+                </div>
+
+                <div class="public-kpi-value">
+                    {{ public_metrics.geographic_origins }}
+                </div>
+
+                <div class="text-muted small mt-2">
+                    Public geographic origins
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <p class="text-muted small mt-3 mb-0">
+        Statistics include only records explicitly eligible for
+        unauthenticated public disclosure.
+    </p>
+</section>
+
+
+<section class="mb-5">
+    <div class="row g-4">
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="public-section-label mb-1">
+                        Composition
+                    </div>
+
+                    <h2 class="h4 fw-bold mb-2">
+                        Public catalog by Sample type
+                    </h2>
+
+                    <p class="text-muted mb-4">
+                        Distribution of publication-approved Samples
+                        across the most represented material types.
+                    </p>
+
+                    {% if sample_type_distribution %}
+
+                        {% for item in sample_type_distribution %}
+                            <div class="composition-row">
+
+                                <div
+                                    class="d-flex justify-content-between gap-3 mb-2"
+                                >
+                                    <a
+                                        href="{% url 'public_collections' %}?q={{ item.sample_type|urlencode }}"
+                                        class="text-decoration-none fw-semibold"
+                                    >
+                                        {{ item.sample_type }}
+                                    </a>
+
+                                    <span class="text-muted small">
+                                        {{ item.total }}
+                                        Sample{{ item.total|pluralize }}
+                                        ·
+                                        {{ item.percentage }}%
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="composition-track"
+                                    role="progressbar"
+                                    aria-label="{{ item.sample_type }}"
+                                    aria-valuenow="{{ item.percentage }}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                >
+                                    <div
+                                        class="composition-fill"
+                                        style="width: {{ item.percentage }}%;"
+                                    ></div>
+                                </div>
+
+                            </div>
+                        {% endfor %}
+
+                    {% else %}
+
+                        <div class="text-muted">
+                            Public Sample-type statistics will appear
+                            here as publication-approved records are
+                            added to the catalog.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="public-section-label mb-1">
+                        Discovery
+                    </div>
+
+                    <h2 class="h4 fw-bold mb-2">
+                        Explore public resources
+                    </h2>
+
+                    <p class="text-muted mb-4">
+                        Use the catalog to move from a broad scientific
+                        question to publication-approved Collections.
+                    </p>
+
+                    {% for item in sample_type_distribution|slice:":3" %}
+                        <a
+                            href="{% url 'public_collections' %}?q={{ item.sample_type|urlencode }}"
+                            class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 text-decoration-none"
+                        >
+                            <span>
+                                <strong>
+                                    {{ item.sample_type }}
+                                </strong>
+
+                                <span class="d-block text-muted small">
+                                    {{ item.total }}
+                                    public Sample{{ item.total|pluralize }}
+                                </span>
+                            </span>
+
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    {% empty %}
+                        <p class="text-muted small">
+                            Public resource categories will appear here
+                            as catalog records become available.
+                        </p>
+                    {% endfor %}
+
+                    <a
+                        href="{% url 'public_collections' %}"
+                        class="btn btn-outline-primary btn-sm mt-2"
+                    >
+                        Browse all public Collections
+                    </a>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+<section class="mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+            <div class="public-section-label mb-1">
+                Collections
+            </div>
+
+            <h2 class="h4 fw-bold mb-0">
+                Featured public Collections
+            </h2>
+        </div>
+
+        <a
+            href="{% url 'public_collections' %}"
+            class="small text-decoration-none"
+        >
+            View catalog
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+
+    {% if featured_collections %}
+
+        <div class="row g-3">
+
+            {% for collection in featured_collections %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="featured-card p-4 d-flex flex-column">
+
+                        <div class="mb-3">
+                            <span class="badge bg-success">
+                                Public Collection
+                            </span>
+                        </div>
+
+                        <h3 class="h5 fw-bold">
+                            {{ collection.name }}
+                        </h3>
+
+                        <p class="text-muted small flex-grow-1">
+                            {{ collection.description|default:"No public description provided."|truncatechars:150 }}
+                        </p>
+
+                        <div class="small text-muted mb-3">
+                            <i class="bi bi-box-seam me-1"></i>
+                            {{ collection.public_sample_count }}
+                            public Sample{{ collection.public_sample_count|pluralize }}
+                        </div>
+
+                        {% if collection.public_tags %}
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                {% for tag in collection.public_tags|slice:":4" %}
+                                    <span class="badge bg-light text-dark border">
+                                        {{ tag.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <a
+                            href="{% url 'public_collection_detail' collection.id %}"
+                            class="btn btn-sm btn-outline-primary align-self-start"
+                        >
+                            Open Collection
+                        </a>
+
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="border rounded-3 p-4 text-muted">
+            Featured Collections will appear here when public
+            Collections are available.
+        </div>
+
+    {% endif %}
+</section>
+
+
+<section class="mb-5">
+    <div class="public-section-label mb-1">
+        Data exploration
+    </div>
+
+    <h2 class="h4 fw-bold mb-4">
+        Explore the scientific context of the catalog
+    </h2>
+
+    <div class="row g-3">
+
+        <div class="col-md-6">
+            <div class="explorer-card p-4">
+
+                <div class="public-icon mb-3">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+
+                <h3 class="h5 fw-bold">
+                    Geographic Explorer
+                </h3>
+
+                <p class="text-muted mb-2">
+                    Explore the geographic provenance of public
+                    biological resources while respecting
+                    origin-level disclosure controls.
+                </p>
+
+                <span class="badge bg-light text-dark border">
+                    Interactive map · next phase
+                </span>
+
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="explorer-card p-4">
+
+                <div class="public-icon mb-3">
+                    <i class="bi bi-share"></i>
+                </div>
+
+                <h3 class="h5 fw-bold">
+                    Taxonomy Explorer
+                </h3>
+
+                <p class="text-muted mb-2">
+                    Navigate publication-approved taxonomic
+                    assignments through an interactive hierarchical
+                    view inspired by scientific tree explorers.
+                </p>
+
+                <span class="badge bg-light text-dark border">
+                    Verified taxonomy · next phase
+                </span>
+
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
 <section class="mb-5">
     <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-            <div class="row align-items-center gy-3">
+
+            <div class="row align-items-center g-4">
+
                 <div class="col-lg-8">
-                    <h4 class="fw-semibold mb-2">
-                        Remessa de Material Biológico
-                    </h4>
+
+                    <div class="public-section-label mb-1">
+                        Biological material intake
+                    </div>
+
+                    <h2 class="h4 fw-bold mb-2">
+                        Submit and track a Shipment
+                    </h2>
+
                     <p class="text-muted mb-0">
-                        Submeta materiais destinados ao biobanco, gere um QR público
-                        para acompanhamento da remessa e permita a revisão interna
-                        antes do recebimento e entrada da amostra.
+                        Submit biological material to the Biobank,
+                        follow the public Shipment workflow and
+                        provide the required documentation before
+                        internal review and receipt.
                     </p>
+
                 </div>
+
                 <div class="col-lg-4 text-lg-end">
-                    <a href="{% url 'public_shipments_portal' %}"
-                       class="btn btn-primary me-2 mb-2">
-                        Acessar remessas
+
+                    <a
+                        href="{% url 'public_shipments_portal' %}"
+                        class="btn btn-primary me-2 mb-2"
+                    >
+                        Shipment portal
                     </a>
-                    <a href="{% url 'public_shipment_new' %}"
-                       class="btn btn-outline-primary mb-2">
-                        Nova submissão
+
+                    <a
+                        href="{% url 'public_shipment_new' %}"
+                        class="btn btn-outline-primary mb-2"
+                    >
+                        New submission
                     </a>
+
                 </div>
+
             </div>
         </div>
     </div>
 </section>
 
-{% endblock %}
 
-{% block content %}
+<section class="public-disclosure-note rounded-3 p-4">
+    <div class="row align-items-center g-3">
 
-<!-- ================= HERO ================= -->
-<section class="mb-5">
-    <div class="py-5">
+        <div class="col-lg-8">
 
-        <h1 class="fw-semibold mb-3">
-            Biobank CEPID B3
-        </h1>
+            <h2 class="h5 fw-bold mb-2">
+                Public metadata does not imply material access
+            </h2>
 
-        <p class="fs-5 text-muted mb-3">
-            Repositório científico centralizado para armazenamento,
-            organização e gestão de bactérias, bacteriófagos e vetores
-            moleculares produzidos no âmbito do consórcio CEPID B3.
-        </p>
+            <p class="text-muted mb-0">
+                This portal exposes selected metadata approved for
+                public dissemination. Access to biological material
+                remains controlled and may require institutional
+                authorization, governance review and the applicable
+                material transfer process.
+            </p>
 
-        <p class="text-muted mb-4">
-            O Biobank CEPID B3 apoia a pesquisa em microbiologia molecular,
-            biotecnologia e inovação, garantindo rastreabilidade,
-            biossegurança, controle de qualidade e conformidade legal.
-        </p>
-
-        <div class="d-flex flex-wrap gap-3">
-            <a href="{% url 'public_collections' %}"
-               class="btn btn-outline-primary">
-                Explorar coleções
-            </a>
-
-            <a href="{% url 'public_about' %}"
-               class="btn btn-outline-secondary">
-                Sobre o biobanco
-            </a>
         </div>
 
-        <p class="text-muted small mt-4">
-            Utilize a barra de busca no topo para explorar o catálogo público.
-        </p>
+        <div class="col-lg-4 text-lg-end">
 
-    </div>
-</section>
-
-<hr class="mb-5">
-
-<!-- ================= OVERVIEW ================= -->
-<section class="mb-5">
-    <div class="row gy-5">
-
-        <div class="col-md-4">
-            <h5 class="fw-semibold mb-2">
-                Vetores & Construções
-            </h5>
-            <p class="text-muted">
-                Plasmídeos de expressão, vetores de clonagem,
-                construções repórteres e ferramentas de engenharia
-                genética armazenadas em cepas bacterianas de referência.
-            </p>
-            <p class="small mb-1">
-                <strong>Status:</strong> em expansão
-            </p>
-            <p class="small mb-3">
-                <strong>Estimativa 2026:</strong> 400–500 itens
-            </p>
-            <a href="{% url 'public_collections' %}?module=vectors"
-               class="btn btn-sm btn-outline-primary">
-                Ver coleções
+            <a
+                href="{% url 'public_governance' %}"
+                class="btn btn-outline-secondary"
+            >
+                Governance and access
             </a>
+
         </div>
 
-        <div class="col-md-4">
-            <h5 class="fw-semibold mb-2">
-                Bactérias
-            </h5>
-            <p class="text-muted">
-                Linhagens laboratoriais de referência,
-                modelos de estudo e isolados ambientais
-                e clínicos utilizados no CEPID B3.
-            </p>
-            <p class="small mb-1">
-                <strong>Status:</strong> em consolidação
-            </p>
-            <p class="small mb-3">
-                <strong>Estimativa 2026:</strong> 400–500 linhagens
-            </p>
-            <a href="{% url 'public_collections' %}?module=bacteria"
-               class="btn btn-sm btn-outline-primary">
-                Ver coleções
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <h5 class="fw-semibold mb-2">
-                Bacteriófagos
-            </h5>
-            <p class="text-muted">
-                Isolados ambientais e clínicos caracterizados
-                quanto à especificidade de hospedeiro,
-                morfologia, genoma e atividade lítica.
-            </p>
-            <p class="small mb-1">
-                <strong>Status:</strong> em implementação
-            </p>
-            <p class="small mb-3">
-                <strong>Estimativa 2026:</strong> 300–400 isolados
-            </p>
-            <a href="{% url 'public_collections' %}?module=phages"
-               class="btn btn-sm btn-outline-primary">
-                Ver coleções
-            </a>
-        </div>
-
-    </div>
-</section>
-
-<hr class="mb-5">
-
-<!-- ================= INSTITUTIONAL ================= -->
-<section class="mb-5">
-    <div class="row gy-4">
-
-        <div class="col-md-6">
-            <h4 class="fw-semibold mb-3">
-                CEPID B3
-            </h4>
-            <p class="text-muted">
-                O Centro de Pesquisa, Inovação e Difusão – Biologia de
-                Bactérias e Bacteriófagos (CEPID B3) é uma rede colaborativa
-                com mais de 160 pesquisadores vinculados à USP, UNESP,
-                UNICAMP e UNIFESP.
-            </p>
-            <p class="text-muted">
-                O consórcio investiga mecanismos bacterianos fundamentais,
-                incluindo divisão celular, resistência a antibióticos,
-                competição, colonização e interações com bacteriófagos.
-            </p>
-        </div>
-
-        <div class="col-md-6">
-            <h4 class="fw-semibold mb-3">
-                Governança e Qualidade
-            </h4>
-
-            <ul class="ps-3 text-muted">
-                <li>Procedimentos Operacionais Padronizados (POPs)</li>
-                <li>Controle de Qualidade e autenticação</li>
-                <li>Rastreabilidade por identificadores únicos</li>
-                <li>Conformidade com normas de biossegurança (NB2)</li>
-                <li>Adequação à legislação brasileira (SisGen)</li>
-                <li>Integração futura com a rede BioCEL-USP</li>
-            </ul>
-
-            <a href="{% url 'public_governance' %}"
-               class="btn btn-sm btn-outline-secondary mt-2">
-                Saiba mais
-            </a>
-        </div>
-
-    </div>
-</section>
-
-<hr class="mb-5">
-
-<!-- ================= ACCESS ================= -->
-<section>
-    <div class="border-start border-4 ps-4 py-3">
-        <h5 class="fw-semibold mb-2">
-            Acesso ao acervo biológico
-        </h5>
-        <p class="mb-0 text-muted">
-            O acervo do Biobank CEPID B3 não é de acesso público direto.
-            Pesquisadores interessados devem solicitar acesso mediante
-            avaliação da coordenação e assinatura de Termo de Transferência
-            de Material (TTM).
-        </p>
     </div>
 </section>
 

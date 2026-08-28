@@ -10,6 +10,7 @@ embargoed and private resources before any aggregation takes place.
 """
 
 from django.db.models import (
+    Count,
     Prefetch,
     Q,
 )
@@ -17,6 +18,7 @@ from django.db.models import (
 from core.models import (
     Collection,
     Sample,
+    SampleOrigin,
     Tag,
 )
 
@@ -163,3 +165,201 @@ def search_public_collections_queryset(
         )
         .distinct()
     )
+
+
+def public_home_metrics():
+    """
+    Return top-level metrics for the unauthenticated Public Home.
+
+    Every metric starts from a canonical public queryset.
+
+    Geographic coverage is additionally restricted to SampleOrigin
+    records whose location_visibility explicitly permits some level
+    of public disclosure. Internal-only origins do not contribute
+    even to the aggregate country/ocean count.
+    """
+    samples = public_samples_queryset()
+    collections = public_collections_queryset()
+
+    organisms = (
+        samples
+        .exclude(
+            organism_name__isnull=True,
+        )
+        .exclude(
+            organism_name="",
+        )
+        .values(
+            "organism_name",
+        )
+        .distinct()
+        .count()
+    )
+
+    geographic_origins = (
+        samples
+        .filter(
+            origin__location_visibility__in=(
+                SampleOrigin.LOCATION_APPROXIMATE,
+                SampleOrigin.LOCATION_EXACT,
+            ),
+        )
+        .exclude(
+            origin__country_or_ocean="",
+        )
+        .values(
+            "origin__country_or_ocean",
+        )
+        .distinct()
+        .count()
+    )
+
+    return {
+        "public_samples": (
+            samples.count()
+        ),
+        "public_collections": (
+            collections.count()
+        ),
+        "organisms": organisms,
+        "geographic_origins": (
+            geographic_origins
+        ),
+    }
+
+
+def public_sample_type_distribution(
+    limit=6,
+):
+    """
+    Return the leading Sample types in the public catalog.
+
+    Private, embargoed, inactive and trashed Samples have already
+    been removed before aggregation.
+
+    ``percentage`` uses all publicly accessible Samples as the
+    denominator and is intended only for presentation of the
+    server-rendered overview bars.
+    """
+    samples = public_samples_queryset()
+
+    public_total = (
+        samples.count()
+    )
+
+    rows = list(
+        samples
+        .exclude(
+            sample_type__isnull=True,
+        )
+        .exclude(
+            sample_type="",
+        )
+        .values(
+            "sample_type",
+        )
+        .annotate(
+            total=Count(
+                "pk",
+            )
+        )
+        .order_by(
+            "-total",
+            "sample_type",
+        )[
+            :limit
+        ]
+    )
+
+    for row in rows:
+        if public_total:
+            row["percentage"] = round(
+                (
+                    row["total"]
+                    / public_total
+                )
+                * 100,
+                1,
+            )
+        else:
+            row["percentage"] = 0
+
+    return rows
+
+
+def featured_public_collections(
+    limit=3,
+):
+    """
+    Return recently updated public Collections with publication-safe
+    metadata and publication-safe Sample counts.
+
+    The count is calculated by intersecting Collection membership
+    with public_samples_queryset(). It therefore never represents
+    raw Collection membership.
+    """
+    collections = list(
+        public_collection_catalog_queryset()
+        .order_by(
+            "-updated_at",
+            "name",
+        )[
+            :limit
+        ]
+    )
+
+    collection_ids = [
+        collection.pk
+        for collection in collections
+    ]
+
+    counts = {}
+
+    if collection_ids:
+        counts = {
+            row["collections"]: row["total"]
+            for row in (
+                public_samples_queryset()
+                .filter(
+                    collections__pk__in=(
+                        collection_ids
+                    )
+                )
+                .values(
+                    "collections",
+                )
+                .annotate(
+                    total=Count(
+                        "pk",
+                        distinct=True,
+                    )
+                )
+            )
+        }
+
+    for collection in collections:
+        collection.public_sample_count = (
+            counts.get(
+                collection.pk,
+                0,
+            )
+        )
+
+    return collections
+
+
+def public_home_context():
+    """
+    Build the publication-safe dynamic context for the Public Home.
+    """
+    return {
+        "public_metrics": (
+            public_home_metrics()
+        ),
+        "sample_type_distribution": (
+            public_sample_type_distribution()
+        ),
+        "featured_collections": (
+            featured_public_collections()
+        ),
+    }
