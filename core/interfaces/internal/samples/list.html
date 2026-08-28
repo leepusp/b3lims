@@ -126,6 +126,15 @@ Search, filter and manage Samples visible to your account
         Network
     </a>
 
+
+    <a
+        href="{% url 'sample_micro_qr_lookup' %}"
+        class="btn btn-sm btn-outline-primary"
+    >
+        <i class="bi bi-qr-code-scan me-1"></i>
+        Micro QR Lookup
+    </a>
+
     <a
         href="{% url 'samples_import' %}"
         class="btn btn-sm btn-outline-primary"
@@ -876,17 +885,6 @@ Search, filter and manage Samples visible to your account
                         </form>
                     </li>
                 {% endif %}
-
-                <li>
-                    <a
-                        href="{% url 'sample_micro_qr_lookup' %}"
-                        class="dropdown-item"
-                    >
-                        <i class="bi bi-qr-code-scan me-2 text-primary"></i>
-                        Micro QR Lookup
-                    </a>
-                </li>
-
                 <li>
                     <a
                         href="{% url 'print_sample_label' sample.pk %}"
