@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from core.permissions.biobanks import editable_biobanks_for_user
 from core.permissions.samples import (
     assignable_sample_owners_for_user,
+    can_manage_sample_sharing,
     editable_sample_collections_for_user,
     sample_research_groups_for_user,
 )
@@ -213,8 +214,15 @@ class SampleForm(forms.ModelForm):
             **kwargs,
         )
 
+        self._form_user = user
+        self._editable_collection_ids = set()
+
         if user is None:
             self._lock_existing_owner_field()
+            self._lock_existing_identity_fields()
+            self._lock_existing_visibility_fields(
+                user
+            )
             return
 
         owner_qs = assignable_sample_owners_for_user(
@@ -231,6 +239,13 @@ class SampleForm(forms.ModelForm):
 
         collection_qs = editable_sample_collections_for_user(
             user
+        )
+
+        self._editable_collection_ids = set(
+            collection_qs.values_list(
+                "pk",
+                flat=True,
+            )
         )
 
         if self.instance and self.instance.pk:
@@ -325,6 +340,137 @@ class SampleForm(forms.ModelForm):
         )
 
         self._lock_existing_owner_field()
+        self._lock_existing_identity_fields()
+        self._lock_existing_visibility_fields(
+            user
+        )
+
+    def _lock_existing_identity_fields(self):
+        """
+        Existing Sample identity is immutable through the standard
+        Edit Sample workflow.
+
+        HTML readonly attributes are presentation-only; Django field
+        disabling provides the server-side boundary against crafted
+        POST requests.
+        """
+        if not (
+            self.instance
+            and self.instance.pk
+        ):
+            return
+
+        contracts = {
+            "sample_id": (
+                "Sample ID cannot be changed after registration."
+            ),
+            "sample_type": (
+                "Sample Type cannot be changed after registration."
+            ),
+        }
+
+        for name, help_text in contracts.items():
+            field = self.fields.get(
+                name
+            )
+
+            if field is None:
+                continue
+
+            field.disabled = True
+            field.help_text = help_text
+
+    def _lock_existing_visibility_fields(
+        self,
+        user,
+    ):
+        """
+        Public exposure and embargo state require Sample sharing
+        management authority, which is deliberately stricter than
+        ordinary metadata-edit authority.
+        """
+        if not (
+            self.instance
+            and self.instance.pk
+        ):
+            return
+
+        if can_manage_sample_sharing(
+            user,
+            self.instance,
+        ):
+            return
+
+        for name in (
+            "is_public",
+            "is_embargoed",
+        ):
+            field = self.fields.get(
+                name
+            )
+
+            if field is None:
+                continue
+
+            field.disabled = True
+            field.help_text = (
+                "Only the Sample owner or an administrator may "
+                "change Sample visibility or embargo state."
+            )
+
+    def clean_collections(self):
+        """
+        Permit ordinary editors to modify Collection membership only
+        for Collections they themselves may edit.
+
+        Existing memberships outside that authority remain visible so
+        the form can preserve them, but crafted POST data cannot remove
+        them.
+        """
+        collections = self.cleaned_data.get(
+            "collections"
+        )
+
+        if (
+            collections is None
+            or not self.instance
+            or not self.instance.pk
+        ):
+            return collections
+
+        current_ids = set(
+            self.instance
+            .collections
+            .values_list(
+                "pk",
+                flat=True,
+            )
+        )
+
+        protected_ids = (
+            current_ids
+            - self._editable_collection_ids
+        )
+
+        selected_ids = set(
+            collections.values_list(
+                "pk",
+                flat=True,
+            )
+        )
+
+        removed_protected_ids = (
+            protected_ids
+            - selected_ids
+        )
+
+        if removed_protected_ids:
+            raise forms.ValidationError(
+                "Collections you do not have permission to edit "
+                "cannot be removed from this Sample."
+            )
+
+        return collections
 
     def _lock_existing_owner_field(self):
         """

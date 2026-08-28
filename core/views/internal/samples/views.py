@@ -2287,6 +2287,17 @@ def _sync_sample_edit_relationships(base_sample, request, user):
     """
     sample_type = base_sample.sample_type or ""
 
+    # The Edit Sample datalist exposes only Samples visible to the
+    # current user. Enforce the same boundary on crafted POST data.
+    visible_target_ids = set(
+        visible_samples_for_user(
+            user
+        ).values_list(
+            "pk",
+            flat=True,
+        )
+    )
+
     host_ids = _clean_posted_sample_ids(request.POST.getlist("host_bacterium[]"))
     host_notes = request.POST.getlist("host_bacterium_notes[]")
 
@@ -2298,7 +2309,14 @@ def _sync_sample_edit_relationships(base_sample, request, user):
 
     if "Bacterium" in sample_type:
         for idx, plasmid_sample_id in enumerate(plasmid_ids):
-            target = Sample.objects.filter(sample_id=plasmid_sample_id).first()
+            target = (
+                Sample.objects
+                .filter(
+                    pk__in=visible_target_ids,
+                    sample_id=plasmid_sample_id,
+                )
+                .first()
+            )
             if not target:
                 continue
             notes = plasmid_notes[idx] if idx < len(plasmid_notes) else ""
@@ -2314,7 +2332,14 @@ def _sync_sample_edit_relationships(base_sample, request, user):
 
         if hasattr(base_sample, "bacteria"):
             for idx, phage_sample_id in enumerate(phage_ids):
-                phage = Phage.objects.filter(sample_id=phage_sample_id).first()
+                phage = (
+                    Phage.objects
+                    .filter(
+                        pk__in=visible_target_ids,
+                        sample_id=phage_sample_id,
+                    )
+                    .first()
+                )
                 if not phage:
                     continue
                 notes = phage_notes[idx] if idx < len(phage_notes) else ""
@@ -2326,7 +2351,14 @@ def _sync_sample_edit_relationships(base_sample, request, user):
 
     elif "Phage" in sample_type and hasattr(base_sample, "phage"):
         for idx, host_sample_id in enumerate(host_ids):
-            bacteria = Bacteria.objects.filter(sample_id=host_sample_id).first()
+            bacteria = (
+                Bacteria.objects
+                .filter(
+                    pk__in=visible_target_ids,
+                    sample_id=host_sample_id,
+                )
+                .first()
+            )
             if not bacteria:
                 continue
             notes = host_notes[idx] if idx < len(host_notes) else ""
@@ -2338,7 +2370,14 @@ def _sync_sample_edit_relationships(base_sample, request, user):
 
     elif "Plasmid" in sample_type:
         for idx, host_sample_id in enumerate(host_ids):
-            host = Sample.objects.filter(sample_id=host_sample_id).first()
+            host = (
+                Sample.objects
+                .filter(
+                    pk__in=visible_target_ids,
+                    sample_id=host_sample_id,
+                )
+                .first()
+            )
             if not host:
                 continue
             notes = host_notes[idx] if idx < len(host_notes) else ""
