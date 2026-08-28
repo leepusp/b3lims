@@ -11,69 +11,69 @@ from django.urls import (
 from biobank import settings as production_settings
 
 
-class C3LimsUrlStaticContractTests(SimpleTestCase):
+class B3LimsUrlStaticContractTests(SimpleTestCase):
     def test_canonical_url_prefix(self):
         # The production settings own the external mount.
         # test_settings.py intentionally clears FORCE_SCRIPT_NAME
         # so most unit tests can exercise unprefixed paths.
         self.assertEqual(
-            production_settings.C3_LIMS_URL_PREFIX,
-            "/c3-lims",
+            production_settings.B3_LIMS_URL_PREFIX,
+            "/b3lims",
         )
         self.assertEqual(
             production_settings.FORCE_SCRIPT_NAME,
-            "/c3-lims",
+            "/b3lims",
         )
         self.assertEqual(
-            settings.C3_LIMS_URL_PREFIX,
-            "/c3-lims",
+            settings.B3_LIMS_URL_PREFIX,
+            "/b3lims",
         )
         self.assertEqual(
             settings.STATIC_URL,
-            "/c3-lims/static/",
+            "/b3lims/static/",
         )
         self.assertEqual(
             settings.MEDIA_URL,
-            "/c3-lims/data/",
+            "/b3lims/data/",
         )
         self.assertEqual(
             settings.LOGIN_URL,
-            "/c3-lims/login/",
+            "/b3lims/login/",
         )
         self.assertEqual(
             settings.LOGOUT_URL,
-            "/c3-lims/logout/",
+            "/b3lims/logout/",
         )
         self.assertEqual(
             settings.LOGIN_REDIRECT_URL,
-            "/c3-lims/workspace/",
+            "/b3lims/workspace/",
         )
 
     def test_canonical_reversed_routes(self):
         previous_prefix = get_script_prefix()
 
         try:
-            set_script_prefix("/c3-lims/")
+            set_script_prefix("/b3lims/")
 
             self.assertEqual(
                 reverse("root_redirect"),
-                "/c3-lims/",
+                "/b3lims/",
             )
             self.assertEqual(
                 reverse("workspace"),
-                "/c3-lims/workspace/",
+                "/b3lims/workspace/",
             )
             self.assertEqual(
                 reverse("public_home"),
-                "/c3-lims/public/",
+                "/b3lims/public/",
             )
             self.assertEqual(
                 reverse("public_about"),
-                "/c3-lims/public/about/",
+                "/b3lims/public/about/",
             )
             self.assertEqual(
                 reverse("public_collections"),
-                "/c3-lims/public/collections/",
+                "/b3lims/public/collections/",
             )
         finally:
             set_script_prefix(previous_prefix)
@@ -135,7 +135,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             configured,
         )
 
-    def test_apache_mount_uses_c3_lims_prefix(self):
+    def test_apache_mount_uses_b3_lims_prefix(self):
         apache = (
             Path(settings.BASE_DIR)
             / "deploy"
@@ -144,19 +144,19 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
         ).read_text()
 
         self.assertIn(
-            "Alias /c3-lims/static/",
+            "Alias /b3lims/static/",
             apache,
         )
         self.assertIn(
-            "ProxyPass        /c3-lims/",
+            "ProxyPass        /b3lims/",
             apache,
         )
         self.assertIn(
-            'AuthName "C3 LIMS Authentication"',
+            'AuthName "B3 LIMS Authentication"',
             apache,
         )
 
-        # C3 LIMS uses its own PAM service namespace while
+        # B3 LIMS uses its own PAM service namespace while
         # preserving the validated PAM policy stack.
         self.assertIn(
             "AuthPAMService biobank",
@@ -172,7 +172,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
         ).read_text()
 
         self.assertIn(
-            '<LocationMatch "^/c3-lims(?:$|/)">',
+            '<LocationMatch "^/b3lims(?:$|/)">',
             apache,
         )
         self.assertIn(
@@ -206,7 +206,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
         ).read_text()
 
         sanitize = apache.index(
-            '<LocationMatch "^/c3-lims(?:$|/)">'
+            '<LocationMatch "^/b3lims(?:$|/)">'
         )
         unset_identity = apache.index(
             "RequestHeader unset X-Biobank-Pam-User",
@@ -247,7 +247,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             line
             for line in apache.splitlines()
             if line.startswith(
-                '<LocationMatch "^/c3-lims($|/'
+                '<LocationMatch "^/b3lims($|/'
             )
         )
 
@@ -265,7 +265,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             apache,
         )
 
-    def test_c3_lims_uses_dedicated_pam_service(self):
+    def test_b3_lims_uses_dedicated_pam_service(self):
         base = Path(settings.BASE_DIR)
 
         apache = (
@@ -328,7 +328,7 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
             apache,
         )
 
-    def test_jupyter_public_prefix_is_c3_lims(self):
+    def test_jupyter_public_prefix_is_b3_lims(self):
         base = Path(settings.BASE_DIR)
 
         jupyter_conf = (
@@ -353,14 +353,121 @@ class C3LimsUrlStaticContractTests(SimpleTestCase):
         ).read_text()
 
         self.assertIn(
-            "^/c3-lims/internal/lab-tools/jupyter/",
+            "^/b3lims/internal/lab-tools/jupyter/",
             jupyter_conf,
         )
         self.assertIn(
-            "^/c3%-lims/internal/lab%-tools/jupyter/",
+            "^/b3lims/internal/lab%-tools/jupyter/",
             lua,
         )
         self.assertIn(
-            'BASE_URL="/c3-lims/internal/lab-tools/jupyter/',
+            'BASE_URL="/b3lims/internal/lab-tools/jupyter/',
             runtime,
+        )
+
+
+    def test_legacy_c3_lims_namespace_redirects_to_b3_lims(
+        self,
+    ):
+        apache = (
+            Path(settings.BASE_DIR)
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        self.assertIn(
+            'RedirectMatch 308 "^/c3-lims$" "/b3lims/"',
+            apache,
+        )
+
+        self.assertIn(
+            'RedirectMatch 308 "^/c3-lims/(.*)$" "/b3lims/$1"',
+            apache,
+        )
+
+        self.assertNotIn(
+            "Alias /c3-lims/",
+            apache,
+        )
+
+        self.assertNotIn(
+            "ProxyPass        /c3-lims/",
+            apache,
+        )
+
+        self.assertNotIn(
+            '<LocationMatch "^/c3-lims',
+            apache,
+        )
+
+        self.assertIn(
+            "Alias /b3lims/static/",
+            apache,
+        )
+
+        self.assertIn(
+            "ProxyPass        /b3lims/",
+            apache,
+        )
+
+        self.assertIn(
+            '<LocationMatch "^/b3lims',
+            apache,
+        )
+
+
+    def test_legacy_hyphenated_b3_namespace_redirects_to_b3lims(
+        self,
+    ):
+        apache = (
+            Path(settings.BASE_DIR)
+            / "deploy"
+            / "apache"
+            / "biobank.conf"
+        ).read_text()
+
+        self.assertIn(
+            'RedirectMatch 308 "^/b3-lims$" "/b3lims/"',
+            apache,
+        )
+
+        self.assertIn(
+            'RedirectMatch 308 "^/b3-lims/(.*)$" "/b3lims/$1"',
+            apache,
+        )
+
+        self.assertNotIn(
+            "Alias /b3-lims/",
+            apache,
+        )
+
+        self.assertNotIn(
+            "ProxyPass        /b3-lims/",
+            apache,
+        )
+
+        self.assertNotIn(
+            "ProxyPassReverse /b3-lims/",
+            apache,
+        )
+
+        self.assertNotIn(
+            '<LocationMatch "^/b3-lims',
+            apache,
+        )
+
+        self.assertIn(
+            "Alias /b3lims/static/",
+            apache,
+        )
+
+        self.assertIn(
+            "ProxyPass        /b3lims/",
+            apache,
+        )
+
+        self.assertIn(
+            '<LocationMatch "^/b3lims',
+            apache,
         )

@@ -132,7 +132,7 @@ local function request_tuple(r)
     local notebook_id, host, port =
         string.match(
             uri,
-            "^/c3%-lims/internal/lab%-tools/jupyter/"
+            "^/b3lims/internal/lab%-tools/jupyter/"
             .. "(%d+)/node/([^/]+)/(%d+)/"
         )
 

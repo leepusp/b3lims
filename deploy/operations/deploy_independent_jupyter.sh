@@ -867,7 +867,7 @@ CONTROL_CODE="$(
         -D "$CONTROL_HEADERS" \
         -o /dev/null \
         -w '%{http_code}' \
-        'https://davinci.icb.usp.br/c3-lims/'
+        'https://davinci.icb.usp.br/b3lims/'
 )"
 
 test "$CONTROL_CODE" = "401"
@@ -883,7 +883,7 @@ INCOMPLETE_CODE="$(
         -D "$INCOMPLETE_HEADERS" \
         -o /dev/null \
         -w '%{http_code}' \
-        'https://davinci.icb.usp.br/c3-lims/internal/lab-tools/jupyter/999999999/node/gn01/65534'
+        'https://davinci.icb.usp.br/b3lims/internal/lab-tools/jupyter/999999999/node/gn01/65534'
 )"
 
 test "$INCOMPLETE_CODE" = "401"
@@ -899,7 +899,7 @@ DATA_CODE="$(
         -D "$DATA_HEADERS" \
         -o /dev/null \
         -w '%{http_code}' \
-        'https://davinci.icb.usp.br/c3-lims/internal/lab-tools/jupyter/999999999/node/gn01/65534/'
+        'https://davinci.icb.usp.br/b3lims/internal/lab-tools/jupyter/999999999/node/gn01/65534/'
 )"
 
 test "$DATA_CODE" = "403"

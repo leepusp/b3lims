@@ -589,7 +589,7 @@ class IndependentJupyterViewTests(TestCase):
         target = mocked_target.return_value
         target.redirect_path = "/managed-jupyterlab"
         target.cookie_path = (
-            "/c3-lims/internal/lab-tools/jupyter/"
+            "/b3lims/internal/lab-tools/jupyter/"
             f"{notebook.id}/node/gn03/45679/"
         )
         target.token = (

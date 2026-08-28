@@ -85,7 +85,7 @@ class OfficialJupyterViewTests(TestCase):
                     "host": "gn03",
                     "port": 45679,
                     "base_url": (
-                        f"/c3-lims/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
+                        f"/b3lims/internal/lab-tools/jupyter/{self.notebook.id}/node/gn03/45679/"
                     ),
                 },
                 "token": (
@@ -113,12 +113,12 @@ class OfficialJupyterViewTests(TestCase):
 
         target = mocked_connection.return_value
         target.redirect_path = (
-            f"/c3-lims/internal/lab-tools/jupyter/"
+            f"/b3lims/internal/lab-tools/jupyter/"
             f"{self.notebook.id}/node/gn03/45679/"
             "tree/notebook.ipynb"
         )
         target.cookie_path = (
-            f"/c3-lims/internal/lab-tools/jupyter/"
+            f"/b3lims/internal/lab-tools/jupyter/"
             f"{self.notebook.id}/node/gn03/45679/"
         )
         target.token = "protected-connect-token-value-1234567890"

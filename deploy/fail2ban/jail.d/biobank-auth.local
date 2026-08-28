@@ -9,7 +9,7 @@ backend = systemd
 ignoreip = 127.0.0.0/8 ::1
 
 # Five failed PAM authentications within ten minutes result in a
-# one-hour C3 LIMS private-control-plane ban.
+# one-hour B3 LIMS private-control-plane ban.
 maxretry = 5
 findtime = 600
 bantime = 3600

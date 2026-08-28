@@ -4,7 +4,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 
-class C3LimsBruteForceContractTests(
+class B3LimsBruteForceContractTests(
     SimpleTestCase
 ):
     def setUp(self):
@@ -171,7 +171,7 @@ class C3LimsBruteForceContractTests(
             line
             for line in apache.splitlines()
             if line.startswith(
-                '<LocationMatch "^/c3-lims($|/'
+                '<LocationMatch "^/b3lims($|/'
             )
         )
 

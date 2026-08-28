@@ -95,7 +95,7 @@ local function is_banned(ip)
 
     -- Expiration is evaluated by Apache as well as Fail2ban.
     -- Therefore stale state left behind by an interrupted detector
-    -- cannot cause an indefinite C3 LIMS ban.
+    -- cannot cause an indefinite B3 LIMS ban.
     if expiry <= os.time() then
         return false
     end

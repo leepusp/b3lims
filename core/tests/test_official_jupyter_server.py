@@ -379,7 +379,7 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        f"/c3-lims/internal/lab-tools/"
+                        f"/b3lims/internal/lab-tools/"
                         f"jupyter/{self.notebook.id}/"
                         "node/gn03/45678/"
                     ),
@@ -415,7 +415,7 @@ class OfficialJupyterServerTests(TestCase):
                     "host": "gn03",
                     "port": 45678,
                     "base_url": (
-                        f"/c3-lims/internal/lab-tools/"
+                        f"/b3lims/internal/lab-tools/"
                         f"jupyter/{self.notebook.id}/"
                         "node/gn03/45678/"
                     ),
@@ -437,7 +437,7 @@ class OfficialJupyterServerTests(TestCase):
             )
 
         expected_base = (
-            f"/c3-lims/internal/lab-tools/"
+            f"/b3lims/internal/lab-tools/"
             f"jupyter/{self.notebook.id}/"
             "node/gn03/45678/"
         )

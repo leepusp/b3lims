@@ -1922,7 +1922,7 @@ def sample_qr_scan_view(request, uuid):
     """
     sample = get_object_or_404(Sample, uuid=uuid)
 
-    # Use named routes so redirects preserve the configured C3 LIMS script prefix.
+    # Use named routes so redirects preserve the configured B3 LIMS script prefix.
     sample_is_publicly_accessible = (
         sample.is_active
         and sample.is_public

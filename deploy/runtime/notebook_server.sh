@@ -88,7 +88,7 @@ print(secrets.token_urlsafe(48))
 PY
 )"
 
-BASE_URL="/c3-lims/internal/lab-tools/jupyter/${NOTEBOOK_ID}/node/${HOST}/${PORT}/"
+BASE_URL="/b3lims/internal/lab-tools/jupyter/${NOTEBOOK_ID}/node/${HOST}/${PORT}/"
 DEFAULT_URL="/tree/${WORKSPACE_RELATIVE}/${NOTEBOOK_NAME}"
 CONFIG_FILE="$RUN_DIR/jupyter_server_config.py"
 READY_FILE="$RUN_DIR/connection.json"
