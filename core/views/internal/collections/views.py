@@ -15,6 +15,7 @@ from core.models import (
     Tag,
     Keyword,
     KeywordValue,
+    SampleTaxonomyAssignment,
 )
 
 from core.permissions.collections import (
@@ -24,6 +25,9 @@ from core.permissions.collections import (
 )
 
 from core.permissions.samples import visible_samples_for_user
+from core.services.sample_origin_map import (
+    build_sample_origin_distribution_context,
+)
 
 
 @login_required
@@ -178,8 +182,8 @@ def collection_detail_view(
     Interactive scientific overview for one Collection.
 
     Collection authorization controls access to the Collection itself.
-    Sample-level authorization is evaluated independently before any
-    Sample metadata or aggregate is exposed.
+    Every Sample-derived aggregate starts from visible_samples_for_user()
+    so taxonomy and geography cannot broaden Sample visibility.
     """
     collection = get_object_or_404(
         Collection.objects
@@ -212,6 +216,7 @@ def collection_detail_view(
             "biobank",
             "owner",
             "research_group",
+            "origin",
         )
         .distinct()
         .order_by(
@@ -220,7 +225,31 @@ def collection_detail_view(
         )
     )
 
-    total_samples = samples_qs.count()
+    collection_samples = list(
+        samples_qs
+    )
+
+    total_samples = len(
+        collection_samples
+    )
+
+    def coverage_percent(
+        value,
+    ):
+        if not total_samples:
+            return 0
+
+        return round(
+            (
+                value
+                / total_samples
+            )
+            * 100
+        )
+
+    # ---------------------------------------------------------
+    # Basic Collection distributions
+    # ---------------------------------------------------------
 
     sample_type_distribution = list(
         samples_qs
@@ -247,16 +276,8 @@ def collection_detail_view(
             row["sample_type"]
             or "__blank__"
         )
-        row["percent"] = (
-            round(
-                (
-                    row["total"]
-                    / total_samples
-                )
-                * 100
-            )
-            if total_samples
-            else 0
+        row["percent"] = coverage_percent(
+            row["total"]
         )
 
     biobank_distribution = list(
@@ -289,78 +310,383 @@ def collection_detail_view(
             is not None
             else "__none__"
         )
-        row["percent"] = (
-            round(
-                (
-                    row["total"]
-                    / total_samples
-                )
-                * 100
-            )
-            if total_samples
-            else 0
+        row["percent"] = coverage_percent(
+            row["total"]
         )
 
-    taxonomy_count = (
-        samples_qs
+    # ---------------------------------------------------------
+    # Taxonomic evidence
+    #
+    # There is currently no canonical taxonomy assignment model.
+    # Therefore:
+    # - all current assignments contribute to review-state metrics;
+    # - candidate + verified assignments may drive exploratory
+    #   taxonomic drill-down;
+    # - conflict, unresolved and stale evidence do not drive
+    #   taxonomic filtering.
+    # ---------------------------------------------------------
+
+    sample_ids = [
+        sample.pk
+        for sample in collection_samples
+    ]
+
+    current_taxonomy_assignments = list(
+        SampleTaxonomyAssignment.objects
         .filter(
-            taxonomy_assignments__isnull=False,
+            sample_id__in=sample_ids,
+            is_current=True,
         )
-        .distinct()
-        .count()
+        .order_by(
+            "sample_id",
+            "source",
+            "pk",
+        )
     )
+
+    accepted_taxonomy_statuses = {
+        SampleTaxonomyAssignment
+        .STATUS_CANDIDATE,
+        SampleTaxonomyAssignment
+        .STATUS_VERIFIED,
+    }
+
+    taxonomy_rank_definitions = (
+        (
+            "domain",
+            "domain_or_realm",
+            "Domain / Realm",
+        ),
+        (
+            "phylum",
+            "phylum",
+            "Phylum",
+        ),
+        (
+            "family",
+            "family",
+            "Family",
+        ),
+        (
+            "genus",
+            "genus",
+            "Genus",
+        ),
+        (
+            "species",
+            "species",
+            "Species",
+        ),
+    )
+
+    taxonomy_values_by_sample = {
+        sample.pk: {
+            rank_key: set()
+            for (
+                rank_key,
+                _field_name,
+                _label,
+            )
+            in taxonomy_rank_definitions
+        }
+        for sample in collection_samples
+    }
+
+    taxonomy_value_sample_ids = {
+        rank_key: {}
+        for (
+            rank_key,
+            _field_name,
+            _label,
+        )
+        in taxonomy_rank_definitions
+    }
+
+    taxonomy_status_sample_ids = {
+        status: set()
+        for (
+            status,
+            _label,
+        )
+        in (
+            SampleTaxonomyAssignment
+            .MATCH_STATUS_CHOICES
+        )
+    }
+
+    taxonomy_current_sample_ids = set()
+    taxonomy_usable_sample_ids = set()
+
+    for assignment in current_taxonomy_assignments:
+        taxonomy_current_sample_ids.add(
+            assignment.sample_id
+        )
+
+        taxonomy_status_sample_ids.setdefault(
+            assignment.match_status,
+            set(),
+        ).add(
+            assignment.sample_id
+        )
+
+        if (
+            assignment.match_status
+            not in accepted_taxonomy_statuses
+        ):
+            continue
+
+        taxonomy_usable_sample_ids.add(
+            assignment.sample_id
+        )
+
+        sample_values = (
+            taxonomy_values_by_sample
+            .get(
+                assignment.sample_id
+            )
+        )
+
+        if sample_values is None:
+            continue
+
+        for (
+            rank_key,
+            field_name,
+            _label,
+        ) in taxonomy_rank_definitions:
+            value = (
+                getattr(
+                    assignment,
+                    field_name,
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if not value:
+                continue
+
+            sample_values[
+                rank_key
+            ].add(
+                value
+            )
+
+            (
+                taxonomy_value_sample_ids[
+                    rank_key
+                ]
+                .setdefault(
+                    value,
+                    set(),
+                )
+                .add(
+                    assignment.sample_id
+                )
+            )
+
+    for sample in collection_samples:
+        values = (
+            taxonomy_values_by_sample[
+                sample.pk
+            ]
+        )
+
+        for (
+            rank_key,
+            _field_name,
+            _label,
+        ) in taxonomy_rank_definitions:
+            normalized_values = sorted(
+                values[
+                    rank_key
+                ],
+                key=str.casefold,
+            )
+
+            setattr(
+                sample,
+                (
+                    "collection_taxonomy_"
+                    f"{rank_key}_data"
+                ),
+                "||".join(
+                    normalized_values
+                ),
+            )
+
+        origin = getattr(
+            sample,
+            "origin",
+            None,
+        )
+
+        sample.collection_origin_country = (
+            (
+                origin.country_or_ocean
+                or ""
+            ).strip()
+            if origin is not None
+            else ""
+        )
+
+    taxonomy_sections = []
+
+    for (
+        rank_key,
+        _field_name,
+        label,
+    ) in taxonomy_rank_definitions:
+        rows = [
+            {
+                "label": value,
+                "filter_value": value,
+                "total": len(
+                    taxon_sample_ids
+                ),
+                "percent": coverage_percent(
+                    len(
+                        taxon_sample_ids
+                    )
+                ),
+            }
+            for (
+                value,
+                taxon_sample_ids,
+            )
+            in (
+                taxonomy_value_sample_ids[
+                    rank_key
+                ].items()
+            )
+        ]
+
+        rows.sort(
+            key=lambda row: (
+                -row["total"],
+                row["label"].casefold(),
+            )
+        )
+
+        taxonomy_sections.append(
+            {
+                "key": rank_key,
+                "label": label,
+                "rows": rows,
+            }
+        )
+
+    taxonomy_status_counts = [
+        {
+            "status": status,
+            "label": label,
+            "samples": len(
+                taxonomy_status_sample_ids
+                .get(
+                    status,
+                    set(),
+                )
+            ),
+        }
+        for (
+            status,
+            label,
+        )
+        in (
+            SampleTaxonomyAssignment
+            .MATCH_STATUS_CHOICES
+        )
+    ]
+
+    # ---------------------------------------------------------
+    # Genome evidence
+    # ---------------------------------------------------------
 
     genome_count = (
         samples_qs
         .filter(
-            genome_assembly_assignments__isnull=False,
+            genome_assembly_assignments__is_current=True,
         )
         .distinct()
         .count()
     )
 
-    origin_count = (
-        samples_qs
-        .filter(
-            origin__isnull=False,
+    # ---------------------------------------------------------
+    # Geographic provenance
+    # ---------------------------------------------------------
+
+    origin_context = (
+        build_sample_origin_distribution_context(
+            samples_qs
         )
-        .distinct()
-        .count()
     )
 
-    mapped_count = (
-        samples_qs
-        .filter(
-            origin__latitude__isnull=False,
-            origin__longitude__isnull=False,
-        )
-        .distinct()
-        .count()
+    origin_stats = (
+        origin_context[
+            "sample_origin_map_stats"
+        ]
     )
 
-    def coverage_percent(
-        value,
-    ):
-        if not total_samples:
-            return 0
+    country_sample_ids = {}
 
-        return round(
-            (
-                value
-                / total_samples
+    for sample in collection_samples:
+        country = (
+            sample.collection_origin_country
+        )
+
+        if not country:
+            continue
+
+        (
+            country_sample_ids
+            .setdefault(
+                country,
+                set(),
             )
-            * 100
+            .add(
+                sample.pk
+            )
         )
+
+    country_distribution = [
+        {
+            "label": country,
+            "filter_value": country,
+            "total": len(
+                country_samples
+            ),
+            "percent": coverage_percent(
+                len(
+                    country_samples
+                )
+            ),
+        }
+        for (
+            country,
+            country_samples,
+        )
+        in country_sample_ids.items()
+    ]
+
+    country_distribution.sort(
+        key=lambda row: (
+            -row["total"],
+            row["label"].casefold(),
+        )
+    )
 
     ctx = base_context(
         request
     )
 
+    ctx.update(
+        origin_context
+    )
+
     ctx.update({
         "collection": collection,
-        "collection_samples": list(
-            samples_qs
-        ),
+        "collection_samples":
+            collection_samples,
         "collection_stats": {
             "samples": total_samples,
             "sample_types": len(
@@ -373,27 +699,72 @@ def collection_detail_view(
                 if row["biobank_id"]
                 is not None
             ]),
-            "taxonomy": taxonomy_count,
-            "taxonomy_percent": coverage_percent(
-                taxonomy_count
+            "taxonomy": len(
+                taxonomy_current_sample_ids
+            ),
+            "taxonomy_percent":
+                coverage_percent(
+                    len(
+                        taxonomy_current_sample_ids
+                    )
+                ),
+            "taxonomy_usable": len(
+                taxonomy_usable_sample_ids
+            ),
+            "taxonomy_verified": len(
+                taxonomy_status_sample_ids
+                .get(
+                    SampleTaxonomyAssignment
+                    .STATUS_VERIFIED,
+                    set(),
+                )
+            ),
+            "taxonomy_conflicts": len(
+                taxonomy_status_sample_ids
+                .get(
+                    SampleTaxonomyAssignment
+                    .STATUS_CONFLICT,
+                    set(),
+                )
             ),
             "genomes": genome_count,
-            "genomes_percent": coverage_percent(
-                genome_count
+            "genomes_percent":
+                coverage_percent(
+                    genome_count
+                ),
+            "origins": (
+                origin_stats[
+                    "with_origin"
+                ]
             ),
-            "origins": origin_count,
-            "origins_percent": coverage_percent(
-                origin_count
+            "origins_percent":
+                coverage_percent(
+                    origin_stats[
+                        "with_origin"
+                    ]
+                ),
+            "mapped": (
+                origin_stats[
+                    "with_coordinates"
+                ]
             ),
-            "mapped": mapped_count,
-            "mapped_percent": coverage_percent(
-                mapped_count
-            ),
+            "mapped_percent":
+                coverage_percent(
+                    origin_stats[
+                        "with_coordinates"
+                    ]
+                ),
         },
         "sample_type_distribution":
             sample_type_distribution,
         "biobank_distribution":
             biobank_distribution,
+        "taxonomy_sections":
+            taxonomy_sections,
+        "taxonomy_status_counts":
+            taxonomy_status_counts,
+        "country_distribution":
+            country_distribution,
         "can_edit_collection":
             can_edit_collection(
                 request.user,
