@@ -3612,6 +3612,17 @@ def sample_deactivate_view(
             ),
         )
 
+    if (
+        request.POST.get(
+            "next",
+            "",
+        ).strip()
+        == "lifecycle"
+    ):
+        return redirect(
+            "samples_lifecycle",
+        )
+
     return redirect(
         "sample_detail",
         sample_id=sample.pk,

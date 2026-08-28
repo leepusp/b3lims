@@ -897,6 +897,36 @@ Search, filter and manage Samples visible to your account
                     </a>
                 </li>
 
+                {% if sample.can_edit_current_user %}
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+
+                    <li>
+                        <form
+                            method="post"
+                            action="{% url 'sample_deactivate' sample.pk %}"
+                        >
+                            {% csrf_token %}
+
+                            <input
+                                type="hidden"
+                                name="next"
+                                value="lifecycle"
+                            >
+
+                            <button
+                                type="submit"
+                                class="dropdown-item text-danger"
+                                onclick="return confirm('Deactivate Sample {{ sample.sample_id|escapejs }}? It will move to Lifecycle and can be reactivated later.');"
+                            >
+                                <i class="bi bi-archive me-2"></i>
+                                Deactivate Sample
+                            </button>
+                        </form>
+                    </li>
+                {% endif %}
+
             </ul>
         </div>
 

@@ -559,6 +559,100 @@ class SampleLifecycleTests(TestCase):
             403,
         )
 
+    def test_list_deactivate_action_redirects_to_lifecycle(self):
+        self.client.force_login(
+            self.member
+        )
+
+        response = self.client.post(
+            self.client_path(
+                reverse(
+                    "sample_deactivate",
+                    args=[
+                        self.sample.pk,
+                    ],
+                )
+            ),
+            {
+                "next": "lifecycle",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            302,
+        )
+
+        self.assertEqual(
+            response.url,
+            reverse(
+                "samples_lifecycle"
+            ),
+        )
+
+        self.sample.refresh_from_db()
+
+        self.assertFalse(
+            self.sample.is_active
+        )
+
+        self.assertIsNone(
+            self.sample.deletion_requested_at
+        )
+
+        self.assertEqual(
+            self.sample.deactivated_by_id,
+            self.member.pk,
+        )
+
+    def test_sample_list_exposes_deactivate_action_to_group_editor(
+        self,
+    ):
+        self.client.force_login(
+            self.member
+        )
+
+        response = self.client.get(
+            self.client_path(
+                reverse(
+                    "samples_list"
+                )
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.assertContains(
+            response,
+            "Deactivate Sample",
+        )
+
+        self.assertContains(
+            response,
+            reverse(
+                "sample_deactivate",
+                args=[
+                    self.sample.pk,
+                ],
+            ),
+        )
+
+        self.assertContains(
+            response,
+            'name="next"',
+            html=False,
+        )
+
+        self.assertContains(
+            response,
+            'value="lifecycle"',
+            html=False,
+        )
+
+
     def test_owner_can_trash_and_restore_sample(self):
         self.client.force_login(
             self.owner
