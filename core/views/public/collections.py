@@ -5,7 +5,9 @@ from django.shortcuts import (
 )
 
 from core.context import base_context
-from core.models import Collection
+from core.services.public_catalog import (
+    public_collections_queryset,
+)
 
 
 def public_collection_list(
@@ -13,6 +15,10 @@ def public_collection_list(
 ):
     """
     Display the active public Collection catalog.
+
+    The query begins exclusively from the canonical public catalog
+    projection so subsequent search/filter operations cannot expand
+    visibility into private or inactive Collections.
     """
     query = (
         request.GET.get(
@@ -23,11 +29,7 @@ def public_collection_list(
     ).strip()
 
     collections = (
-        Collection.objects
-        .filter(
-            is_public=True,
-            is_active=True,
-        )
+        public_collections_queryset()
         .prefetch_related(
             "tags",
         )
@@ -77,13 +79,11 @@ def public_collection_detail(
     collection_id,
 ):
     """
-    Display one active public Collection.
+    Display one Collection from the canonical public projection.
     """
     collection = get_object_or_404(
-        Collection,
+        public_collections_queryset(),
         id=collection_id,
-        is_public=True,
-        is_active=True,
     )
 
     context = {
