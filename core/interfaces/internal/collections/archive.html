@@ -1,0 +1,114 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Archived Collections · C3 LIMS{% endblock %}
+{% block page_title %}Archived Collections{% endblock %}
+{% block page_subtitle %}Governance and recovery of inactive research Collections{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h4 mb-1">
+                <i class="bi bi-archive me-2 text-secondary"></i>
+                Archived Collections
+            </h1>
+            <p class="text-muted mb-0">
+                Only inactive Collections for which you hold lifecycle authority are shown here.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'collections_list' %}"
+            class="btn btn-sm btn-outline-primary"
+        >
+            <i class="bi bi-arrow-left me-1"></i>
+            Active Collections
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Collection</th>
+                        <th>Research group</th>
+                        <th>Owner</th>
+                        <th>Last deactivated</th>
+                        <th>Deactivated by</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for collection in archived_collections %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ collection.name }}
+                                </div>
+                                <div class="small text-muted">
+                                    {{ collection.description|default:"No description registered."|truncatechars:100 }}
+                                </div>
+                                <span class="badge text-bg-secondary mt-1">
+                                    Inactive
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ collection.research_group.name|default:"Unassigned" }}
+                            </td>
+
+                            <td>
+                                {{ collection.owner.username|default:"No owner" }}
+                            </td>
+
+                            <td>
+                                {% if collection.latest_deactivation_event %}
+                                    {{ collection.latest_deactivation_event.created_at|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if collection.latest_deactivation_event and collection.latest_deactivation_event.actor %}
+                                    {{ collection.latest_deactivation_event.actor.username|default:"Unknown" }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                <form
+                                    method="post"
+                                    action="{% url 'collection_reactivate' collection.id %}"
+                                    class="d-inline"
+                                >
+                                    {% csrf_token %}
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline-success"
+                                    >
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                        Reactivate
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td
+                                colspan="6"
+                                class="text-center text-muted py-5"
+                            >
+                                No archived Collections are available to you.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

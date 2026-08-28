@@ -21,6 +21,7 @@ from core.forms import (
 
 from core.models import (
     Collection,
+    CollectionLifecycleEvent,
     Biobank,
     Tag,
     Keyword,
@@ -52,6 +53,7 @@ from core.services.collection_sharing import (
 )
 from core.services.collection_lifecycle import (
     deactivate_collection,
+    reactivate_collection,
 )
 
 
@@ -195,6 +197,112 @@ def collections_list_view(request, template_name="internal/collections/collectio
     ctx["collections"] = visible_collections
 
     return render(request, template_name, ctx)
+
+
+@login_required
+def collection_archive_view(
+    request,
+):
+    """
+    Governance-only view of inactive Collections the user
+    has lifecycle authority to reactivate.
+
+    Normal Collection visibility remains active-only.
+    """
+    inactive_qs = (
+        Collection.objects
+        .filter(
+            is_active=False,
+        )
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .prefetch_related(
+            "lifecycle_events__actor",
+        )
+        .order_by(
+            "-updated_at",
+            "-pk",
+        )
+    )
+
+    archived_collections = []
+
+    for collection in inactive_qs:
+        if not can_delete_collection(
+            request.user,
+            collection,
+        ):
+            continue
+
+        lifecycle_events = list(
+            collection.lifecycle_events.all()
+        )
+
+        collection.latest_deactivation_event = next(
+            (
+                event
+                for event
+                in reversed(
+                    lifecycle_events
+                )
+                if event.event_type
+                == (
+                    CollectionLifecycleEvent
+                    .EventType
+                    .DEACTIVATED
+                )
+            ),
+            None,
+        )
+
+        archived_collections.append(
+            collection
+        )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx[
+        "archived_collections"
+    ] = archived_collections
+
+    return render(
+        request,
+        "internal/collections/archive.html",
+        ctx,
+    )
+
+
+@login_required
+@require_POST
+def collection_reactivate_view(
+    request,
+    collection_id,
+):
+    """
+    Reactivate one Collection through the audited lifecycle service.
+    """
+    collection = get_object_or_404(
+        Collection,
+        pk=collection_id,
+    )
+
+    reactivate_collection(
+        collection=collection,
+        actor=request.user,
+    )
+
+    messages.success(
+        request,
+        "Collection reactivated successfully.",
+    )
+
+    return redirect(
+        "collection_archive"
+    )
 
 
 @login_required

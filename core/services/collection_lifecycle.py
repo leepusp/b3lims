@@ -93,3 +93,65 @@ def deactivate_collection(
     )
 
     return locked_collection
+
+
+@transaction.atomic
+def reactivate_collection(
+    *,
+    collection,
+    actor,
+):
+    """
+    Reactivate one Collection and append its audit event atomically.
+
+    Repeated reactivation is idempotent: an already active
+    Collection is returned without appending another event.
+    """
+    _validate_collection(
+        collection
+    )
+
+    locked_collection = (
+        Collection.objects
+        .select_for_update()
+        .select_related(
+            "owner",
+            "research_group",
+        )
+        .get(
+            pk=collection.pk,
+        )
+    )
+
+    if not can_delete_collection(
+        actor,
+        locked_collection,
+    ):
+        raise PermissionDenied(
+            "You do not have permission to reactivate this Collection."
+        )
+
+    if locked_collection.is_active:
+        return locked_collection
+
+    locked_collection.is_active = True
+
+    locked_collection.save(
+        update_fields=[
+            "is_active",
+            "updated_at",
+        ]
+    )
+
+    CollectionLifecycleEvent.objects.create(
+        collection=locked_collection,
+        event_type=(
+            CollectionLifecycleEvent
+            .EventType
+            .REACTIVATED
+        ),
+        actor=actor,
+        notes="Collection reactivated.",
+    )
+
+    return locked_collection

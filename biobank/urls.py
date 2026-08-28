@@ -53,6 +53,8 @@ from core.views.internal.collections.views import (
     collection_edit_view,
     collection_share_view,
     collection_share_revoke_view,
+    collection_archive_view,
+    collection_reactivate_view,
 )
 
 # 5. SAMPLES (AMOSTRAS)
@@ -194,6 +196,16 @@ urlpatterns = [
     path("collections/", collections_list_view, name="collections_list"),
     path("collections/add/", collection_create_view, name="collection_create"),
     path("collections/dashboard/", collections_dashboard_view, name="collections_dashboard"),
+    path(
+        "collections/archive/",
+        collection_archive_view,
+        name="collection_archive",
+    ),
+    path(
+        "collections/<int:collection_id>/reactivate/",
+        collection_reactivate_view,
+        name="collection_reactivate",
+    ),
     path(
         "collections/<int:collection_id>/edit/",
         collection_edit_view,
