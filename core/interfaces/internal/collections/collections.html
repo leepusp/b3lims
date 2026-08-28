@@ -164,7 +164,7 @@
                         </td>
                         <td>{{ collection.created_at|date:"d/m/Y" }}</td>
                         <td class="text-end">
-                            {% if collection.can_edit %}
+                            {% if collection.can_delete %}
                                 <form method="post" action="{% url 'collections_list' %}" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="deactivate_collection">
@@ -174,7 +174,7 @@
                                     </button>
                                 </form>
                             {% else %}
-                                <span class="collection-muted small">View only</span>
+                                <span class="collection-muted small">No lifecycle actions</span>
                             {% endif %}
                         </td>
                     </tr>

@@ -33,6 +33,7 @@ from core.models import (
 from core.permissions.collections import (
     can_view_collection,
     can_edit_collection,
+    can_delete_collection,
     can_manage_collection_permissions,
     visible_collections_for_user,
 )
@@ -152,7 +153,7 @@ def collections_list_view(request, template_name="internal/collections/collectio
         cid = request.POST.get("collection_id")
         collection = get_object_or_404(Collection, id=cid)
 
-        if not can_edit_collection(user, collection):
+        if not can_delete_collection(user, collection):
             raise PermissionDenied
 
         collection.is_active = False
@@ -176,6 +177,7 @@ def collections_list_view(request, template_name="internal/collections/collectio
     visible_collections = []
     for c in collections_qs:
         c.can_edit = can_edit_collection(user, c)
+        c.can_delete = can_delete_collection(user, c)
         visible_collections.append(c)
 
     ctx["collections"] = visible_collections
