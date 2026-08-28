@@ -287,6 +287,42 @@ def public_sample_type_distribution(
     return rows
 
 
+def public_organism_distribution(
+    limit=12,
+):
+    """
+    Return the most represented organism names among publicly
+    accessible Samples.
+
+    Organism metadata participates only after the Sample has passed
+    the canonical public projection. Private, embargoed, inactive and
+    trashed Samples therefore cannot contribute to this aggregate.
+    """
+    return list(
+        public_samples_queryset()
+        .exclude(
+            organism_name__isnull=True,
+        )
+        .exclude(
+            organism_name="",
+        )
+        .values(
+            "organism_name",
+        )
+        .annotate(
+            total=Count(
+                "pk",
+            )
+        )
+        .order_by(
+            "-total",
+            "organism_name",
+        )[
+            :limit
+        ]
+    )
+
+
 def featured_public_collections(
     limit=3,
 ):
@@ -358,6 +394,9 @@ def public_home_context():
         ),
         "sample_type_distribution": (
             public_sample_type_distribution()
+        ),
+        "organism_distribution": (
+            public_organism_distribution()
         ),
         "featured_collections": (
             featured_public_collections()

@@ -1,23 +1,28 @@
 {% extends "public/base.html" %}
 
-{% block title %}Biobank CEPID B3 | Public Catalog{% endblock %}
+{% block title %}Biobank CEPID B3 | Public Portal{% endblock %}
+
 
 {% block extra_css %}
 <style>
-    .public-hero {
-        border: 1px solid #dbe4ee;
-        border-radius: 1.25rem;
+    .portal-welcome {
+        border: 1px solid #e8e4d8;
+        border-radius: 1.3rem;
         background:
             linear-gradient(
-                135deg,
-                #f7fbff 0%,
-                #ffffff 58%,
-                #f4f8fb 100%
+                180deg,
+                #f8f5e9 0%,
+                #fbfaf5 100%
             );
-        overflow: hidden;
     }
 
-    .public-hero-kicker {
+    .portal-welcome-inner {
+        max-width: 900px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .portal-kicker {
         color: var(--cepid-blue-light);
         font-size: 0.78rem;
         font-weight: 700;
@@ -25,103 +30,187 @@
         text-transform: uppercase;
     }
 
-    .public-hero-title {
-        max-width: 760px;
-        font-size: clamp(2.1rem, 4vw, 3.8rem);
-        line-height: 1.05;
+    .portal-title {
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 1.07;
         letter-spacing: -0.035em;
     }
 
-    .public-search-shell {
-        max-width: 820px;
-        padding: 0.55rem;
-        border: 1px solid #d5dee8;
-        border-radius: 0.9rem;
+    .portal-lead {
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .portal-search {
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0.5rem;
+        border: 1px solid #d7dee6;
+        border-radius: 0.85rem;
         background: #ffffff;
         box-shadow: 0 0.7rem 2rem rgba(10, 47, 90, 0.08);
     }
 
-    .public-search-shell .form-control {
+    .portal-search .form-control {
         border: 0;
         box-shadow: none;
     }
 
-    .public-kpi {
-        height: 100%;
-        border: 1px solid #e1e8ef;
-        border-radius: 1rem;
-        background: #ffffff;
+    .portal-search-hints {
+        font-size: 0.78rem;
+        color: var(--cepid-muted);
     }
 
-    .public-kpi-value {
-        color: var(--cepid-blue);
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1;
-    }
-
-    .public-section-label {
+    .portal-section-label {
         color: var(--cepid-blue-light);
-        font-size: 0.75rem;
+        font-size: 0.74rem;
         font-weight: 700;
         letter-spacing: 0.1em;
         text-transform: uppercase;
     }
 
-    .composition-row + .composition-row {
-        margin-top: 1.1rem;
-    }
-
-    .composition-track {
-        height: 0.72rem;
-        overflow: hidden;
-        border-radius: 999px;
-        background: #edf2f7;
-    }
-
-    .composition-fill {
-        min-width: 0.35rem;
+    .portal-gateway-card {
+        display: block;
         height: 100%;
-        border-radius: 999px;
-        background: var(--cepid-blue-light);
-    }
-
-    .featured-card {
-        height: 100%;
-        border: 1px solid #e1e8ef;
-        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid #dfe6ed;
+        border-radius: 0.95rem;
+        color: inherit;
+        background: #ffffff;
+        text-decoration: none;
         transition:
             transform 0.15s ease,
-            box-shadow 0.15s ease;
+            box-shadow 0.15s ease,
+            border-color 0.15s ease;
     }
 
-    .featured-card:hover {
+    .portal-gateway-card:hover {
+        color: inherit;
         transform: translateY(-2px);
-        box-shadow: 0 0.8rem 2rem rgba(10, 47, 90, 0.08);
+        border-color: #c5d3e0;
+        box-shadow: 0 0.8rem 1.8rem rgba(10, 47, 90, 0.08);
     }
 
-    .explorer-card {
-        height: 100%;
-        border: 1px solid #e1e8ef;
-        border-radius: 1rem;
-        background: #fbfcfe;
-    }
-
-    .public-icon {
+    .portal-icon {
         display: inline-flex;
-        width: 2.8rem;
-        height: 2.8rem;
+        width: 2.9rem;
+        height: 2.9rem;
         align-items: center;
         justify-content: center;
-        border-radius: 0.8rem;
+        border-radius: 50%;
         color: var(--cepid-blue);
         background: #edf4fa;
         font-size: 1.2rem;
     }
 
-    .public-disclosure-note {
+    .portal-card-arrow {
+        color: var(--cepid-blue-light);
+    }
+
+    .portal-guide {
+        border: 1px solid #dfe6ed;
+        border-radius: 0.9rem;
+        overflow: hidden;
+        background: #ffffff;
+    }
+
+    .portal-guide .accordion-item {
+        border: 0;
+        border-bottom: 1px solid #e7ecf1;
+    }
+
+    .portal-guide .accordion-item:last-child {
+        border-bottom: 0;
+    }
+
+    .portal-guide .accordion-button {
+        font-weight: 600;
+        background: #ffffff;
+    }
+
+    .portal-guide .accordion-button:not(.collapsed) {
+        color: var(--cepid-blue);
+        background: #f7fafc;
+        box-shadow: none;
+    }
+
+    .portal-kpi {
+        height: 100%;
+        padding: 1.35rem;
+        border: 1px solid #e1e8ef;
+        border-radius: 0.9rem;
+        background: #ffffff;
+    }
+
+    .portal-kpi-value {
+        color: var(--cepid-blue);
+        font-size: 1.9rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .portal-chart-card {
+        height: 100%;
+        border: 1px solid #e0e7ee;
+        border-radius: 1rem;
+        background: #ffffff;
+        box-shadow: 0 0.5rem 1.5rem rgba(10, 47, 90, 0.045);
+    }
+
+    .portal-chart {
+        width: 100%;
+        height: 350px;
+    }
+
+    .portal-chart-help {
+        font-size: 0.78rem;
+        color: var(--cepid-muted);
+    }
+
+    .portal-feature-card {
+        height: 100%;
+        padding: 1.35rem;
+        border: 1px solid #e0e7ee;
+        border-radius: 0.9rem;
+        background: #ffffff;
+    }
+
+    .portal-explorer-card {
+        height: 100%;
+        padding: 1.5rem;
+        border: 1px solid #e0e7ee;
+        border-radius: 0.95rem;
+        background: #f9fbfd;
+    }
+
+    .portal-resource-card {
+        height: 100%;
+        padding: 1.5rem;
+        border: 1px solid #e0e7ee;
+        border-radius: 0.95rem;
+        background: #ffffff;
+    }
+
+    .portal-empty-state {
+        border: 1px dashed #cfd9e3;
+        border-radius: 0.9rem;
+        background: #fafcfd;
+    }
+
+    .portal-disclosure {
         border-left: 4px solid var(--cepid-blue-light);
         background: #f7f9fc;
+    }
+
+    @media (max-width: 767.98px) {
+        .portal-chart {
+            height: 300px;
+        }
     }
 </style>
 {% endblock %}
@@ -129,35 +218,34 @@
 
 {% block content %}
 
-<section class="public-hero mb-5">
-    <div class="p-4 p-md-5">
+<section class="portal-welcome mb-5">
+    <div class="portal-welcome-inner px-4 py-5 px-md-5">
 
-        <div class="public-hero-kicker mb-3">
-            CEPID B3 · Public Biobank Catalog
+        <div class="portal-kicker mb-3">
+            CEPID B3 · Public Biobank Portal
         </div>
 
-        <h1 class="public-hero-title fw-bold mb-4">
-            Explore the biological resources of the B3 Biobank
+        <h1 class="portal-title fw-bold mb-3">
+            Welcome to the B3 Biobank public catalog
         </h1>
 
-        <p class="fs-5 text-muted mb-4" style="max-width: 850px;">
-            Discover publication-approved metadata describing
-            bacterial strains, bacteriophages, molecular constructs
-            and scientific Collections maintained by the CEPID B3
-            research network.
+        <p class="portal-lead fs-5 text-muted mb-4">
+            Search and explore publication-approved metadata describing
+            biological resources maintained by the CEPID B3 research
+            network.
         </p>
 
         <form
             method="get"
             action="{% url 'public_collections' %}"
-            class="public-search-shell d-flex align-items-center mb-4"
+            class="portal-search d-flex align-items-center"
         >
             <i class="bi bi-search ms-2 text-muted"></i>
 
             <input
                 type="search"
                 name="q"
-                class="form-control form-control-lg"
+                class="form-control"
                 placeholder="Search Collections, organisms, Sample types or public Tags"
                 aria-label="Search the public B3 Biobank catalog"
             >
@@ -170,19 +258,127 @@
             </button>
         </form>
 
-        <div class="d-flex flex-wrap gap-2">
+        <div class="portal-search-hints mt-2">
+            Search by Collection name, organism, Sample type or public Tag.
+        </div>
+
+    </div>
+</section>
+
+
+<section class="mb-5">
+
+    <div class="portal-section-label mb-1">
+        Start exploring
+    </div>
+
+    <h2 class="h4 fw-bold mb-3">
+        Public Biobank resources
+    </h2>
+
+    <div class="row g-3">
+
+        <div class="col-md-6 col-xl-3">
             <a
                 href="{% url 'public_collections' %}"
-                class="btn btn-outline-primary"
+                class="portal-gateway-card"
             >
-                Browse public Collections
-            </a>
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-collection"></i>
+                </div>
 
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-2">
+                            Browse Collections
+                        </h3>
+
+                        <p class="small text-muted mb-0">
+                            Explore Collections approved for public
+                            discovery.
+                        </p>
+                    </div>
+
+                    <i class="bi bi-arrow-right portal-card-arrow"></i>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
             <a
                 href="{% url 'public_about' %}"
-                class="btn btn-outline-secondary"
+                class="portal-gateway-card"
             >
-                About the Biobank
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-info-circle"></i>
+                </div>
+
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-2">
+                            About the Biobank
+                        </h3>
+
+                        <p class="small text-muted mb-0">
+                            Learn how the B3 Biobank supports research
+                            and resource stewardship.
+                        </p>
+                    </div>
+
+                    <i class="bi bi-arrow-right portal-card-arrow"></i>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <a
+                href="{% url 'public_governance' %}"
+                class="portal-gateway-card"
+            >
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-2">
+                            Governance & Access
+                        </h3>
+
+                        <p class="small text-muted mb-0">
+                            Understand public metadata and controlled
+                            biological material access.
+                        </p>
+                    </div>
+
+                    <i class="bi bi-arrow-right portal-card-arrow"></i>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <a
+                href="{% url 'public_shipments_portal' %}"
+                class="portal-gateway-card"
+            >
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-truck"></i>
+                </div>
+
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-2">
+                            Shipment Portal
+                        </h3>
+
+                        <p class="small text-muted mb-0">
+                            Submit and follow biological material
+                            intake workflows.
+                        </p>
+                    </div>
+
+                    <i class="bi bi-arrow-right portal-card-arrow"></i>
+                </div>
             </a>
         </div>
 
@@ -191,218 +387,319 @@
 
 
 <section class="mb-5">
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <div>
-            <div class="public-section-label mb-1">
-                Public catalog
-            </div>
 
-            <h2 class="h4 fw-bold mb-0">
-                Catalog at a glance
-            </h2>
+    <div class="portal-section-label mb-1">
+        Getting started
+    </div>
+
+    <h2 class="h4 fw-bold mb-3">
+        Explore and understand the catalog
+    </h2>
+
+    <div
+        class="accordion portal-guide"
+        id="publicPortalGuide"
+    >
+
+        <div class="accordion-item">
+            <h3
+                class="accordion-header"
+                id="portalGuideBrowseHeading"
+            >
+                <button
+                    class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#portalGuideBrowse"
+                    aria-expanded="false"
+                    aria-controls="portalGuideBrowse"
+                >
+                    Browse publication-approved resources
+                </button>
+            </h3>
+
+            <div
+                id="portalGuideBrowse"
+                class="accordion-collapse collapse"
+                aria-labelledby="portalGuideBrowseHeading"
+                data-bs-parent="#publicPortalGuide"
+            >
+                <div class="accordion-body text-muted">
+                    Search the public catalog by Collection name,
+                    organism, Sample type or public Tag. Catalog
+                    visibility is independent from internal inventory
+                    access.
+                </div>
+            </div>
         </div>
+
+
+        <div class="accordion-item">
+            <h3
+                class="accordion-header"
+                id="portalGuideMetadataHeading"
+            >
+                <button
+                    class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#portalGuideMetadata"
+                    aria-expanded="false"
+                    aria-controls="portalGuideMetadata"
+                >
+                    Understand public metadata
+                </button>
+            </h3>
+
+            <div
+                id="portalGuideMetadata"
+                class="accordion-collapse collapse"
+                aria-labelledby="portalGuideMetadataHeading"
+                data-bs-parent="#publicPortalGuide"
+            >
+                <div class="accordion-body text-muted">
+                    Public statistics and visualizations include only
+                    records that have passed the canonical public
+                    disclosure boundary. Private, embargoed, inactive
+                    and trashed Samples are excluded before aggregation.
+                </div>
+            </div>
+        </div>
+
+
+        <div class="accordion-item">
+            <h3
+                class="accordion-header"
+                id="portalGuideMaterialHeading"
+            >
+                <button
+                    class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#portalGuideMaterial"
+                    aria-expanded="false"
+                    aria-controls="portalGuideMaterial"
+                >
+                    Request or submit biological material
+                </button>
+            </h3>
+
+            <div
+                id="portalGuideMaterial"
+                class="accordion-collapse collapse"
+                aria-labelledby="portalGuideMaterialHeading"
+                data-bs-parent="#publicPortalGuide"
+            >
+                <div class="accordion-body text-muted">
+                    Public metadata does not represent authorization
+                    to receive biological material. Material access
+                    and Shipment intake remain governed workflows.
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+<section class="mb-5">
+
+    <div class="portal-section-label mb-1">
+        Public catalog
+    </div>
+
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h2 class="h4 fw-bold mb-0">
+            Catalog at a glance
+        </h2>
+
+        <span class="small text-muted">
+            Publication-approved records only
+        </span>
     </div>
 
     <div class="row g-3">
 
         <div class="col-6 col-lg-3">
-            <div class="public-kpi p-4">
-                <div class="public-icon mb-3">
+            <div class="portal-kpi">
+                <div class="portal-icon mb-3">
                     <i class="bi bi-box-seam"></i>
                 </div>
 
-                <div class="public-kpi-value">
+                <div class="portal-kpi-value">
                     {{ public_metrics.public_samples }}
                 </div>
 
-                <div class="text-muted small mt-2">
+                <div class="small text-muted mt-2">
                     Public Samples
                 </div>
             </div>
         </div>
 
         <div class="col-6 col-lg-3">
-            <div class="public-kpi p-4">
-                <div class="public-icon mb-3">
+            <div class="portal-kpi">
+                <div class="portal-icon mb-3">
                     <i class="bi bi-collection"></i>
                 </div>
 
-                <div class="public-kpi-value">
+                <div class="portal-kpi-value">
                     {{ public_metrics.public_collections }}
                 </div>
 
-                <div class="text-muted small mt-2">
+                <div class="small text-muted mt-2">
                     Public Collections
                 </div>
             </div>
         </div>
 
         <div class="col-6 col-lg-3">
-            <div class="public-kpi p-4">
-                <div class="public-icon mb-3">
+            <div class="portal-kpi">
+                <div class="portal-icon mb-3">
                     <i class="bi bi-diagram-3"></i>
                 </div>
 
-                <div class="public-kpi-value">
+                <div class="portal-kpi-value">
                     {{ public_metrics.organisms }}
                 </div>
 
-                <div class="text-muted small mt-2">
+                <div class="small text-muted mt-2">
                     Organisms represented
                 </div>
             </div>
         </div>
 
         <div class="col-6 col-lg-3">
-            <div class="public-kpi p-4">
-                <div class="public-icon mb-3">
+            <div class="portal-kpi">
+                <div class="portal-icon mb-3">
                     <i class="bi bi-globe-americas"></i>
                 </div>
 
-                <div class="public-kpi-value">
+                <div class="portal-kpi-value">
                     {{ public_metrics.geographic_origins }}
                 </div>
 
-                <div class="text-muted small mt-2">
+                <div class="small text-muted mt-2">
                     Public geographic origins
                 </div>
             </div>
         </div>
 
     </div>
-
-    <p class="text-muted small mt-3 mb-0">
-        Statistics include only records explicitly eligible for
-        unauthenticated public disclosure.
-    </p>
 </section>
 
 
 <section class="mb-5">
+
+    <div class="portal-section-label mb-1">
+        Interactive data views
+    </div>
+
+    <h2 class="h4 fw-bold mb-2">
+        Explore public catalog composition
+    </h2>
+
+    <p class="text-muted mb-4">
+        Interactive summaries are generated from the same
+        publication-safe catalog projection used throughout the
+        public portal.
+    </p>
+
     <div class="row g-4">
 
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4 p-md-5">
+        <div class="col-lg-5">
+            <div class="portal-chart-card p-4">
 
-                    <div class="public-section-label mb-1">
-                        Composition
+                <h3 class="h5 fw-bold mb-1">
+                    Sample type composition
+                </h3>
+
+                <p class="small text-muted mb-3">
+                    Distribution of publicly accessible Samples by
+                    material type.
+                </p>
+
+                {% if sample_type_distribution %}
+
+                    <div
+                        id="publicSampleTypeChart"
+                        class="portal-chart"
+                        role="img"
+                        aria-label="Interactive donut chart showing public Samples by Sample type"
+                    ></div>
+
+                    <ul class="visually-hidden">
+                        {% for item in sample_type_distribution %}
+                            <li>
+                                {{ item.sample_type }}:
+                                {{ item.total }}
+                                public Sample{{ item.total|pluralize }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="portal-chart-help mt-2">
+                        Hover over a segment for details. Use the
+                        legend to focus individual categories.
                     </div>
 
-                    <h2 class="h4 fw-bold mb-2">
-                        Public catalog by Sample type
-                    </h2>
+                {% else %}
 
-                    <p class="text-muted mb-4">
-                        Distribution of publication-approved Samples
-                        across the most represented material types.
-                    </p>
+                    <div class="portal-empty-state p-4 text-muted">
+                        Sample-type composition will appear when
+                        publication-approved Samples are available.
+                    </div>
 
-                    {% if sample_type_distribution %}
+                {% endif %}
 
-                        {% for item in sample_type_distribution %}
-                            <div class="composition-row">
-
-                                <div
-                                    class="d-flex justify-content-between gap-3 mb-2"
-                                >
-                                    <a
-                                        href="{% url 'public_collections' %}?q={{ item.sample_type|urlencode }}"
-                                        class="text-decoration-none fw-semibold"
-                                    >
-                                        {{ item.sample_type }}
-                                    </a>
-
-                                    <span class="text-muted small">
-                                        {{ item.total }}
-                                        Sample{{ item.total|pluralize }}
-                                        ·
-                                        {{ item.percentage }}%
-                                    </span>
-                                </div>
-
-                                <div
-                                    class="composition-track"
-                                    role="progressbar"
-                                    aria-label="{{ item.sample_type }}"
-                                    aria-valuenow="{{ item.percentage }}"
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                >
-                                    <div
-                                        class="composition-fill"
-                                        style="width: {{ item.percentage }}%;"
-                                    ></div>
-                                </div>
-
-                            </div>
-                        {% endfor %}
-
-                    {% else %}
-
-                        <div class="text-muted">
-                            Public Sample-type statistics will appear
-                            here as publication-approved records are
-                            added to the catalog.
-                        </div>
-
-                    {% endif %}
-
-                </div>
             </div>
         </div>
 
 
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4 p-md-5">
+        <div class="col-lg-7">
+            <div class="portal-chart-card p-4">
 
-                    <div class="public-section-label mb-1">
-                        Discovery
+                <h3 class="h5 fw-bold mb-1">
+                    Organism representation
+                </h3>
+
+                <p class="small text-muted mb-3">
+                    Relative representation of organism names among
+                    publication-approved Samples.
+                </p>
+
+                {% if organism_distribution %}
+
+                    <div
+                        id="publicOrganismChart"
+                        class="portal-chart"
+                        role="img"
+                        aria-label="Interactive treemap showing organism representation among public Samples"
+                    ></div>
+
+                    <ul class="visually-hidden">
+                        {% for item in organism_distribution %}
+                            <li>
+                                {{ item.organism_name }}:
+                                {{ item.total }}
+                                public Sample{{ item.total|pluralize }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="portal-chart-help mt-2">
+                        Hover over a tile to inspect the public Sample
+                        count represented by that organism.
                     </div>
 
-                    <h2 class="h4 fw-bold mb-2">
-                        Explore public resources
-                    </h2>
+                {% else %}
 
-                    <p class="text-muted mb-4">
-                        Use the catalog to move from a broad scientific
-                        question to publication-approved Collections.
-                    </p>
+                    <div class="portal-empty-state p-4 text-muted">
+                        Organism composition will appear when public
+                        organism metadata is available.
+                    </div>
 
-                    {% for item in sample_type_distribution|slice:":3" %}
-                        <a
-                            href="{% url 'public_collections' %}?q={{ item.sample_type|urlencode }}"
-                            class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 text-decoration-none"
-                        >
-                            <span>
-                                <strong>
-                                    {{ item.sample_type }}
-                                </strong>
+                {% endif %}
 
-                                <span class="d-block text-muted small">
-                                    {{ item.total }}
-                                    public Sample{{ item.total|pluralize }}
-                                </span>
-                            </span>
-
-                            <i class="bi bi-arrow-right"></i>
-                        </a>
-                    {% empty %}
-                        <p class="text-muted small">
-                            Public resource categories will appear here
-                            as catalog records become available.
-                        </p>
-                    {% endfor %}
-
-                    <a
-                        href="{% url 'public_collections' %}"
-                        class="btn btn-outline-primary btn-sm mt-2"
-                    >
-                        Browse all public Collections
-                    </a>
-
-                </div>
             </div>
         </div>
 
@@ -410,10 +707,12 @@
 </section>
 
 
+{% if featured_collections %}
 <section class="mb-5">
+
     <div class="d-flex justify-content-between align-items-end mb-3">
         <div>
-            <div class="public-section-label mb-1">
+            <div class="portal-section-label mb-1">
                 Collections
             </div>
 
@@ -431,84 +730,97 @@
         </a>
     </div>
 
+    <div class="row g-3">
 
-    {% if featured_collections %}
+        {% for collection in featured_collections %}
+            <div class="col-md-6 col-xl-4">
+                <div class="portal-feature-card d-flex flex-column">
 
-        <div class="row g-3">
+                    <span class="badge bg-success align-self-start mb-3">
+                        Public Collection
+                    </span>
 
-            {% for collection in featured_collections %}
-                <div class="col-md-6 col-xl-4">
-                    <div class="featured-card p-4 d-flex flex-column">
+                    <h3 class="h5 fw-bold">
+                        {{ collection.name }}
+                    </h3>
 
-                        <div class="mb-3">
-                            <span class="badge bg-success">
-                                Public Collection
-                            </span>
-                        </div>
+                    <p class="small text-muted flex-grow-1">
+                        {{ collection.description|default:"No public description provided."|truncatechars:150 }}
+                    </p>
 
-                        <h3 class="h5 fw-bold">
-                            {{ collection.name }}
-                        </h3>
+                    <div class="small text-muted mb-3">
+                        <i class="bi bi-box-seam me-1"></i>
 
-                        <p class="text-muted small flex-grow-1">
-                            {{ collection.description|default:"No public description provided."|truncatechars:150 }}
-                        </p>
-
-                        <div class="small text-muted mb-3">
-                            <i class="bi bi-box-seam me-1"></i>
-                            {{ collection.public_sample_count }}
-                            public Sample{{ collection.public_sample_count|pluralize }}
-                        </div>
-
-                        {% if collection.public_tags %}
-                            <div class="d-flex flex-wrap gap-1 mb-3">
-                                {% for tag in collection.public_tags|slice:":4" %}
-                                    <span class="badge bg-light text-dark border">
-                                        {{ tag.name }}
-                                    </span>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <a
-                            href="{% url 'public_collection_detail' collection.id %}"
-                            class="btn btn-sm btn-outline-primary align-self-start"
-                        >
-                            Open Collection
-                        </a>
-
+                        {{ collection.public_sample_count }}
+                        public Sample{{ collection.public_sample_count|pluralize }}
                     </div>
+
+                    {% if collection.public_tags %}
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            {% for tag in collection.public_tags|slice:":4" %}
+                                <span class="badge bg-light text-dark border">
+                                    {{ tag.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <a
+                        href="{% url 'public_collection_detail' collection.id %}"
+                        class="btn btn-outline-primary btn-sm align-self-start"
+                    >
+                        Open Collection
+                    </a>
+
                 </div>
-            {% endfor %}
+            </div>
+        {% endfor %}
 
-        </div>
-
-    {% else %}
-
-        <div class="border rounded-3 p-4 text-muted">
-            Featured Collections will appear here when public
-            Collections are available.
-        </div>
-
-    {% endif %}
+    </div>
 </section>
+
+{% else %}
+
+<section class="mb-5">
+
+    <div class="portal-section-label mb-1">
+        Collections
+    </div>
+
+    <div class="portal-empty-state p-4">
+        <h2 class="h6 fw-bold mb-2">
+            No public Collections are currently published
+        </h2>
+
+        <p class="small text-muted mb-0">
+            This area will populate automatically when a Collection
+            is approved for public release. Public Sample statistics
+            remain governed independently by the Sample publication
+            policy.
+        </p>
+    </div>
+
+</section>
+
+{% endif %}
 
 
 <section class="mb-5">
-    <div class="public-section-label mb-1">
-        Data exploration
+
+    <div class="portal-section-label mb-1">
+        Scientific exploration
     </div>
 
-    <h2 class="h4 fw-bold mb-4">
-        Explore the scientific context of the catalog
+    <h2 class="h4 fw-bold mb-3">
+        Explore the scientific context
     </h2>
 
     <div class="row g-3">
 
         <div class="col-md-6">
-            <div class="explorer-card p-4">
+            <div class="portal-explorer-card">
 
-                <div class="public-icon mb-3">
+                <div class="portal-icon mb-3">
                     <i class="bi bi-geo-alt"></i>
                 </div>
 
@@ -516,23 +828,39 @@
                     Geographic Explorer
                 </h3>
 
-                <p class="text-muted mb-2">
-                    Explore the geographic provenance of public
-                    biological resources while respecting
-                    origin-level disclosure controls.
-                </p>
+                {% if public_metrics.geographic_origins %}
 
-                <span class="badge bg-light text-dark border">
-                    Interactive map · next phase
-                </span>
+                    <p class="text-muted mb-2">
+                        Public geographic metadata is available and
+                        will support a privacy-aware interactive map.
+                    </p>
+
+                    <span class="badge bg-light text-dark border">
+                        {{ public_metrics.geographic_origins }}
+                        public geographic origin{{ public_metrics.geographic_origins|pluralize }}
+                    </span>
+
+                {% else %}
+
+                    <p class="text-muted mb-2">
+                        No geographic origin is currently eligible for
+                        public visualization.
+                    </p>
+
+                    <span class="badge bg-light text-dark border">
+                        Awaiting public geographic metadata
+                    </span>
+
+                {% endif %}
 
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="explorer-card p-4">
 
-                <div class="public-icon mb-3">
+        <div class="col-md-6">
+            <div class="portal-explorer-card">
+
+                <div class="portal-icon mb-3">
                     <i class="bi bi-share"></i>
                 </div>
 
@@ -541,13 +869,13 @@
                 </h3>
 
                 <p class="text-muted mb-2">
-                    Navigate publication-approved taxonomic
-                    assignments through an interactive hierarchical
-                    view inspired by scientific tree explorers.
+                    A hierarchical public taxonomy view will connect
+                    verified taxonomic assignments to scientific
+                    catalog discovery.
                 </p>
 
                 <span class="badge bg-light text-dark border">
-                    Verified taxonomy · next phase
+                    Taxonomic hierarchy · next phase
                 </span>
 
             </div>
@@ -558,85 +886,305 @@
 
 
 <section class="mb-5">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
 
-            <div class="row align-items-center g-4">
+    <div class="portal-section-label mb-1">
+        Resources and governance
+    </div>
 
-                <div class="col-lg-8">
+    <h2 class="h4 fw-bold mb-3">
+        Work with the B3 Biobank
+    </h2>
 
-                    <div class="public-section-label mb-1">
-                        Biological material intake
-                    </div>
+    <div class="row g-3">
 
-                    <h2 class="h4 fw-bold mb-2">
-                        Submit and track a Shipment
-                    </h2>
+        <div class="col-md-6">
+            <div class="portal-resource-card">
 
-                    <p class="text-muted mb-0">
-                        Submit biological material to the Biobank,
-                        follow the public Shipment workflow and
-                        provide the required documentation before
-                        internal review and receipt.
-                    </p>
-
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-truck"></i>
                 </div>
 
-                <div class="col-lg-4 text-lg-end">
+                <h3 class="h5 fw-bold">
+                    Submit biological material
+                </h3>
 
+                <p class="text-muted">
+                    Start a Shipment submission and follow the material
+                    intake workflow before internal review and receipt.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2">
                     <a
                         href="{% url 'public_shipments_portal' %}"
-                        class="btn btn-primary me-2 mb-2"
+                        class="btn btn-primary btn-sm"
                     >
                         Shipment portal
                     </a>
 
                     <a
                         href="{% url 'public_shipment_new' %}"
-                        class="btn btn-outline-primary mb-2"
+                        class="btn btn-outline-primary btn-sm"
                     >
                         New submission
                     </a>
-
                 </div>
 
             </div>
         </div>
-    </div>
-</section>
 
 
-<section class="public-disclosure-note rounded-3 p-4">
-    <div class="row align-items-center g-3">
+        <div class="col-md-6">
+            <div class="portal-resource-card">
 
-        <div class="col-lg-8">
+                <div class="portal-icon mb-3">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
 
-            <h2 class="h5 fw-bold mb-2">
-                Public metadata does not imply material access
-            </h2>
+                <h3 class="h5 fw-bold">
+                    Governance and material access
+                </h3>
 
-            <p class="text-muted mb-0">
-                This portal exposes selected metadata approved for
-                public dissemination. Access to biological material
-                remains controlled and may require institutional
-                authorization, governance review and the applicable
-                material transfer process.
-            </p>
+                <p class="text-muted">
+                    Review how public metadata, institutional
+                    authorization and biological material transfer
+                    are governed.
+                </p>
 
-        </div>
+                <a
+                    href="{% url 'public_governance' %}"
+                    class="btn btn-outline-secondary btn-sm"
+                >
+                    Governance and access
+                </a>
 
-        <div class="col-lg-4 text-lg-end">
-
-            <a
-                href="{% url 'public_governance' %}"
-                class="btn btn-outline-secondary"
-            >
-                Governance and access
-            </a>
-
+            </div>
         </div>
 
     </div>
 </section>
+
+
+<section class="portal-disclosure rounded-3 p-4">
+
+    <h2 class="h6 fw-bold mb-2">
+        Public metadata does not imply material access
+    </h2>
+
+    <p class="small text-muted mb-0">
+        This portal exposes selected metadata approved for public
+        dissemination. Biological material remains controlled and may
+        require institutional authorization, governance review and the
+        applicable material transfer process.
+    </p>
+
+</section>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+{{ sample_type_distribution|json_script:"public-sample-type-data" }}
+{{ organism_distribution|json_script:"public-organism-data" }}
+
+<script
+    src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js">
+</script>
+
+<script>
+(function () {
+    "use strict";
+
+    const sampleTypeElement = document.getElementById(
+        "public-sample-type-data"
+    );
+
+    const organismElement = document.getElementById(
+        "public-organism-data"
+    );
+
+    const sampleTypeData = sampleTypeElement
+        ? JSON.parse(sampleTypeElement.textContent)
+        : [];
+
+    const organismData = organismElement
+        ? JSON.parse(organismElement.textContent)
+        : [];
+
+    const charts = [];
+
+
+    function initializeSampleTypeChart() {
+        const element = document.getElementById(
+            "publicSampleTypeChart"
+        );
+
+        if (
+            !element ||
+            !window.echarts ||
+            !sampleTypeData.length
+        ) {
+            return;
+        }
+
+        const chart = window.echarts.init(
+            element
+        );
+
+        chart.setOption({
+            animationDuration: 500,
+
+            tooltip: {
+                trigger: "item",
+                renderMode: "richText"
+            },
+
+            legend: {
+                type: "scroll",
+                bottom: 0,
+                left: "center"
+            },
+
+            series: [
+                {
+                    name: "Public Samples",
+                    type: "pie",
+                    radius: [
+                        "48%",
+                        "72%"
+                    ],
+                    center: [
+                        "50%",
+                        "43%"
+                    ],
+                    avoidLabelOverlap: true,
+
+                    itemStyle: {
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: "#ffffff"
+                    },
+
+                    label: {
+                        show: false
+                    },
+
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 15,
+                            fontWeight: "bold"
+                        }
+                    },
+
+                    data: sampleTypeData.map(
+                        function (row) {
+                            return {
+                                name: row.sample_type,
+                                value: row.total
+                            };
+                        }
+                    )
+                }
+            ]
+        });
+
+        charts.push(
+            chart
+        );
+    }
+
+
+    function initializeOrganismChart() {
+        const element = document.getElementById(
+            "publicOrganismChart"
+        );
+
+        if (
+            !element ||
+            !window.echarts ||
+            !organismData.length
+        ) {
+            return;
+        }
+
+        const chart = window.echarts.init(
+            element
+        );
+
+        chart.setOption({
+            animationDuration: 500,
+
+            tooltip: {
+                trigger: "item",
+                renderMode: "richText"
+            },
+
+            series: [
+                {
+                    name: "Public organism representation",
+                    type: "treemap",
+                    roam: false,
+                    nodeClick: false,
+
+                    breadcrumb: {
+                        show: false
+                    },
+
+                    label: {
+                        show: true,
+                        overflow: "truncate"
+                    },
+
+                    upperLabel: {
+                        show: false
+                    },
+
+                    data: organismData.map(
+                        function (row) {
+                            return {
+                                name: row.organism_name,
+                                value: row.total
+                            };
+                        }
+                    )
+                }
+            ]
+        });
+
+        charts.push(
+            chart
+        );
+    }
+
+
+    function initializePublicCharts() {
+        initializeSampleTypeChart();
+        initializeOrganismChart();
+    }
+
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializePublicCharts
+        );
+    } else {
+        initializePublicCharts();
+    }
+
+
+    window.addEventListener(
+        "resize",
+        function () {
+            charts.forEach(
+                function (chart) {
+                    chart.resize();
+                }
+            );
+        }
+    );
+})();
+</script>
 
 {% endblock %}

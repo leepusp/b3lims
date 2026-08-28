@@ -418,7 +418,7 @@ class PublicHomeV2Tests(
 
         self.assertContains(
             response,
-            "Public catalog by Sample type",
+            "Sample type composition",
         )
 
         self.assertContains(
