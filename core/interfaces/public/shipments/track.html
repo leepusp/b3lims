@@ -1,111 +1,157 @@
 {% extends "public/base.html" %}
 
-{% block title %}Rastreio da Remessa · Biobank CEPID B3{% endblock %}
+{% block title %}Shipment Tracking | B3 LIMS{% endblock %}
 
 {% block content %}
 
+<a
+    href="{% url 'public_shipments_portal' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    Shipment Portal
+</a>
+
+
 <section class="mb-4">
-    <h1 class="fw-semibold mb-2">
-        Rastreio da Remessa
+
+    <h1 class="fw-bold mb-2">
+        Shipment Tracking
     </h1>
+
     <p class="text-muted mb-0">
-        Informações públicas limitadas da remessa {{ shipment.shipment_code }}.
+        Limited public information for Shipment
+        {{ shipment.shipment_code }}.
     </p>
+
 </section>
 
+
 <div class="alert alert-secondary">
-    Esta página é destinada ao acompanhamento da embalagem. Ela não dá acesso a documentos,
-    arquivos assinados, envio de arquivos ou ações internas do biobanco.
+    This page is intended for Shipment tracking. It does not provide
+    access to documents, signed files, upload actions or internal
+    B3 LIMS operations.
 </div>
+
 
 <div class="row g-3">
+
     <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-semibold">
+
+        <div class="public-surface h-100 p-4">
+
+            <h2 class="h6 fw-bold">
                 Status
+            </h2>
+
+            <div class="mb-2">
+                <span class="text-muted">Code:</span>
+                <strong>{{ shipment.shipment_code }}</strong>
             </div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <span class="text-muted">Código:</span>
-                    <strong>{{ shipment.shipment_code }}</strong>
-                </div>
 
-                <div class="mb-2">
-                    <span class="text-muted">Status atual:</span>
-                    <strong>{{ shipment.get_status_display }}</strong>
-                </div>
-
-                <div class="mb-2">
-                    <span class="text-muted">Fluxo:</span>
-                    {{ shipment.get_flow_type_display }}
-                </div>
-
-                <div>
-                    <span class="text-muted">Criada em:</span>
-                    {{ shipment.created_at|date:"d/m/Y H:i" }}
-                </div>
+            <div class="mb-2">
+                <span class="text-muted">Current status:</span>
+                <strong>{{ shipment.get_status_display }}</strong>
             </div>
+
+            <div class="mb-2">
+                <span class="text-muted">Flow:</span>
+                {{ shipment.get_flow_type_display }}
+            </div>
+
+            <div>
+                <span class="text-muted">Created:</span>
+                {{ shipment.created_at|date:"M d, Y H:i" }}
+            </div>
+
         </div>
+
     </div>
+
 
     <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-semibold">
-                Rota institucional
-            </div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <span class="text-muted">Origin:</span>
-                    {{ shipment.sender_institution|default:"Not provided" }}
-                </div>
 
-                <div>
-                    <span class="text-muted">Destination:</span>
-                    {{ shipment.recipient_institution|default:"Biobank CEPID B3" }}
-                </div>
+        <div class="public-surface h-100 p-4">
+
+            <h2 class="h6 fw-bold">
+                Institutional route
+            </h2>
+
+            <div class="mb-2">
+                <span class="text-muted">Origin:</span>
+                {{ shipment.sender_institution|default:"Not provided" }}
             </div>
+
+            <div>
+                <span class="text-muted">Destination:</span>
+                {{ shipment.recipient_institution|default:"CEPID B3 repository" }}
+            </div>
+
         </div>
+
     </div>
+
 </div>
 
-<div class="card border-0 shadow-sm mt-3">
-    <div class="card-header bg-white fw-semibold">
-        Itens declarados
+
+<div class="public-surface mt-3 overflow-hidden">
+
+    <div class="px-4 py-3 border-bottom fw-semibold">
+        Declared items
     </div>
 
     <div class="table-responsive">
+
         <table class="table table-sm mb-0">
+
             <thead>
                 <tr>
-                    <th>ID externo</th>
+                    <th>External ID</th>
                     <th>Material</th>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
                 </tr>
             </thead>
+
             <tbody>
+
                 {% for item in items %}
+
                     <tr>
                         <td>{{ item.imported_sample_id }}</td>
                         <td>{{ item.material_name }}</td>
                         <td>{{ item.sample_type }}</td>
-                        <td>{{ item.quantity }} {{ item.quantity_unit }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-muted">
-                            Nenhum item registrado.
+                        <td>
+                            {{ item.quantity }}
+                            {{ item.quantity_unit }}
                         </td>
                     </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td
+                            colspan="4"
+                            class="text-muted"
+                        >
+                            No items are registered.
+                        </td>
+                    </tr>
+
                 {% endfor %}
+
             </tbody>
+
         </table>
+
     </div>
+
 </div>
 
+
 <div class="alert alert-info mt-3 mb-0">
-    Em caso de divergência, dano na embalagem ou necessidade de conferência,
-    entre em contato com a equipe responsável pelo biobanco.
+    If you identify a discrepancy, packaging damage or another issue,
+    contact the repository team responsible for this Shipment.
 </div>
 
 {% endblock %}

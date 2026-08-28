@@ -466,11 +466,11 @@ class PublicMetadataDisclosureTests(
             template,
         )
 
-    def test_navbar_search_claim_matches_public_search_backend(
+    def test_public_search_claim_matches_public_search_backend(
         self,
     ):
         template = Path(
-            "core/interfaces/public/base.html"
+            "core/interfaces/public/index.html"
         ).read_text()
 
         service = Path(
@@ -479,8 +479,8 @@ class PublicMetadataDisclosureTests(
 
         self.assertIn(
             (
-                "Buscar por coleção, organismo, "
-                "tipo ou tag"
+                "Search Collections, organisms, "
+                "Sample types or public Tags"
             ),
             template,
         )

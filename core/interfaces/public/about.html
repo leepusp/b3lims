@@ -1,130 +1,142 @@
 {% extends "public/base.html" %}
 
-{% block title %}Sobre o Biobank CEPID B3{% endblock %}
+{% block title %}About B3 LIMS{% endblock %}
 
 {% block content %}
 
-<!-- ================= HEADER ================= -->
-<section class="mb-5">
-    <h1 class="fw-bold mb-3">
-        Sobre o Biobank CEPID B3
-    </h1>
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    B3 LIMS public catalog
+</a>
 
-    <p class="lead text-muted">
-        O Biobank CEPID B3 é um repositório científico centralizado
-        dedicado à preservação, organização, rastreabilidade e
-        distribuição controlada de recursos biológicos utilizados
-        no âmbito do consórcio CEPID B3.
-    </p>
-</section>
 
-<!-- ================= CEPID B3 ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        O CEPID B3
-    </h3>
+<div class="public-surface p-4 p-md-5">
 
-    <p class="text-muted">
-        O Centro de Pesquisa, Inovação e Difusão – Biologia de Bactérias
-        e Bacteriófagos (CEPID B3) é uma rede colaborativa composta por
-        mais de 160 pesquisadores vinculados às universidades USP,
-        UNESP, UNICAMP e UNIFESP, distribuídos em cinco municípios do
-        estado de São Paulo.
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        O consórcio investiga as bases moleculares de mecanismos
-        bacterianos que impactam a vida humana, incluindo divisão
-        celular, comportamentos multicelulares, competição,
-        colonização, resistência a antibióticos e interações entre
-        bactérias, hospedeiros eucarióticos e seus principais
-        predadores naturais, os bacteriófagos.
-    </p>
-</section>
+        <div class="text-uppercase small fw-semibold text-primary mb-2">
+            CEPID B3 Research Network
+        </div>
 
-<!-- ================= MISSION ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Missão do Biobank
-    </h3>
+        <h1 class="fw-bold mb-3">
+            About B3 LIMS
+        </h1>
 
-    <p class="text-muted">
-        No decorrer das atividades de pesquisa do CEPID B3, é gerado
-        um patrimônio biológico de alto valor científico e tecnológico,
-        composto por bactérias de origem ambiental e clínica,
-        bacteriófagos e vetores moleculares.
-    </p>
+        <p class="lead text-muted">
+            B3 LIMS is the laboratory information management and
+            public catalog environment supporting the organization,
+            preservation, traceability and controlled distribution
+            of biological resources maintained within CEPID B3.
+        </p>
 
-    <p class="text-muted">
-        O Biobank CEPID B3 tem como missão organizar, preservar,
-        proteger e disponibilizar esses recursos biológicos de forma
-        padronizada, segura e rastreável, garantindo biossegurança,
-        conformidade legal e sustentabilidade do acervo a longo prazo.
-    </p>
-</section>
+    </section>
 
-<!-- ================= RELEVANCE ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Relevância Científica e Institucional
-    </h3>
 
-    <p class="text-muted">
-        O Biobank CEPID B3 se enquadra no Grupo Temático de Acervos
-        Científicos, contribuindo diretamente para a preservação,
-        digitalização e difusão de coleções científicas estratégicas
-        para o desenvolvimento científico e tecnológico brasileiro.
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        A consolidação do biobanco fortalece a reprodutibilidade da
-        pesquisa, a integridade dos dados experimentais e a geração
-        de novos produtos de inovação, incluindo compostos
-        antimicrobianos e alvos terapêuticos.
-    </p>
-</section>
+        <h2 class="h4 fw-bold mb-3">
+            CEPID B3
+        </h2>
 
-<!-- ================= DIFFUSION ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Difusão e Impacto Social
-    </h3>
+        <p class="text-muted">
+            The Center for Research, Innovation and Dissemination
+            in Bacterial and Bacteriophage Biology (CEPID B3) is a
+            collaborative research network involving researchers
+            from USP, UNESP, UNICAMP and UNIFESP across the state
+            of São Paulo.
+        </p>
 
-    <p class="text-muted">
-        Paralelamente à construção do repositório, o projeto prevê
-        ações de difusão científica e inclusão social, incluindo
-        documentação audiovisual das atividades desenvolvidas e
-        iniciativas voltadas à ampliação do acesso ao conhecimento
-        em Microbiologia e Ciências Biológicas.
-    </p>
+        <p class="text-muted mb-0">
+            The network investigates molecular mechanisms affecting
+            bacterial cell biology, multicellular behavior,
+            competition, colonization, antibiotic resistance and
+            interactions among bacteria, eukaryotic hosts and
+            bacteriophages.
+        </p>
 
-    <p class="text-muted">
-        Essas ações visam reduzir barreiras sociais e físicas,
-        promover a ciência cidadã e ampliar a participação de
-        diferentes públicos, incluindo pessoas com deficiência,
-        na construção do conhecimento científico.
-    </p>
-</section>
+    </section>
 
-<!-- ================= INSTITUTIONAL GAINS ================= -->
-<section>
-    <h3 class="fw-bold mb-3">
-        Ganhos Institucionais
-    </h3>
 
-    <p class="text-muted">
-        A consolidação do Biobank CEPID B3 representa um investimento
-        estratégico para a infraestrutura de pesquisa do Instituto
-        de Química da USP, modernizando a gestão de recursos biológicos
-        e ampliando a capacidade de armazenamento e preservação do acervo.
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        A plataforma digital de gerenciamento do biobanco será
-        desenvolvida em código aberto, possibilitando sua adoção
-        por outros grupos de pesquisa e fortalecendo a colaboração
-        científica em nível nacional.
-    </p>
-</section>
+        <h2 class="h4 fw-bold mb-3">
+            Biobank Mission
+        </h2>
+
+        <p class="text-muted">
+            CEPID B3 research activities generate biological
+            resources of substantial scientific and technological
+            value, including bacteria of environmental and clinical
+            origin, bacteriophages and molecular vectors.
+        </p>
+
+        <p class="text-muted mb-0">
+            B3 LIMS supports standardized, secure and traceable
+            stewardship of these resources, contributing to
+            biosafety, legal compliance and long-term sustainability
+            of the scientific collection.
+        </p>
+
+    </section>
+
+
+    <section class="mb-5">
+
+        <h2 class="h4 fw-bold mb-3">
+            Scientific and Institutional Relevance
+        </h2>
+
+        <p class="text-muted">
+            The CEPID B3 Biobank contributes to the preservation,
+            digital organization and dissemination of scientific
+            collections that are strategic for research and
+            technological development.
+        </p>
+
+        <p class="text-muted mb-0">
+            Consolidating the repository strengthens research
+            reproducibility, experimental data integrity and the
+            generation of new innovation opportunities, including
+            antimicrobial compounds and therapeutic targets.
+        </p>
+
+    </section>
+
+
+    <section class="mb-5">
+
+        <h2 class="h4 fw-bold mb-3">
+            Outreach and Social Impact
+        </h2>
+
+        <p class="text-muted mb-0">
+            The initiative also supports scientific communication,
+            documentation and inclusive dissemination activities
+            designed to broaden access to knowledge in microbiology
+            and biological sciences.
+        </p>
+
+    </section>
+
+
+    <section>
+
+        <h2 class="h4 fw-bold mb-3">
+            Institutional Benefits
+        </h2>
+
+        <p class="text-muted mb-0">
+            B3 LIMS provides an open and maintainable digital
+            foundation for biological resource management and may
+            support adoption and collaboration across additional
+            research groups and institutions.
+        </p>
+
+    </section>
+
+</div>
 
 {% endblock %}

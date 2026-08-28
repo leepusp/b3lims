@@ -91,12 +91,22 @@ class InternalShellBrandingTests(SimpleTestCase):
             source,
         )
 
-    def test_public_institutional_brand_is_preserved(self):
+    def test_public_b3_lims_brand_preserves_cepid_b3_context(self):
         source = self.source(
             "core/interfaces/public/base.html"
         )
 
         self.assertIn(
+            "B3 LIMS",
+            source,
+        )
+
+        self.assertIn(
+            "CEPID B3",
+            source,
+        )
+
+        self.assertNotIn(
             "Biobank CEPID B3",
             source,
         )

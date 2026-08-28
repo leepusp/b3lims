@@ -1,156 +1,169 @@
 {% extends "public/base.html" %}
 
-{% block title %}Coleções | Biobank CEPID B3{% endblock %}
+{% block title %}Public Collections | B3 LIMS{% endblock %}
 
 {% block content %}
 
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    B3 LIMS public catalog
+</a>
+
+
 <section class="mb-4">
+
     <h1 class="fw-bold mb-2">
-        Catálogo de Coleções
+        Public Collections
     </h1>
 
     <p class="text-muted mb-2">
-        Explore os metadados publicados das coleções científicas
-        disponíveis no Biobank CEPID B3.
+        Explore publication-approved metadata describing scientific
+        Collections available through the B3 LIMS public catalog.
     </p>
 
     <p class="text-muted small mb-0">
-        A publicação de metadados não implica acesso automático
-        ao material biológico, que permanece sujeito à governança
-        e às autorizações aplicáveis.
+        Public metadata availability does not imply automatic access
+        to biological material.
     </p>
+
 </section>
 
-<div class="row">
 
-    <aside class="col-lg-3 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
+<div class="row g-4">
 
-                <h5 class="fw-bold mb-3">
-                    Buscar
-                </h5>
+    <aside class="col-lg-3">
 
-                <form
-                    method="get"
-                    action="{% url 'public_collections' %}"
-                >
-                    <div class="mb-3">
-                        <label
-                            for="publicCollectionSearch"
-                            class="form-label fw-semibold"
-                        >
-                            Catálogo público
-                        </label>
+        <div class="public-surface p-4">
 
-                        <input
-                            id="publicCollectionSearch"
-                            type="search"
-                            name="q"
-                            value="{{ query }}"
-                            class="form-control"
-                            placeholder="Coleção, organismo, tipo ou tag"
-                        >
-                    </div>
+            <h2 class="h6 fw-bold mb-3">
+                Search the catalog
+            </h2>
 
-                    <button
-                        type="submit"
-                        class="btn btn-primary w-100"
+            <form
+                method="get"
+                action="{% url 'public_collections' %}"
+            >
+
+                <div class="mb-3">
+
+                    <label
+                        for="publicCollectionSearch"
+                        class="form-label fw-semibold"
                     >
-                        Buscar
-                    </button>
+                        Public catalog
+                    </label>
 
-                    {% if query %}
-                        <a
-                            href="{% url 'public_collections' %}"
-                            class="btn btn-outline-secondary w-100 mt-2"
-                        >
-                            Limpar busca
-                        </a>
-                    {% endif %}
-                </form>
+                    <input
+                        id="publicCollectionSearch"
+                        type="search"
+                        name="q"
+                        value="{{ query }}"
+                        class="form-control"
+                        placeholder="Collection, organism, Sample type or Tag"
+                    >
 
-            </div>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary w-100"
+                >
+                    Search
+                </button>
+
+                {% if query %}
+                    <a
+                        href="{% url 'public_collections' %}"
+                        class="btn btn-outline-secondary w-100 mt-2"
+                    >
+                        Clear search
+                    </a>
+                {% endif %}
+
+            </form>
+
         </div>
+
     </aside>
+
 
     <section class="col-lg-9">
 
-        <div
-            class="d-flex justify-content-between align-items-center mb-3"
-        >
-            <p class="mb-0 text-muted">
-                {{ collections|length }}
-                coleção(ões) pública(s) encontrada(s)
-            </p>
-        </div>
+        <p class="text-muted mb-3">
+            {{ collections|length }}
+            public Collection{{ collections|length|pluralize }}
+            found
+        </p>
+
 
         {% if collections %}
-            <div class="row g-4">
+
+            <div class="row g-3">
 
                 {% for collection in collections %}
+
                     <div class="col-md-6 col-xl-4">
-                        <div class="card h-100 shadow-sm">
 
-                            <div
-                                class="card-body d-flex flex-column"
-                            >
-                                <div class="mb-2">
-                                    <span class="badge bg-success">
-                                        Pública
-                                    </span>
-                                </div>
+                        <div class="public-surface h-100 p-4 d-flex flex-column">
 
-                                <h5 class="fw-bold mb-2">
-                                    {{ collection.name }}
-                                </h5>
-
-                                <p
-                                    class="text-muted small flex-grow-1"
-                                >
-                                    {{ collection.description|default:"Sem descrição."|truncatechars:130 }}
-                                </p>
-
-                                <ul
-                                    class="list-unstyled small mb-3"
-                                >
-                                    <li>
-                                        <strong>
-                                            Publicada no catálogo:
-                                        </strong>
-                                        {{ collection.created_at|date:"d/m/Y" }}
-                                    </li>
-                                </ul>
-
-                                {% if collection.public_tags %}
-                                    <div class="mb-3">
-                                        {% for tag in collection.public_tags %}
-                                            <span
-                                                class="badge bg-secondary"
-                                            >
-                                                {{ tag.name }}
-                                            </span>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-
-                                <a
-                                    href="{% url 'public_collection_detail' collection.id %}"
-                                    class="btn btn-outline-primary btn-sm mt-auto"
-                                >
-                                    Ver detalhes
-                                </a>
-
+                            <div class="mb-2">
+                                <span class="badge bg-success">
+                                    Public
+                                </span>
                             </div>
+
+                            <h2 class="h5 fw-bold mb-2">
+                                {{ collection.name }}
+                            </h2>
+
+                            <p class="text-muted small flex-grow-1">
+                                {{ collection.description|default:"No public description provided."|truncatechars:130 }}
+                            </p>
+
+                            <p class="small text-muted mb-3">
+                                <strong>
+                                    Published in catalog:
+                                </strong>
+
+                                {{ collection.created_at|date:"M d, Y" }}
+                            </p>
+
+                            {% if collection.public_tags %}
+                                <div class="d-flex flex-wrap gap-1 mb-3">
+
+                                    {% for tag in collection.public_tags %}
+                                        <span class="badge bg-light text-dark border">
+                                            {{ tag.name }}
+                                        </span>
+                                    {% endfor %}
+
+                                </div>
+                            {% endif %}
+
+                            <a
+                                href="{% url 'public_collection_detail' collection.id %}"
+                                class="btn btn-outline-primary btn-sm mt-auto align-self-start"
+                            >
+                                View details
+                            </a>
+
                         </div>
+
                     </div>
+
                 {% endfor %}
 
             </div>
+
         {% else %}
-            <div class="alert alert-light border">
-                Nenhuma coleção pública corresponde à busca informada.
+
+            <div class="public-surface p-4 text-muted">
+                No public Collection matches this search.
             </div>
+
         {% endif %}
 
     </section>

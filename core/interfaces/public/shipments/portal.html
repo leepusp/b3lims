@@ -1,79 +1,119 @@
 {% extends "public/base.html" %}
 
-{% block title %}Remessa de Material Biológico · Biobank CEPID B3{% endblock %}
+{% block title %}Biological Material Shipments | B3 LIMS{% endblock %}
 
 {% block content %}
 
-<section class="mb-5">
-    <div class="py-4">
-        <h1 class="fw-semibold mb-3">
-            Remessa de Material Biológico
-        </h1>
-        <p class="fs-5 text-muted mb-0">
-            Área pública para submissão e acompanhamento de remessas destinadas ao biobanco.
-        </p>
-    </div>
-</section>
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    B3 LIMS public catalog
+</a>
+
 
 <section class="mb-4">
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
-                    <h2 class="h5 fw-semibold mb-3">
-                        Enviar material ao biobanco
-                    </h2>
 
-                    <p class="text-muted">
-                        Preencha a declaração do remetente, a declaração de conteúdo,
-                        os dados da amostra, a classificação de risco, as condições
-                        de embalagem e o transporte.
-                    </p>
+    <h1 class="fw-bold mb-2">
+        Biological Material Shipments
+    </h1>
 
-                    <a href="{% url 'public_shipment_new' %}" class="btn btn-primary">
-                        Iniciar submissão
-                    </a>
-                </div>
-            </div>
-        </div>
+    <p class="text-muted mb-0">
+        Public workflow for submitting and tracking biological
+        material shipments associated with the CEPID B3 repository.
+    </p>
 
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
-                    <h2 class="h5 fw-semibold mb-3">
-                        Acompanhar remessa
-                    </h2>
-
-                    <p class="text-muted">
-                        Informe o token público ou use o QR gerado após a submissão.
-                    </p>
-
-                    {% if error_message %}
-                        <div class="alert alert-warning py-2">
-                            {{ error_message }}
-                        </div>
-                    {% endif %}
-
-                    <form method="get">
-                        <label class="form-label">Token de rastreio</label>
-                        <input type="text"
-                               name="token"
-                               class="form-control mb-3"
-                               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-
-                        <button type="submit" class="btn btn-outline-primary">
-                            Acompanhar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 </section>
 
-<div class="alert alert-secondary">
-    Após a submissão, a equipe do biobanco fará a revisão interna antes do recebimento,
-    controle de qualidade e entrada da amostra.
+
+<div class="row g-4">
+
+    <div class="col-md-6">
+
+        <div class="public-surface h-100 p-4">
+
+            <div class="portal-icon mb-3">
+                <i class="bi bi-box-arrow-in-down"></i>
+            </div>
+
+            <h2 class="h5 fw-bold mb-3">
+                Submit biological material
+            </h2>
+
+            <p class="text-muted">
+                Complete the sender declaration, content information,
+                Sample details, risk classification, packaging and
+                transportation requirements.
+            </p>
+
+            <a
+                href="{% url 'public_shipment_new' %}"
+                class="btn btn-primary"
+            >
+                Start submission
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-6">
+
+        <div class="public-surface h-100 p-4">
+
+            <div class="portal-icon mb-3">
+                <i class="bi bi-search"></i>
+            </div>
+
+            <h2 class="h5 fw-bold mb-3">
+                Track a Shipment
+            </h2>
+
+            <p class="text-muted">
+                Enter the public tracking token or use the QR code
+                generated after submission.
+            </p>
+
+            {% if error_message %}
+                <div class="alert alert-warning py-2">
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+            <form method="get">
+
+                <label class="form-label">
+                    Tracking token
+                </label>
+
+                <input
+                    type="text"
+                    name="token"
+                    class="form-control mb-3"
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                >
+
+                <button
+                    type="submit"
+                    class="btn btn-outline-primary"
+                >
+                    Track Shipment
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="alert alert-secondary mt-4 mb-0">
+    After submission, the repository team performs an internal review
+    before receipt, quality control and final Sample intake.
 </div>
 
 {% endblock %}

@@ -1,6 +1,6 @@
 {% extends "public/base.html" %}
 
-{% block title %}New Shipment · Biobank CEPID B3{% endblock %}
+{% block title %}New Shipment | B3 LIMS{% endblock %}
 
 {% block content %}
 
@@ -84,7 +84,7 @@
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Phone/E-mail do destinatário</label>
+                <label class="form-label">Recipient Phone / E-mail</label>
                 <input type="text" name="recipient_phone_email" class="form-control">
             </div>
         </div>
@@ -117,7 +117,7 @@
                 <label class="form-label">Risk Class</label>
                 <select name="risk_class" class="form-select" required>
                     <option value="CR1">Risk Class 1</option>
-                    <option value="CR2">Risk Class 2 / Categoria B - UN3373</option>
+                    <option value="CR2">Risk Class 2 / Category B - UN3373</option>
                     <option value="CR3">Risk Class 3</option>
                     <option value="CR4">Risk Class 4</option>
                     <option value="unknown">Not provided / requires review</option>
@@ -177,7 +177,7 @@
 
             <div class="col-md-3">
                 <label class="form-label">Quantity / Volume</label>
-                <input type="text" name="quantity_volume" class="form-control" placeholder="Ex.: 1 criotubo, 500 µL">
+                <input type="text" name="quantity_volume" class="form-control" placeholder="E.g.: 1 cryotube, 500 µL">
             </div>
 
             <div class="col-md-3">

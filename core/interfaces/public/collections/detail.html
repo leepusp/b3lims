@@ -1,123 +1,136 @@
 {% extends "public/base.html" %}
 
 {% block title %}
-    {{ collection.name }} | Biobank CEPID B3
+    {{ collection.name }} | B3 LIMS
 {% endblock %}
 
 {% block content %}
-<div class="container my-5">
+
+<a
+    href="{% url 'public_collections' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    Back to Public Collections
+</a>
+
+
+<div class="public-surface p-4 p-md-5">
 
     <div class="mb-4">
-        <div class="mb-2">
-            <span class="badge bg-success">
-                Coleção pública
-            </span>
-        </div>
+
+        <span class="badge bg-success mb-2">
+            Public Collection
+        </span>
 
         <h1 class="fw-bold mb-2">
             {{ collection.name }}
         </h1>
 
         <p class="text-muted mb-0">
-            Metadados selecionados para divulgação no catálogo
-            público do Biobank CEPID B3.
+            Publication-approved Collection metadata available
+            through the B3 LIMS public catalog.
         </p>
+
     </div>
+
 
     {% if collection.description %}
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">
-                    Descrição
-                </h5>
 
-                <p class="card-text text-muted mb-0">
-                    {{ collection.description }}
-                </p>
-            </div>
-        </div>
+        <section class="mb-4">
+
+            <h2 class="h5 fw-bold">
+                Description
+            </h2>
+
+            <p class="text-muted mb-0">
+                {{ collection.description }}
+            </p>
+
+        </section>
+
     {% endif %}
 
-    <div class="row">
 
-        <div class="col-md-6 mb-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        Informações públicas
-                    </h6>
+    <div class="row g-3">
 
-                    <ul class="list-unstyled mb-0">
-                        <li>
-                            <strong>Status:</strong>
-                            Publicada
-                        </li>
+        <div class="col-md-6">
 
-                        <li>
-                            <strong>
-                                Data de inclusão:
-                            </strong>
-                            {{ collection.created_at|date:"d/m/Y" }}
-                        </li>
-                    </ul>
-                </div>
+            <div class="border rounded-3 p-4 h-100">
+
+                <h2 class="h6 fw-bold">
+                    Public information
+                </h2>
+
+                <ul class="list-unstyled mb-0">
+
+                    <li>
+                        <strong>Status:</strong>
+                        Published
+                    </li>
+
+                    <li>
+                        <strong>Catalog date:</strong>
+                        {{ collection.created_at|date:"M d, Y" }}
+                    </li>
+
+                </ul>
+
             </div>
+
         </div>
 
-        <div class="col-md-6 mb-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        Tags públicas
-                    </h6>
 
-                    {% if collection.public_tags %}
-                        <div
-                            class="d-flex flex-wrap gap-2 mt-2"
-                        >
-                            {% for tag in collection.public_tags %}
-                                <span
-                                    class="badge bg-secondary"
-                                >
-                                    {{ tag.name }}
-                                </span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted mb-0">
-                            Nenhuma tag pública associada.
-                        </p>
-                    {% endif %}
-                </div>
+        <div class="col-md-6">
+
+            <div class="border rounded-3 p-4 h-100">
+
+                <h2 class="h6 fw-bold">
+                    Public Tags
+                </h2>
+
+                {% if collection.public_tags %}
+
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+
+                        {% for tag in collection.public_tags %}
+                            <span class="badge bg-light text-dark border">
+                                {{ tag.name }}
+                            </span>
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="text-muted mb-0">
+                        No public Tags are associated with this Collection.
+                    </p>
+
+                {% endif %}
+
             </div>
+
         </div>
 
     </div>
 
-    <div class="card border-0 bg-light mt-3">
-        <div class="card-body">
-            <h6 class="fw-semibold mb-2">
-                Acesso ao material biológico
-            </h6>
 
-            <p class="text-muted small mb-0">
-                A disponibilidade pública destes metadados não
-                representa autorização para acesso ou transferência
-                do material. Solicitações permanecem sujeitas à
-                governança institucional e aos procedimentos
-                aplicáveis.
-            </p>
-        </div>
-    </div>
+    <div class="mt-4 p-4 rounded-3 bg-light">
 
-    <div class="mt-4">
-        <a
-            href="{% url 'public_collections' %}"
-            class="btn btn-outline-secondary"
-        >
-            ← Voltar ao catálogo
-        </a>
+        <h2 class="h6 fw-bold mb-2">
+            Biological material access
+        </h2>
+
+        <p class="small text-muted mb-0">
+            Public availability of these metadata does not authorize
+            access to or transfer of biological material. Material
+            requests remain subject to institutional governance and
+            the applicable authorization procedures.
+        </p>
+
     </div>
 
 </div>
+
 {% endblock %}

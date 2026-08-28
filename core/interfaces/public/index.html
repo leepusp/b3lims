@@ -1,18 +1,29 @@
 {% extends "public/base.html" %}
 
-{% block title %}Biobank CEPID B3 | Public Portal{% endblock %}
+{% block title %}B3 LIMS | Public Catalog{% endblock %}
 
 
 {% block extra_css %}
 <style>
     .portal-welcome {
-        border: 1px solid #e8e4d8;
+        border: 1px solid #d8e6f0;
         border-radius: 1.3rem;
+
         background:
             linear-gradient(
-                180deg,
-                #f8f5e9 0%,
-                #fbfaf5 100%
+                135deg,
+                #f4f9fd 0%,
+                #fbfbf7 52%,
+                #eef6fb 100%
+            );
+
+        box-shadow:
+            0 1rem 3rem
+            rgba(
+                23,
+                79,
+                126,
+                0.055
             );
     }
 
@@ -207,6 +218,52 @@
         background: #f7f9fc;
     }
 
+    .portal-hero-actions {
+        max-width: 1050px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .portal-hero-actions .portal-gateway-card {
+        display: flex;
+        min-height: 58px;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+
+        padding: 0.85rem 1rem;
+
+        border-color: #cbddea;
+        border-radius: 0.75rem;
+
+        color: var(--b3-primary);
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.72
+            );
+
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .portal-hero-actions .portal-icon {
+        width: auto;
+        height: auto;
+
+        margin: 0 !important;
+
+        border-radius: 0;
+
+        color: var(--b3-accent);
+        background: transparent;
+
+        font-size: 1.05rem;
+    }
+
     @media (max-width: 767.98px) {
         .portal-chart {
             height: 300px;
@@ -222,17 +279,17 @@
     <div class="portal-welcome-inner px-4 py-5 px-md-5">
 
         <div class="portal-kicker mb-3">
-            CEPID B3 · Public Biobank Portal
+            CEPID B3 RESEARCH NETWORK
         </div>
 
         <h1 class="portal-title fw-bold mb-3">
-            Welcome to the B3 Biobank public catalog
+            Welcome to the B3 LIMS public catalog
         </h1>
 
         <p class="portal-lead fs-5 text-muted mb-4">
-            Search and explore publication-approved metadata describing
-            biological resources maintained by the CEPID B3 research
-            network.
+            Search and explore publication-approved metadata
+            describing biological resources maintained by the
+            CEPID B3 research network.
         </p>
 
         <form
@@ -247,7 +304,7 @@
                 name="q"
                 class="form-control"
                 placeholder="Search Collections, organisms, Sample types or public Tags"
-                aria-label="Search the public B3 Biobank catalog"
+                aria-label="Search the B3 LIMS public catalog"
             >
 
             <button
@@ -259,127 +316,92 @@
         </form>
 
         <div class="portal-search-hints mt-2">
-            Search by Collection name, organism, Sample type or public Tag.
+            Search by Collection name, organism, Sample type
+            or public Tag.
         </div>
 
-    </div>
-</section>
+
+        <div class="row g-2 portal-hero-actions mt-4">
+
+            <div class="col-6 col-md">
+                <a
+                    href="{% url 'public_collections' %}"
+                    class="portal-gateway-card"
+                >
+                    <span class="portal-icon">
+                        <i class="bi bi-folder2-open"></i>
+                    </span>
+
+                    <span>
+                        Browse Collections
+                    </span>
+                </a>
+            </div>
 
 
-<section class="mb-5">
+            <div class="col-6 col-md">
+                <a
+                    href="{% url 'public_about' %}"
+                    class="portal-gateway-card"
+                >
+                    <span class="portal-icon">
+                        <i class="bi bi-info-circle"></i>
+                    </span>
 
-    <div class="portal-section-label mb-1">
-        Start exploring
-    </div>
+                    <span>
+                        About B3 LIMS
+                    </span>
+                </a>
+            </div>
 
-    <h2 class="h4 fw-bold mb-3">
-        Public Biobank resources
-    </h2>
 
-    <div class="row g-3">
+            <div class="col-6 col-md">
+                <a
+                    href="{% url 'public_governance' %}"
+                    class="portal-gateway-card"
+                >
+                    <span class="portal-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </span>
 
-        <div class="col-md-6 col-xl-3">
-            <a
-                href="{% url 'public_collections' %}"
-                class="portal-gateway-card"
-            >
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-collection"></i>
-                </div>
+                    <span>
+                        Governance
+                    </span>
+                </a>
+            </div>
 
-                <div class="d-flex justify-content-between gap-3">
-                    <div>
-                        <h3 class="h6 fw-bold mb-2">
-                            Browse Collections
-                        </h3>
 
-                        <p class="small text-muted mb-0">
-                            Explore Collections approved for public
-                            discovery.
-                        </p>
-                    </div>
+            <div class="col-6 col-md">
+                <a
+                    href="{% url 'public_shipments_portal' %}"
+                    class="portal-gateway-card"
+                >
+                    <span class="portal-icon">
+                        <i class="bi bi-truck"></i>
+                    </span>
 
-                    <i class="bi bi-arrow-right portal-card-arrow"></i>
-                </div>
-            </a>
-        </div>
+                    <span>
+                        Shipments
+                    </span>
+                </a>
+            </div>
 
-        <div class="col-md-6 col-xl-3">
-            <a
-                href="{% url 'public_about' %}"
-                class="portal-gateway-card"
-            >
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-info-circle"></i>
-                </div>
 
-                <div class="d-flex justify-content-between gap-3">
-                    <div>
-                        <h3 class="h6 fw-bold mb-2">
-                            About the Biobank
-                        </h3>
+            <div class="col-6 col-md">
+                <a
+                    href="{% url 'login' %}"
+                    class="portal-gateway-card"
+                >
+                    <span class="portal-icon">
+                        <i class="bi bi-lock"></i>
+                    </span>
 
-                        <p class="small text-muted mb-0">
-                            Learn how the B3 Biobank supports research
-                            and resource stewardship.
-                        </p>
-                    </div>
+                    <span>
+                        Internal Area
+                    </span>
+                </a>
+            </div>
 
-                    <i class="bi bi-arrow-right portal-card-arrow"></i>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-6 col-xl-3">
-            <a
-                href="{% url 'public_governance' %}"
-                class="portal-gateway-card"
-            >
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-shield-check"></i>
-                </div>
-
-                <div class="d-flex justify-content-between gap-3">
-                    <div>
-                        <h3 class="h6 fw-bold mb-2">
-                            Governance & Access
-                        </h3>
-
-                        <p class="small text-muted mb-0">
-                            Understand public metadata and controlled
-                            biological material access.
-                        </p>
-                    </div>
-
-                    <i class="bi bi-arrow-right portal-card-arrow"></i>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-6 col-xl-3">
-            <a
-                href="{% url 'public_shipments_portal' %}"
-                class="portal-gateway-card"
-            >
-                <div class="portal-icon mb-3">
-                    <i class="bi bi-truck"></i>
-                </div>
-
-                <div class="d-flex justify-content-between gap-3">
-                    <div>
-                        <h3 class="h6 fw-bold mb-2">
-                            Shipment Portal
-                        </h3>
-
-                        <p class="small text-muted mb-0">
-                            Submit and follow biological material
-                            intake workflows.
-                        </p>
-                    </div>
-
-                    <i class="bi bi-arrow-right portal-card-arrow"></i>
-                </div>
-            </a>
         </div>
 
     </div>
@@ -892,7 +914,7 @@
     </div>
 
     <h2 class="h4 fw-bold mb-3">
-        Work with the B3 Biobank
+        Work with B3 LIMS
     </h2>
 
     <div class="row g-3">

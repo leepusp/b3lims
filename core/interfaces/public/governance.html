@@ -1,136 +1,146 @@
 {% extends "public/base.html" %}
 
-{% block title %}Governança e Biossegurança | Biobank CEPID B3{% endblock %}
+{% block title %}Governance, Biosafety and Quality | B3 LIMS{% endblock %}
 
 {% block content %}
 
-<!-- ================= HEADER ================= -->
-<section class="mb-5">
-    <h1 class="fw-bold mb-3">
-        Governança, Biossegurança e Qualidade
-    </h1>
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    B3 LIMS public catalog
+</a>
 
-    <p class="lead text-muted">
-        O Biobank CEPID B3 opera sob uma estrutura de governança
-        técnica e administrativa que assegura a biossegurança,
-        a rastreabilidade, a qualidade do acervo e a conformidade
-        com a legislação vigente.
-    </p>
-</section>
 
-<!-- ================= INFRASTRUCTURE ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Infraestrutura e Criopreservação
-    </h3>
+<div class="public-surface p-4 p-md-5">
 
-    <p class="text-muted">
-        As amostras do Biobank CEPID B3 são preservadas em sistemas
-        de criopreservação a −80 °C, utilizando tubos, caixas e racks
-        criogênicos padronizados. O acervo opera sob um sistema de
-        redundância, com coleções duplicadas armazenadas em
-        equipamentos independentes para mitigação de riscos.
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        A sala de criopreservação é climatizada e equipada com
-        ultrafreezers conectados a gerador de energia dedicado.
-        Adicionalmente, estão previstos sítios secundários de
-        armazenamento externo em instituições parceiras, como
-        medidas adicionais de segurança do acervo.
-    </p>
-</section>
+        <div class="text-uppercase small fw-semibold text-primary mb-2">
+            CEPID B3
+        </div>
 
-<!-- ================= BIOSAFETY ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Biossegurança e Procedimentos Operacionais
-    </h3>
+        <h1 class="fw-bold mb-3">
+            Governance, Biosafety and Quality
+        </h1>
 
-    <p class="text-muted">
-        Todas as atividades do Biobank CEPID B3 seguem Procedimentos
-        Operacionais Padronizados (POPs) atualizados, que abrangem
-        o recebimento, manuseio, armazenamento, processamento,
-        monitoramento e descarte de amostras biológicas.
-    </p>
+        <p class="lead text-muted">
+            B3 LIMS supports the technical and administrative
+            governance framework of the CEPID B3 Biobank, including
+            biosafety, traceability, collection quality and
+            institutional compliance.
+        </p>
 
-    <p class="text-muted">
-        Os procedimentos estão em conformidade com as normas de
-        biossegurança aplicáveis a agentes classificados como
-        Nível de Biossegurança 2 (NB2). As instalações e os
-        equipamentos são periodicamente validados e calibrados,
-        e todo o pessoal envolvido recebe treinamento contínuo
-        em boas práticas de laboratório e biossegurança.
-    </p>
-</section>
+    </section>
 
-<!-- ================= QUALITY CONTROL ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Autenticação, Controle de Qualidade e Rastreabilidade
-    </h3>
 
-    <p class="text-muted">
-        Antes de sua inclusão no biobanco, todo material biológico
-        passa por processos de triagem, autenticação, controle
-        de qualidade e digitalização dos dados associados.
-        Apenas amostras que atendem aos critérios estabelecidos
-        são disponibilizadas para uso.
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        Os procedimentos de controle de qualidade incluem, conforme
-        o módulo do acervo, análises moleculares, testes de viabilidade,
-        avaliação de pureza, caracterização fenotípica e
-        sequenciamento genômico. A rastreabilidade é garantida
-        por meio de identificadores únicos associados a códigos
-        de barras e/ou QR Codes.
-    </p>
-</section>
+        <h2 class="h4 fw-bold mb-3">
+            Infrastructure and Cryopreservation
+        </h2>
 
-<!-- ================= ACCESS POLICY ================= -->
-<section class="mb-5">
-    <h3 class="fw-bold mb-3">
-        Política de Acesso e Utilização
-    </h3>
+        <p class="text-muted">
+            Biological Samples are preserved using standardized
+            cryogenic tubes, boxes and racks in cryopreservation
+            systems operating at −80 °C.
+        </p>
 
-    <p class="text-muted">
-        Em função da natureza do acervo, que inclui microrganismos
-        classificados como NB2, o Biobank CEPID B3 não disponibiliza
-        diretamente suas amostras ao público. O acesso ao acervo
-        é restrito a pesquisadores autorizados.
-    </p>
+        <p class="text-muted mb-0">
+            The repository uses redundancy strategies and independent
+            storage equipment to reduce operational risks. Supporting
+            infrastructure includes environmental control and
+            dedicated emergency power resources.
+        </p>
 
-    <p class="text-muted">
-        A plataforma digital do biobanco permite a visualização
-        controlada das coleções e opera sob uma política de acesso
-        hierarquizada, com diferentes níveis de permissão, incluindo
-        administradores, curadores, coordenadores de grupo e usuários.
-        A transferência de material biológico está condicionada
-        à aprovação da coordenação e à assinatura de Termo de
-        Transferência de Material (TTM).
-    </p>
-</section>
+    </section>
 
-<!-- ================= LEGAL ================= -->
-<section>
-    <h3 class="fw-bold mb-3">
-        Conformidade Legal e Integração Institucional
-    </h3>
 
-    <p class="text-muted">
-        O Biobank CEPID B3 opera em conformidade com a legislação
-        brasileira sobre recursos genéticos, incluindo os
-        requisitos do Sistema Nacional de Gestão do Patrimônio
-        Genético e do Conhecimento Tradicional Associado (SisGen).
-    </p>
+    <section class="mb-5">
 
-    <p class="text-muted">
-        Os registros do acervo são compatíveis com os padrões
-        institucionais da Universidade de São Paulo, permitindo
-        futura integração com a rede BioCEL-USP e com plataformas
-        nacionais e internacionais de gestão de coleções biológicas.
-    </p>
-</section>
+        <h2 class="h4 fw-bold mb-3">
+            Biosafety and Standard Operating Procedures
+        </h2>
+
+        <p class="text-muted">
+            Receiving, handling, storage, processing, monitoring and
+            disposal activities are governed by documented Standard
+            Operating Procedures.
+        </p>
+
+        <p class="text-muted mb-0">
+            Applicable biosafety requirements, equipment validation
+            and personnel training are incorporated into the
+            repository governance process.
+        </p>
+
+    </section>
+
+
+    <section class="mb-5">
+
+        <h2 class="h4 fw-bold mb-3">
+            Authentication, Quality Control and Traceability
+        </h2>
+
+        <p class="text-muted">
+            Biological material may undergo screening,
+            authentication, quality control and associated metadata
+            review before inclusion in managed collections.
+        </p>
+
+        <p class="text-muted mb-0">
+            Traceability is supported through unique identifiers,
+            barcodes and QR-based workflows maintained through
+            B3 LIMS.
+        </p>
+
+    </section>
+
+
+    <section class="mb-5">
+
+        <h2 class="h4 fw-bold mb-3">
+            Access and Use Policy
+        </h2>
+
+        <p class="text-muted">
+            Public metadata access does not represent unrestricted
+            access to biological material.
+        </p>
+
+        <p class="text-muted mb-0">
+            Material access remains subject to institutional
+            authorization, applicable biosafety requirements,
+            governance review and the required material transfer
+            procedures.
+        </p>
+
+    </section>
+
+
+    <section>
+
+        <h2 class="h4 fw-bold mb-3">
+            Legal Compliance and Institutional Integration
+        </h2>
+
+        <p class="text-muted">
+            Repository activities are designed to operate in
+            accordance with applicable Brazilian requirements for
+            genetic resources, including SisGen-related obligations
+            when applicable.
+        </p>
+
+        <p class="text-muted mb-0">
+            B3 LIMS also provides a digital foundation for future
+            integration with institutional and scientific collection
+            management initiatives.
+        </p>
+
+    </section>
+
+</div>
 
 {% endblock %}

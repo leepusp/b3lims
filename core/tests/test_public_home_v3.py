@@ -229,10 +229,12 @@ class PublicHomeV3Tests(
 
         for token in (
             (
-                "Welcome to the B3 "
-                "Biobank public catalog"
+                "Welcome to the "
+                "B3 LIMS public catalog"
             ),
-            "Public Biobank resources",
+            "Browse Collections",
+            "About B3 LIMS",
+            "Internal Area",
             (
                 "Explore and understand "
                 "the catalog"
@@ -263,6 +265,7 @@ class PublicHomeV3Tests(
             "public_about",
             "public_governance",
             "public_shipments_portal",
+            "login",
         ):
             self.assertContains(
                 response,

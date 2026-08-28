@@ -1,82 +1,175 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
 
-    <title>{% block title %}Biobank CEPID B3{% endblock %}</title>
+    <title>{% block title %}B3 LIMS | Public Catalog{% endblock %}</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-    <!-- Bootstrap CSS -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
-    <!-- Bootstrap Icons -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
         rel="stylesheet"
     >
 
-    <!-- Public Base Style -->
     <style>
         :root {
-            --cepid-blue: #0a2f5a;
-            --cepid-blue-light: #1f4e79;
-            --cepid-text: #1f2933;
-            --cepid-muted: #6b7280;
-            --cepid-bg: #ffffff;
-            --cepid-border: #e5e7eb;
+            --b3-primary: #174f7e;
+            --b3-primary-dark: #123b60;
+            --b3-accent: #2675bd;
+
+            --b3-page-bg: #f2f8fc;
+            --b3-page-bg-soft: #f7fbfe;
+            --b3-panel: #ffffff;
+            --b3-panel-warm: #fbfaf6;
+            --b3-soft-blue: #eaf4fb;
+
+            --b3-text: #1f2a37;
+            --b3-muted: #64748b;
+            --b3-border: #d9e6ef;
+
+            /* Compatibility with existing public components. */
+            --cepid-blue: var(--b3-primary);
+            --cepid-blue-light: var(--b3-accent);
+            --cepid-text: var(--b3-text);
+            --cepid-muted: var(--b3-muted);
+            --cepid-bg: var(--b3-page-bg);
+            --cepid-border: var(--b3-border);
+        }
+
+        html {
+            background: var(--b3-page-bg);
         }
 
         body {
-            font-family: "Helvetica Neue", Arial, sans-serif;
-            color: var(--cepid-text);
-            background-color: var(--cepid-bg);
+            min-height: 100vh;
+
+            font-family:
+                "Helvetica Neue",
+                Arial,
+                sans-serif;
+
+            color: var(--b3-text);
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #f3f9fd 0%,
+                    #f8fbfd 48%,
+                    #eef6fb 100%
+                );
+
             line-height: 1.6;
         }
 
-        /* Navbar */
-        .navbar {
-            background-color: var(--cepid-blue);
+        a {
+            color: var(--b3-primary);
         }
 
-        .navbar-brand {
-            font-weight: 600;
-            letter-spacing: 0.3px;
+        .btn-primary {
+            --bs-btn-bg: var(--b3-accent);
+            --bs-btn-border-color: var(--b3-accent);
+
+            --bs-btn-hover-bg: var(--b3-primary);
+            --bs-btn-hover-border-color: var(--b3-primary);
         }
 
-        .navbar .nav-link {
-            color: #ffffff !important;
-            font-weight: 400;
+        .btn-outline-primary {
+            --bs-btn-color: var(--b3-primary);
+            --bs-btn-border-color: #a9c7de;
+
+            --bs-btn-hover-bg: var(--b3-primary);
+            --bs-btn-hover-border-color: var(--b3-primary);
         }
 
-        .navbar .nav-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Main content */
         main {
-            min-height: 60vh;
+            min-height: 70vh;
         }
 
-        /* Footer */
-        footer {
-            background-color: #f9fafb;
-            border-top: 1px solid var(--cepid-border);
-            margin-top: 4rem;
+        .public-surface {
+            border: 1px solid var(--b3-border);
+            border-radius: 1rem;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.92
+                );
+
+            box-shadow:
+                0 0.45rem 1.4rem
+                rgba(
+                    23,
+                    79,
+                    126,
+                    0.045
+                );
         }
 
-        footer p {
+        .public-back-link {
+            display: inline-flex;
+            gap: 0.45rem;
+            align-items: center;
+
+            margin-bottom: 1.5rem;
+
             font-size: 0.9rem;
-            color: var(--cepid-muted);
+            font-weight: 600;
+
+            text-decoration: none;
+        }
+
+        footer {
+            margin-top: 4rem;
+
+            border-top:
+                1px solid
+                var(--b3-border);
+
+            background:
+                rgba(
+                    247,
+                    251,
+                    254,
+                    0.96
+                );
         }
 
         footer .footer-title {
-            font-weight: 600;
-            color: var(--cepid-text);
+            color: var(--b3-primary-dark);
+            font-weight: 700;
+        }
+
+        footer p,
+        footer a {
+            font-size: 0.88rem;
+        }
+
+        .footer-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem 1rem;
+        }
+
+        .footer-nav a {
+            color: var(--b3-muted);
+            text-decoration: none;
+        }
+
+        .footer-nav a:hover {
+            color: var(--b3-primary);
+            text-decoration: underline;
         }
     </style>
 
@@ -85,128 +178,73 @@
 
 <body>
 
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container-lg">
-
-        <!-- LOGO -->
-        <a class="navbar-brand me-4"
-           href="{% url 'public_home' %}">
-            Biobank CEPID B3
-        </a>
-
-        <!-- SEARCH -->
-        <form class="d-none d-lg-flex flex-grow-1 me-4"
-              method="get"
-              action="{% url 'public_collections' %}">
-            <input
-                class="form-control form-control-sm me-2"
-                type="search"
-                name="q"
-                placeholder="Buscar por coleção, organismo, tipo ou tag"
-                aria-label="Buscar no catálogo público"
-            >
-            <button class="btn btn-outline-light btn-sm">
-                Buscar
-            </button>
-        </form>
-
-        <!-- MOBILE TOGGLE -->
-        <button class="navbar-toggler"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- NAV LINKS -->
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav ms-auto align-items-lg-center">
-
-                <!-- MOBILE SEARCH -->
-                <li class="nav-item d-lg-none my-2">
-                    <form method="get" action="{% url 'public_collections' %}">
-                        <input
-                            class="form-control form-control-sm mb-2"
-                            type="search"
-                            name="q"
-                            placeholder="Buscar no catálogo"
-                        >
-                        <button class="btn btn-outline-light btn-sm w-100">
-                            Buscar
-                        </button>
-                    </form>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'public_home' %}">
-                        Início
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'public_collections' %}">
-                        Coleções
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'public_about' %}">
-                        Sobre
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'public_governance' %}">
-                        Governança
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'public_shipments_portal' %}">
-                        Remessas
-                    </a>
-                </li>
-
-                <li class="nav-item ms-lg-3">
-                    <a href="{% url 'login' %}"
-                       class="btn btn-outline-light btn-sm">
-                        Área interna
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-    </div>
-
-</nav>
-
-<!-- CONTENT -->
-<main class="container-lg my-5">
+<main class="container-xl py-5">
     {% block content %}{% endblock %}
 </main>
 
-<!-- FOOTER -->
+
 <footer>
-    <div class="container-lg py-4">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <p class="footer-title mb-1">Biobank CEPID B3</p>
-                <p class="mb-0">
-                    Repositório científico de bactérias, bacteriófagos
-                    e vetores moleculares do consórcio CEPID B3.
+    <div class="container-xl py-4">
+
+        <div class="row g-4 align-items-end">
+
+            <div class="col-lg-7">
+
+                <p class="footer-title mb-1">
+                    B3 LIMS
                 </p>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <p class="mb-0">
-                    © {{ now|date:"Y" }} CEPID B3
+
+                <p class="text-muted mb-3">
+                    Laboratory information management and public
+                    catalog environment supporting the CEPID B3
+                    research network.
                 </p>
+
+                <nav
+                    class="footer-nav"
+                    aria-label="Public portal links"
+                >
+                    <a href="{% url 'public_home' %}">
+                        Public Catalog
+                    </a>
+
+                    <a href="{% url 'public_collections' %}">
+                        Collections
+                    </a>
+
+                    <a href="{% url 'public_about' %}">
+                        About B3 LIMS
+                    </a>
+
+                    <a href="{% url 'public_governance' %}">
+                        Governance
+                    </a>
+
+                    <a href="{% url 'public_shipments_portal' %}">
+                        Shipments
+                    </a>
+
+                    <a href="{% url 'login' %}">
+                        Internal Area
+                    </a>
+                </nav>
+
             </div>
+
+            <div class="col-lg-5 text-lg-end">
+
+                <p class="text-muted mb-0">
+                    © {% now "Y" %} CEPID B3
+                </p>
+
+            </div>
+
         </div>
+
     </div>
 </footer>
 
-<!-- Bootstrap JS -->
+
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js">
 </script>
@@ -215,4 +253,3 @@
 
 </body>
 </html>
-
