@@ -2387,6 +2387,48 @@ def _sync_sample_edit_relationships(base_sample, request, user):
                 },
             )
 
+SAMPLE_EDIT_NON_BIOLOGICAL_FIELD_NAMES = frozenset(
+    {
+        "sample_id",
+        "sample_type",
+        "biosafety_level",
+        "organism_name",
+        "status",
+        "aliquot_count",
+        "is_public",
+        "is_embargoed",
+        "owner",
+        "research_group",
+        "storage_location",
+        "biobank",
+        "collections",
+        "scientific_notes",
+        "notes",
+        "collaborator",
+    }
+)
+
+
+def _sample_edit_biological_fields(
+    form,
+):
+    """
+    Return subtype-specific fields for the Biological Properties
+    section of Edit Sample.
+
+    Base Sample, governance, inventory, storage and ELN fields are
+    rendered explicitly in dedicated sections of the page.
+    """
+    return tuple(
+        form[
+            field_name
+        ]
+        for field_name in form.fields
+        if field_name
+        not in SAMPLE_EDIT_NON_BIOLOGICAL_FIELD_NAMES
+    )
+
+
 @login_required
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
@@ -2719,6 +2761,9 @@ def sample_edit_view(request, sample_id):
     ctx = base_context(request)
     ctx.update({
         'form': form,
+        'biological_fields': _sample_edit_biological_fields(
+            form
+        ),
         'sample': real_sample,
         'parents': parents,
         'children': children,

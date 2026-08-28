@@ -9,43 +9,116 @@
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
-    .relation-row-item { transition: all 0.2s ease-in-out; }
-    .relation-row-item:hover { background-color: #f1f8f5 !important; }
+    .relation-row-item {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .relation-row-item:hover {
+        background-color: #f1f8f5 !important;
+    }
+
+    .sample-edit-readonly-value {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background: #f8f9fa;
+    }
+
+    .sample-edit-section-description {
+        max-width: 760px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5" style="max-width: 900px;">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div
+    class="container-fluid py-4 sample-page"
+    data-sample-edit-layout="v1"
+>
+    <div
+        class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"
+    >
         <div>
-            <h2 class="h3 fw-bold mb-1"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Sample</h2>
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-secondary">{{ sample.sample_id }}</span>
+            <div class="text-muted small mb-1">
+                Sample
+            </div>
+
+            <h1 class="h4 fw-bold mb-1">
+                Edit {{ sample.sample_id }}
+            </h1>
+
+            <p class="text-muted mb-2">
+                Update Sample metadata, provenance, relationships,
+                classification and attached files.
+            </p>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-secondary">
+                    {{ sample.sample_id }}
+                </span>
+
                 {% if form.instance.sample_type %}
-                    <span class="badge bg-info text-dark"><i class="bi bi-tag me-1"></i>{{ form.instance.sample_type }}</span>
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                        {{ form.instance.sample_type }}
+                    </span>
                 {% endif %}
-                <span class="text-muted small fw-bold ms-2">{{ sample.organism_name }}</span>
+
+                <span class="badge bg-light text-dark border">
+                    {{ sample.get_status_display }}
+                </span>
             </div>
         </div>
-        <div class="d-flex gap-2">
-            <form method="post" action="{% url 'notebook_create_from_sample' sample.id %}" class="d-inline">
+
+        <div class="d-flex flex-wrap gap-2">
+            <form
+                method="post"
+                action="{% url 'notebook_create_from_sample' sample.id %}"
+                class="d-inline"
+            >
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-journal-plus me-2"></i>New ELN entry
+
+                <button
+                    type="submit"
+                    class="btn btn-outline-success"
+                >
+                    <i class="bi bi-journal-plus me-1"></i>
+                    New ELN Entry
                 </button>
             </form>
-            <a href="{% url 'samples_list' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back
+
+            <a
+                href="{% url 'sample_detail' sample.id %}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-eye me-1"></i>
+                View Sample
+            </a>
+
+            <a
+                href="{% url 'samples_list' %}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-arrow-left me-1"></i>
+                Samples
             </a>
         </div>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" id="mainSampleForm">
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+        id="mainSampleForm"
+        class="sample-form"
+        novalidate
+    >
         {% csrf_token %}
 
         {% if form.non_field_errors %}
             <div
-                class="alert alert-danger py-2 mb-4"
+                class="alert alert-danger mb-4"
                 data-sample-edit-non-field-errors
             >
                 {% for error in form.non_field_errors %}
@@ -57,412 +130,956 @@
             </div>
         {% endif %}
 
-        <input type="hidden" name="scientific_notes" id="scientific_notes_input" value="{{ sample.scientific_notes|default:'' }}">
+        {% if origin_form.non_field_errors %}
+            <div class="alert alert-danger mb-4">
+                {{ origin_form.non_field_errors }}
+            </div>
+        {% endif %}
 
-        <input type="hidden" id="init_hosts" value="{{ current_host_id|default:'' }}">
-        <input type="hidden" id="init_plasmids" value="{{ current_plasmids_string|default:'' }}">
-        <input type="hidden" id="init_phages" value="{{ current_phages_string|default:'' }}">
+        <input
+            type="hidden"
+            name="scientific_notes"
+            id="scientific_notes_input"
+            value="{{ sample.scientific_notes|default:'' }}"
+        >
+
+        <input
+            type="hidden"
+            id="init_hosts"
+            value="{{ current_host_id|default:'' }}"
+        >
+
+        <input
+            type="hidden"
+            id="init_plasmids"
+            value="{{ current_plasmids_string|default:'' }}"
+        >
+
+        <input
+            type="hidden"
+            id="init_phages"
+            value="{{ current_phages_string|default:'' }}"
+        >
 
         <datalist id="allSamplesListForJS">
             {% for s in all_samples %}
-                <option value="{{ s.sample_id }}">{{ s.organism_name|default:"No Organism" }} ({{ s.sample_type|default:"Generic" }})</option>
+                <option value="{{ s.sample_id }}">
+                    {{ s.organism_name|default:"No Organism" }}
+                    ({{ s.sample_type|default:"Generic" }})
+                </option>
             {% endfor %}
         </datalist>
 
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-xl-8">
 
-                <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">1. General Data & Governance</h5>
-                <div class="row g-3">
-
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_id.label }}</label>
-                        {{ form.sample_id }}
+                <!-- ================================================== -->
+                <!-- Identity & workflow                               -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="identity"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-fingerprint me-2 text-primary"></i>
+                        Identity & Workflow
                     </div>
 
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.sample_type.label }}</label>
-                        {{ form.sample_type }}
-                        <div class="form-text small text-warning">The biological type cannot be changed.</div>
-                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small sample-edit-section-description">
+                            Stable Sample identity and current workflow state.
+                            Identity and status are not changed by standard
+                            metadata editing.
+                        </p>
 
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.status.label }}</label>
-                        {{ form.status }}
-                    </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label
+                                    for="{{ form.sample_id.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ form.sample_id.label }}
+                                </label>
 
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
-                            {{ form.biosafety_level.label }}
-                        </label>
-                        {{ form.biosafety_level }}
-                        {% if form.biosafety_level.errors %}
-                            <div class="text-danger small mt-1">{{ form.biosafety_level.errors }}</div>
-                        {% endif %}
-                    </div>
+                                {{ form.sample_id }}
 
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
-                            {{ form.aliquot_count.label }}
-                        </label>
-                        {{ form.aliquot_count }}
-                        <div class="form-text small">
-                            Editable physical aliquot quantity for this Sample record.
-                        </div>
-                        {% if form.aliquot_count.errors %}
-                            <div class="text-danger small mt-1">{{ form.aliquot_count.errors }}</div>
-                        {% endif %}
-                    </div>
+                                {% for error in form.sample_id.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
 
-                    <div class="col-md-12 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Physical Location</label>
-                        <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
-                            <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ sample.storage_location|default:'' }}">
-                            <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level & Enter...">
-                        </div>
-                        <div class="form-text small" style="font-size: 0.70rem;">(Ex: Freezer 1 ↵ Box A ↵)</div>
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
-                            {{ form.owner.label }}
-                        </label>
-                        {{ form.owner }}
-                        {% if form.owner.errors %}
-                            <div class="text-danger small mt-1">{{ form.owner.errors }}</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
-                            {{ form.research_group.label }}
-                        </label>
-                        {{ form.research_group }}
-                        <div class="form-text small">
-                            Independent from the Biobank and Collections.
-                        </div>
-                        {% if form.research_group.errors %}
-                            <div class="text-danger small mt-1">{{ form.research_group.errors }}</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.biobank.label }}</label>
-                        {{ form.biobank }}
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label fw-bold text-muted small text-uppercase">{{ form.collections.label }}</label>
-                        {{ form.collections }}
-                    </div>
-
-                    <div class="col-12 mt-3 mb-2">
-                        <div class="form-check form-switch bg-light p-3 rounded border">
-                            {{ form.is_public }}
-                            <label class="form-check-label fw-bold ms-2" for="{{ form.is_public.id_for_label }}">
-                                {{ form.is_public.label }}
-                            </label>
-                            <div class="form-text ms-4 ps-2">Check to allow external researchers to view metadata.</div>
-                        </div>
-                    </div>
-
-                    <div class="col-12 mb-2">
-                        <div class="form-check form-switch bg-warning-subtle p-3 rounded border border-warning">
-                            {{ form.is_embargoed }}
-                            <label class="form-check-label fw-bold ms-2" for="{{ form.is_embargoed.id_for_label }}">
-                                Sample Embargo
-                            </label>
-                            <div class="form-text ms-4 ps-2">
-                                Embargo overrides Public Availability for external access.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-5 p-4 bg-light border rounded">
-                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">
-                        <i class="bi bi-tags me-2 text-primary"></i>
-                        Metadata & Classification
-                    </h5>
-
-                    <div class="row g-4">
-
-                        <div class="col-12">
-                            <label class="form-label fw-bold small">
-                                {{ form.notes.label }}
-                            </label>
-
-                            {{ form.notes }}
-
-                            <div class="form-text">
-                                Internal operational notes are separate
-                                from Scientific Notes (ELN).
+                                {% if form.sample_id.help_text %}
+                                    <div class="form-text">
+                                        {{ form.sample_id.help_text }}
+                                    </div>
+                                {% endif %}
                             </div>
 
-                            {% if form.notes.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.notes.errors }}
+                            <div class="col-md-6">
+                                <label
+                                    for="{{ form.sample_type.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ form.sample_type.label }}
+                                </label>
+
+                                {{ form.sample_type }}
+
+                                {% for error in form.sample_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+
+                                {% if form.sample_type.help_text %}
+                                    <div class="form-text">
+                                        {{ form.sample_type.help_text }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Canonical Identity
+                                </label>
+
+                                <div class="sample-edit-readonly-value">
+                                    {% if sample.organism_name %}
+                                        {{ sample.organism_name }}
+                                    {% else %}
+                                        <span class="text-muted">
+                                            Not defined
+                                        </span>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+
+                                <div class="form-text">
+                                    Derived from the Sample's biological
+                                    metadata when applicable.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Status
+                                </label>
+
+                                <div class="sample-edit-readonly-value">
+                                    <span class="badge bg-light text-dark border">
+                                        {{ sample.get_status_display }}
+                                    </span>
+                                </div>
+
+                                <div class="form-text">
+                                    Workflow-managed. Standard metadata editing
+                                    preserves this value.
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </section>
 
-                        <div class="col-md-6">
-                            <label
-                                for="sampleTags"
-                                class="form-label fw-bold small"
-                            >
-                                Tags
-                            </label>
 
-                            <select
-                                id="sampleTags"
-                                name="tags"
-                                class="form-select"
-                                multiple
-                                size="7"
-                            >
-                                {% for tag in all_tags %}
-                                    <option
-                                        value="{{ tag.pk }}"
-                                        {% if tag.pk in selected_tag_ids %}selected{% endif %}
+                <!-- ================================================== -->
+                <!-- Inventory & biosafety                              -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="inventory"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>
+                        Inventory & Biosafety
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label
+                                    for="{{ form.biosafety_level.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ form.biosafety_level.label }}
+                                </label>
+
+                                {{ form.biosafety_level }}
+
+                                {% for error in form.biosafety_level.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label
+                                    for="{{ form.aliquot_count.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ form.aliquot_count.label }}
+                                </label>
+
+                                {{ form.aliquot_count }}
+
+                                <div class="form-text">
+                                    Physical aliquot quantity represented by
+                                    this Sample record.
+                                </div>
+
+                                {% for error in form.aliquot_count.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="col-12">
+                                <label
+                                    for="storageInputVisual"
+                                    class="form-label fw-semibold"
+                                >
+                                    Physical Storage Location
+                                </label>
+
+                                <div
+                                    id="dynamicStorageContainer"
+                                    class="form-control d-flex flex-wrap align-items-center gap-1 bg-light"
+                                    style="min-height: 42px; cursor: text;"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="storage_location"
+                                        id="storage_location_hidden"
+                                        value="{{ sample.storage_location|default:'' }}"
                                     >
-                                        {{ tag.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
 
-                            <div class="form-text">
-                                Select zero or more active Tags.
-                                Clearing all selections removes all Tags.
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label
-                                for="keywordPairsText"
-                                class="form-label fw-bold small"
-                            >
-                                Custom Keywords
-                            </label>
-
-                            <textarea
-                                id="keywordPairsText"
-                                name="keyword_pairs_text"
-                                class="form-control"
-                                rows="7"
-                                placeholder="Target Gene: eGFP&#10;Expression System: T7"
-                            >{{ keyword_pairs_text }}</textarea>
-
-                            <div class="form-text">
-                                One Key: Value pair per line.
-                                Emptying this field removes all
-                                custom Keywords.
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div id="biologicalRelationshipsSection" class="mt-5 p-4 bg-success-subtle border border-success rounded d-none">
-                    <h5 class="text-uppercase text-success fw-bold small mb-3 border-bottom border-success pb-2">
-                        <i class="bi bi-diagram-3 me-2"></i>Biological Interactions & Storage
-                    </h5>
-                    <div class="row g-4">
-
-                        <div id="hostBacteriumDiv" class="col-md-12 d-none">
-                            <label class="small fw-bold text-dark mb-2">Host Bacterium</label>
-                            <div id="hostBacteriumContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('hostBacteriumContainer', 'host_bacterium[]', 'Specific notes (e.g. EOP, Infection rate...)', '')">
-                                <i class="bi bi-plus-lg"></i> Add Host Bacterium
-                            </button>
-                            <div class="form-text small mt-1 text-muted" id="hostBacteriumHelp"></div>
-                        </div>
-
-                        <div id="storedPlasmidsDiv" class="col-md-12 d-none">
-                            <label class="small fw-bold text-dark mb-2">Stored Plasmids</label>
-                            <div id="storedPlasmidsContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('storedPlasmidsContainer', 'stored_plasmids[]', 'Specific notes (e.g. Copy number, Stability...)', '')">
-                                <i class="bi bi-plus-lg"></i> Add Plasmid
-                            </button>
-                        </div>
-
-                        <div id="infectingPhagesDiv" class="col-md-12 d-none">
-                            <label class="small fw-bold text-dark mb-2">Infecting Phages (Host-Range)</label>
-                            <div id="infectingPhagesContainer" class="d-flex flex-column gap-2 mb-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-success border-dashed w-100" onclick="addRelationRowWithData('infectingPhagesContainer', 'infecting_phages[]', 'Specific notes (e.g. EOP, Plaque morphology...)', '')">
-                                <i class="bi bi-plus-lg"></i> Add Phage
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {% comment %} Dynamic Biological Fields (from Form) {% endcomment %}
-                {% for field in form %}
-                    {% if field.name not in "sample_id,sample_type,biosafety_level,organism_name,status,aliquot_count,is_public,is_embargoed,owner,research_group,storage_location,biobank,collections,scientific_notes,notes,collaborator" %}
-                        {% if forloop.first or forloop.counter0 == 0 %}
-                            <div class="mt-5 p-4 bg-primary-subtle border border-primary rounded">
-                                <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
-                                    <i class="bi bi-magic me-2"></i>Biological Properties
-                                </h5>
-                                <div class="row g-3">
-                        {% endif %}
-
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label fw-bold text-primary-emphasis small">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
-                            {% if field.help_text %}<div class="form-text small">{{ field.help_text }}</div>{% endif %}
-                        </div>
-
-                        {% if forloop.last %} </div> </div> {% endif %}
-                    {% endif %}
-                {% endfor %}
-
-                <div class="mt-5 mb-4">
-                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">
-                        <i class="bi bi-diagram-2 me-2 text-warning"></i>Biological Traceability (Network)
-                    </h5>
-
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <div class="card border-0 bg-light shadow-sm h-100 border-start border-3 border-warning">
-                                <div class="card-header bg-white border-bottom fw-bold text-secondary py-3">
-                                    <i class="bi bi-arrow-up-right me-2 text-warning"></i>Source (Derived from...)
+                                    <input
+                                        type="text"
+                                        id="storageInputVisual"
+                                        class="border-0 p-0 m-0 bg-transparent"
+                                        style="outline: none; flex-grow: 1; min-width: 150px;"
+                                        placeholder="Add level and press Enter..."
+                                    >
                                 </div>
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush">
-                                        {% for rel in parents %}
-                                            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center p-3">
-                                                <div>
-                                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle mb-1">{{ rel.get_relationship_type_display }}</span><br>
-                                                    <a href="{% url 'sample_edit' rel.source_sample.id %}" class="fw-bold text-decoration-none">{{ rel.source_sample.sample_id }}</a>
-                                                    <small class="d-block text-muted">{{ rel.source_sample.sample_type|default:"Generic" }}</small>
-                                                </div>
-                                            </li>
-                                        {% empty %}
-                                            <li class="list-group-item bg-transparent text-muted small p-3 text-center">No origin registered. (Primary Sample)</li>
-                                        {% endfor %}
-                                    </ul>
+
+                                <div class="form-text">
+                                    Example: Freezer 1 → Box A.
                                 </div>
-                            </div>
-                        </div>
 
-                        <div class="col-md-6">
-                            <div class="card border-0 bg-light shadow-sm h-100 border-start border-3 border-secondary">
-                                <div class="card-header bg-white border-bottom fw-bold text-secondary py-3">
-                                    <i class="bi bi-arrow-return-right me-2 text-secondary"></i>Target (Generated / Aliquots...)
-                                </div>
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush">
-                                        {% for rel in children %}
-                                            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center p-3">
-                                                <div>
-                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mb-1">{{ rel.get_relationship_type_display }}</span><br>
-                                                    <a href="{% url 'sample_edit' rel.target_sample.id %}" class="fw-bold text-decoration-none">{{ rel.target_sample.sample_id }}</a>
-                                                </div>
-                                            </li>
-                                        {% empty %}
-                                            <li class="list-group-item bg-transparent text-muted small p-3 text-center">No generated samples derived from this.</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-5 mb-4">
-                    <h5 class="text-uppercase text-primary fw-bold small mb-3 border-bottom border-primary pb-2">
-                        <i class="bi bi-geo-alt me-2"></i>
-                        Sample Origin & Collection Site
-                    </h5>
-
-                    <p class="text-muted small">
-                        Geographic and environmental provenance is independent
-                        from the Sample's current Physical Storage.
-                    </p>
-
-                    {% include "internal/samples/_origin_fields.html" %}
-
-                    <h5 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Scientific Notes (ELN)</h5>
-                    <div id="eln-editor" class="bg-white" style="height: 250px;">{{ sample.scientific_notes|safe }}</div>
-                </div>
-
-                <div class="mt-5">
-                    <h5 id="sample-files" class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Files and Attachments</h5>
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-muted small text-uppercase">Saved Files</label>
-                            {% if sample_files %}
-                            <ul class="list-group list-group-flush border rounded shadow-sm">
-                                {% for anexo in sample_files %}
-                                <li class="list-group-item bg-light">
-                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                        <div>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                                                <i class="bi bi-file-earmark-text me-1"></i>{{ anexo.category }}
-                                            </span>
-                                            {% if anexo.file_size %}
-                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">{{ anexo.file_size }} bytes</span>
-                                            {% endif %}
-                                        </div>
-                                        <a href="{% url 'sample_file_download' anexo.pk %}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            Open
-                                        </a>
+                                {% for error in form.storage_location.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
                                     </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-                                    <div class="small fw-bold text-break">{{ anexo.filename }}</div>
 
-                                    {% if anexo.description %}
-                                        <div class="small text-muted mt-1">{{ anexo.description }}</div>
-                                    {% endif %}
+                <!-- ================================================== -->
+                <!-- Biological subtype metadata                        -->
+                <!-- ================================================== -->
+                {% if biological_fields %}
+                    <section
+                        class="card shadow-sm border-0 mb-4"
+                        data-sample-edit-section="biological-properties"
+                    >
+                        <div class="card-header bg-white fw-bold">
+                            <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                            Biological Properties
+                        </div>
 
-                                    {% if anexo.mime_type %}
-                                        <div class="small text-muted mt-1">MIME: {{ anexo.mime_type }}</div>
-                                    {% endif %}
+                        <div class="card-body p-4">
+                            <p class="text-muted small sample-edit-section-description">
+                                Type-specific metadata for
+                                {{ form.instance.sample_type|default:"this Sample" }}.
+                            </p>
 
-                                    <div class="form-check mt-2">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            name="remove_file_ids"
-                                            value="{{ anexo.id }}"
-                                            id="remove-file-{{ anexo.id }}"
+                            <div class="row g-3">
+                                {% for field in biological_fields %}
+                                    <div class="col-md-6">
+                                        <label
+                                            for="{{ field.id_for_label }}"
+                                            class="form-label fw-semibold"
                                         >
-                                        <label class="form-check-label small text-danger" for="remove-file-{{ anexo.id }}">
-                                            Remove this file link when saving
+                                            {{ field.label }}
                                         </label>
-                                    </div>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            <div class="form-text small text-muted mt-2">
-                                Removing a link does not delete the physical file from storage.
-                            </div>
-                            {% else %}
-                                <div class="p-3 bg-light rounded text-center border text-muted small">No files attached.</div>
-                            {% endif %}
-                        </div>
 
-                        <div class="col-md-6">
-                            <div class="p-3 border rounded bg-light h-100">
-                                <label class="form-label fw-bold text-muted small text-uppercase mb-3"><i class="bi bi-cloud-arrow-up me-1"></i> Upload New Files</label>
-                                <div id="fileContainer" class="d-flex flex-column gap-3 mb-3 mt-2"></div>
-                                <button type="button" id="addFileBtn" class="btn btn-sm w-100 btn-outline-secondary bg-white border-dashed shadow-sm">
-                                    <i class="bi bi-plus me-1"></i>Add File
+                                        {{ field }}
+
+                                        {% for error in field.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ error }}
+                                            </div>
+                                        {% endfor %}
+
+                                        {% if field.help_text %}
+                                            <div class="form-text">
+                                                {{ field.help_text }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+
+                <!-- ================================================== -->
+                <!-- Biological relationships                           -->
+                <!-- ================================================== -->
+                <section
+                    id="biologicalRelationshipsSection"
+                    class="card shadow-sm border-0 mb-4 d-none"
+                    data-sample-edit-section="relationships"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-bezier2 me-2 text-success"></i>
+                        Biological Interactions & Storage
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small sample-edit-section-description">
+                            Link this Sample to visible biological interaction
+                            or storage partners.
+                        </p>
+
+                        <div class="row g-4">
+                            <div
+                                id="hostBacteriumDiv"
+                                class="col-12 d-none"
+                            >
+                                <label class="form-label fw-semibold">
+                                    Host Bacterium
+                                </label>
+
+                                <div
+                                    id="hostBacteriumContainer"
+                                    class="d-flex flex-column gap-2 mb-2"
+                                ></div>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-success border-dashed w-100"
+                                    onclick="addRelationRowWithData('hostBacteriumContainer', 'host_bacterium[]', 'Specific notes (e.g. EOP, Infection rate...)', '')"
+                                >
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    Add Host Bacterium
+                                </button>
+
+                                <div
+                                    class="form-text mt-1"
+                                    id="hostBacteriumHelp"
+                                ></div>
+                            </div>
+
+                            <div
+                                id="storedPlasmidsDiv"
+                                class="col-12 d-none"
+                            >
+                                <label class="form-label fw-semibold">
+                                    Stored Plasmids
+                                </label>
+
+                                <div
+                                    id="storedPlasmidsContainer"
+                                    class="d-flex flex-column gap-2 mb-2"
+                                ></div>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-success border-dashed w-100"
+                                    onclick="addRelationRowWithData('storedPlasmidsContainer', 'stored_plasmids[]', 'Specific notes (e.g. Copy number, Stability...)', '')"
+                                >
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    Add Plasmid
+                                </button>
+                            </div>
+
+                            <div
+                                id="infectingPhagesDiv"
+                                class="col-12 d-none"
+                            >
+                                <label class="form-label fw-semibold">
+                                    Infecting Phages (Host Range)
+                                </label>
+
+                                <div
+                                    id="infectingPhagesContainer"
+                                    class="d-flex flex-column gap-2 mb-2"
+                                ></div>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-success border-dashed w-100"
+                                    onclick="addRelationRowWithData('infectingPhagesContainer', 'infecting_phages[]', 'Specific notes (e.g. EOP, Plaque morphology...)', '')"
+                                >
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    Add Phage
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
+
+                <!-- ================================================== -->
+                <!-- Traceability                                       -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="traceability"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-diagram-2 me-2 text-warning"></i>
+                        Biological Traceability
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small">
+                            Existing provenance relationships are shown here
+                            for context. Dedicated relationship controls above
+                            handle supported interaction links.
+                        </p>
+
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="border rounded h-100">
+                                    <div class="border-bottom p-3 fw-semibold">
+                                        <i class="bi bi-arrow-up-right me-1 text-warning"></i>
+                                        Source
+                                    </div>
+
+                                    <ul class="list-group list-group-flush">
+                                        {% for rel in parents %}
+                                            <li class="list-group-item p-3">
+                                                <span class="badge bg-warning-subtle text-dark border mb-1">
+                                                    {{ rel.get_relationship_type_display }}
+                                                </span>
+
+                                                <div>
+                                                    <a
+                                                        href="{% url 'sample_edit' rel.source_sample.id %}"
+                                                        class="fw-semibold text-decoration-none"
+                                                    >
+                                                        {{ rel.source_sample.sample_id }}
+                                                    </a>
+                                                </div>
+
+                                                <small class="text-muted">
+                                                    {{ rel.source_sample.sample_type|default:"Generic" }}
+                                                </small>
+                                            </li>
+                                        {% empty %}
+                                            <li class="list-group-item text-muted small p-3">
+                                                No source relationship registered.
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="border rounded h-100">
+                                    <div class="border-bottom p-3 fw-semibold">
+                                        <i class="bi bi-arrow-return-right me-1 text-secondary"></i>
+                                        Derived / Target
+                                    </div>
+
+                                    <ul class="list-group list-group-flush">
+                                        {% for rel in children %}
+                                            <li class="list-group-item p-3">
+                                                <span class="badge bg-secondary-subtle text-secondary border mb-1">
+                                                    {{ rel.get_relationship_type_display }}
+                                                </span>
+
+                                                <div>
+                                                    <a
+                                                        href="{% url 'sample_edit' rel.target_sample.id %}"
+                                                        class="fw-semibold text-decoration-none"
+                                                    >
+                                                        {{ rel.target_sample.sample_id }}
+                                                    </a>
+                                                </div>
+                                            </li>
+                                        {% empty %}
+                                            <li class="list-group-item text-muted small p-3">
+                                                No derived Sample relationship registered.
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ================================================== -->
+                <!-- Origin & provenance                                -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="origin"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-geo-alt me-2 text-primary"></i>
+                        Origin & Provenance
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small sample-edit-section-description">
+                            Geographic and environmental provenance is
+                            independent from the Sample's current physical
+                            storage location.
+                        </p>
+
+                        {% include "internal/samples/_origin_fields.html" %}
+                    </div>
+                </section>
+
+
+                <!-- ================================================== -->
+                <!-- Metadata & classification                          -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="metadata"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-tags me-2 text-primary"></i>
+                        Metadata & Classification
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <label
+                                    for="{{ form.notes.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ form.notes.label }}
+                                </label>
+
+                                {{ form.notes }}
+
+                                <div class="form-text">
+                                    Internal operational notes are separate
+                                    from Scientific Notes (ELN).
+                                </div>
+
+                                {% for error in form.notes.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label
+                                    for="sampleTags"
+                                    class="form-label fw-semibold"
+                                >
+                                    Tags
+                                </label>
+
+                                <select
+                                    id="sampleTags"
+                                    name="tags"
+                                    class="form-select"
+                                    multiple
+                                    size="7"
+                                >
+                                    {% for tag in all_tags %}
+                                        <option
+                                            value="{{ tag.pk }}"
+                                            {% if tag.pk in selected_tag_ids %}selected{% endif %}
+                                        >
+                                            {{ tag.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+
+                                <div class="form-text">
+                                    Select zero or more active Tags.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label
+                                    for="keywordPairsText"
+                                    class="form-label fw-semibold"
+                                >
+                                    Custom Keywords
+                                </label>
+
+                                <textarea
+                                    id="keywordPairsText"
+                                    name="keyword_pairs_text"
+                                    class="form-control"
+                                    rows="7"
+                                    placeholder="Target Gene: eGFP&#10;Expression System: T7"
+                                >{{ keyword_pairs_text }}</textarea>
+
+                                <div class="form-text">
+                                    One Key: Value pair per line.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ================================================== -->
+                <!-- Scientific Notes                                   -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="scientific-notes"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-journal-text me-2 text-primary"></i>
+                        Scientific Notes (ELN)
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small">
+                            Rich scientific notes associated with this Sample.
+                        </p>
+
+                        <div
+                            id="eln-editor"
+                            class="bg-white"
+                            style="height: 250px;"
+                        >{{ sample.scientific_notes|safe }}</div>
+                    </div>
+                </section>
+
+
+                <!-- ================================================== -->
+                <!-- Files                                              -->
+                <!-- ================================================== -->
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="files"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-paperclip me-2 text-primary"></i>
+                        Files & Attachments
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Saved Files
+                                </label>
+
+                                {% if sample_files %}
+                                    <ul class="list-group border rounded">
+                                        {% for anexo in sample_files %}
+                                            <li class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                                    <div>
+                                                        <span class="badge bg-primary-subtle text-primary border">
+                                                            <i class="bi bi-file-earmark-text me-1"></i>
+                                                            {{ anexo.category }}
+                                                        </span>
+
+                                                        {% if anexo.file_size %}
+                                                            <span class="badge bg-secondary-subtle text-secondary border ms-1">
+                                                                {{ anexo.file_size }} bytes
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <a
+                                                        href="{% url 'sample_file_download' anexo.pk %}"
+                                                        target="_blank"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                    >
+                                                        Open
+                                                    </a>
+                                                </div>
+
+                                                <div class="small fw-semibold text-break">
+                                                    {{ anexo.filename }}
+                                                </div>
+
+                                                {% if anexo.description %}
+                                                    <div class="small text-muted mt-1">
+                                                        {{ anexo.description }}
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if anexo.mime_type %}
+                                                    <div class="small text-muted mt-1">
+                                                        MIME: {{ anexo.mime_type }}
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="form-check mt-2">
+                                                    <input
+                                                        class="form-check-input"
+                                                        type="checkbox"
+                                                        name="remove_file_ids"
+                                                        value="{{ anexo.id }}"
+                                                        id="remove-file-{{ anexo.id }}"
+                                                    >
+
+                                                    <label
+                                                        class="form-check-label small text-danger"
+                                                        for="remove-file-{{ anexo.id }}"
+                                                    >
+                                                        Remove this file link when saving
+                                                    </label>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+
+                                    <div class="form-text mt-2">
+                                        Removing a link does not delete the
+                                        physical file from storage.
+                                    </div>
+                                {% else %}
+                                    <div class="p-3 bg-light rounded border text-muted small">
+                                        No files attached.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <label class="form-label fw-semibold">
+                                        <i class="bi bi-cloud-arrow-up me-1"></i>
+                                        Upload New Files
+                                    </label>
+
+                                    <div
+                                        id="fileContainer"
+                                        class="d-flex flex-column gap-3 mb-3 mt-2"
+                                    ></div>
+
+                                    <button
+                                        type="button"
+                                        id="addFileBtn"
+                                        class="btn btn-sm w-100 btn-outline-secondary bg-white border-dashed"
+                                    >
+                                        <i class="bi bi-plus me-1"></i>
+                                        Add File
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <div class="card-footer bg-light border-top p-4 text-end">
-                <a href="{% url 'samples_list' %}" class="btn btn-sm btn-light me-2">Cancel</a>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <i class="bi bi-save me-2"></i>Save Changes
-                </button>
+
+            <!-- ====================================================== -->
+            <!-- Governance sidebar                                     -->
+            <!-- ====================================================== -->
+            <div class="col-xl-4">
+                <section
+                    class="card shadow-sm border-0 mb-4"
+                    data-sample-edit-section="governance"
+                >
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-shield-check me-2 text-primary"></i>
+                        Governance & Access
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small">
+                            Ownership, Research Group, Biobank, Collection
+                            membership and metadata visibility.
+                        </p>
+
+                        <div class="mb-3">
+                            <label
+                                for="{{ form.owner.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                {{ form.owner.label }}
+                            </label>
+
+                            {{ form.owner }}
+
+                            {% if form.owner.help_text %}
+                                <div class="form-text">
+                                    {{ form.owner.help_text }}
+                                </div>
+                            {% endif %}
+
+                            {% for error in form.owner.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label
+                                for="{{ form.research_group.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                {{ form.research_group.label }}
+                            </label>
+
+                            {{ form.research_group }}
+
+                            <div class="form-text">
+                                Independent from Biobank and Collection
+                                assignment.
+                            </div>
+
+                            {% for error in form.research_group.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label
+                                for="{{ form.biobank.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                {{ form.biobank.label }}
+                            </label>
+
+                            {{ form.biobank }}
+
+                            {% for error in form.biobank.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label
+                                for="{{ form.collections.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                {{ form.collections.label }}
+                            </label>
+
+                            {{ form.collections }}
+
+                            {% for error in form.collections.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+
+                            {% if form.collections.help_text %}
+                                <div class="form-text">
+                                    {{ form.collections.help_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="form-check form-switch">
+                                {{ form.is_public }}
+
+                                <label
+                                    class="form-check-label fw-semibold"
+                                    for="{{ form.is_public.id_for_label }}"
+                                >
+                                    {{ form.is_public.label }}
+                                </label>
+                            </div>
+
+                            <div class="form-text">
+                                Allow external metadata visibility when policy
+                                permits.
+                            </div>
+
+                            {% for error in form.is_public.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="border rounded p-3 bg-warning-subtle">
+                            <div class="form-check form-switch">
+                                {{ form.is_embargoed }}
+
+                                <label
+                                    class="form-check-label fw-semibold"
+                                    for="{{ form.is_embargoed.id_for_label }}"
+                                >
+                                    {{ form.is_embargoed.label }}
+                                </label>
+                            </div>
+
+                            <div class="form-text">
+                                Embargo overrides Public visibility for
+                                external access.
+                            </div>
+
+                            {% for error in form.is_embargoed.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white fw-bold">
+                        Editing Boundaries
+                    </div>
+
+                    <div class="card-body">
+                        <div class="small text-muted">
+                            <div class="mb-2">
+                                <i class="bi bi-lock me-1"></i>
+                                Sample ID and Sample Type are immutable here.
+                            </div>
+
+                            <div class="mb-2">
+                                <i class="bi bi-lock me-1"></i>
+                                Status is preserved by standard metadata
+                                editing.
+                            </div>
+
+                            <div>
+                                <i class="bi bi-box-arrow-up-right me-1"></i>
+                                Taxonomy, genome review, lifecycle and sharing
+                                remain dedicated workflows.
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
+        </div>
+
+        <div
+            class="d-flex flex-wrap justify-content-end gap-2 border-top pt-4 mt-2"
+        >
+            <a
+                href="{% url 'sample_detail' sample.id %}"
+                class="btn btn-outline-secondary"
+            >
+                Cancel
+            </a>
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                <i class="bi bi-check2-circle me-1"></i>
+                Save Changes
+            </button>
         </div>
     </form>
 </div>
