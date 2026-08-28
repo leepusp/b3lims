@@ -28,15 +28,186 @@
     }
 
     .sample-edit-section-description {
-        max-width: 760px;
+        max-width: none;
+    }
+
+    /*
+     * Sample Edit Layout v2
+     *
+     * The general Sample stylesheet intentionally remains untouched.
+     * These rules are scoped to this edit surface so the wider layout
+     * cannot change registration, list or detail pages.
+     */
+    .sample-edit-page {
+        width: 100%;
+        max-width: 1720px !important;
+        margin-inline: auto;
+        padding-left: clamp(1rem, 2.25vw, 2.5rem) !important;
+        padding-right: clamp(1rem, 2.25vw, 2.5rem) !important;
+    }
+
+    .sample-edit-shell {
+        align-items: flex-start;
+    }
+
+    .sample-edit-main,
+    .sample-edit-sidebar {
+        min-width: 0;
+    }
+
+    .sample-edit-main > [data-sample-edit-section] {
+        min-width: 0;
+    }
+
+    /*
+     * Governance visibility switches.
+     *
+     * samples.css gives ordinary form inputs a minimum height and
+     * Bootstrap form-switch normally uses negative left offsets.
+     * The scoped flex contract below neutralizes those assumptions
+     * so the switch can never overlap its label/help text.
+     */
+    .sample-governance-toggle {
+        overflow: hidden;
+    }
+
+    .sample-governance-switch {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+        padding-left: 0;
+        margin: 0;
+    }
+
+    .sample-form .sample-governance-switch .form-check-input {
+        float: none;
+        flex: 0 0 auto;
+        width: 2.5rem;
+        height: 1.35rem;
+        min-height: 1.35rem;
+        margin: 0.1rem 0 0 0 !important;
+    }
+
+    .sample-governance-switch-copy {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .sample-form .sample-governance-switch .form-check-label {
+        display: block;
+        margin: 0 0 0.25rem;
+        padding: 0;
+        line-height: 1.25;
+    }
+
+    .sample-governance-switch-copy .form-text {
+        margin-top: 0;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .sample-governance-toggle > .text-danger {
+        margin-left: 3.35rem;
+    }
+
+    /*
+     * Wide desktop composition.
+     *
+     * Biological Properties occupies the right-hand track while
+     * Inventory, Relationships and Traceability use the left-hand
+     * track. This consumes horizontal space that was previously
+     * unused instead of creating one very long vertical stack.
+     */
+    @media (min-width: 1200px) {
+        .sample-edit-main {
+            display: grid;
+            grid-template-columns:
+                minmax(0, 1fr)
+                minmax(0, 1fr);
+            grid-template-areas:
+                "identity identity"
+                "inventory biological"
+                "relationships biological"
+                "traceability biological"
+                "origin origin"
+                "metadata scientific"
+                "files files";
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .sample-edit-main > [data-sample-edit-section] {
+            margin-bottom: 0 !important;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="identity"] {
+            grid-area: identity;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="inventory"] {
+            grid-area: inventory;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="biological-properties"] {
+            grid-area: biological;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="relationships"] {
+            grid-area: relationships;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="traceability"] {
+            grid-area: traceability;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="origin"] {
+            grid-area: origin;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="metadata"] {
+            grid-area: metadata;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="scientific-notes"] {
+            grid-area: scientific;
+        }
+
+        .sample-edit-main > [data-sample-edit-section="files"] {
+            grid-area: files;
+        }
+
+        .sample-edit-sidebar {
+            position: sticky;
+            top: 1rem;
+            align-self: flex-start;
+        }
+    }
+
+    /*
+     * On very wide displays, biological subtype metadata gets a
+     * third field column. It falls back naturally on smaller screens.
+     */
+    @media (min-width: 1600px) {
+        .sample-edit-main
+        > [data-sample-edit-section="biological-properties"]
+        .row
+        > .col-md-6 {
+            width: 33.333333%;
+        }
+    }
+
+    @media (max-width: 1199.98px) {
+        .sample-edit-sidebar {
+            position: static;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div
-    class="container-fluid py-4 sample-page"
-    data-sample-edit-layout="v1"
+    class="container-fluid py-4 sample-page sample-edit-page"
+    data-sample-edit-layout="v2"
 >
     <div
         class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"
@@ -170,8 +341,8 @@
             {% endfor %}
         </datalist>
 
-        <div class="row g-4">
-            <div class="col-xl-8">
+        <div class="row g-4 sample-edit-shell">
+            <div class="col-12 col-xl-9 sample-edit-main">
 
                 <!-- ================================================== -->
                 <!-- Identity & workflow                               -->
@@ -883,7 +1054,7 @@
             <!-- ====================================================== -->
             <!-- Governance sidebar                                     -->
             <!-- ====================================================== -->
-            <div class="col-xl-4">
+            <div class="col-12 col-xl-3 sample-edit-sidebar">
                 <section
                     class="card shadow-sm border-0 mb-4"
                     data-sample-edit-section="governance"
@@ -984,21 +1155,26 @@
                             {% endif %}
                         </div>
 
-                        <div class="border rounded p-3 mb-3 bg-light">
-                            <div class="form-check form-switch">
+                        <div
+                            class="border rounded p-3 mb-3 bg-light sample-governance-toggle"
+                            data-sample-governance-toggle="public"
+                        >
+                            <div class="form-check form-switch sample-governance-switch">
                                 {{ form.is_public }}
 
-                                <label
-                                    class="form-check-label fw-semibold"
-                                    for="{{ form.is_public.id_for_label }}"
-                                >
-                                    {{ form.is_public.label }}
-                                </label>
-                            </div>
+                                <div class="sample-governance-switch-copy">
+                                    <label
+                                        class="form-check-label fw-semibold"
+                                        for="{{ form.is_public.id_for_label }}"
+                                    >
+                                        {{ form.is_public.label }}
+                                    </label>
 
-                            <div class="form-text">
-                                Allow external metadata visibility when policy
-                                permits.
+                                    <div class="form-text">
+                                        Allow external metadata visibility when
+                                        policy permits.
+                                    </div>
+                                </div>
                             </div>
 
                             {% for error in form.is_public.errors %}
@@ -1008,21 +1184,26 @@
                             {% endfor %}
                         </div>
 
-                        <div class="border rounded p-3 bg-warning-subtle">
-                            <div class="form-check form-switch">
+                        <div
+                            class="border rounded p-3 bg-warning-subtle sample-governance-toggle"
+                            data-sample-governance-toggle="embargo"
+                        >
+                            <div class="form-check form-switch sample-governance-switch">
                                 {{ form.is_embargoed }}
 
-                                <label
-                                    class="form-check-label fw-semibold"
-                                    for="{{ form.is_embargoed.id_for_label }}"
-                                >
-                                    {{ form.is_embargoed.label }}
-                                </label>
-                            </div>
+                                <div class="sample-governance-switch-copy">
+                                    <label
+                                        class="form-check-label fw-semibold"
+                                        for="{{ form.is_embargoed.id_for_label }}"
+                                    >
+                                        {{ form.is_embargoed.label }}
+                                    </label>
 
-                            <div class="form-text">
-                                Embargo overrides Public visibility for
-                                external access.
+                                    <div class="form-text">
+                                        Embargo overrides Public visibility for
+                                        external access.
+                                    </div>
+                                </div>
                             </div>
 
                             {% for error in form.is_embargoed.errors %}

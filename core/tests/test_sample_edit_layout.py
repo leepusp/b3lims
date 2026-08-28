@@ -364,7 +364,7 @@ class SampleEditLayoutTests(
 
         self.assertContains(
             response,
-            'data-sample-edit-layout="v1"',
+            'data-sample-edit-layout="v2"',
         )
 
         self.assertContains(
@@ -390,4 +390,107 @@ class SampleEditLayoutTests(
         self.assertNotContains(
             response,
             'name="status"',
+        )
+
+
+    def test_layout_v2_uses_wide_responsive_grid_contract(
+        self,
+    ):
+        text = self.template_text()
+
+        for token in (
+            'data-sample-edit-layout="v2"',
+            "sample-edit-page",
+            "sample-edit-shell",
+            "sample-edit-main",
+            "sample-edit-sidebar",
+            "max-width: 1720px",
+            "grid-template-areas:",
+            '"inventory biological"',
+            '"relationships biological"',
+            '"traceability biological"',
+            '"metadata scientific"',
+        ):
+            with self.subTest(
+                token=token
+            ):
+                self.assertIn(
+                    token,
+                    text,
+                )
+
+    def test_governance_switches_use_non_overlapping_flex_contract(
+        self,
+    ):
+        text = self.template_text()
+
+        self.assertGreaterEqual(
+            text.count(
+                "sample-governance-toggle"
+            ),
+            2,
+        )
+
+        self.assertEqual(
+            text.count(
+                'class="form-check form-switch '
+                'sample-governance-switch"'
+            ),
+            2,
+        )
+
+        self.assertIn(
+            'data-sample-governance-toggle="public"',
+            text,
+        )
+
+        self.assertIn(
+            'data-sample-governance-toggle="embargo"',
+            text,
+        )
+
+        self.assertIn(
+            ".sample-form .sample-governance-switch "
+            ".form-check-input",
+            text,
+        )
+
+        self.assertIn(
+            "min-height: 1.35rem",
+            text,
+        )
+
+        self.assertIn(
+            "margin: 0.1rem 0 0 0 !important",
+            text,
+        )
+
+        self.assertNotIn(
+            '<div class="form-check form-switch">',
+            text,
+        )
+
+    def test_layout_v2_keeps_governance_in_responsive_sidebar(
+        self,
+    ):
+        text = self.template_text()
+
+        self.assertIn(
+            'class="col-12 col-xl-9 sample-edit-main"',
+            text,
+        )
+
+        self.assertIn(
+            'class="col-12 col-xl-3 sample-edit-sidebar"',
+            text,
+        )
+
+        self.assertIn(
+            "position: sticky",
+            text,
+        )
+
+        self.assertIn(
+            "top: 1rem",
+            text,
         )
