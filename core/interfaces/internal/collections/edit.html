@@ -1,0 +1,169 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Edit Collection · B3 LIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <div class="text-muted small mb-1">
+                Collection
+            </div>
+
+            <h1 class="h4 fw-bold mb-1">
+                Edit {{ collection.name }}
+            </h1>
+
+            <p class="text-muted mb-0">
+                Update descriptive metadata without changing Collection governance.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'collection_detail' collection.pk %}"
+            class="btn btn-outline-secondary"
+        >
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Collection
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">
+                    Collection Metadata
+                </div>
+
+                <div class="card-body p-4">
+                    <form
+                        method="post"
+                        id="collectionEditForm"
+                        novalidate
+                    >
+                        {% csrf_token %}
+
+                        {% if collection_edit_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ collection_edit_form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <label
+                                for="{{ collection_edit_form.name.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                Collection Name
+                            </label>
+
+                            {{ collection_edit_form.name }}
+
+                            {% for error in collection_edit_form.name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label
+                                for="{{ collection_edit_form.description.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                Description
+                            </label>
+
+                            {{ collection_edit_form.description }}
+
+                            {% for error in collection_edit_form.description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="alert alert-light border small mb-4">
+                            <div class="fw-semibold mb-1">
+                                Governance fields are not changed here.
+                            </div>
+
+                            Ownership, Research Group assignment, lifecycle state,
+                            public visibility, tags, and keywords remain unchanged.
+                        </div>
+
+                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                            <a
+                                href="{% url 'collection_detail' collection.pk %}"
+                                class="btn btn-outline-secondary"
+                            >
+                                Cancel
+                            </a>
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                <i class="bi bi-check2-circle me-1"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">
+                    Governance
+                </div>
+
+                <div class="card-body">
+                    <dl class="row small mb-0">
+                        <dt class="col-5 text-muted">
+                            Owner
+                        </dt>
+                        <dd class="col-7">
+                            {{ collection.owner.get_full_name|default:collection.owner.username }}
+                        </dd>
+
+                        <dt class="col-5 text-muted">
+                            Research Group
+                        </dt>
+                        <dd class="col-7">
+                            {% if collection.research_group %}
+                                {{ collection.research_group.name }}
+                            {% else %}
+                                Not assigned
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-5 text-muted">
+                            Visibility
+                        </dt>
+                        <dd class="col-7">
+                            {% if collection.is_public %}
+                                Public
+                            {% else %}
+                                Restricted
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-5 text-muted">
+                            Lifecycle
+                        </dt>
+                        <dd class="col-7 mb-0">
+                            {% if collection.is_active %}
+                                Active
+                            {% else %}
+                                Inactive
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

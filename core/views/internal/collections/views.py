@@ -14,7 +14,10 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
 
 from core.context import base_context
-from core.forms import CollectionForm
+from core.forms import (
+    CollectionEditForm,
+    CollectionForm,
+)
 
 from core.models import (
     Collection,
@@ -189,6 +192,93 @@ def collection_create_view(request):
     return collections_list_view(
         request,
         template_name="internal/collections/collection_create.html",
+    )
+
+
+@login_required
+def collection_edit_view(
+    request,
+    collection_id,
+):
+    """
+    Edit descriptive metadata for one active Collection.
+
+    The standard edit surface deliberately excludes ownership,
+    Research Group assignment, lifecycle state, public visibility,
+    tags, and keywords.
+    """
+    collection_qs = (
+        Collection.objects
+        .select_related(
+            "owner",
+            "research_group",
+        )
+    )
+
+    if request.method == "POST":
+        with transaction.atomic():
+            collection = get_object_or_404(
+                collection_qs.select_for_update(),
+                pk=collection_id,
+                is_active=True,
+            )
+
+            if not can_edit_collection(
+                request.user,
+                collection,
+            ):
+                raise PermissionDenied
+
+            form = CollectionEditForm(
+                request.POST,
+                instance=collection,
+            )
+
+            if form.is_valid():
+                form.save()
+
+                messages.success(
+                    request,
+                    "Collection metadata updated successfully.",
+                )
+
+                return redirect(
+                    "collection_detail",
+                    collection_id=collection.pk,
+                )
+
+    else:
+        collection = get_object_or_404(
+            collection_qs,
+            pk=collection_id,
+            is_active=True,
+        )
+
+        if not can_edit_collection(
+            request.user,
+            collection,
+        ):
+            raise PermissionDenied
+
+        form = CollectionEditForm(
+            instance=collection,
+        )
+
+    ctx = base_context(
+        request
+    )
+
+    ctx.update(
+        {
+            "collection": collection,
+            "collection_edit_form": form,
+        }
+    )
+
+    return render(
+        request,
+        "internal/collections/edit.html",
+        ctx,
     )
 
 def _collection_share_error_message(

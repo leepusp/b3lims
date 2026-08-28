@@ -635,12 +635,13 @@
             {% endif %}
 
             {% if can_edit_collection %}
-                <span
-                    class="btn btn-sm btn-outline-primary disabled"
-                    title="Collection editing will be added in a dedicated changeset."
+                <a
+                    href="{% url 'collection_edit' collection.pk %}"
+                    class="btn btn-sm btn-outline-primary"
                 >
+                    <i class="bi bi-pencil-square me-1"></i>
                     Edit
-                </span>
+                </a>
             {% endif %}
         </div>
     </header>

@@ -50,6 +50,7 @@ from core.views.internal.collections.views import (
     collection_create_view,
     collections_dashboard_view,
     collection_detail_view,
+    collection_edit_view,
     collection_share_view,
     collection_share_revoke_view,
 )
@@ -193,6 +194,11 @@ urlpatterns = [
     path("collections/", collections_list_view, name="collections_list"),
     path("collections/add/", collection_create_view, name="collection_create"),
     path("collections/dashboard/", collections_dashboard_view, name="collections_dashboard"),
+    path(
+        "collections/<int:collection_id>/edit/",
+        collection_edit_view,
+        name="collection_edit",
+    ),
     path(
         "collections/<int:collection_id>/",
         collection_detail_view,

@@ -43,6 +43,38 @@ class CollectionForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
         }
 
+
+class CollectionEditForm(forms.ModelForm):
+    """
+    Edit descriptive Collection metadata only.
+
+    Ownership, Research Group assignment, lifecycle state, public
+    visibility, tags, and keywords are intentionally outside this
+    standard edit surface.
+    """
+
+    class Meta:
+        model = Collection
+        fields = [
+            "name",
+            "description",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Collection name",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 5,
+                }
+            ),
+        }
+
+
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
