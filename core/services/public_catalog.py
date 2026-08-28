@@ -323,6 +323,114 @@ def public_organism_distribution(
     )
 
 
+
+def public_geographic_distribution(
+    limit=50,
+):
+    """
+    Return publication-safe geographic coverage aggregated only at
+    the country/ocean label level.
+
+    Exact coordinates, collection-site names and other internal
+    origin metadata are deliberately excluded from this projection.
+
+    A Sample contributes only when:
+
+    - the Sample passes public_samples_queryset();
+    - its SampleOrigin explicitly permits approximate or exact
+      public location disclosure;
+    - country_or_ocean is populated.
+
+    The browser therefore receives only ``location`` and ``total``.
+    """
+    rows = list(
+        public_samples_queryset()
+        .filter(
+            origin__location_visibility__in=(
+                SampleOrigin.LOCATION_APPROXIMATE,
+                SampleOrigin.LOCATION_EXACT,
+            ),
+        )
+        .exclude(
+            origin__country_or_ocean__isnull=True,
+        )
+        .exclude(
+            origin__country_or_ocean="",
+        )
+        .values(
+            "origin__country_or_ocean",
+        )
+        .annotate(
+            total=Count(
+                "pk",
+            )
+        )
+        .order_by(
+            "-total",
+            "origin__country_or_ocean",
+        )[
+            :limit
+        ]
+    )
+
+    return [
+        {
+            "location": (
+                row[
+                    "origin__country_or_ocean"
+                ]
+            ),
+            "total": row["total"],
+        }
+        for row in rows
+    ]
+
+
+def public_organism_sample_type_network(
+    limit=60,
+):
+    """
+    Return publication-safe Organism ↔ Sample type associations.
+
+    Each row represents an aggregate edge derived only from Samples
+    that have already passed the canonical public projection.
+
+    The result intentionally contains no Sample IDs, owner metadata,
+    Collection membership, storage information or internal origin
+    information.
+    """
+    return list(
+        public_samples_queryset()
+        .exclude(
+            organism_name__isnull=True,
+        )
+        .exclude(
+            organism_name="",
+        )
+        .exclude(
+            sample_type__isnull=True,
+        )
+        .exclude(
+            sample_type="",
+        )
+        .values(
+            "organism_name",
+            "sample_type",
+        )
+        .annotate(
+            total=Count(
+                "pk",
+            )
+        )
+        .order_by(
+            "-total",
+            "organism_name",
+            "sample_type",
+        )[
+            :limit
+        ]
+    )
+
 def featured_public_collections(
     limit=3,
 ):
@@ -397,6 +505,12 @@ def public_home_context():
         ),
         "organism_distribution": (
             public_organism_distribution()
+        ),
+        "geographic_distribution": (
+            public_geographic_distribution()
+        ),
+        "organism_sample_type_network": (
+            public_organism_sample_type_network()
         ),
         "featured_collections": (
             featured_public_collections()

@@ -2,6 +2,8 @@
 
 {% block title %}B3 LIMS | Public Catalog{% endblock %}
 
+{% block main_class %}container-fluid py-4 px-3 px-md-4 px-xxl-5{% endblock %}
+
 
 {% block extra_css %}
 <style>
@@ -17,7 +19,7 @@
         position: relative;
         overflow: hidden;
 
-        max-width: 1120px;
+        max-width: 1720px;
         margin-left: auto;
         margin-right: auto;
 
@@ -251,7 +253,11 @@
     }
 
     .portal-section {
+        max-width: 1720px;
+
         margin-top: 2.8rem;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .portal-section-heading {
@@ -561,6 +567,130 @@
                 255,
                 0.68
             );
+    }
+
+    .portal-view-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+
+        margin-bottom: 1.1rem;
+
+        padding: 0.4rem;
+
+        border: 1px solid #dfe7ef;
+        border-radius: 14px;
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.72
+            );
+
+        box-shadow:
+            0 5px 18px -16px
+            rgba(
+                27,
+                42,
+                74,
+                0.35
+            );
+    }
+
+    .portal-view-toolbar .nav-link {
+        display: inline-flex;
+        gap: 0.48rem;
+        align-items: center;
+
+        padding:
+            0.62rem
+            0.9rem;
+
+        border: 0;
+        border-radius: 10px;
+
+        color: #64748b;
+        background: transparent;
+
+        font-size: 0.82rem;
+        font-weight: 650;
+    }
+
+    .portal-view-toolbar .nav-link:hover {
+        color: #1b2a4a;
+        background: #f3f7fb;
+    }
+
+    .portal-view-toolbar .nav-link.active {
+        color: #ffffff;
+        background:
+            linear-gradient(
+                135deg,
+                #3b82f6,
+                #2563eb
+            );
+
+        box-shadow:
+            0 8px 18px -12px
+            rgba(
+                37,
+                99,
+                235,
+                0.8
+            );
+    }
+
+    .portal-view-panel {
+        min-height: 400px;
+    }
+
+    .portal-chart-wide {
+        height: 470px;
+    }
+
+    .portal-map-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+
+        margin-top: 0.85rem;
+    }
+
+    .portal-map-summary-item {
+        padding:
+            0.32rem
+            0.55rem;
+
+        border:
+            1px solid
+            #e2e8f0;
+
+        border-radius: 999px;
+
+        color: #64748b;
+        background: #f8fafc;
+
+        font-size: 0.72rem;
+    }
+
+    .portal-chart-fallback {
+        display: grid;
+        place-items: center;
+
+        min-height: 300px;
+
+        color: var(--b3-muted);
+    }
+
+    #microbes {
+        will-change: transform;
+
+        transition:
+            transform
+            180ms
+            ease-out;
     }
 
     @media (max-width: 991.98px) {
@@ -880,116 +1010,427 @@
     </p>
 
 
-    <div class="portal-charts-grid">
+    <div
+        class="nav nav-pills portal-view-toolbar"
+        id="publicDataViewTabs"
+        role="tablist"
+        aria-label="Public scientific visualization options"
+    >
 
-        <div class="portal-panel">
+        <button
+            class="nav-link active"
+            id="publicViewOverviewTab"
+            data-bs-toggle="pill"
+            data-bs-target="#publicViewOverview"
+            type="button"
+            role="tab"
+            aria-controls="publicViewOverview"
+            aria-selected="true"
+            data-public-view="overview"
+        >
+            <i class="bi bi-pie-chart"></i>
+            Overview
+        </button>
 
-            <div class="portal-panel-heading">
-                Public Samples
+
+        <button
+            class="nav-link"
+            id="publicViewGeographyTab"
+            data-bs-toggle="pill"
+            data-bs-target="#publicViewGeography"
+            type="button"
+            role="tab"
+            aria-controls="publicViewGeography"
+            aria-selected="false"
+            data-public-view="geography"
+        >
+            <i class="bi bi-globe-americas"></i>
+            Geography
+        </button>
+
+
+        <button
+            class="nav-link"
+            id="publicViewNetworkTab"
+            data-bs-toggle="pill"
+            data-bs-target="#publicViewNetwork"
+            type="button"
+            role="tab"
+            aria-controls="publicViewNetwork"
+            aria-selected="false"
+            data-public-view="network"
+        >
+            <i class="bi bi-share"></i>
+            Network
+        </button>
+
+
+        <button
+            class="nav-link"
+            id="publicViewRankingTab"
+            data-bs-toggle="pill"
+            data-bs-target="#publicViewRanking"
+            type="button"
+            role="tab"
+            aria-controls="publicViewRanking"
+            aria-selected="false"
+            data-public-view="ranking"
+        >
+            <i class="bi bi-bar-chart"></i>
+            Rankings
+        </button>
+
+
+        <button
+            class="nav-link"
+            id="publicViewBubbleTab"
+            data-bs-toggle="pill"
+            data-bs-target="#publicViewBubble"
+            type="button"
+            role="tab"
+            aria-controls="publicViewBubble"
+            aria-selected="false"
+            data-public-view="bubble"
+        >
+            <i class="bi bi-circle-square"></i>
+            Bubbles
+        </button>
+
+    </div>
+
+
+    <div class="tab-content">
+
+        <div
+            class="tab-pane fade show active"
+            id="publicViewOverview"
+            role="tabpanel"
+            aria-labelledby="publicViewOverviewTab"
+            tabindex="0"
+        >
+
+            <div class="portal-charts-grid">
+
+                <div class="portal-panel">
+
+                    <div class="portal-panel-heading">
+                        Public Samples
+                    </div>
+
+                    <h3 class="portal-panel-title">
+                        Sample type composition
+                    </h3>
+
+                    <p class="portal-panel-description">
+                        Distribution of publication-approved Samples
+                        by Sample type.
+                    </p>
+
+
+                    {% if sample_type_distribution %}
+
+                        <div
+                            id="publicSampleTypeChart"
+                            class="portal-chart"
+                            role="img"
+                            aria-label="Interactive donut chart showing public Samples by Sample type"
+                        ></div>
+
+                        <ul class="visually-hidden">
+
+                            {% for item in sample_type_distribution %}
+
+                                <li>
+                                    {{ item.sample_type }}:
+                                    {{ item.total }}
+                                    public Sample{{ item.total|pluralize }}
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+                        <div class="portal-chart-help">
+                            Hover over a segment for details.
+                            Use the legend to focus categories.
+                        </div>
+
+                    {% else %}
+
+                        <div class="portal-empty-state">
+                            Sample type composition will appear when
+                            publication-approved Samples are available.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div class="portal-panel">
+
+                    <div class="portal-panel-heading">
+                        Scientific representation
+                    </div>
+
+                    <h3 class="portal-panel-title">
+                        Organism representation
+                    </h3>
+
+                    <p class="portal-panel-description">
+                        Relative representation of organism names among
+                        publication-approved Samples.
+                    </p>
+
+
+                    {% if organism_distribution %}
+
+                        <div
+                            id="publicOrganismChart"
+                            class="portal-chart"
+                            role="img"
+                            aria-label="Interactive treemap showing organism representation among public Samples"
+                        ></div>
+
+                        <ul class="visually-hidden">
+
+                            {% for item in organism_distribution %}
+
+                                <li>
+                                    {{ item.organism_name }}:
+                                    {{ item.total }}
+                                    public Sample{{ item.total|pluralize }}
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+                        <div class="portal-chart-help">
+                            Hover over a tile to inspect its public
+                            Sample count.
+                        </div>
+
+                    {% else %}
+
+                        <div class="portal-empty-state">
+                            Organism composition will appear when public
+                            organism metadata are available.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
             </div>
-
-            <h3 class="portal-panel-title">
-                Sample type composition
-            </h3>
-
-            <p class="portal-panel-description">
-                Distribution of publication-approved Samples
-                by Sample type.
-            </p>
-
-
-            {% if sample_type_distribution %}
-
-                <div
-                    id="publicSampleTypeChart"
-                    class="portal-chart"
-                    role="img"
-                    aria-label="Interactive donut chart showing public Samples by Sample type"
-                ></div>
-
-                <ul class="visually-hidden">
-
-                    {% for item in sample_type_distribution %}
-
-                        <li>
-                            {{ item.sample_type }}:
-                            {{ item.total }}
-                            public Sample{{ item.total|pluralize }}
-                        </li>
-
-                    {% endfor %}
-
-                </ul>
-
-                <div class="portal-chart-help">
-                    Hover over a segment for details.
-                    Use the legend to focus categories.
-                </div>
-
-            {% else %}
-
-                <div class="portal-empty-state">
-                    Sample type composition will appear when
-                    publication-approved Samples are available.
-                </div>
-
-            {% endif %}
 
         </div>
 
 
-        <div class="portal-panel">
+        <div
+            class="tab-pane fade"
+            id="publicViewGeography"
+            role="tabpanel"
+            aria-labelledby="publicViewGeographyTab"
+            tabindex="0"
+        >
 
-            <div class="portal-panel-heading">
-                Scientific representation
-            </div>
+            <div class="portal-panel portal-view-panel">
 
-            <h3 class="portal-panel-title">
-                Organism representation
-            </h3>
+                <div class="portal-panel-heading">
+                    Geographic Explorer
+                </div>
 
-            <p class="portal-panel-description">
-                Relative representation of organism names among
-                publication-approved Samples.
-            </p>
+                <h3 class="portal-panel-title">
+                    Public geographic coverage
+                </h3>
 
-
-            {% if organism_distribution %}
+                <p class="portal-panel-description">
+                    Country- or ocean-level aggregation only.
+                    Exact coordinates and internal-only origins are
+                    never transmitted to this visualization.
+                </p>
 
                 <div
-                    id="publicOrganismChart"
-                    class="portal-chart"
+                    id="publicGeographicChart"
+                    class="portal-chart portal-chart-wide"
                     role="img"
-                    aria-label="Interactive treemap showing organism representation among public Samples"
+                    aria-label="Interactive world map showing privacy-approved public geographic coverage"
                 ></div>
 
-                <ul class="visually-hidden">
 
-                    {% for item in organism_distribution %}
+                {% if geographic_distribution %}
 
-                        <li>
-                            {{ item.organism_name }}:
-                            {{ item.total }}
-                            public Sample{{ item.total|pluralize }}
-                        </li>
+                    <div
+                        class="portal-map-summary"
+                        aria-label="Public geographic origin summary"
+                    >
 
-                    {% endfor %}
+                        {% for item in geographic_distribution %}
 
-                </ul>
+                            <span class="portal-map-summary-item">
+                                {{ item.location }} · {{ item.total }}
+                            </span>
 
-                <div class="portal-chart-help">
-                    Hover over a tile to inspect its public
-                    Sample count.
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="portal-chart-help mt-2">
+                        The base map is available, but no geographic
+                        origin currently meets the public disclosure
+                        criteria.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="tab-pane fade"
+            id="publicViewNetwork"
+            role="tabpanel"
+            aria-labelledby="publicViewNetworkTab"
+            tabindex="0"
+        >
+
+            <div class="portal-panel portal-view-panel">
+
+                <div class="portal-panel-heading">
+                    Relationship Explorer
                 </div>
 
-            {% else %}
+                <h3 class="portal-panel-title">
+                    Organism ↔ Sample type network
+                </h3>
 
-                <div class="portal-empty-state">
-                    Organism composition will appear when public
-                    organism metadata are available.
+                <p class="portal-panel-description">
+                    Interactive associations derived only from public
+                    Samples. Node size reflects the number of
+                    publication-approved Samples represented.
+                </p>
+
+                {% if organism_sample_type_network %}
+
+                    <div
+                        id="publicNetworkChart"
+                        class="portal-chart portal-chart-wide"
+                        role="img"
+                        aria-label="Interactive network linking public organism names and Sample types"
+                    ></div>
+
+                    <div class="portal-chart-help">
+                        Drag nodes, zoom and hover over relationships
+                        to inspect public aggregate counts.
+                    </div>
+
+                {% else %}
+
+                    <div class="portal-empty-state">
+                        Network relationships will appear when public
+                        organism and Sample type metadata coexist.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="tab-pane fade"
+            id="publicViewRanking"
+            role="tabpanel"
+            aria-labelledby="publicViewRankingTab"
+            tabindex="0"
+        >
+
+            <div class="portal-panel portal-view-panel">
+
+                <div class="portal-panel-heading">
+                    Ranking View
                 </div>
 
-            {% endif %}
+                <h3 class="portal-panel-title">
+                    Most represented organisms
+                </h3>
+
+                <p class="portal-panel-description">
+                    Ranked by the number of publication-approved
+                    Samples contributing each organism name.
+                </p>
+
+                {% if organism_distribution %}
+
+                    <div
+                        id="publicRankingChart"
+                        class="portal-chart portal-chart-wide"
+                        role="img"
+                        aria-label="Interactive horizontal bar chart ranking organisms in the public catalog"
+                    ></div>
+
+                {% else %}
+
+                    <div class="portal-empty-state">
+                        Organism rankings will appear when public
+                        organism metadata are available.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="tab-pane fade"
+            id="publicViewBubble"
+            role="tabpanel"
+            aria-labelledby="publicViewBubbleTab"
+            tabindex="0"
+        >
+
+            <div class="portal-panel portal-view-panel">
+
+                <div class="portal-panel-heading">
+                    Association Matrix
+                </div>
+
+                <h3 class="portal-panel-title">
+                    Organism × Sample type bubbles
+                </h3>
+
+                <p class="portal-panel-description">
+                    Bubble size represents the public Sample count for
+                    each Organism and Sample type association.
+                </p>
+
+                {% if organism_sample_type_network %}
+
+                    <div
+                        id="publicBubbleChart"
+                        class="portal-chart portal-chart-wide"
+                        role="img"
+                        aria-label="Interactive bubble matrix comparing organisms and Sample types"
+                    ></div>
+
+                {% else %}
+
+                    <div class="portal-empty-state">
+                        Association bubbles will appear when public
+                        Organism and Sample type metadata coexist.
+                    </div>
+
+                {% endif %}
+
+            </div>
 
         </div>
 
@@ -1415,10 +1856,16 @@
 
 {{ sample_type_distribution|json_script:"public-sample-type-data" }}
 {{ organism_distribution|json_script:"public-organism-data" }}
+{{ geographic_distribution|json_script:"public-geographic-data" }}
+{{ organism_sample_type_network|json_script:"public-network-data" }}
 
 
 <script
     src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js">
+</script>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/echarts-maps@1.1.0/world.js">
 </script>
 
 
@@ -2633,6 +3080,128 @@
 (function () {
     "use strict";
 
+    const hero = document.querySelector(
+        ".portal-welcome"
+    );
+
+    const canvas = document.getElementById(
+        "microbes"
+    );
+
+    if (
+        !hero
+        ||
+        !canvas
+        ||
+        !window.matchMedia
+    ) {
+        return;
+    }
+
+
+    const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+
+    if (
+        reducedMotion
+    ) {
+        return;
+    }
+
+
+    function resetParallax() {
+        canvas.style.transform = (
+            "translate3d(0px, 0px, 0px) "
+            +
+            "scale(1)"
+        );
+    }
+
+
+    hero.addEventListener(
+        "pointermove",
+        function (
+            event
+        ) {
+            const bounds = (
+                hero.getBoundingClientRect()
+            );
+
+            const x = (
+                (
+                    event.clientX
+                    -
+                    bounds.left
+                )
+                /
+                bounds.width
+                -
+                0.5
+            );
+
+            const y = (
+                (
+                    event.clientY
+                    -
+                    bounds.top
+                )
+                /
+                bounds.height
+                -
+                0.5
+            );
+
+
+            const offsetX = (
+                x
+                *
+                -20
+            );
+
+            const offsetY = (
+                y
+                *
+                -14
+            );
+
+
+            canvas.style.transform = (
+                "translate3d("
+                +
+                offsetX.toFixed(2)
+                +
+                "px, "
+                +
+                offsetY.toFixed(2)
+                +
+                "px, 0px) "
+                +
+                "scale(1.035)"
+            );
+        }
+    );
+
+
+    hero.addEventListener(
+        "pointerleave",
+        resetParallax
+    );
+
+
+    hero.addEventListener(
+        "pointercancel",
+        resetParallax
+    );
+})();
+</script>
+
+
+<script>
+(function () {
+    "use strict";
+
     const sampleTypeElement = document.getElementById(
         "public-sample-type-data"
     );
@@ -2890,6 +3459,910 @@
     } else {
         initializePublicCharts();
     }
+
+
+    window.addEventListener(
+        "resize",
+        function () {
+            charts.forEach(
+                function (
+                    chart
+                ) {
+                    chart.resize();
+                }
+            );
+        }
+    );
+})();
+</script>
+
+
+<script>
+(function () {
+    "use strict";
+
+    const geographicElement = document.getElementById(
+        "public-geographic-data"
+    );
+
+    const networkElement = document.getElementById(
+        "public-network-data"
+    );
+
+    const organismElement = document.getElementById(
+        "public-organism-data"
+    );
+
+
+    const geographicData = geographicElement
+        ? JSON.parse(
+            geographicElement.textContent
+        )
+        : [];
+
+
+    const networkData = networkElement
+        ? JSON.parse(
+            networkElement.textContent
+        )
+        : [];
+
+
+    const organismData = organismElement
+        ? JSON.parse(
+            organismElement.textContent
+        )
+        : [];
+
+
+    const charts = new Map();
+
+
+    function getOrCreateChart(
+        key,
+        elementId
+    ) {
+        if (
+            charts.has(
+                key
+            )
+        ) {
+            return charts.get(
+                key
+            );
+        }
+
+
+        const element = document.getElementById(
+            elementId
+        );
+
+
+        if (
+            !element
+            ||
+            !window.echarts
+        ) {
+            return null;
+        }
+
+
+        const chart = window.echarts.init(
+            element
+        );
+
+
+        charts.set(
+            key,
+            chart
+        );
+
+
+        return chart;
+    }
+
+
+    function initializeGeography() {
+        const element = document.getElementById(
+            "publicGeographicChart"
+        );
+
+
+        if (
+            !element
+            ||
+            !window.echarts
+        ) {
+            return;
+        }
+
+
+        if (
+            !window.echarts.getMap(
+                "world"
+            )
+        ) {
+            element.textContent = (
+                "The world map resource is currently unavailable."
+            );
+
+            element.classList.add(
+                "portal-chart-fallback"
+            );
+
+            return;
+        }
+
+
+        const chart = getOrCreateChart(
+            "geography",
+            "publicGeographicChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const maximum = Math.max(
+            1,
+            ...geographicData.map(
+                function (
+                    row
+                ) {
+                    return row.total;
+                }
+            )
+        );
+
+
+        chart.setOption({
+            animationDuration: 450,
+
+            tooltip: {
+                trigger: "item",
+                renderMode: "richText",
+
+                formatter: function (
+                    params
+                ) {
+                    const value = (
+                        params.value
+                        ||
+                        0
+                    );
+
+                    return (
+                        params.name
+                        +
+                        ": "
+                        +
+                        value
+                        +
+                        " public Sample"
+                        +
+                        (
+                            value === 1
+                            ? ""
+                            : "s"
+                        )
+                    );
+                }
+            },
+
+            visualMap: {
+                show:
+                    geographicData.length
+                    >
+                    0,
+
+                min: 0,
+                max: maximum,
+
+                left: 10,
+                bottom: 10,
+
+                calculable: true,
+
+                inRange: {
+                    color: [
+                        "#e8f1fb",
+                        "#93c5fd",
+                        "#3b82f6",
+                        "#1d4ed8"
+                    ]
+                },
+
+                textStyle: {
+                    color: "#64748b"
+                }
+            },
+
+            series: [
+                {
+                    type: "map",
+                    map: "world",
+
+                    roam: true,
+
+                    scaleLimit: {
+                        min: 1,
+                        max: 8
+                    },
+
+                    emphasis: {
+                        label: {
+                            show: true
+                        },
+
+                        itemStyle: {
+                            areaColor: "#60a5fa"
+                        }
+                    },
+
+                    itemStyle: {
+                        areaColor: "#edf3f9",
+                        borderColor: "#ffffff",
+                        borderWidth: 0.7
+                    },
+
+                    data:
+                        geographicData.map(
+                            function (
+                                row
+                            ) {
+                                return {
+                                    name:
+                                        row.location,
+
+                                    value:
+                                        row.total
+                                };
+                            }
+                        )
+                }
+            ],
+
+            graphic:
+                geographicData.length
+                ?
+                []
+                :
+                [
+                    {
+                        type: "text",
+
+                        left: "center",
+                        bottom: 20,
+
+                        style: {
+                            text:
+                                "No public geographic "
+                                +
+                                "origin is currently "
+                                +
+                                "available.",
+
+                            fill: "#64748b",
+                            fontSize: 12
+                        }
+                    }
+                ]
+        });
+    }
+
+
+    function buildNetworkModel() {
+        const nodes = new Map();
+        const links = [];
+
+
+        function ensureNode(
+            key,
+            name,
+            category
+        ) {
+            if (
+                !nodes.has(
+                    key
+                )
+            ) {
+                nodes.set(
+                    key,
+                    {
+                        id: key,
+                        name: name,
+                        category: category,
+                        total: 0
+                    }
+                );
+            }
+
+            return nodes.get(
+                key
+            );
+        }
+
+
+        networkData.forEach(
+            function (
+                row
+            ) {
+                const organismKey = (
+                    "organism:"
+                    +
+                    row.organism_name
+                );
+
+                const sampleTypeKey = (
+                    "sample-type:"
+                    +
+                    row.sample_type
+                );
+
+
+                const organismNode = ensureNode(
+                    organismKey,
+                    row.organism_name,
+                    0
+                );
+
+                const typeNode = ensureNode(
+                    sampleTypeKey,
+                    row.sample_type,
+                    1
+                );
+
+
+                organismNode.total += (
+                    row.total
+                );
+
+                typeNode.total += (
+                    row.total
+                );
+
+
+                links.push({
+                    source: organismKey,
+                    target: sampleTypeKey,
+                    value: row.total
+                });
+            }
+        );
+
+
+        return {
+            nodes:
+                Array.from(
+                    nodes.values()
+                ),
+
+            links: links
+        };
+    }
+
+
+    function initializeNetwork() {
+        if (
+            !networkData.length
+        ) {
+            return;
+        }
+
+
+        const chart = getOrCreateChart(
+            "network",
+            "publicNetworkChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const model = buildNetworkModel();
+
+
+        chart.setOption({
+            animationDuration: 550,
+
+            tooltip: {
+                trigger: "item",
+                renderMode: "richText"
+            },
+
+            legend: {
+                top: 4,
+
+                data: [
+                    "Organism",
+                    "Sample type"
+                ],
+
+                textStyle: {
+                    color: "#64748b"
+                }
+            },
+
+            series: [
+                {
+                    type: "graph",
+                    layout: "force",
+
+                    roam: true,
+                    draggable: true,
+
+                    categories: [
+                        {
+                            name: "Organism"
+                        },
+                        {
+                            name: "Sample type"
+                        }
+                    ],
+
+                    force: {
+                        repulsion: 250,
+                        edgeLength: [
+                            90,
+                            170
+                        ],
+                        gravity: 0.08
+                    },
+
+                    label: {
+                        show: true,
+                        position: "right",
+
+                        formatter: function (
+                            params
+                        ) {
+                            const name = (
+                                params.data.name
+                            );
+
+                            return (
+                                name.length
+                                >
+                                24
+                                ?
+                                (
+                                    name.slice(
+                                        0,
+                                        22
+                                    )
+                                    +
+                                    "…"
+                                )
+                                :
+                                name
+                            );
+                        }
+                    },
+
+                    lineStyle: {
+                        color: "source",
+                        curveness: 0.08,
+                        opacity: 0.48
+                    },
+
+                    emphasis: {
+                        focus: "adjacency"
+                    },
+
+                    data:
+                        model.nodes.map(
+                            function (
+                                node
+                            ) {
+                                return {
+                                    id: node.id,
+                                    name: node.name,
+                                    category: node.category,
+                                    value: node.total,
+
+                                    symbolSize:
+                                        22
+                                        +
+                                        Math.sqrt(
+                                            node.total
+                                        )
+                                        *
+                                        10
+                                };
+                            }
+                        ),
+
+                    links:
+                        model.links
+                }
+            ]
+        });
+    }
+
+
+    function initializeRanking() {
+        if (
+            !organismData.length
+        ) {
+            return;
+        }
+
+
+        const chart = getOrCreateChart(
+            "ranking",
+            "publicRankingChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const ranked = [
+            ...organismData
+        ].reverse();
+
+
+        chart.setOption({
+            animationDuration: 450,
+
+            grid: {
+                left: 30,
+                right: 30,
+                top: 20,
+                bottom: 25,
+                containLabel: true
+            },
+
+            tooltip: {
+                trigger: "axis",
+                axisPointer: {
+                    type: "shadow"
+                },
+                renderMode: "richText"
+            },
+
+            xAxis: {
+                type: "value",
+
+                axisLine: {
+                    show: false
+                },
+
+                splitLine: {
+                    lineStyle: {
+                        color: "#edf2f7"
+                    }
+                }
+            },
+
+            yAxis: {
+                type: "category",
+
+                data:
+                    ranked.map(
+                        function (
+                            row
+                        ) {
+                            return row.organism_name;
+                        }
+                    ),
+
+                axisLabel: {
+                    color: "#64748b",
+                    width: 190,
+                    overflow: "truncate"
+                }
+            },
+
+            series: [
+                {
+                    type: "bar",
+
+                    barMaxWidth: 28,
+
+                    itemStyle: {
+                        color: "#3b82f6",
+                        borderRadius: [
+                            0,
+                            6,
+                            6,
+                            0
+                        ]
+                    },
+
+                    data:
+                        ranked.map(
+                            function (
+                                row
+                            ) {
+                                return row.total;
+                            }
+                        )
+                }
+            ]
+        });
+    }
+
+
+    function initializeBubbleMatrix() {
+        if (
+            !networkData.length
+        ) {
+            return;
+        }
+
+
+        const chart = getOrCreateChart(
+            "bubble",
+            "publicBubbleChart"
+        );
+
+
+        if (
+            !chart
+        ) {
+            return;
+        }
+
+
+        const sampleTypes = [
+            ...new Set(
+                networkData.map(
+                    function (
+                        row
+                    ) {
+                        return row.sample_type;
+                    }
+                )
+            )
+        ];
+
+
+        const organisms = [
+            ...new Set(
+                networkData.map(
+                    function (
+                        row
+                    ) {
+                        return row.organism_name;
+                    }
+                )
+            )
+        ];
+
+
+        const data = networkData.map(
+            function (
+                row
+            ) {
+                return [
+                    sampleTypes.indexOf(
+                        row.sample_type
+                    ),
+
+                    organisms.indexOf(
+                        row.organism_name
+                    ),
+
+                    row.total,
+
+                    row.sample_type,
+                    row.organism_name
+                ];
+            }
+        );
+
+
+        chart.setOption({
+            animationDuration: 450,
+
+            grid: {
+                left: 30,
+                right: 30,
+                top: 25,
+                bottom: 35,
+                containLabel: true
+            },
+
+            tooltip: {
+                trigger: "item",
+                renderMode: "richText",
+
+                formatter: function (
+                    params
+                ) {
+                    const value = (
+                        params.data
+                    );
+
+                    return (
+                        value[4]
+                        +
+                        " × "
+                        +
+                        value[3]
+                        +
+                        ": "
+                        +
+                        value[2]
+                        +
+                        " public Sample"
+                        +
+                        (
+                            value[2] === 1
+                            ? ""
+                            : "s"
+                        )
+                    );
+                }
+            },
+
+            xAxis: {
+                type: "category",
+                data: sampleTypes,
+
+                axisLabel: {
+                    color: "#64748b",
+                    interval: 0,
+                    rotate:
+                        sampleTypes.length
+                        >
+                        5
+                        ?
+                        25
+                        :
+                        0
+                },
+
+                splitLine: {
+                    show: true,
+
+                    lineStyle: {
+                        color: "#edf2f7"
+                    }
+                }
+            },
+
+            yAxis: {
+                type: "category",
+                data: organisms,
+
+                axisLabel: {
+                    color: "#64748b",
+                    width: 180,
+                    overflow: "truncate"
+                },
+
+                splitLine: {
+                    show: true,
+
+                    lineStyle: {
+                        color: "#edf2f7"
+                    }
+                }
+            },
+
+            series: [
+                {
+                    type: "scatter",
+
+                    data: data,
+
+                    itemStyle: {
+                        color: "#3b82f6",
+                        opacity: 0.82
+                    },
+
+                    symbolSize: function (
+                        value
+                    ) {
+                        return (
+                            18
+                            +
+                            Math.sqrt(
+                                value[2]
+                            )
+                            *
+                            15
+                        );
+                    },
+
+                    emphasis: {
+                        scale: 1.25
+                    }
+                }
+            ]
+        });
+    }
+
+
+    function activateView(
+        viewName
+    ) {
+        if (
+            viewName
+            ===
+            "geography"
+        ) {
+            initializeGeography();
+        }
+
+        if (
+            viewName
+            ===
+            "network"
+        ) {
+            initializeNetwork();
+        }
+
+        if (
+            viewName
+            ===
+            "ranking"
+        ) {
+            initializeRanking();
+        }
+
+        if (
+            viewName
+            ===
+            "bubble"
+        ) {
+            initializeBubbleMatrix();
+        }
+
+
+        window.setTimeout(
+            function () {
+                charts.forEach(
+                    function (
+                        chart
+                    ) {
+                        chart.resize();
+                    }
+                );
+
+                window.dispatchEvent(
+                    new Event(
+                        "resize"
+                    )
+                );
+            },
+            60
+        );
+    }
+
+
+    document.querySelectorAll(
+        "[data-public-view]"
+    ).forEach(
+        function (
+            button
+        ) {
+            button.addEventListener(
+                "shown.bs.tab",
+                function (
+                    event
+                ) {
+                    activateView(
+                        event.target.dataset.publicView
+                    );
+                }
+            );
+        }
+    );
 
 
     window.addEventListener(
