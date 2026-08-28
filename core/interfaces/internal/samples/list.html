@@ -79,6 +79,40 @@
         min-width: 8rem;
     }
 
+    /*
+     * Keep the Sample list section header visually aligned with
+     * Research Collections and Biobank Repositories.
+     *
+     * The shared manage_base.html provides the structural wrapper;
+     * these rules affect only this Sample list template.
+     */
+    .manage-container
+        > .d-flex.justify-content-between.align-items-center.mb-4 {
+        margin-bottom: 18px !important;
+    }
+
+    .manage-container
+        > .d-flex.justify-content-between.align-items-center.mb-4
+        > div:first-child
+        > h2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 !important;
+        color: #0f172a;
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .manage-container
+        > .d-flex.justify-content-between.align-items-center.mb-4
+        > div:first-child
+        > h2
+        > .bi {
+        margin-right: 0 !important;
+    }
+
     @media (max-width: 1199.98px) {
         .sample-filter-control {
             min-width: 180px;
@@ -89,12 +123,10 @@
 
 
 {% block manage_title %}
-<i class="bi bi-droplet me-2 text-primary"></i>Sample Inventory
+<i class="bi bi-droplet text-primary"></i>Sample Inventory
 {% endblock %}
 
-{% block manage_subtitle %}
-Search, filter and manage Samples visible to your account
-{% endblock %}
+{% block manage_subtitle %}{% endblock %}
 
 
 {% block manage_actions %}

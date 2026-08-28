@@ -74,3 +74,75 @@ class SampleListGlobalActionsTests(
             lookup,
             table_body,
         )
+
+    def test_sample_inventory_header_matches_section_style(
+        self,
+    ):
+        manage_title = (
+            self.template
+            .split(
+                "{% block manage_title %}",
+                1,
+            )[1]
+            .split(
+                "{% endblock %}",
+                1,
+            )[0]
+        )
+
+        manage_subtitle = (
+            self.template
+            .split(
+                "{% block manage_subtitle %}",
+                1,
+            )[1]
+            .split(
+                "{% endblock %}",
+                1,
+            )[0]
+        )
+
+        self.assertIn(
+            "Sample Inventory",
+            manage_title,
+        )
+
+        self.assertIn(
+            "bi bi-droplet text-primary",
+            manage_title,
+        )
+
+        self.assertNotIn(
+            "me-2",
+            manage_title,
+        )
+
+        self.assertEqual(
+            manage_subtitle.strip(),
+            "",
+        )
+
+        self.assertIn(
+            "font-size: 22px;",
+            self.template,
+        )
+
+        self.assertIn(
+            "font-weight: 800;",
+            self.template,
+        )
+
+        self.assertIn(
+            "color: #0f172a;",
+            self.template,
+        )
+
+        self.assertIn(
+            "gap: 10px;",
+            self.template,
+        )
+
+        self.assertIn(
+            "margin-bottom: 18px !important;",
+            self.template,
+        )
