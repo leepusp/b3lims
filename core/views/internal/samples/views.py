@@ -2230,7 +2230,7 @@ def _sync_sample_after_successful_edit(base_sample, real_sample, request, identi
     """
     After a successful internal edit:
     - do not allow a blank form submission to erase identification
-    - mark the sample as available/approved
+    - preserve the Sample workflow status
     """
     try:
         base_sample.refresh_from_db()
@@ -2255,10 +2255,6 @@ def _sync_sample_after_successful_edit(base_sample, real_sample, request, identi
     if hasattr(base_sample, "organism_name") and final_identity:
         base_sample.organism_name = final_identity
         update_fields.append("organism_name")
-
-    if hasattr(base_sample, "status"):
-        base_sample.status = "available"
-        update_fields.append("status")
 
     if update_fields:
         base_sample.save(update_fields=list(dict.fromkeys(update_fields)))

@@ -220,6 +220,7 @@ class SampleForm(forms.ModelForm):
         if user is None:
             self._lock_existing_owner_field()
             self._lock_existing_identity_fields()
+            self._lock_existing_status_field()
             self._lock_existing_visibility_fields(
                 user
             )
@@ -341,6 +342,7 @@ class SampleForm(forms.ModelForm):
 
         self._lock_existing_owner_field()
         self._lock_existing_identity_fields()
+        self._lock_existing_status_field()
         self._lock_existing_visibility_fields(
             user
         )
@@ -379,6 +381,34 @@ class SampleForm(forms.ModelForm):
 
             field.disabled = True
             field.help_text = help_text
+
+    def _lock_existing_status_field(self):
+        """
+        Sample status is a workflow state, not ordinary editable
+        metadata.
+
+        Existing records preserve their current status through the
+        standard Edit Sample workflow. New Sample registration keeps
+        the existing selectable status behavior.
+        """
+        if not (
+            self.instance
+            and self.instance.pk
+        ):
+            return
+
+        field = self.fields.get(
+            "status"
+        )
+
+        if field is None:
+            return
+
+        field.disabled = True
+        field.help_text = (
+            "Sample status is preserved during standard metadata "
+            "editing."
+        )
 
     def _lock_existing_visibility_fields(
         self,
