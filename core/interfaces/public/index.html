@@ -2374,12 +2374,287 @@
 {{ taxonomy_records|json_script:"public-taxonomy-data" }}
 
 
-<script
-    src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js">
-</script>
+<script>
+(function () {
+    "use strict";
 
-<script
-    src="https://cdn.jsdelivr.net/npm/echarts-maps@1.1.0/world.js">
+    /*
+     * B3 LIMS public chart dependency loader.
+     *
+     * External visualization libraries are loaded dynamically so they
+     * cannot block the hero animation or the initial public catalog
+     * render.
+     */
+
+    const ECHARTS_URL = (
+        "https://cdn.jsdelivr.net/"
+        +
+        "npm/echarts@5.5.1/dist/echarts.min.js"
+    );
+
+    const WORLD_MAP_URL = (
+        "https://cdn.jsdelivr.net/"
+        +
+        "npm/echarts-maps@1.1.0/world.js"
+    );
+
+    const LOAD_TIMEOUT_MS = 8000;
+
+    let echartsPromise = null;
+    let worldMapPromise = null;
+
+
+    function loadScript(
+        id,
+        source,
+        readyCheck
+    ) {
+        if (
+            readyCheck()
+        ) {
+            return Promise.resolve();
+        }
+
+
+        return new Promise(
+            function (
+                resolve,
+                reject
+            ) {
+                const existing = (
+                    document.getElementById(
+                        id
+                    )
+                );
+
+
+                if (
+                    existing
+                ) {
+                    reject(
+                        new Error(
+                            "Dependency script already exists "
+                            +
+                            "without a ready runtime: "
+                            +
+                            id
+                        )
+                    );
+
+                    return;
+                }
+
+
+                const script = (
+                    document.createElement(
+                        "script"
+                    )
+                );
+
+
+                let settled = false;
+
+
+                function finish(
+                    error
+                ) {
+                    if (
+                        settled
+                    ) {
+                        return;
+                    }
+
+                    settled = true;
+
+                    window.clearTimeout(
+                        timeout
+                    );
+
+
+                    if (
+                        error
+                    ) {
+                        reject(
+                            error
+                        );
+                    } else {
+                        resolve();
+                    }
+                }
+
+
+                script.id = id;
+                script.src = source;
+                script.async = true;
+
+                script.dataset.b3LimsDynamic = (
+                    "true"
+                );
+
+
+                script.addEventListener(
+                    "load",
+                    function () {
+                        if (
+                            readyCheck()
+                        ) {
+                            finish(
+                                null
+                            );
+                        } else {
+                            finish(
+                                new Error(
+                                    "Dependency loaded but "
+                                    +
+                                    "runtime contract is missing: "
+                                    +
+                                    id
+                                )
+                            );
+                        }
+                    },
+                    {
+                        once: true
+                    }
+                );
+
+
+                script.addEventListener(
+                    "error",
+                    function () {
+                        finish(
+                            new Error(
+                                "Unable to load dependency: "
+                                +
+                                id
+                            )
+                        );
+                    },
+                    {
+                        once: true
+                    }
+                );
+
+
+                const timeout = (
+                    window.setTimeout(
+                        function () {
+                            finish(
+                                new Error(
+                                    "Dependency load timeout: "
+                                    +
+                                    id
+                                )
+                            );
+                        },
+                        LOAD_TIMEOUT_MS
+                    )
+                );
+
+
+                document.head.appendChild(
+                    script
+                );
+            }
+        );
+    }
+
+
+    function whenEChartsReady() {
+        if (
+            window.echarts
+        ) {
+            return Promise.resolve(
+                window.echarts
+            );
+        }
+
+
+        if (
+            !echartsPromise
+        ) {
+            echartsPromise = (
+                loadScript(
+                    "b3-public-echarts-runtime",
+                    ECHARTS_URL,
+                    function () {
+                        return Boolean(
+                            window.echarts
+                        );
+                    }
+                )
+                .then(
+                    function () {
+                        return window.echarts;
+                    }
+                )
+            );
+        }
+
+
+        return echartsPromise;
+    }
+
+
+    function whenWorldMapReady() {
+        return (
+            whenEChartsReady()
+            .then(
+                function (
+                    echarts
+                ) {
+                    if (
+                        echarts.getMap(
+                            "world"
+                        )
+                    ) {
+                        return echarts;
+                    }
+
+
+                    if (
+                        !worldMapPromise
+                    ) {
+                        worldMapPromise = (
+                            loadScript(
+                                "b3-public-echarts-world-map",
+                                WORLD_MAP_URL,
+                                function () {
+                                    return Boolean(
+                                        window.echarts
+                                        &&
+                                        window.echarts.getMap(
+                                            "world"
+                                        )
+                                    );
+                                }
+                            )
+                            .then(
+                                function () {
+                                    return (
+                                        window.echarts
+                                    );
+                                }
+                            )
+                        );
+                    }
+
+
+                    return worldMapPromise;
+                }
+            )
+        );
+    }
+
+
+    window.B3LimsChartLoader = Object.freeze({
+        whenEChartsReady:
+            whenEChartsReady,
+
+        whenWorldMapReady:
+            whenWorldMapReady
+    });
+})();
 </script>
 
 
@@ -4122,6 +4397,102 @@
     }
 
 
+    function showOverviewDependencyFallback() {
+        [
+            {
+                id:
+                    "publicSampleTypeChart",
+
+                message:
+                    "Sample type composition is temporarily "
+                    +
+                    "unavailable. Public Sample counts remain "
+                    +
+                    "available in the catalog."
+            },
+            {
+                id:
+                    "publicOrganismChart",
+
+                message:
+                    "Organism representation is temporarily "
+                    +
+                    "unavailable. Public Sample metadata remain "
+                    +
+                    "available in the catalog."
+            }
+        ].forEach(
+            function (
+                fallback
+            ) {
+                const element = (
+                    document.getElementById(
+                        fallback.id
+                    )
+                );
+
+
+                if (
+                    !element
+                ) {
+                    return;
+                }
+
+
+                element.textContent = (
+                    fallback.message
+                );
+
+                element.classList.add(
+                    "portal-chart-fallback"
+                );
+            }
+        );
+    }
+
+
+    function initializePublicChartsWhenReady() {
+        const loader = (
+            window.B3LimsChartLoader
+        );
+
+
+        if (
+            !loader
+        ) {
+            showOverviewDependencyFallback();
+            return;
+        }
+
+
+        /*
+         * Let the browser paint the page and start the independent
+         * microorganism canvas before chart network activity begins.
+         */
+        window.requestAnimationFrame(
+            function () {
+                loader
+                    .whenEChartsReady()
+                    .then(
+                        initializePublicCharts
+                    )
+                    .catch(
+                        function (
+                            error
+                        ) {
+                            console.warn(
+                                "B3 LIMS public charts unavailable:",
+                                error
+                            );
+
+                            showOverviewDependencyFallback();
+                        }
+                    );
+            }
+        );
+    }
+
+
     if (
         document.readyState
         ===
@@ -4129,10 +4500,10 @@
     ) {
         document.addEventListener(
             "DOMContentLoaded",
-            initializePublicCharts
+            initializePublicChartsWhenReady
         );
     } else {
-        initializePublicCharts();
+        initializePublicChartsWhenReady();
     }
 
 
@@ -6468,7 +6839,67 @@
     }
 
 
-    function activateView(
+    const VIEW_CHART_TARGETS = {
+        geography:
+            "publicGeographicChart",
+
+        network:
+            "publicNetworkChart",
+
+        ranking:
+            "publicRankingChart",
+
+        sankey:
+            "publicSankeyChart"
+    };
+
+
+    function showExplorerDependencyFallback(
+        viewName
+    ) {
+        const elementId = (
+            VIEW_CHART_TARGETS[
+                viewName
+            ]
+        );
+
+
+        if (
+            !elementId
+        ) {
+            return;
+        }
+
+
+        const element = (
+            document.getElementById(
+                elementId
+            )
+        );
+
+
+        if (
+            !element
+        ) {
+            return;
+        }
+
+
+        element.textContent = (
+            "This interactive visualization is temporarily "
+            +
+            "unavailable. The public catalog and metadata "
+            +
+            "remain accessible."
+        );
+
+        element.classList.add(
+            "portal-chart-fallback"
+        );
+    }
+
+
+    function initializeResolvedView(
         viewName
     ) {
         if (
@@ -6509,22 +6940,87 @@
 
         window.setTimeout(
             function () {
-                charts.forEach(
-                    function (
-                        chart
-                    ) {
-                        chart.resize();
-                    }
-                );
-
-                window.dispatchEvent(
-                    new Event(
-                        "resize"
+                const chart = (
+                    charts.get(
+                        viewName
                     )
                 );
+
+
+                if (
+                    chart
+                ) {
+                    chart.resize();
+                }
             },
             60
         );
+    }
+
+
+    function activateView(
+        viewName
+    ) {
+        if (
+            !Object.prototype.hasOwnProperty.call(
+                VIEW_CHART_TARGETS,
+                viewName
+            )
+        ) {
+            return;
+        }
+
+
+        const loader = (
+            window.B3LimsChartLoader
+        );
+
+
+        if (
+            !loader
+        ) {
+            showExplorerDependencyFallback(
+                viewName
+            );
+
+            return;
+        }
+
+
+        const dependency = (
+            viewName
+            ===
+            "geography"
+            ?
+            loader.whenWorldMapReady()
+            :
+            loader.whenEChartsReady()
+        );
+
+
+        dependency
+            .then(
+                function () {
+                    initializeResolvedView(
+                        viewName
+                    );
+                }
+            )
+            .catch(
+                function (
+                    error
+                ) {
+                    console.warn(
+                        "B3 LIMS public explorer unavailable:",
+                        viewName,
+                        error
+                    );
+
+                    showExplorerDependencyFallback(
+                        viewName
+                    );
+                }
+            );
     }
 
 
