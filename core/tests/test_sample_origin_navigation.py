@@ -28,33 +28,68 @@ class SampleOriginNavigationTests(TestCase):
 
         return url
 
-    def test_sample_inventory_exposes_origin_map(self):
-        response = self.client.get(
-            self.client_path(
-                reverse("samples_list")
-            )
+    def test_sample_inventory_uses_dashboard_for_geographic_navigation(self):
+        inventory = self.client.get(
+            reverse("samples_list")
         )
 
-        self.assertEqual(response.status_code, 200)
-
-        expected_url = reverse(
-            "samples_origin_map"
+        self.assertEqual(
+            inventory.status_code,
+            200,
         )
 
         self.assertContains(
-            response,
-            "Origin Map",
+            inventory,
+            reverse("samples_dashboard"),
         )
 
-        self.assertContains(
-            response,
+        self.assertNotContains(
+            inventory,
+            reverse("samples_origin_map"),
+        )
+
+        self.assertNotContains(
+            inventory,
             "data-sample-origin-map-link",
         )
 
-        self.assertContains(
-            response,
-            f'href="{expected_url}"',
+        dashboard = self.client.get(
+            reverse("samples_dashboard")
         )
+
+        self.assertEqual(
+            dashboard.status_code,
+            200,
+        )
+
+        self.assertContains(
+            dashboard,
+            'id="sample-origin-map"',
+        )
+
+        self.assertContains(
+            dashboard,
+            "Sample Geographic Origins",
+        )
+
+        for hook in (
+            'id="sample-origin-filter-search"',
+            'id="sample-origin-filter-type"',
+            'id="sample-origin-filter-status"',
+            'id="sample-origin-filter-biobank"',
+            'id="sample-origin-filter-group"',
+            'id="sample-origin-filter-location"',
+            'id="sample-origin-filter-site"',
+            'id="sample-origin-filter-environment"',
+            'id="sample-origin-filter-habitat"',
+            'id="sample-origin-filter-broad-scale"',
+            'id="sample-origin-filter-local-scale"',
+            'id="sample-origin-filter-reset"',
+        ):
+            self.assertContains(
+                dashboard,
+                hook,
+            )
 
     def test_dashboard_exposes_origin_map_anchor(self):
         response = self.client.get(

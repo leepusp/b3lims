@@ -262,14 +262,42 @@
         <div class="sample-origin-dashboard-controls">
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-search"
+                    class="sample-filter-label"
+                >
+                    Search
+                </label>
+
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        id="sample-origin-filter-search"
+                        type="search"
+                        class="form-control"
+                        placeholder="Sample ID, organism, site, location or owner"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label
+                    for="sample-origin-filter-type"
+                    class="sample-filter-label"
+                >
                     Sample Type
                 </label>
+
                 <select
                     id="sample-origin-filter-type"
                     class="form-select form-select-sm"
                 >
                     <option value="">All types</option>
+
                     {% for value in sample_origin_filter_types %}
                         <option value="{{ value }}">
                             {{ value }}
@@ -279,14 +307,19 @@
             </div>
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-status"
+                    class="sample-filter-label"
+                >
                     Status
                 </label>
+
                 <select
                     id="sample-origin-filter-status"
                     class="form-select form-select-sm"
                 >
                     <option value="">All statuses</option>
+
                     {% for value, label in sample_origin_filter_statuses %}
                         <option value="{{ value }}">
                             {{ label }}
@@ -296,14 +329,19 @@
             </div>
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-biobank"
+                    class="sample-filter-label"
+                >
                     Biobank
                 </label>
+
                 <select
                     id="sample-origin-filter-biobank"
                     class="form-select form-select-sm"
                 >
                     <option value="">All Biobanks</option>
+
                     {% for value in sample_origin_filter_biobanks %}
                         <option value="{{ value }}">
                             {{ value }}
@@ -313,14 +351,19 @@
             </div>
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-group"
+                    class="sample-filter-label"
+                >
                     Research Group
                 </label>
+
                 <select
                     id="sample-origin-filter-group"
                     class="form-select form-select-sm"
                 >
                     <option value="">All groups</option>
+
                     {% for value in sample_origin_filter_groups %}
                         <option value="{{ value }}">
                             {{ value }}
@@ -330,14 +373,19 @@
             </div>
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-location"
+                    class="sample-filter-label"
+                >
                     Country / Ocean
                 </label>
+
                 <select
                     id="sample-origin-filter-location"
                     class="form-select form-select-sm"
                 >
                     <option value="">All locations</option>
+
                     {% for value in sample_origin_filter_locations %}
                         <option value="{{ value }}">
                             {{ value }}
@@ -347,20 +395,124 @@
             </div>
 
             <div>
-                <label class="sample-filter-label">
+                <label
+                    for="sample-origin-filter-site"
+                    class="sample-filter-label"
+                >
+                    Collection Site
+                </label>
+
+                <select
+                    id="sample-origin-filter-site"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All collection sites</option>
+
+                    {% for value in sample_origin_filter_sites %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label
+                    for="sample-origin-filter-environment"
+                    class="sample-filter-label"
+                >
                     Environment
                 </label>
+
                 <select
                     id="sample-origin-filter-environment"
                     class="form-select form-select-sm"
                 >
                     <option value="">All environments</option>
+
                     {% for value in sample_origin_filter_environments %}
                         <option value="{{ value }}">
                             {{ value }}
                         </option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div>
+                <label
+                    for="sample-origin-filter-habitat"
+                    class="sample-filter-label"
+                >
+                    Habitat
+                </label>
+
+                <select
+                    id="sample-origin-filter-habitat"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All habitats</option>
+
+                    {% for value in sample_origin_filter_habitats %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label
+                    for="sample-origin-filter-broad-scale"
+                    class="sample-filter-label"
+                >
+                    Broad Scale
+                </label>
+
+                <select
+                    id="sample-origin-filter-broad-scale"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All broad-scale terms</option>
+
+                    {% for value in sample_origin_filter_broad_scales %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label
+                    for="sample-origin-filter-local-scale"
+                    class="sample-filter-label"
+                >
+                    Local Scale
+                </label>
+
+                <select
+                    id="sample-origin-filter-local-scale"
+                    class="form-select form-select-sm"
+                >
+                    <option value="">All local-scale terms</option>
+
+                    {% for value in sample_origin_filter_local_scales %}
+                        <option value="{{ value }}">
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex align-items-end">
+                <button
+                    type="button"
+                    id="sample-origin-filter-reset"
+                    class="btn btn-sm btn-outline-secondary w-100"
+                >
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>
+                    Reset filters
+                </button>
             </div>
 
         </div>

@@ -1151,6 +1151,26 @@ def samples_dashboard_view(request):
                     "environmental_medium"
                 )
             ),
+            "sample_origin_filter_habitats": (
+                unique_point_values(
+                    "habitat"
+                )
+            ),
+            "sample_origin_filter_broad_scales": (
+                unique_point_values(
+                    "env_broad_scale"
+                )
+            ),
+            "sample_origin_filter_local_scales": (
+                unique_point_values(
+                    "env_local_scale"
+                )
+            ),
+            "sample_origin_filter_sites": (
+                unique_point_values(
+                    "collection_site_name"
+                )
+            ),
         }
     )
 

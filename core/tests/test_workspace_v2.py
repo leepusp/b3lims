@@ -481,7 +481,7 @@ class WorkspaceV23Tests(
             "jupyter_index",
             "molecular_registry_index",
             "samples_network",
-            "samples_origin_map",
+            "samples_dashboard",
             "lab_calendar",
         ):
             self.assertContains(
