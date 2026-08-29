@@ -947,3 +947,516 @@ def public_home_context():
             featured_public_collections()
         ),
     }
+
+
+# ---------------------------------------------------------------------
+# Public Sample catalog
+# ---------------------------------------------------------------------
+def public_sample_catalog_queryset():
+    """
+    Return publication-safe Samples prepared for public catalog views.
+
+    This projection always starts from public_samples_queryset().
+    Public Collections and current verified taxonomy assignments are
+    prefetched through bounded querysets so public templates do not
+    traverse unrestricted relationships.
+
+    The Sample object itself remains subject to the canonical public
+    publication boundary before any related metadata is considered.
+    """
+    public_collections = (
+        public_collections_queryset()
+        .order_by(
+            "name",
+        )
+    )
+
+    verified_taxonomy = (
+        SampleTaxonomyAssignment.objects
+        .filter(
+            is_current=True,
+            match_status=(
+                SampleTaxonomyAssignment.STATUS_VERIFIED
+            ),
+        )
+        .order_by(
+            "source",
+            "pk",
+        )
+    )
+
+    return (
+        public_samples_queryset()
+        .select_related(
+            "bacteria",
+            "phage",
+            "origin",
+        )
+        .prefetch_related(
+            Prefetch(
+                "collections",
+                queryset=public_collections,
+                to_attr="public_collections",
+            ),
+            Prefetch(
+                "taxonomy_assignments",
+                queryset=verified_taxonomy,
+                to_attr="public_verified_taxonomy",
+            ),
+        )
+    )
+
+
+def search_public_samples_queryset(
+    query="",
+    *,
+    sample_type="",
+    genus="",
+    species="",
+):
+    """
+    Search the public Sample catalog using publication-safe metadata.
+
+    Search and facets use only the base Sample fields and curated
+    Bacteria/Phage subtype metadata. External taxonomy evidence remains
+    source-labelled and is presented separately on Sample detail pages;
+    it never silently replaces curated Sample identity.
+    """
+    query = _clean_public_taxonomy_value(
+        query
+    )
+
+    sample_type = _clean_public_taxonomy_value(
+        sample_type
+    )
+
+    genus = _clean_public_taxonomy_value(
+        genus
+    )
+
+    species = _clean_public_taxonomy_value(
+        species
+    )
+
+    samples = (
+        public_sample_catalog_queryset()
+    )
+
+    if query:
+        samples = samples.filter(
+            Q(
+                sample_id__icontains=query
+            )
+            |
+            Q(
+                organism_name__icontains=query
+            )
+            |
+            Q(
+                sample_type__icontains=query
+            )
+            |
+            Q(
+                bacteria__genus__icontains=query
+            )
+            |
+            Q(
+                bacteria__species__icontains=query
+            )
+            |
+            Q(
+                bacteria__strain__icontains=query
+            )
+            |
+            Q(
+                phage__genus__icontains=query
+            )
+            |
+            Q(
+                phage__taxonomy__icontains=query
+            )
+            |
+            Q(
+                phage__strain__icontains=query
+            )
+        )
+
+    if sample_type:
+        samples = samples.filter(
+            sample_type=sample_type
+        )
+
+    if genus:
+        samples = samples.filter(
+            Q(
+                bacteria__genus=genus
+            )
+            |
+            Q(
+                phage__genus=genus
+            )
+        )
+
+    if species:
+        samples = samples.filter(
+            bacteria__species=species
+        )
+
+    return (
+        samples
+        .distinct()
+        .order_by(
+            "sample_id",
+        )
+    )
+
+
+def public_sample_facets():
+    """
+    Return curated facet options derived exclusively from public Samples.
+
+    Empty values are omitted. External taxonomy assignments are not
+    merged into these curated facets.
+    """
+    samples = public_samples_queryset()
+
+    sample_types = list(
+        samples
+        .exclude(
+            sample_type__isnull=True,
+        )
+        .exclude(
+            sample_type="",
+        )
+        .values_list(
+            "sample_type",
+            flat=True,
+        )
+        .distinct()
+        .order_by(
+            "sample_type",
+        )
+    )
+
+    bacterial_genera = set(
+        samples
+        .exclude(
+            bacteria__genus__isnull=True,
+        )
+        .exclude(
+            bacteria__genus="",
+        )
+        .values_list(
+            "bacteria__genus",
+            flat=True,
+        )
+    )
+
+    phage_genera = set(
+        samples
+        .exclude(
+            phage__genus__isnull=True,
+        )
+        .exclude(
+            phage__genus="",
+        )
+        .values_list(
+            "phage__genus",
+            flat=True,
+        )
+    )
+
+    species = list(
+        samples
+        .exclude(
+            bacteria__species__isnull=True,
+        )
+        .exclude(
+            bacteria__species="",
+        )
+        .values_list(
+            "bacteria__species",
+            flat=True,
+        )
+        .distinct()
+        .order_by(
+            "bacteria__species",
+        )
+    )
+
+    return {
+        "sample_types": sample_types,
+        "genera": sorted(
+            bacterial_genera
+            |
+            phage_genera,
+            key=str.casefold,
+        ),
+        "species": species,
+    }
+
+
+def _public_sample_curated_taxonomy(
+    sample,
+):
+    """
+    Return only curated taxonomy approved for the public Sample detail.
+
+    Missing fields remain empty and are never inferred.
+    """
+    record = {
+        "family": "",
+        "genus": "",
+        "species": "",
+        "strain": "",
+    }
+
+    try:
+        bacteria = sample.bacteria
+    except Bacteria.DoesNotExist:
+        bacteria = None
+
+    if bacteria is not None:
+        record[
+            "genus"
+        ] = _clean_public_taxonomy_value(
+            bacteria.genus
+        )
+
+        record[
+            "species"
+        ] = _public_species_name(
+            bacteria.genus,
+            bacteria.species,
+        )
+
+        record[
+            "strain"
+        ] = _clean_public_taxonomy_value(
+            bacteria.strain
+        )
+
+        return record
+
+    try:
+        phage = sample.phage
+    except Phage.DoesNotExist:
+        phage = None
+
+    if phage is not None:
+        record[
+            "family"
+        ] = _clean_public_taxonomy_value(
+            phage.taxonomy
+        )
+
+        record[
+            "genus"
+        ] = _clean_public_taxonomy_value(
+            phage.genus
+        )
+
+        record[
+            "strain"
+        ] = _clean_public_taxonomy_value(
+            phage.strain
+        )
+
+    return record
+
+
+def _public_sample_external_taxonomy(
+    sample,
+):
+    """
+    Return source-labelled external taxonomy evidence for one Sample.
+
+    Only current + verified assignments are prefetched by
+    public_sample_catalog_queryset(). If a source has multiple current
+    verified assignments for the same Sample, that source fails closed
+    and is omitted as ambiguous.
+    """
+    grouped = {}
+
+    for assignment in getattr(
+        sample,
+        "public_verified_taxonomy",
+        (),
+    ):
+        grouped.setdefault(
+            assignment.source,
+            [],
+        ).append(
+            assignment
+        )
+
+    records = []
+
+    for source in sorted(
+        grouped,
+        key=str.casefold,
+    ):
+        assignments = grouped[
+            source
+        ]
+
+        if len(
+            assignments
+        ) != 1:
+            continue
+
+        assignment = assignments[
+            0
+        ]
+
+        records.append(
+            {
+                "source": (
+                    assignment.source
+                ),
+                "source_label": (
+                    assignment.get_source_display()
+                ),
+                "source_release": (
+                    _clean_public_taxonomy_value(
+                        assignment.source_release
+                    )
+                ),
+                "scientific_name": (
+                    _clean_public_taxonomy_value(
+                        assignment.scientific_name
+                    )
+                ),
+                "rank": (
+                    _clean_public_taxonomy_value(
+                        assignment.rank
+                    )
+                ),
+                "domain_or_realm": (
+                    _clean_public_taxonomy_value(
+                        assignment.domain_or_realm
+                    )
+                ),
+                "kingdom": (
+                    _clean_public_taxonomy_value(
+                        assignment.kingdom
+                    )
+                ),
+                "phylum": (
+                    _clean_public_taxonomy_value(
+                        assignment.phylum
+                    )
+                ),
+                "class_name": (
+                    _clean_public_taxonomy_value(
+                        assignment.class_name
+                    )
+                ),
+                "order_name": (
+                    _clean_public_taxonomy_value(
+                        assignment.order_name
+                    )
+                ),
+                "family": (
+                    _clean_public_taxonomy_value(
+                        assignment.family
+                    )
+                ),
+                "genus": (
+                    _clean_public_taxonomy_value(
+                        assignment.genus
+                    )
+                ),
+                "species": (
+                    _public_species_name(
+                        assignment.genus,
+                        assignment.species,
+                    )
+                ),
+            }
+        )
+
+    return records
+
+
+def _public_sample_location(
+    sample,
+):
+    """
+    Return the bounded geographic label allowed in Public Samples v1.
+
+    Even for LOCATION_EXACT, this first public Sample surface exposes
+    only country_or_ocean. Coordinates, site names, geo_loc_name and
+    other granular provenance remain server-side.
+    """
+    try:
+        origin = sample.origin
+    except SampleOrigin.DoesNotExist:
+        return ""
+
+    if (
+        origin.location_visibility
+        not in (
+            SampleOrigin.LOCATION_APPROXIMATE,
+            SampleOrigin.LOCATION_EXACT,
+        )
+    ):
+        return ""
+
+    return _clean_public_taxonomy_value(
+        origin.country_or_ocean
+    )
+
+
+def public_sample_detail_record(
+    sample,
+):
+    """
+    Build an explicit publication-safe dictionary for Sample detail.
+
+    Sensitive Sample fields and unrestricted related objects are never
+    placed into this projection.
+    """
+    public_collections = [
+        {
+            "id": collection.pk,
+            "name": collection.name,
+        }
+        for collection in getattr(
+            sample,
+            "public_collections",
+            (),
+        )
+    ]
+
+    return {
+        "sample_id": sample.sample_id,
+        "sample_type": (
+            _clean_public_taxonomy_value(
+                sample.sample_type
+            )
+        ),
+        "organism_name": (
+            _clean_public_taxonomy_value(
+                sample.organism_name
+            )
+        ),
+        "curated_taxonomy": (
+            _public_sample_curated_taxonomy(
+                sample
+            )
+        ),
+        "external_taxonomy": (
+            _public_sample_external_taxonomy(
+                sample
+            )
+        ),
+        "public_location": (
+            _public_sample_location(
+                sample
+            )
+        ),
+        "public_collections": (
+            public_collections
+        ),
+    }

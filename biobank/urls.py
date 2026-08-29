@@ -26,6 +26,10 @@ from core.views.public.collections import (
     public_collection_list,
     public_collection_detail,
 )
+from core.views.public.samples import (
+    public_sample_list,
+    public_sample_detail,
+)
 
 # 2. AUTHENTICATION
 from core.views.auth import CoreLoginView, logout_user
@@ -166,6 +170,8 @@ urlpatterns = [
     path("public/governance/", public_governance, name="public_governance"),
     path("public/collections/", public_collection_list, name="public_collections"),
     path("public/collections/<int:collection_id>/", public_collection_detail, name="public_collection_detail"),
+    path("public/samples/", public_sample_list, name="public_samples"),
+    path("public/samples/<str:sample_id>/", public_sample_detail, name="public_sample_detail"),
 
     # ---------------- ADMIN & AUTH ----------------
     path("admin/", admin.site.urls),

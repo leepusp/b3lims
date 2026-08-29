@@ -1,0 +1,368 @@
+{% extends "public/base.html" %}
+
+{% block title %}Public Samples | B3 LIMS{% endblock %}
+
+{% block content %}
+
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    B3 LIMS public catalog
+</a>
+
+
+<section class="mb-4">
+
+    <h1 class="fw-bold mb-2">
+        Public Samples
+    </h1>
+
+    <p class="text-muted mb-2">
+        Explore publication-approved biological resources represented
+        in the B3 LIMS public catalog.
+    </p>
+
+    <p class="text-muted small mb-0">
+        Public metadata availability does not imply automatic access
+        to biological material.
+    </p>
+
+</section>
+
+
+<div class="row g-4">
+
+    <aside class="col-lg-3">
+
+        <div class="public-surface p-4">
+
+            <h2 class="h6 fw-bold mb-3">
+                Search and filter
+            </h2>
+
+            <form
+                method="get"
+                action="{% url 'public_samples' %}"
+            >
+
+                <div class="mb-3">
+
+                    <label
+                        for="publicSampleSearch"
+                        class="form-label fw-semibold"
+                    >
+                        Search
+                    </label>
+
+                    <input
+                        id="publicSampleSearch"
+                        type="search"
+                        name="q"
+                        value="{{ query }}"
+                        class="form-control"
+                        placeholder="Sample ID, organism or taxonomy"
+                    >
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <label
+                        for="publicSampleType"
+                        class="form-label fw-semibold"
+                    >
+                        Sample type
+                    </label>
+
+                    <select
+                        id="publicSampleType"
+                        name="sample_type"
+                        class="form-select"
+                    >
+                        <option value="">
+                            All Sample types
+                        </option>
+
+                        {% for value in facets.sample_types %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if selected_sample_type == value %}selected{% endif %}
+                            >
+                                {{ value }}
+                            </option>
+
+                        {% endfor %}
+                    </select>
+
+                </div>
+
+
+                {% if facets.genera %}
+
+                    <div class="mb-3">
+
+                        <label
+                            for="publicSampleGenus"
+                            class="form-label fw-semibold"
+                        >
+                            Genus
+                        </label>
+
+                        <select
+                            id="publicSampleGenus"
+                            name="genus"
+                            class="form-select"
+                        >
+                            <option value="">
+                                All genera
+                            </option>
+
+                            {% for value in facets.genera %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if selected_genus == value %}selected{% endif %}
+                                >
+                                    {{ value }}
+                                </option>
+
+                            {% endfor %}
+                        </select>
+
+                    </div>
+
+                {% endif %}
+
+
+                {% if facets.species %}
+
+                    <div class="mb-3">
+
+                        <label
+                            for="publicSampleSpecies"
+                            class="form-label fw-semibold"
+                        >
+                            Species
+                        </label>
+
+                        <select
+                            id="publicSampleSpecies"
+                            name="species"
+                            class="form-select"
+                        >
+                            <option value="">
+                                All species
+                            </option>
+
+                            {% for value in facets.species %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if selected_species == value %}selected{% endif %}
+                                >
+                                    {{ value }}
+                                </option>
+
+                            {% endfor %}
+                        </select>
+
+                    </div>
+
+                {% endif %}
+
+
+                <button
+                    type="submit"
+                    class="btn btn-primary w-100"
+                >
+                    Apply filters
+                </button>
+
+
+                {% if query or selected_sample_type or selected_genus or selected_species %}
+
+                    <a
+                        href="{% url 'public_samples' %}"
+                        class="btn btn-outline-secondary w-100 mt-2"
+                    >
+                        Clear filters
+                    </a>
+
+                {% endif %}
+
+            </form>
+
+        </div>
+
+    </aside>
+
+
+    <section class="col-lg-9">
+
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+
+            <p class="text-muted mb-0">
+
+                <strong>
+                    {{ result_count }}
+                </strong>
+
+                public Sample{{ result_count|pluralize }}
+                found
+
+            </p>
+
+            <span class="small text-muted">
+                Publication-safe metadata only
+            </span>
+
+        </div>
+
+
+        {% if samples %}
+
+            <div class="row g-3">
+
+                {% for sample in samples %}
+
+                    <div class="col-md-6 col-xl-4">
+
+                        <article class="public-surface h-100 p-4 d-flex flex-column">
+
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+
+                                <span class="badge bg-success">
+                                    Public Sample
+                                </span>
+
+                                {% if sample.sample_type %}
+
+                                    <span class="badge bg-light text-dark border">
+                                        {{ sample.sample_type }}
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="small text-muted mb-1">
+                                {{ sample.sample_id }}
+                            </div>
+
+
+                            <h2 class="h5 fw-bold mb-2">
+
+                                {{ sample.organism_name|default:"Organism not specified" }}
+
+                            </h2>
+
+
+                            <p class="text-muted small flex-grow-1 mb-3">
+                                Open this resource to inspect curated
+                                taxonomy, verified external taxonomy
+                                evidence, public geographic context and
+                                published Collection relationships.
+                            </p>
+
+
+                            <a
+                                href="{% url 'public_sample_detail' sample.sample_id %}"
+                                class="btn btn-outline-primary btn-sm mt-auto align-self-start"
+                            >
+                                View Sample
+                            </a>
+
+                        </article>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            {% if page_obj.paginator.num_pages > 1 %}
+
+                <nav
+                    class="mt-4"
+                    aria-label="Public Sample catalog pages"
+                >
+
+                    <ul class="pagination">
+
+                        {% if page_obj.has_previous %}
+
+                            <li class="page-item">
+
+                                <a
+                                    class="page-link"
+                                    href="?q={{ query|urlencode }}&sample_type={{ selected_sample_type|urlencode }}&genus={{ selected_genus|urlencode }}&species={{ selected_species|urlencode }}&page={{ page_obj.previous_page_number }}"
+                                >
+                                    Previous
+                                </a>
+
+                            </li>
+
+                        {% endif %}
+
+
+                        <li class="page-item disabled">
+
+                            <span class="page-link">
+
+                                Page {{ page_obj.number }}
+                                of {{ page_obj.paginator.num_pages }}
+
+                            </span>
+
+                        </li>
+
+
+                        {% if page_obj.has_next %}
+
+                            <li class="page-item">
+
+                                <a
+                                    class="page-link"
+                                    href="?q={{ query|urlencode }}&sample_type={{ selected_sample_type|urlencode }}&genus={{ selected_genus|urlencode }}&species={{ selected_species|urlencode }}&page={{ page_obj.next_page_number }}"
+                                >
+                                    Next
+                                </a>
+
+                            </li>
+
+                        {% endif %}
+
+                    </ul>
+
+                </nav>
+
+            {% endif %}
+
+        {% else %}
+
+            <div class="public-surface p-4">
+
+                <strong class="d-block mb-1">
+                    No public Samples found
+                </strong>
+
+                <p class="text-muted mb-0">
+                    No publication-approved Sample matches the current
+                    search and filter combination.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+{% endblock %}

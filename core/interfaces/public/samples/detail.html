@@ -1,0 +1,393 @@
+{% extends "public/base.html" %}
+
+{% block title %}
+    {{ record.sample_id }} | B3 LIMS
+{% endblock %}
+
+{% block content %}
+
+<a
+    href="{% url 'public_samples' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    Back to Public Samples
+</a>
+
+
+<div class="public-surface p-4 p-md-5">
+
+    <header class="mb-4">
+
+        <div class="d-flex flex-wrap gap-2 mb-2">
+
+            <span class="badge bg-success">
+                Public Sample
+            </span>
+
+            {% if record.sample_type %}
+
+                <span class="badge bg-light text-dark border">
+                    {{ record.sample_type }}
+                </span>
+
+            {% endif %}
+
+        </div>
+
+
+        <div class="small text-muted mb-1">
+            {{ record.sample_id }}
+        </div>
+
+
+        <h1 class="fw-bold mb-2">
+
+            {{ record.organism_name|default:"Organism not specified" }}
+
+        </h1>
+
+
+        <p class="text-muted mb-0">
+            Publication-approved Sample metadata available through
+            the B3 LIMS public catalog.
+        </p>
+
+    </header>
+
+
+    <div class="row g-4">
+
+        <section class="col-lg-6">
+
+            <div class="border rounded-3 p-4 h-100">
+
+                <h2 class="h5 fw-bold mb-3">
+                    Curated taxonomy
+                </h2>
+
+
+                {% if record.curated_taxonomy.family or record.curated_taxonomy.genus or record.curated_taxonomy.species or record.curated_taxonomy.strain %}
+
+                    <dl class="row mb-0">
+
+                        {% if record.curated_taxonomy.family %}
+
+                            <dt class="col-sm-4">
+                                Family
+                            </dt>
+
+                            <dd class="col-sm-8">
+                                {{ record.curated_taxonomy.family }}
+                            </dd>
+
+                        {% endif %}
+
+
+                        {% if record.curated_taxonomy.genus %}
+
+                            <dt class="col-sm-4">
+                                Genus
+                            </dt>
+
+                            <dd class="col-sm-8">
+                                <em>
+                                    {{ record.curated_taxonomy.genus }}
+                                </em>
+                            </dd>
+
+                        {% endif %}
+
+
+                        {% if record.curated_taxonomy.species %}
+
+                            <dt class="col-sm-4">
+                                Species
+                            </dt>
+
+                            <dd class="col-sm-8">
+                                <em>
+                                    {{ record.curated_taxonomy.species }}
+                                </em>
+                            </dd>
+
+                        {% endif %}
+
+
+                        {% if record.curated_taxonomy.strain %}
+
+                            <dt class="col-sm-4">
+                                Strain / isolate
+                            </dt>
+
+                            <dd class="col-sm-8">
+                                {{ record.curated_taxonomy.strain }}
+                            </dd>
+
+                        {% endif %}
+
+                    </dl>
+
+                {% else %}
+
+                    <p class="text-muted mb-0">
+                        No structured curated taxonomy is currently
+                        available for this Sample.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </section>
+
+
+        <section class="col-lg-6">
+
+            <div class="border rounded-3 p-4 h-100">
+
+                <h2 class="h5 fw-bold mb-3">
+                    Geographic context
+                </h2>
+
+
+                {% if record.public_location %}
+
+                    <p class="mb-1">
+                        <strong>
+                            Country / Ocean
+                        </strong>
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        {{ record.public_location }}
+                    </p>
+
+                {% else %}
+
+                    <p class="text-muted mb-0">
+                        No geographic origin is currently eligible
+                        for public disclosure.
+                    </p>
+
+                {% endif %}
+
+
+                <hr>
+
+
+                <p class="small text-muted mb-0">
+                    This public surface does not transmit collection
+                    site names, latitude, longitude or internal-only
+                    geographic metadata.
+                </p>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <section class="mt-4">
+
+        <h2 class="h5 fw-bold mb-3">
+            Verified external taxonomy evidence
+        </h2>
+
+
+        {% if record.external_taxonomy %}
+
+            <div class="row g-3">
+
+                {% for taxonomy in record.external_taxonomy %}
+
+                    <div class="col-lg-6">
+
+                        <article class="border rounded-3 p-4 h-100">
+
+                            <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+
+                                <strong>
+                                    {{ taxonomy.source_label }}
+                                </strong>
+
+                                <span class="badge bg-light text-dark border">
+                                    Verified
+                                </span>
+
+                            </div>
+
+
+                            {% if taxonomy.scientific_name %}
+
+                                <div class="mb-2">
+
+                                    <div class="small text-muted">
+                                        Scientific name
+                                    </div>
+
+                                    <div>
+                                        <em>
+                                            {{ taxonomy.scientific_name }}
+                                        </em>
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.rank %}
+
+                                <div class="small">
+                                    <strong>Rank:</strong>
+                                    {{ taxonomy.rank }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.phylum %}
+
+                                <div class="small">
+                                    <strong>Phylum:</strong>
+                                    {{ taxonomy.phylum }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.class_name %}
+
+                                <div class="small">
+                                    <strong>Class:</strong>
+                                    {{ taxonomy.class_name }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.order_name %}
+
+                                <div class="small">
+                                    <strong>Order:</strong>
+                                    {{ taxonomy.order_name }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.family %}
+
+                                <div class="small">
+                                    <strong>Family:</strong>
+                                    {{ taxonomy.family }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.genus %}
+
+                                <div class="small">
+                                    <strong>Genus:</strong>
+                                    {{ taxonomy.genus }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.species %}
+
+                                <div class="small">
+                                    <strong>Species:</strong>
+                                    {{ taxonomy.species }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if taxonomy.source_release %}
+
+                                <div class="small text-muted mt-2">
+                                    Source release:
+                                    {{ taxonomy.source_release }}
+                                </div>
+
+                            {% endif %}
+
+                        </article>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="border rounded-3 p-4 text-muted">
+                No unambiguous current + verified external taxonomy
+                evidence is currently available for public display.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <section class="mt-4">
+
+        <h2 class="h5 fw-bold mb-3">
+            Public Collections
+        </h2>
+
+
+        {% if record.public_collections %}
+
+            <div class="d-flex flex-wrap gap-2">
+
+                {% for collection in record.public_collections %}
+
+                    <a
+                        href="{% url 'public_collection_detail' collection.id %}"
+                        class="btn btn-outline-primary btn-sm"
+                    >
+                        {{ collection.name }}
+                    </a>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="border rounded-3 p-4 text-muted">
+                This Sample is not currently associated with a
+                published public Collection.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <div class="mt-4 p-4 rounded-3 bg-light">
+
+        <h2 class="h6 fw-bold mb-2">
+            Biological material access
+        </h2>
+
+        <p class="small text-muted mb-0">
+            Public availability of these metadata does not authorize
+            access to or transfer of biological material. Material
+            requests remain subject to institutional governance and
+            the applicable authorization procedures.
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}
