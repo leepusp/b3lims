@@ -2027,3 +2027,21 @@
         width: 100%;
     }
 }
+/* =========================================================
+   WORKSPACE UI - ANALYSIS COMPUTE REMOVED
+   ========================================================= */
+
+/*
+ * The Analysis & Compute sidebar was intentionally removed
+ * from the Workspace surface. The scientific-context panel
+ * now consumes the complete row.
+ */
+
+.workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace-main {
+    width: 100%;
+    min-width: 0;
+}

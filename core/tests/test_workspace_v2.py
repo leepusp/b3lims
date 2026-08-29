@@ -117,8 +117,7 @@ class WorkspaceV23Tests(
             "Scientific Evidence",
             "Taxonomy coverage",
             "Genome coverage",
-            "Analysis & Compute",
-        ):
+                    ):
             self.assertContains(
                 response,
                 text,
@@ -170,6 +169,34 @@ class WorkspaceV23Tests(
 
         self.assertIn(
             "internal/workspace/workspace.js",
+            template,
+        )
+
+
+    def test_workspace_hides_analysis_compute_surface(
+        self,
+    ):
+        template = Path(
+            "core/interfaces/internal/workspace/workspace.html"
+        ).read_text()
+
+        self.assertNotIn(
+            "Analysis & Compute",
+            template,
+        )
+
+        self.assertNotIn(
+            "Scientific tools",
+            template,
+        )
+
+        self.assertNotIn(
+            'class="workspace-sidebar"',
+            template,
+        )
+
+        self.assertIn(
+            "Scientific Evidence",
             template,
         )
 
