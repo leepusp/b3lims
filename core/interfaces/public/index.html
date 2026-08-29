@@ -1000,8 +1000,8 @@
 
 
         <div class="portal-search-hints">
-            Try searching by Collection name, organism,
-            Sample type or public Tag.
+            Search Collections here, or browse individual public
+            Samples using the Sample catalog below.
         </div>
 
 
@@ -1009,6 +1009,15 @@
             class="portal-hero-actions"
             aria-label="B3 LIMS public portal shortcuts"
         >
+
+            <a
+                href="{% url 'public_samples' %}"
+                class="portal-navchip"
+            >
+                <i class="bi bi-box-seam"></i>
+                Browse Samples
+            </a>
+
 
             <a
                 href="{% url 'public_collections' %}"
@@ -1080,7 +1089,11 @@
                 <i class="bi bi-box-seam"></i>
             </div>
 
-            <div>
+            <a
+                href="{% url 'public_samples' %}"
+                class="text-decoration-none text-reset"
+                aria-label="Browse all public Samples"
+            >
                 <div class="portal-stat-label">
                     Public Samples
                 </div>
@@ -1092,7 +1105,7 @@
                 <div class="portal-stat-subtitle">
                     Publication-approved Samples
                 </div>
-            </div>
+            </a>
 
         </div>
 
@@ -1103,7 +1116,11 @@
                 <i class="bi bi-folder2-open"></i>
             </div>
 
-            <div>
+            <a
+                href="{% url 'public_collections' %}"
+                class="text-decoration-none text-reset"
+                aria-label="Browse all public Collections"
+            >
                 <div class="portal-stat-label">
                     Public Collections
                 </div>
@@ -1115,7 +1132,7 @@
                 <div class="portal-stat-subtitle">
                     Published catalog Collections
                 </div>
-            </div>
+            </a>
 
         </div>
 
@@ -4956,6 +4973,131 @@
     }
 
 
+    const PUBLIC_SAMPLES_CATALOG_URL = (
+        "{% url 'public_samples' %}"
+    );
+
+
+    function publicSamplesCatalogUrl(
+        filters
+    ) {
+        const parameters = (
+            new URLSearchParams()
+        );
+
+
+        Object.entries(
+            filters
+            ||
+            {}
+        ).forEach(
+            function (
+                entry
+            ) {
+                const key = entry[0];
+                const value = entry[1];
+
+
+                if (
+                    value === null
+                    ||
+                    value === undefined
+                    ||
+                    String(
+                        value
+                    ).trim() === ""
+                ) {
+                    return;
+                }
+
+
+                parameters.set(
+                    key,
+                    String(
+                        value
+                    )
+                );
+            }
+        );
+
+
+        const query = (
+            parameters.toString()
+        );
+
+
+        return (
+            PUBLIC_SAMPLES_CATALOG_URL
+            +
+            (
+                query
+                ?
+                (
+                    "?"
+                    +
+                    query
+                )
+                :
+                ""
+            )
+        );
+    }
+
+
+    function rankingCatalogFilters(
+        group
+    ) {
+        if (
+            !group
+            ||
+            group.source
+            !==
+            "curated"
+        ) {
+            return null;
+        }
+
+
+        if (
+            group.rank
+            ===
+            "species"
+        ) {
+            return {
+                species:
+                    group.label
+            };
+        }
+
+
+        if (
+            group.rank
+            ===
+            "genus"
+        ) {
+            return {
+                genus:
+                    group.label
+            };
+        }
+
+
+        if (
+            group.rank
+            ===
+            "candidate"
+        ) {
+            return {
+                q:
+                    group.label
+            };
+        }
+
+
+        return null;
+    }
+
+
     function buildNetworkModel(
         rows
     ) {
@@ -5579,6 +5721,71 @@
 
 
         refreshNetwork();
+
+
+        const chart = getOrCreateChart(
+            "network",
+            "publicNetworkChart"
+        );
+
+
+        if (
+            chart
+            &&
+            !chart.__b3PublicSampleNavigationBound
+        ) {
+            chart.on(
+                "click",
+                function (
+                    params
+                ) {
+                    if (
+                        !params.data
+                        ||
+                        !Number.isInteger(
+                            params.data.category
+                        )
+                    ) {
+                        return;
+                    }
+
+
+                    if (
+                        params.data.category
+                        ===
+                        0
+                    ) {
+                        window.location.assign(
+                            publicSamplesCatalogUrl({
+                                q:
+                                    params.data.name
+                            })
+                        );
+
+                        return;
+                    }
+
+
+                    if (
+                        params.data.category
+                        ===
+                        1
+                    ) {
+                        window.location.assign(
+                            publicSamplesCatalogUrl({
+                                sample_type:
+                                    params.data.name
+                            })
+                        );
+                    }
+                }
+            );
+
+
+            chart.__b3PublicSampleNavigationBound = (
+                true
+            );
+        }
     }
 
 
@@ -5671,6 +5878,8 @@
                         {
                             key: label,
                             label: label,
+                            source: row.source,
+                            rank: rank,
                             total: 0,
                             candidates: new Map()
                         }
@@ -5859,16 +6068,59 @@
         );
 
 
+        const catalogFilters = (
+            rankingCatalogFilters(
+                group
+            )
+        );
+
+
+        if (
+            catalogFilters
+        ) {
+            const browse = document.createElement(
+                "a"
+            );
+
+            browse.className = (
+                "btn btn-outline-primary btn-sm mb-3"
+            );
+
+            browse.href = (
+                publicSamplesCatalogUrl(
+                    catalogFilters
+                )
+            );
+
+            browse.textContent = (
+                "Browse matching public Samples"
+            );
+
+            list.appendChild(
+                browse
+            );
+        }
+
+
         group.candidates.forEach(
             function (
                 candidate
             ) {
                 const item = document.createElement(
-                    "div"
+                    "a"
                 );
 
                 item.className = (
-                    "portal-ranking-candidate"
+                    "portal-ranking-candidate "
+                    +
+                    "text-decoration-none text-reset"
+                );
+
+                item.href = (
+                    publicSamplesCatalogUrl({
+                        q:
+                            candidate.candidate
+                    })
                 );
 
 

@@ -116,6 +116,81 @@
     </div>
 
 
+    <section class="mt-4">
+
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+
+            <h2 class="h5 fw-bold mb-0">
+                Public Samples
+            </h2>
+
+            {% if public_samples %}
+
+                <span class="small text-muted">
+                    {{ public_samples|length }}
+                    publication-approved Sample{{ public_samples|length|pluralize }}
+                </span>
+
+            {% endif %}
+
+        </div>
+
+
+        {% if public_samples %}
+
+            <div class="row g-3">
+
+                {% for sample in public_samples %}
+
+                    <div class="col-md-6 col-xl-4">
+
+                        <article class="border rounded-3 p-3 h-100">
+
+                            <div class="small text-muted mb-1">
+                                {{ sample.sample_id }}
+                            </div>
+
+                            <h3 class="h6 fw-bold mb-2">
+                                {{ sample.organism_name|default:"Organism not specified" }}
+                            </h3>
+
+                            {% if sample.sample_type %}
+
+                                <div class="small text-muted mb-3">
+                                    {{ sample.sample_type }}
+                                </div>
+
+                            {% endif %}
+
+                            <a
+                                href="{% url 'public_sample_detail' sample.sample_id %}"
+                                class="btn btn-outline-primary btn-sm"
+                            >
+                                View Sample
+                            </a>
+
+                        </article>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="border rounded-3 p-4 text-muted">
+
+                No publication-approved Samples are currently
+                associated with this public Collection.
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
     <div class="mt-4 p-4 rounded-3 bg-light">
 
         <h2 class="h6 fw-bold mb-2">

@@ -6,6 +6,7 @@ from django.shortcuts import (
 from core.context import base_context
 from core.services.public_catalog import (
     public_collection_catalog_queryset,
+    public_sample_catalog_queryset,
     search_public_collections_queryset,
 )
 
@@ -71,8 +72,19 @@ def public_collection_detail(
         id=collection_id,
     )
 
+    public_samples = list(
+        public_sample_catalog_queryset()
+        .filter(
+            collections=collection,
+        )
+        .order_by(
+            "sample_id",
+        )
+    )
+
     context = {
         "collection": collection,
+        "public_samples": public_samples,
     }
 
     context.update(
