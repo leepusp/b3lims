@@ -261,3 +261,58 @@ class ShipmentRouteMapTests(TestCase):
             response,
             "Recent transport routes",
         )
+
+
+    def test_operational_summaries_follow_route_tracking(self):
+        self.client.force_login(
+            self.user
+        )
+
+        response = self.client.get(
+            reverse(
+                "shipments_dashboard"
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        content = response.content.decode()
+
+        route_index = content.index(
+            "Shipment Route Tracking"
+        )
+
+        status_index = content.index(
+            "Status distribution"
+        )
+
+        flow_index = content.index(
+            "Flow type"
+        )
+
+        documents_index = content.index(
+            "Document readiness"
+        )
+
+        self.assertLess(
+            route_index,
+            status_index,
+        )
+
+        self.assertLess(
+            route_index,
+            flow_index,
+        )
+
+        self.assertLess(
+            route_index,
+            documents_index,
+        )
+
+        self.assertContains(
+            response,
+            'class="ship-side ship-side-bottom"',
+        )

@@ -389,6 +389,79 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ==========================================================
+   SHIPMENT ROUTE MAP LAYOUT REFINEMENT V1
+   Route tracking is the primary dashboard workspace.
+   Operational summaries are intentionally placed below it.
+   ========================================================== */
+
+.ship-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+
+.ship-layout > .ship-main {
+    min-width: 0;
+    width: 100%;
+}
+
+.ship-layout > .ship-side.ship-side-bottom {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    position: static;
+    align-self: stretch;
+}
+
+.ship-layout
+> .ship-side.ship-side-bottom
+> .ship-panel {
+    height: 100%;
+    min-width: 0;
+    margin: 0 !important;
+}
+
+.ship-layout
+> .ship-side.ship-side-bottom
+.ship-panel-body {
+    height: auto;
+}
+
+@media (max-width: 1100px) {
+    .ship-layout
+    > .ship-side.ship-side-bottom {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .ship-layout
+    > .ship-side.ship-side-bottom
+    > .ship-panel:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 720px) {
+    .ship-layout
+    > .ship-side.ship-side-bottom {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-layout
+    > .ship-side.ship-side-bottom
+    > .ship-panel:last-child {
+        grid-column: auto;
+    }
+}
+
 </style>
 
 <div class="ship-dashboard-page">
@@ -463,91 +536,7 @@
     </div>
 
     <div class="ship-layout">
-        <aside class="ship-side">
-            <div class="ship-panel mb-3">
-                <div class="ship-panel-header">
-                    <h2 class="ship-panel-title">
-                        <i class="bi bi-activity"></i>Status distribution
-                    </h2>
-                    <span class="ship-panel-hint">records</span>
-                </div>
-                <div class="ship-panel-body">
-                    <div class="ship-status-list">
-                        {% for row in status_summary %}
-                            <div class="ship-status-card">
-                                <div class="ship-status-top">
-                                    <div class="ship-status-name">{{ row.label }}</div>
-                                    <div class="ship-status-count">{{ row.total }}</div>
-                                </div>
-                                <div class="ship-status-note">{{ row.value }}</div>
-                            </div>
-                        {% empty %}
-                            <div class="ship-empty">No status data available.</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
 
-            <div class="ship-panel">
-                <div class="ship-panel-header">
-                    <h2 class="ship-panel-title">
-                        <i class="bi bi-diagram-3"></i>Flow type
-                    </h2>
-                    <span class="ship-panel-hint">records</span>
-                </div>
-                <div class="ship-panel-body">
-                    <table class="ship-table">
-                        <tbody>
-                            {% for row in flow_summary %}
-                                <tr>
-                                    <td>{{ row.label }}</td>
-                                    <td class="text-end fw-bold">{{ row.total }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="2" class="ship-empty">No flow data available.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="ship-panel mt-3">
-                <div class="ship-panel-header">
-                    <h2 class="ship-panel-title">
-                        <i class="bi bi-file-earmark-check"></i>Document readiness
-                    </h2>
-                    <span class="ship-panel-hint">{{ document_total }} documents</span>
-                </div>
-                <div class="ship-panel-body">
-                    <table class="ship-table">
-                        <tbody>
-                            <tr>
-                                <td>Draft / generated</td>
-                                <td class="text-end fw-bold">{{ document_draft }}</td>
-                            </tr>
-                            <tr>
-                                <td>Uploaded / submitted</td>
-                                <td class="text-end fw-bold">{{ document_uploaded }}</td>
-                            </tr>
-                            <tr>
-                                <td>Approved</td>
-                                <td class="text-end fw-bold">{{ document_approved }}</td>
-                            </tr>
-                            <tr>
-                                <td>Checklist completed</td>
-                                <td class="text-end fw-bold">{{ checklist_completed }}</td>
-                            </tr>
-                            <tr>
-                                <td>Checklist pending</td>
-                                <td class="text-end fw-bold">{{ checklist_pending }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </aside>
 
         <main class="ship-main">
             <div class="ship-panel shipment-route-map-panel"
@@ -855,6 +844,93 @@
                 </div>
             </div>
         </main>
+
+        <!-- SHIPMENT ROUTE MAP LAYOUT REFINEMENT V1 -->
+<aside class="ship-side ship-side-bottom" aria-label="Operational summaries">
+            <div class="ship-panel mb-3">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-activity"></i>Status distribution
+                    </h2>
+                    <span class="ship-panel-hint">records</span>
+                </div>
+                <div class="ship-panel-body">
+                    <div class="ship-status-list">
+                        {% for row in status_summary %}
+                            <div class="ship-status-card">
+                                <div class="ship-status-top">
+                                    <div class="ship-status-name">{{ row.label }}</div>
+                                    <div class="ship-status-count">{{ row.total }}</div>
+                                </div>
+                                <div class="ship-status-note">{{ row.value }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="ship-empty">No status data available.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="ship-panel">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-diagram-3"></i>Flow type
+                    </h2>
+                    <span class="ship-panel-hint">records</span>
+                </div>
+                <div class="ship-panel-body">
+                    <table class="ship-table">
+                        <tbody>
+                            {% for row in flow_summary %}
+                                <tr>
+                                    <td>{{ row.label }}</td>
+                                    <td class="text-end fw-bold">{{ row.total }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="2" class="ship-empty">No flow data available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="ship-panel mt-3">
+                <div class="ship-panel-header">
+                    <h2 class="ship-panel-title">
+                        <i class="bi bi-file-earmark-check"></i>Document readiness
+                    </h2>
+                    <span class="ship-panel-hint">{{ document_total }} documents</span>
+                </div>
+                <div class="ship-panel-body">
+                    <table class="ship-table">
+                        <tbody>
+                            <tr>
+                                <td>Draft / generated</td>
+                                <td class="text-end fw-bold">{{ document_draft }}</td>
+                            </tr>
+                            <tr>
+                                <td>Uploaded / submitted</td>
+                                <td class="text-end fw-bold">{{ document_uploaded }}</td>
+                            </tr>
+                            <tr>
+                                <td>Approved</td>
+                                <td class="text-end fw-bold">{{ document_approved }}</td>
+                            </tr>
+                            <tr>
+                                <td>Checklist completed</td>
+                                <td class="text-end fw-bold">{{ checklist_completed }}</td>
+                            </tr>
+                            <tr>
+                                <td>Checklist pending</td>
+                                <td class="text-end fw-bold">{{ checklist_pending }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </aside>
     </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
