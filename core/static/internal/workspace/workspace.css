@@ -1867,3 +1867,163 @@
         transition: none;
     }
 }
+/* =========================================================
+   WORKSPACE LAYOUT TUNE - CARD ALIGNMENT
+   ========================================================= */
+
+/*
+ * Keep every dashboard row visually anchored to the same
+ * vertical grid.
+ */
+
+.workspace {
+    width: 100%;
+}
+
+
+/* ---------------------------------------------------------
+   Quick actions
+   --------------------------------------------------------- */
+
+.workspace-quick-grid {
+    align-items: stretch;
+}
+
+.workspace-quick-grid > * {
+    min-width: 0;
+}
+
+.workspace-quick-card {
+    width: 100%;
+    height: 100%;
+    min-height: 78px;
+}
+
+
+/* ---------------------------------------------------------
+   Analytics row
+   --------------------------------------------------------- */
+
+.workspace-analytics-grid {
+    align-items: stretch;
+}
+
+.workspace-analytics-grid > * {
+    min-width: 0;
+}
+
+.workspace-analytics-grid > .workspace-card,
+.workspace-analytics-grid > .workspace-calendar-card {
+    height: 100%;
+}
+
+
+/*
+ * A Workspace card behaves as a vertical flex container.
+ * This keeps headers aligned while allowing each body to use
+ * the remaining available space.
+ */
+
+.workspace-card {
+    width: 100%;
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.workspace-card-header {
+    flex: 0 0 auto;
+}
+
+.workspace-card-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+
+/*
+ * The two analytical cards and the calendar remain aligned at
+ * both the top and bottom of their common row.
+ */
+
+.workspace-chart-card,
+.workspace-calendar-card {
+    height: 100%;
+}
+
+
+/* ---------------------------------------------------------
+   Lower scientific / compute row
+   --------------------------------------------------------- */
+
+/*
+ * Do not force the shorter right-hand column to become as tall
+ * as the scientific evidence panel. Both columns should start
+ * at exactly the same vertical position.
+ */
+
+.workspace-grid {
+    align-items: start;
+}
+
+.workspace-main,
+.workspace-sidebar {
+    min-width: 0;
+    align-self: start;
+}
+
+.workspace-main > *,
+.workspace-sidebar > * {
+    width: 100%;
+}
+
+
+/*
+ * Maintain a consistent visual rhythm when more than one card
+ * appears in the right-hand column.
+ */
+
+.workspace-sidebar {
+    row-gap: 16px;
+}
+
+
+/* ---------------------------------------------------------
+   Scientific evidence internals
+   --------------------------------------------------------- */
+
+.workspace-evidence-layout {
+    align-items: stretch;
+}
+
+.workspace-evidence-layout > * {
+    min-width: 0;
+}
+
+
+/* ---------------------------------------------------------
+   Tool cards
+   --------------------------------------------------------- */
+
+.workspace-tool-list a {
+    min-height: 50px;
+}
+
+
+/* ---------------------------------------------------------
+   Responsive correction
+   --------------------------------------------------------- */
+
+@media (max-width: 992px) {
+    .workspace-analytics-grid,
+    .workspace-grid,
+    .workspace-evidence-layout {
+        align-items: stretch;
+    }
+
+    .workspace-main,
+    .workspace-sidebar {
+        width: 100%;
+    }
+}
