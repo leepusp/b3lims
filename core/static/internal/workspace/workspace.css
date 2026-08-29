@@ -1716,3 +1716,154 @@
         transform: none;
     }
 }
+
+
+/* =========================================================
+   INTERACTIVE WORKSPACE ANALYTICS
+========================================================= */
+
+.workspace-chart-card {
+    position: relative;
+}
+
+.workspace-donut-segment {
+    cursor: pointer;
+
+    outline: none;
+
+    transition:
+        opacity 140ms ease,
+        stroke-width 140ms ease,
+        filter 140ms ease;
+}
+
+.workspace-donut-segment:hover,
+.workspace-donut-segment:focus-visible,
+.workspace-donut-segment.is-active {
+    stroke-width: 7;
+    filter: brightness(0.94);
+}
+
+.workspace-donut.is-interacting
+.workspace-donut-segment:not(.is-active) {
+    opacity: 0.36;
+}
+
+.workspace-legend-row {
+    border-radius: 7px;
+
+    cursor: pointer;
+
+    outline: none;
+
+    transition:
+        background 140ms ease,
+        opacity 140ms ease;
+}
+
+.workspace-legend-row:hover,
+.workspace-legend-row:focus-visible,
+.workspace-legend-row.is-active {
+    background: #f4f7fb;
+}
+
+.workspace-chart-legend.is-interacting
+.workspace-legend-row:not(.is-active) {
+    opacity: 0.42;
+}
+
+.workspace-bar-column {
+    cursor: pointer;
+
+    outline: none;
+
+    transition:
+        opacity 140ms ease,
+        transform 140ms ease;
+}
+
+.workspace-bar-column:hover,
+.workspace-bar-column:focus-visible,
+.workspace-bar-column.is-active {
+    transform: translateY(-3px);
+}
+
+.workspace-bar-chart.is-interacting
+.workspace-bar-column:not(.is-active) {
+    opacity: 0.38;
+}
+
+.workspace-bar-fill {
+    transition:
+        filter 140ms ease,
+        transform 140ms ease;
+    transform-origin: bottom;
+}
+
+.workspace-bar-column:hover .workspace-bar-fill,
+.workspace-bar-column:focus-visible .workspace-bar-fill,
+.workspace-bar-column.is-active .workspace-bar-fill {
+    filter: brightness(0.91);
+    transform: scaleX(1.08);
+}
+
+.workspace-chart-tooltip {
+    position: fixed;
+    z-index: 1100;
+
+    max-width: min(260px, calc(100vw - 24px));
+
+    padding: 8px 10px;
+
+    border: 1px solid #dce4ee;
+    border-radius: 8px;
+
+    background: rgba(25, 49, 83, 0.97);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 8px 24px
+        rgba(30, 48, 72, 0.18);
+
+    font-size: 0.7rem;
+    line-height: 1.35;
+
+    pointer-events: none;
+
+    opacity: 0;
+
+    transform: translateY(4px);
+
+    transition:
+        opacity 110ms ease,
+        transform 110ms ease;
+}
+
+.workspace-chart-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.workspace-chart-tooltip strong {
+    display: block;
+
+    margin-bottom: 2px;
+
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.workspace-chart-tooltip span {
+    color: #dbe8fa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace-donut-segment,
+    .workspace-legend-row,
+    .workspace-bar-column,
+    .workspace-bar-fill,
+    .workspace-chart-tooltip {
+        transition: none;
+    }
+}

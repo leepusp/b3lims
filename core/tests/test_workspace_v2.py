@@ -117,14 +117,93 @@ class WorkspaceV23Tests(
             "Scientific Evidence",
             "Taxonomy coverage",
             "Genome coverage",
-            "Recent Samples",
-            "Recent Collections",
             "Analysis & Compute",
-            "Recent Activity",
         ):
             self.assertContains(
                 response,
                 text,
+            )
+
+
+    def test_workspace_v23_refined_surface_contract(
+        self,
+    ):
+        response = self.client.get(
+            reverse(
+                "workspace"
+            )
+        )
+
+        for removed_text in (
+            "Browse Samples",
+            "My Research",
+            "Recent Samples",
+            "Research structure",
+            "Recent Collections",
+            "Traceability",
+            "Recent Activity",
+        ):
+            self.assertNotContains(
+                response,
+                removed_text,
+            )
+
+        template = Path(
+            "core/interfaces/internal/"
+            "workspace/workspace.html"
+        ).read_text()
+
+        self.assertIn(
+            "workspace-donut-segment",
+            template,
+        )
+
+        self.assertIn(
+            'data-chart-index="{{ forloop.counter0 }}"',
+            template,
+        )
+
+        self.assertIn(
+            "workspace-bar-column",
+            template,
+        )
+
+        self.assertIn(
+            "internal/workspace/workspace.js",
+            template,
+        )
+
+
+    def test_global_user_menu_is_width_safe(
+        self,
+    ):
+        base_template = Path(
+            "core/interfaces/internal/common/base.html"
+        ).read_text()
+
+        base_css = Path(
+            "core/static/internal/common/base.css"
+        ).read_text()
+
+        for token in (
+            "lims-topbar-copy",
+            "lims-user-menu",
+            "lims-user-menu-button",
+            "lims-user-menu-name",
+        ):
+            self.assertIn(
+                token,
+                base_template,
+            )
+
+        for token in (
+            "TOPBAR USER MENU CONTAINMENT",
+            "flex: 0 0 34px",
+            "text-overflow: ellipsis",
+        ):
+            self.assertIn(
+                token,
+                base_css,
             )
 
 
@@ -426,12 +505,21 @@ class WorkspaceV23Tests(
             "echarts",
             "d3.js",
             "<canvas",
-            "<script",
         ):
             self.assertNotIn(
                 forbidden,
                 template.lower(),
             )
+
+        self.assertIn(
+            "internal/workspace/workspace.js",
+            template,
+        )
+
+        self.assertIn(
+            "<script",
+            template.lower(),
+        )
 
 
     def test_workspace_preserves_authorization_helpers_and_no_fake_models(

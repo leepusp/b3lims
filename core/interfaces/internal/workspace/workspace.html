@@ -7,7 +7,7 @@
 {% block extra_css %}
 <link
     rel="stylesheet"
-    href="{% static 'internal/workspace/workspace.css' %}?v=20260829-v23"
+    href="{% static 'internal/workspace/workspace.css' %}?v=20260829-v23-refine"
 >
 {% endblock %}
 
@@ -68,18 +68,6 @@
 
         </div>
 
-
-        <div class="workspace-header-actions">
-
-            <a
-                href="{% url 'samples_list' %}"
-                class="workspace-btn workspace-btn-primary"
-            >
-                <i class="bi bi-box-seam"></i>
-                Browse Samples
-            </a>
-
-        </div>
 
     </header>
 
@@ -236,6 +224,13 @@
                                         stroke-dasharray="{{ row.percent }} {{ row.dash_remainder }}"
                                         stroke-dashoffset="{{ row.dashoffset }}"
                                         transform="rotate(-90 21 21)"
+                                        tabindex="0"
+                                        role="button"
+                                        data-chart-index="{{ forloop.counter0 }}"
+                                        data-chart-label="{{ row.label }}"
+                                        data-chart-total="{{ row.total }}"
+                                        data-chart-percent="{{ row.percent }}"
+                                        aria-label="{{ row.label }}: {{ row.total }} Samples, {{ row.percent }} percent"
                                     ></circle>
 
                                 {% endfor %}
@@ -262,7 +257,11 @@
 
                             {% for row in workspace_v2.sample_type_chart %}
 
-                                <div class="workspace-legend-row">
+                                <div
+                                    class="workspace-legend-row"
+                                    data-chart-index="{{ forloop.counter0 }}"
+                                    tabindex="0"
+                                >
 
                                     <span
                                         class="workspace-legend-dot"
@@ -357,11 +356,19 @@
                         class="workspace-bar-chart"
                         role="img"
                         aria-label="Samples by storage location"
+                        data-chart-denominator="{{ workspace_v2.storage_annotated }}"
                     >
 
                         {% for row in workspace_v2.storage_location_chart %}
 
-                            <div class="workspace-bar-column">
+                            <div
+                                class="workspace-bar-column"
+                                tabindex="0"
+                                role="button"
+                                data-chart-label="{{ row.label }}"
+                                data-chart-total="{{ row.total }}"
+                                aria-label="{{ row.label }}: {{ row.total }} Samples"
+                            >
 
                                 <strong class="workspace-bar-value">
                                     {{ row.total }}
@@ -711,229 +718,6 @@
             </section>
 
 
-            <!-- RECENT SAMPLES -->
-
-            <section class="workspace-card">
-
-                <header class="workspace-card-header">
-
-                    <div>
-                        <span class="workspace-card-eyebrow">
-                            My Research
-                        </span>
-
-                        <h2>
-                            Recent Samples
-                        </h2>
-                    </div>
-
-                    <a href="{% url 'samples_list' %}">
-                        View all
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-
-                </header>
-
-
-                <div class="workspace-card-body workspace-card-body-flush">
-
-                    {% if workspace_v2.recent_samples %}
-
-                        <div class="workspace-resource-list">
-
-                            {% for sample in workspace_v2.recent_samples %}
-
-                                <a
-                                    href="{% url 'sample_detail' sample.pk %}"
-                                    class="workspace-resource-row"
-                                >
-
-                                    <span class="workspace-resource-symbol">
-                                        <i class="bi bi-box-seam"></i>
-                                    </span>
-
-
-                                    <span class="workspace-resource-primary">
-
-                                        <strong>
-                                            {{ sample.sample_id }}
-                                        </strong>
-
-                                        <small>
-                                            {{ sample.organism_name|default:"Organism not specified" }}
-                                            ·
-                                            {{ sample.created_at|date:"M d, Y" }}
-                                        </small>
-
-                                    </span>
-
-
-                                    <span class="workspace-resource-cell">
-
-                                        <small>
-                                            Type
-                                        </small>
-
-                                        <strong>
-                                            {{ sample.sample_type|default:"—" }}
-                                        </strong>
-
-                                    </span>
-
-
-                                    <span class="workspace-resource-cell">
-
-                                        <small>
-                                            Research Group
-                                        </small>
-
-                                        <strong>
-                                            {% if sample.research_group %}
-                                                {{ sample.research_group.name }}
-                                            {% else %}
-                                                —
-                                            {% endif %}
-                                        </strong>
-
-                                    </span>
-
-
-                                    <span class="workspace-resource-status">
-                                        {{ sample.get_status_display|default:sample.status }}
-                                    </span>
-
-
-                                    <i class="bi bi-chevron-right"></i>
-
-                                </a>
-
-                            {% endfor %}
-
-                        </div>
-
-                    {% else %}
-
-                        <div class="workspace-empty workspace-empty-padded">
-
-                            <i class="bi bi-box-seam"></i>
-
-                            <div>
-                                <strong>No visible Samples yet</strong>
-
-                                <span>
-                                    Register a Sample or receive access
-                                    to begin building your Workspace.
-                                </span>
-                            </div>
-
-                        </div>
-
-                    {% endif %}
-
-                </div>
-
-            </section>
-
-
-            <!-- RECENT COLLECTIONS -->
-
-            <section class="workspace-card">
-
-                <header class="workspace-card-header">
-
-                    <div>
-                        <span class="workspace-card-eyebrow">
-                            Research structure
-                        </span>
-
-                        <h2>
-                            Recent Collections
-                        </h2>
-                    </div>
-
-                    <a href="{% url 'collections_list' %}">
-                        View all
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-
-                </header>
-
-
-                <div class="workspace-card-body workspace-card-body-flush">
-
-                    {% if workspace_v2.recent_collections %}
-
-                        <div class="workspace-collection-list">
-
-                            {% for collection in workspace_v2.recent_collections %}
-
-                                <a
-                                    href="{% url 'collection_detail' collection.pk %}"
-                                    class="workspace-collection-row"
-                                >
-
-                                    <span class="workspace-collection-icon">
-                                        <i class="bi bi-folder2-open"></i>
-                                    </span>
-
-
-                                    <span class="workspace-collection-copy">
-
-                                        <strong>
-                                            {{ collection.name }}
-                                        </strong>
-
-                                        <small>
-
-                                            {% if collection.research_group %}
-
-                                                {{ collection.research_group.name }}
-
-                                            {% else %}
-
-                                                No Research Group assigned
-
-                                            {% endif %}
-
-                                            ·
-                                            {{ collection.created_at|date:"M d, Y" }}
-
-                                        </small>
-
-                                    </span>
-
-
-                                    <i class="bi bi-chevron-right"></i>
-
-                                </a>
-
-                            {% endfor %}
-
-                        </div>
-
-                    {% else %}
-
-                        <div class="workspace-empty workspace-empty-padded">
-
-                            <i class="bi bi-collection"></i>
-
-                            <div>
-                                <strong>No active Collections in scope</strong>
-
-                                <span>
-                                    Create a Collection to organize
-                                    Samples into a research context.
-                                </span>
-                            </div>
-
-                        </div>
-
-                    {% endif %}
-
-                </div>
-
-            </section>
-
         </main>
 
 
@@ -1031,90 +815,6 @@
                         </div>
 
                     </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- RECENT ACTIVITY -->
-
-            <section class="workspace-card">
-
-                <header class="workspace-card-header">
-
-                    <div>
-                        <span class="workspace-card-eyebrow">
-                            Traceability
-                        </span>
-
-                        <h2>
-                            Recent Activity
-                        </h2>
-                    </div>
-
-                    <a href="{% url 'lab_calendar' %}">
-                        Calendar
-                    </a>
-
-                </header>
-
-
-                <div class="workspace-card-body workspace-card-body-flush">
-
-                    {% if stats.recent_activity %}
-
-                        <div class="workspace-activity-list">
-
-                            {% for event in stats.recent_activity|slice:":5" %}
-
-                                <div class="workspace-activity-row">
-
-                                    <span class="workspace-activity-dot"></span>
-
-                                    <div>
-
-                                        <strong>
-                                            {{ event.get_event_type_display }}
-                                        </strong>
-
-                                        <a
-                                            href="{% url 'sample_detail' event.sample.pk %}"
-                                        >
-                                            {{ event.sample.sample_id }}
-                                        </a>
-
-                                        <small>
-                                            {{ event.timestamp|date:"M d, H:i" }}
-                                            ·
-                                            {{ event.performed_by.username|default:"System" }}
-                                        </small>
-
-                                    </div>
-
-                                </div>
-
-                            {% endfor %}
-
-                        </div>
-
-                    {% else %}
-
-                        <div class="workspace-empty workspace-empty-padded">
-
-                            <i class="bi bi-clock-history"></i>
-
-                            <div>
-                                <strong>No recent activity</strong>
-
-                                <span>
-                                    Sample audit events will appear here.
-                                </span>
-                            </div>
-
-                        </div>
-
-                    {% endif %}
 
                 </div>
 
@@ -1245,5 +945,11 @@
     </div>
 
 </div>
+
+
+<script
+    src="{% static 'internal/workspace/workspace.js' %}?v=20260829-v23-refine"
+    defer
+></script>
 
 {% endblock %}

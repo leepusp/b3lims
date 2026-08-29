@@ -162,6 +162,8 @@ body.lims-layout {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    min-width: 0;
 }
 
 .page-title {
@@ -179,6 +181,7 @@ body.lims-layout {
 .avatar-small {
     width: 34px;
     height: 34px;
+    flex: 0 0 34px;
     border-radius: 50%;
     background: #0b66b2;
     color: #fff;
@@ -219,4 +222,36 @@ body.lims-layout {
     background: #ffffff !important;
     border-color: #ffffff !important;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+}
+
+
+/* =========================================================
+   TOPBAR USER MENU CONTAINMENT
+========================================================= */
+
+.lims-topbar-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.lims-user-menu {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.lims-user-menu-button {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.lims-user-menu-name {
+    min-width: 0;
+    max-width: clamp(6rem, 22vw, 18rem);
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
