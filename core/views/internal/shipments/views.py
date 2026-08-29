@@ -29,6 +29,7 @@ from core.services.shipment_workflow import sync_shipment_requirements
 from core.services.shipment_qr import build_internal_shipment_scan_url, build_qr_data_uri
 from core.services.shipment_receipt import mark_shipment_received, create_intake_records_from_shipment
 from core.permissions.shipments import visible_shipments_for_user
+from core.services.shipment_route_map import build_shipment_route_map_context
 
 
 @login_required
@@ -1260,7 +1261,7 @@ def shipments_dashboard_view(request):
     qs = (
         visible_shipments_for_user(request.user)
         .select_related("origin_biobank", "destination_biobank", "requested_by")
-        .prefetch_related("items", "documents", "checklist_items")
+        .prefetch_related("items__sample", "documents", "checklist_items", "events__actor")
         .order_by("-created_at")
     )
 
@@ -1333,8 +1334,13 @@ def shipments_dashboard_view(request):
     checklist_completed = checklist_qs.filter(is_completed=True).count()
     checklist_pending = checklist_qs.filter(is_required=True, is_completed=False).count()
 
+    shipment_route_map_context = (
+        build_shipment_route_map_context(qs)
+    )
+
     ctx = base_context(request)
     ctx.update({
+        **shipment_route_map_context,
         "total_shipments": total_shipments,
         "ready_or_active": ready_or_active,
         "received_or_completed": received_or_completed,

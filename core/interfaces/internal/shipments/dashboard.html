@@ -1,10 +1,13 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
 
 {% block title %}Transport Dashboard · B3 LIMS{% endblock %}
 {% block page_title %}Transport{% endblock %}
 {% block page_subtitle %}Management of sample shipments, transfers and custody tracking{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'internal/shipments/route_map.css' %}?v=20260829-route-map-v1">
 <style>
 .ship-dashboard-page {
     padding: 24px 28px 32px 28px;
@@ -547,66 +550,214 @@
         </aside>
 
         <main class="ship-main">
-            <div class="ship-panel">
+            <div class="ship-panel shipment-route-map-panel"
+                 data-shipment-route-map>
                 <div class="ship-panel-header">
                     <h2 class="ship-panel-title">
-                        <i class="bi bi-signpost-split"></i>Recent transport routes
+                        <i class="bi bi-globe-americas"></i>Shipment Route Tracking
                     </h2>
-                    <span class="ship-panel-hint">latest records</span>
+                    <span class="ship-panel-hint">
+                        <span data-route-visible-count>{{ shipment_route_map_stats.total }}</span>
+                        visible ·
+                        {{ shipment_route_map_stats.mapped }} mapped ·
+                        {{ shipment_route_map_stats.partial }} partial
+                    </span>
                 </div>
 
-                <div class="ship-route-board">
-                    {% for shipment in recent_shipments %}
-                        <div class="ship-route-card">
-                            <div class="ship-route-top">
-                                <div>
-                                    <a href="{% url 'shipment_detail' shipment.id %}" class="ship-code text-decoration-none">
-                                        {{ shipment.shipment_code }}
-                                    </a>
-                                    <div class="ship-route-meta">
-                                        {{ shipment.carrier_name|default:"Carrier not assigned" }}
-                                        {% if shipment.tracking_code %}
-                                            · {{ shipment.tracking_code }}
-                                        {% endif %}
-                                    </div>
-                                </div>
+                <div class="shipment-route-map-body">
 
-                                <span class="ship-badge {% if shipment.status == 'draft' %}ship-badge-draft{% elif shipment.status == 'ready_for_dispatch' %}ship-badge-ready{% elif shipment.status == 'received' or shipment.status == 'completed' %}ship-badge-done{% endif %}">
-                                    {{ shipment.get_status_display|default:shipment.status }}
+                    <div class="shipment-route-filters">
+
+                        <div class="shipment-route-filter shipment-route-filter-search">
+                            <label for="shipment-route-search">
+                                Search
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input
+                                    id="shipment-route-search"
+                                    type="search"
+                                    class="form-control"
+                                    placeholder="Shipment, Sample, tracking, institution or location"
+                                    autocomplete="off"
+                                    data-route-filter="search"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-status">
+                                Status
+                            </label>
+                            <select
+                                id="shipment-route-status"
+                                class="form-select form-select-sm"
+                                data-route-filter="status"
+                            >
+                                <option value="">All statuses</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-flow">
+                                Flow type
+                            </label>
+                            <select
+                                id="shipment-route-flow"
+                                class="form-select form-select-sm"
+                                data-route-filter="flow"
+                            >
+                                <option value="">All flows</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-carrier">
+                                Carrier
+                            </label>
+                            <select
+                                id="shipment-route-carrier"
+                                class="form-select form-select-sm"
+                                data-route-filter="carrier"
+                            >
+                                <option value="">All carriers</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-origin">
+                                Origin
+                            </label>
+                            <select
+                                id="shipment-route-origin"
+                                class="form-select form-select-sm"
+                                data-route-filter="origin"
+                            >
+                                <option value="">All origins</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-destination">
+                                Destination
+                            </label>
+                            <select
+                                id="shipment-route-destination"
+                                class="form-select form-select-sm"
+                                data-route-filter="destination"
+                            >
+                                <option value="">All destinations</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-temperature">
+                                Temperature
+                            </label>
+                            <select
+                                id="shipment-route-temperature"
+                                class="form-select form-select-sm"
+                                data-route-filter="temperature"
+                            >
+                                <option value="">All conditions</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter">
+                            <label for="shipment-route-mapping">
+                                Map coverage
+                            </label>
+                            <select
+                                id="shipment-route-mapping"
+                                class="form-select form-select-sm"
+                                data-route-filter="mapping"
+                            >
+                                <option value="">All routes</option>
+                                <option value="mapped">Mapped</option>
+                                <option value="partial">Partial</option>
+                                <option value="unmapped">Unmapped</option>
+                            </select>
+                        </div>
+
+                        <div class="shipment-route-filter shipment-route-filter-reset">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary w-100"
+                                data-route-reset
+                            >
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                Reset filters
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <div class="shipment-route-workspace">
+
+                        <aside class="shipment-route-list-column">
+                            <div class="shipment-route-list-header">
+                                <span class="shipment-route-list-title">
+                                    Shipments
+                                </span>
+                                <span
+                                    class="shipment-route-list-count"
+                                    data-route-list-count
+                                >
+                                    {{ shipment_route_map_stats.total }}
                                 </span>
                             </div>
 
-                            <div class="ship-route-lane">
-                                <div class="ship-node">
-                                    <div class="ship-node-label">Origin</div>
-                                    <div class="ship-node-name">
-                                        {% if shipment.origin_biobank %}
-                                            {{ shipment.origin_biobank.name }}
-                                        {% else %}
-                                            {{ shipment.sender_institution|default:"Unassigned" }}
-                                        {% endif %}
-                                    </div>
-                                </div>
+                            <div
+                                class="shipment-route-list"
+                                data-route-list
+                            ></div>
+                        </aside>
 
-                                <div class="ship-lane-arrow"><span></span></div>
+                        <div class="shipment-route-map-column">
 
-                                <div class="ship-node">
-                                    <div class="ship-node-label">Destination</div>
-                                    <div class="ship-node-name">
-                                        {% if shipment.destination_biobank %}
-                                            {{ shipment.destination_biobank.name }}
-                                        {% else %}
-                                            {{ shipment.recipient_institution|default:"Unassigned" }}
-                                        {% endif %}
-                                    </div>
-                                </div>
+                            <div class="shipment-route-map-legend">
+                                <span>
+                                    <i class="shipment-route-map-legend-dot mapped"></i>
+                                    Mapped {{ shipment_route_map_stats.mapped }}
+                                </span>
+                                <span>
+                                    <i class="shipment-route-map-legend-dot partial"></i>
+                                    Partial {{ shipment_route_map_stats.partial }}
+                                </span>
+                                <span>
+                                    <i class="shipment-route-map-legend-dot unmapped"></i>
+                                    Unmapped {{ shipment_route_map_stats.unmapped }}
+                                </span>
                             </div>
+
+                            <div id="shipment-route-map"></div>
+
+                            <div
+                                class="shipment-route-map-empty"
+                                data-route-map-empty
+                                hidden
+                            ></div>
+
                         </div>
-                    {% empty %}
-                        <div class="ship-empty">No shipment records available.</div>
-                    {% endfor %}
+
+                    </div>
+
+                    <div
+                        class="shipment-route-selected"
+                        data-route-selected
+                    >
+                        <div class="shipment-route-selected-empty">
+                            Select a Shipment to inspect its route,
+                            manifest and custody timeline.
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
+            {{ shipment_route_map_data|json_script:"shipment-route-map-data" }}
 
             <div class="ship-panel">
                 <div class="ship-panel-header">
@@ -706,4 +857,7 @@
         </main>
     </div>
 </div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'internal/shipments/route_map.js' %}?v=20260829-route-map-v1"></script>
+
 {% endblock %}
