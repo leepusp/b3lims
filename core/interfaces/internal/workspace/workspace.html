@@ -3,45 +3,38 @@
 
 {% block title %}Workspace · B3 LIMS{% endblock %}
 
-{% block page_title %}Workspace{% endblock %}
-
-{% block page_subtitle %}
-Scientific research hub for your Samples, Collections, evidence and computational tools
-{% endblock %}
-
 
 {% block extra_css %}
 <link
     rel="stylesheet"
-    href="{% static 'internal/workspace/workspace.css' %}?v=20260829-v2"
+    href="{% static 'internal/workspace/workspace.css' %}?v=20260829-v22"
 >
 {% endblock %}
 
 
 {% block content %}
 
-<div class="research-workspace">
+<div class="workspace">
 
-    <section class="workspace-hero">
+    <header class="workspace-header">
 
-        <div class="workspace-hero-copy">
+        <div class="workspace-header-copy">
 
-            <div class="workspace-eyebrow">
-                Scientific Research Workspace
-            </div>
+            <span class="workspace-kicker">
+                Research Workspace
+            </span>
 
             <h1>
-                Welcome,
-                {{ user.first_name|default:user.username }}
+                Welcome back,
+                {{ user.first_name|default:user.username }}!
             </h1>
 
             <p>
-                Bring biological resources, scientific evidence,
-                laboratory documentation and computational work into
-                one research context.
+                B3 LIMS laboratory workspace and scientific research overview.
             </p>
 
-            <div class="workspace-scope-row">
+
+            <div class="workspace-scope">
 
                 <span class="workspace-scope-label">
                     {{ workspace_v2.scope_mode }}
@@ -72,11 +65,11 @@ Scientific research hub for your Samples, Collections, evidence and computationa
         </div>
 
 
-        <div class="workspace-hero-actions">
+        <div class="workspace-header-actions">
 
             <a
                 href="{% url 'samples_list' %}"
-                class="workspace-primary-action"
+                class="workspace-btn workspace-btn-primary"
             >
                 <i class="bi bi-box-seam"></i>
                 Browse Samples
@@ -84,7 +77,7 @@ Scientific research hub for your Samples, Collections, evidence and computationa
 
             <a
                 href="{% url 'user_profile' %}"
-                class="workspace-secondary-action"
+                class="workspace-btn"
             >
                 <i class="bi bi-person-circle"></i>
                 Research profile
@@ -92,72 +85,54 @@ Scientific research hub for your Samples, Collections, evidence and computationa
 
         </div>
 
-    </section>
+    </header>
 
 
     <section
-        class="workspace-metrics"
-        aria-label="Research workspace summary"
+        class="workspace-kpis"
+        aria-label="Workspace summary"
     >
 
         <a
             href="{% url 'samples_list' %}"
-            class="workspace-metric-card"
+            class="workspace-kpi workspace-kpi-primary"
         >
-            <div class="workspace-metric-icon">
-                <i class="bi bi-box-seam"></i>
-            </div>
 
-            <div>
-                <span class="workspace-metric-label">
-                    Visible Samples
+            <span class="workspace-kpi-icon">
+                <i class="bi bi-box-seam"></i>
+            </span>
+
+            <span class="workspace-kpi-copy">
+
+                <span class="workspace-kpi-label">
+                    Total Samples
                 </span>
 
                 <strong>
                     {{ stats.total_samples }}
                 </strong>
 
-                <span class="workspace-metric-note">
-                    Available in your operational scope
-                </span>
-            </div>
-        </a>
+                <small>
+                    Visible in your research scope
+                </small>
 
+            </span>
 
-        <a
-            href="{% url 'collections_list' %}"
-            class="workspace-metric-card"
-        >
-            <div class="workspace-metric-icon">
-                <i class="bi bi-collection"></i>
-            </div>
-
-            <div>
-                <span class="workspace-metric-label">
-                    Collections
-                </span>
-
-                <strong>
-                    {{ stats.total_collections }}
-                </strong>
-
-                <span class="workspace-metric-note">
-                    Active research Collections
-                </span>
-            </div>
         </a>
 
 
         <a
             href="{% url 'samples_list' %}"
-            class="workspace-metric-card"
+            class="workspace-kpi workspace-kpi-warning"
         >
-            <div class="workspace-metric-icon">
-                <i class="bi bi-clipboard2-pulse"></i>
-            </div>
 
-            <div>
-                <span class="workspace-metric-label">
+            <span class="workspace-kpi-icon">
+                <i class="bi bi-hourglass-split"></i>
+            </span>
+
+            <span class="workspace-kpi-copy">
+
+                <span class="workspace-kpi-label">
                     Pending QC
                 </span>
 
@@ -165,522 +140,505 @@ Scientific research hub for your Samples, Collections, evidence and computationa
                     {{ stats.pending_qc }}
                 </strong>
 
-                <span class="workspace-metric-note">
-                    Samples awaiting operational review
-                </span>
-            </div>
+                <small>
+                    Awaiting operational review
+                </small>
+
+            </span>
+
         </a>
 
 
         <a
             href="{% url 'samples_list' %}"
-            class="workspace-metric-card"
+            class="workspace-kpi workspace-kpi-success"
         >
-            <div class="workspace-metric-icon">
-                <i class="bi bi-stars"></i>
-            </div>
 
-            <div>
-                <span class="workspace-metric-label">
-                    New in 30 days
+            <span class="workspace-kpi-icon">
+                <i class="bi bi-graph-up-arrow"></i>
+            </span>
+
+            <span class="workspace-kpi-copy">
+
+                <span class="workspace-kpi-label">
+                    New (30d)
                 </span>
 
                 <strong>
                     {{ stats.new_samples_30d }}
                 </strong>
 
-                <span class="workspace-metric-note">
+                <small>
                     Recently registered Samples
+                </small>
+
+            </span>
+
+        </a>
+
+
+        <a
+            href="{% url 'collections_list' %}"
+            class="workspace-kpi workspace-kpi-info"
+        >
+
+            <span class="workspace-kpi-icon">
+                <i class="bi bi-collection"></i>
+            </span>
+
+            <span class="workspace-kpi-copy">
+
+                <span class="workspace-kpi-label">
+                    Collections
                 </span>
-            </div>
+
+                <strong>
+                    {{ stats.total_collections }}
+                </strong>
+
+                <small>
+                    Active Collections in scope
+                </small>
+
+            </span>
+
         </a>
 
     </section>
 
 
-    <div class="workspace-layout">
+    <div class="workspace-grid">
 
         <main class="workspace-main">
 
-            <section class="workspace-panel">
+            <div class="workspace-overview-grid">
 
-                <div class="workspace-section-heading">
+                <section class="workspace-card">
 
-                    <div>
-                        <span class="workspace-section-kicker">
-                            My Research
-                        </span>
-
-                        <h2>
-                            Recently registered Samples
-                        </h2>
-
-                        <p>
-                            Scientific resources currently visible
-                            in your Workspace scope.
-                        </p>
-                    </div>
-
-                    <a
-                        href="{% url 'samples_list' %}"
-                        class="workspace-text-link"
-                    >
-                        View all Samples
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-
-                </div>
-
-
-                {% if workspace_v2.recent_samples %}
-
-                    <div class="workspace-resource-grid">
-
-                        {% for sample in workspace_v2.recent_samples %}
-
-                            <a
-                                href="{% url 'sample_detail' sample.pk %}"
-                                class="workspace-resource-card"
-                            >
-
-                                <div class="workspace-resource-topline">
-
-                                    <span class="workspace-resource-id">
-                                        {{ sample.sample_id }}
-                                    </span>
-
-                                    {% if sample.status %}
-
-                                        <span class="workspace-resource-state">
-                                            {{ sample.get_status_display|default:sample.status }}
-                                        </span>
-
-                                    {% endif %}
-
-                                </div>
-
-
-                                <h3>
-                                    {{ sample.organism_name|default:"Organism not specified" }}
-                                </h3>
-
-
-                                <div class="workspace-resource-meta">
-
-                                    {% if sample.sample_type %}
-
-                                        <span>
-                                            <i class="bi bi-tag"></i>
-                                            {{ sample.sample_type }}
-                                        </span>
-
-                                    {% endif %}
-
-
-                                    {% if sample.research_group %}
-
-                                        <span>
-                                            <i class="bi bi-people"></i>
-                                            {{ sample.research_group.name }}
-                                        </span>
-
-                                    {% endif %}
-
-                                </div>
-
-                            </a>
-
-                        {% endfor %}
-
-                    </div>
-
-                {% else %}
-
-                    <div class="workspace-empty-state">
-
-                        <i class="bi bi-box-seam"></i>
+                    <div class="workspace-card-header">
 
                         <div>
-                            <strong>No visible Samples yet</strong>
+                            <span class="workspace-card-eyebrow">
+                                Resource profile
+                            </span>
 
-                            <p>
-                                Register a Sample or receive access to
-                                begin building your research workspace.
-                            </p>
+                            <h2>
+                                Sample Types Distribution
+                            </h2>
+                        </div>
+
+                        <a href="{% url 'samples_list' %}">
+                            View Samples
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+
+                    </div>
+
+
+                    <div class="workspace-card-body">
+
+                        {% if workspace_v2.sample_type_distribution %}
+
+                            <div class="workspace-distribution">
+
+                                {% for row in workspace_v2.sample_type_distribution %}
+
+                                    <div class="workspace-distribution-row">
+
+                                        <div class="workspace-distribution-head">
+
+                                            <span>
+                                                {{ row.sample_type|default:"Other" }}
+                                            </span>
+
+                                            <strong>
+                                                {{ row.total }}
+                                            </strong>
+
+                                        </div>
+
+                                        <progress
+                                            max="{{ stats.total_samples|default:1 }}"
+                                            value="{{ row.total }}"
+                                        >
+                                            {{ row.total }}
+                                        </progress>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% else %}
+
+                            <div class="workspace-empty">
+
+                                <i class="bi bi-bar-chart"></i>
+
+                                <div>
+                                    <strong>No distribution available</strong>
+
+                                    <span>
+                                        Sample types will appear here as
+                                        resources enter your Workspace.
+                                    </span>
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </section>
+
+
+                <section class="workspace-card">
+
+                    <div class="workspace-card-header">
+
+                        <div>
+                            <span class="workspace-card-eyebrow">
+                                Scientific context
+                            </span>
+
+                            <h2>
+                                Scientific Evidence
+                            </h2>
                         </div>
 
                     </div>
 
-                {% endif %}
 
-            </section>
+                    <div class="workspace-card-body">
 
+                        <div class="workspace-evidence-grid">
 
-            <section class="workspace-panel">
+                            <div class="workspace-evidence-stat">
 
-                <div class="workspace-section-heading">
-
-                    <div>
-                        <span class="workspace-section-kicker">
-                            Research structure
-                        </span>
-
-                        <h2>
-                            Recent Collections
-                        </h2>
-
-                        <p>
-                            Organize Samples into scientific and
-                            operational research contexts.
-                        </p>
-                    </div>
-
-                    <a
-                        href="{% url 'collections_list' %}"
-                        class="workspace-text-link"
-                    >
-                        View all Collections
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-
-                </div>
-
-
-                {% if workspace_v2.recent_collections %}
-
-                    <div class="workspace-collection-list">
-
-                        {% for collection in workspace_v2.recent_collections %}
-
-                            <a
-                                href="{% url 'collection_detail' collection.pk %}"
-                                class="workspace-collection-row"
-                            >
-
-                                <span class="workspace-collection-icon">
-                                    <i class="bi bi-folder2-open"></i>
+                                <span class="workspace-evidence-icon">
+                                    <i class="bi bi-diagram-2"></i>
                                 </span>
 
-                                <span class="workspace-collection-copy">
-
-                                    <strong>
-                                        {{ collection.name }}
-                                    </strong>
-
+                                <div>
                                     <small>
-
-                                        {% if collection.research_group %}
-
-                                            {{ collection.research_group.name }}
-
-                                        {% else %}
-
-                                            No Research Group assigned
-
-                                        {% endif %}
-
+                                        Taxonomy assignments
                                     </small>
 
+                                    <strong>
+                                        {{ workspace_v2.evidence.current_taxonomy_assignments }}
+                                    </strong>
+                                </div>
+
+                            </div>
+
+
+                            <div class="workspace-evidence-stat">
+
+                                <span class="workspace-evidence-icon">
+                                    <i class="bi bi-check2-circle"></i>
+                                </span>
+
+                                <div>
+                                    <small>
+                                        Samples with taxonomy
+                                    </small>
+
+                                    <strong>
+                                        {{ workspace_v2.evidence.samples_with_taxonomy }}
+                                    </strong>
+                                </div>
+
+                            </div>
+
+
+                            <div class="workspace-evidence-stat">
+
+                                <span class="workspace-evidence-icon">
+                                    <i class="bi bi-hdd-stack"></i>
+                                </span>
+
+                                <div>
+                                    <small>
+                                        Genome assignments
+                                    </small>
+
+                                    <strong>
+                                        {{ workspace_v2.evidence.current_genome_assignments }}
+                                    </strong>
+                                </div>
+
+                            </div>
+
+
+                            <div class="workspace-evidence-stat">
+
+                                <span class="workspace-evidence-icon">
+                                    <i class="bi bi-boxes"></i>
+                                </span>
+
+                                <div>
+                                    <small>
+                                        Samples with genome
+                                    </small>
+
+                                    <strong>
+                                        {{ workspace_v2.evidence.samples_with_genome }}
+                                    </strong>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="workspace-evidence-links">
+
+                            <a href="{% url 'samples_network' %}">
+
+                                <span>
+                                    <i class="bi bi-diagram-3"></i>
+                                    Biological relationships
                                 </span>
 
                                 <i class="bi bi-chevron-right"></i>
 
                             </a>
 
-                        {% endfor %}
 
-                    </div>
+                            <a href="{% url 'samples_origin_map' %}">
 
-                {% else %}
+                                <span>
+                                    <i class="bi bi-globe-americas"></i>
+                                    Geographic context
+                                </span>
 
-                    <div class="workspace-empty-state">
+                                <i class="bi bi-chevron-right"></i>
 
-                        <i class="bi bi-collection"></i>
+                            </a>
 
-                        <div>
-                            <strong>No active Collections in scope</strong>
-
-                            <p>
-                                Collections provide the research context
-                                that connects Samples and collaborators.
-                            </p>
                         </div>
 
                     </div>
 
-                {% endif %}
+                </section>
 
-            </section>
+            </div>
 
 
-            <section class="workspace-panel">
+            <section class="workspace-card">
 
-                <div class="workspace-section-heading">
+                <div class="workspace-card-header">
 
                     <div>
-                        <span class="workspace-section-kicker">
-                            Scientific Context
+                        <span class="workspace-card-eyebrow">
+                            My Research
                         </span>
 
                         <h2>
-                            Evidence attached to your Samples
+                            Recent Samples
                         </h2>
-
-                        <p>
-                            External evidence remains distinct from curated
-                            Sample metadata and can be reviewed at Sample level.
-                        </p>
                     </div>
 
-                </div>
-
-
-                <div class="workspace-evidence-grid">
-
-                    <div class="workspace-evidence-card">
-
-                        <span>
-                            Current taxonomy evidence
-                        </span>
-
-                        <strong>
-                            {{ workspace_v2.evidence.current_taxonomy_assignments }}
-                        </strong>
-
-                        <small>
-                            across
-                            {{ workspace_v2.evidence.samples_with_taxonomy }}
-                            Sample{{ workspace_v2.evidence.samples_with_taxonomy|pluralize }}
-                        </small>
-
-                    </div>
-
-
-                    <div class="workspace-evidence-card">
-
-                        <span>
-                            Current genome evidence
-                        </span>
-
-                        <strong>
-                            {{ workspace_v2.evidence.current_genome_assignments }}
-                        </strong>
-
-                        <small>
-                            across
-                            {{ workspace_v2.evidence.samples_with_genome }}
-                            Sample{{ workspace_v2.evidence.samples_with_genome|pluralize }}
-                        </small>
-
-                    </div>
-
-
-                    <a
-                        href="{% url 'samples_network' %}"
-                        class="workspace-evidence-card workspace-evidence-link"
-                    >
-
-                        <span>
-                            Biological relationships
-                        </span>
-
-                        <strong>
-                            <i class="bi bi-diagram-3"></i>
-                        </strong>
-
-                        <small>
-                            Explore the visible Sample network
-                        </small>
-
-                    </a>
-
-
-                    <a
-                        href="{% url 'samples_origin_map' %}"
-                        class="workspace-evidence-card workspace-evidence-link"
-                    >
-
-                        <span>
-                            Geographic context
-                        </span>
-
-                        <strong>
-                            <i class="bi bi-globe-americas"></i>
-                        </strong>
-
-                        <small>
-                            Explore internal collection origins
-                        </small>
-
-                    </a>
-
-                </div>
-
-            </section>
-
-
-            <section class="workspace-panel">
-
-                <div class="workspace-section-heading">
-
-                    <div>
-                        <span class="workspace-section-kicker">
-                            Resource profile
-                        </span>
-
-                        <h2>
-                            Sample types
-                        </h2>
-
-                        <p>
-                            Distribution across the Samples visible
-                            in your current Workspace scope.
-                        </p>
-                    </div>
-
-                </div>
-
-
-                {% if workspace_v2.sample_type_distribution %}
-
-                    <div class="workspace-distribution-list">
-
-                        {% for row in workspace_v2.sample_type_distribution %}
-
-                            <div class="workspace-distribution-row">
-
-                                <div class="workspace-distribution-label">
-
-                                    <span>
-                                        {{ row.sample_type|default:"Other" }}
-                                    </span>
-
-                                    <strong>
-                                        {{ row.total }}
-                                    </strong>
-
-                                </div>
-
-                                <progress
-                                    max="{{ stats.total_samples|default:1 }}"
-                                    value="{{ row.total }}"
-                                >
-                                    {{ row.total }}
-                                </progress>
-
-                            </div>
-
-                        {% endfor %}
-
-                    </div>
-
-                {% else %}
-
-                    <div class="workspace-empty-state">
-
-                        <i class="bi bi-bar-chart"></i>
-
-                        <div>
-                            <strong>No Sample distribution available</strong>
-
-                            <p>
-                                Sample types will appear here as resources
-                                enter your Workspace scope.
-                            </p>
-                        </div>
-
-                    </div>
-
-                {% endif %}
-
-            </section>
-
-
-            <section class="workspace-panel">
-
-                <div class="workspace-section-heading">
-
-                    <div>
-                        <span class="workspace-section-kicker">
-                            Traceability
-                        </span>
-
-                        <h2>
-                            Recent Activity
-                        </h2>
-
-                        <p>
-                            Audit events associated with Samples
-                            visible in your Workspace.
-                        </p>
-                    </div>
-
-                    <a
-                        href="{% url 'lab_calendar' %}"
-                        class="workspace-text-link"
-                    >
-                        Open calendar
+                    <a href="{% url 'samples_list' %}">
+                        View all
                         <i class="bi bi-arrow-right"></i>
                     </a>
 
                 </div>
 
 
-                {% if stats.recent_activity %}
+                <div class="workspace-card-body workspace-card-body-flush">
 
-                    <div class="workspace-activity-list">
+                    {% if workspace_v2.recent_samples %}
 
-                        {% for event in stats.recent_activity %}
+                        <div class="workspace-resource-list">
 
-                            <div class="workspace-activity-row">
+                            {% for sample in workspace_v2.recent_samples %}
 
-                                <span class="workspace-activity-icon">
-                                    <i class="bi bi-activity"></i>
-                                </span>
+                                <a
+                                    href="{% url 'sample_detail' sample.pk %}"
+                                    class="workspace-resource-row"
+                                >
 
-                                <div class="workspace-activity-copy">
+                                    <span class="workspace-resource-symbol">
+                                        <i class="bi bi-box-seam"></i>
+                                    </span>
 
-                                    <strong>
-                                        {{ event.get_event_type_display }}
-                                    </strong>
 
-                                    <a
-                                        href="{% url 'sample_detail' event.sample.pk %}"
-                                    >
-                                        {{ event.sample.sample_id }}
-                                    </a>
+                                    <span class="workspace-resource-primary">
 
-                                    <small>
-                                        {{ event.timestamp|date:"Y-m-d H:i" }}
-                                        ·
-                                        {{ event.performed_by.username|default:"System" }}
-                                    </small>
+                                        <strong>
+                                            {{ sample.sample_id }}
+                                        </strong>
 
-                                </div>
+                                        <small>
+                                            {{ sample.organism_name|default:"Organism not specified" }}
+                                            ·
+                                            {{ sample.created_at|date:"M d, Y" }}
+                                        </small>
 
-                            </div>
+                                    </span>
 
-                        {% endfor %}
 
-                    </div>
+                                    <span class="workspace-resource-cell">
 
-                {% else %}
+                                        <small>
+                                            Type
+                                        </small>
 
-                    <div class="workspace-empty-state">
+                                        <strong>
+                                            {{ sample.sample_type|default:"—" }}
+                                        </strong>
 
-                        <i class="bi bi-clock-history"></i>
+                                    </span>
 
-                        <div>
-                            <strong>No recent activity</strong>
 
-                            <p>
-                                Sample audit events will appear here.
-                            </p>
+                                    <span class="workspace-resource-cell">
+
+                                        <small>
+                                            Research Group
+                                        </small>
+
+                                        <strong>
+                                            {% if sample.research_group %}
+                                                {{ sample.research_group.name }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </strong>
+
+                                    </span>
+
+
+                                    <span class="workspace-resource-status">
+                                        {{ sample.get_status_display|default:sample.status }}
+                                    </span>
+
+
+                                    <i class="bi bi-chevron-right"></i>
+
+                                </a>
+
+                            {% endfor %}
+
                         </div>
 
+                    {% else %}
+
+                        <div class="workspace-empty workspace-empty-padded">
+
+                            <i class="bi bi-box-seam"></i>
+
+                            <div>
+                                <strong>No visible Samples yet</strong>
+
+                                <span>
+                                    Register a Sample or receive access
+                                    to begin building your Workspace.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <section class="workspace-card">
+
+                <div class="workspace-card-header">
+
+                    <div>
+                        <span class="workspace-card-eyebrow">
+                            Research structure
+                        </span>
+
+                        <h2>
+                            Recent Collections
+                        </h2>
                     </div>
 
-                {% endif %}
+                    <a href="{% url 'collections_list' %}">
+                        View all
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+
+                </div>
+
+
+                <div class="workspace-card-body workspace-card-body-flush">
+
+                    {% if workspace_v2.recent_collections %}
+
+                        <div class="workspace-collection-list">
+
+                            {% for collection in workspace_v2.recent_collections %}
+
+                                <a
+                                    href="{% url 'collection_detail' collection.pk %}"
+                                    class="workspace-collection-row"
+                                >
+
+                                    <span class="workspace-collection-icon">
+                                        <i class="bi bi-folder2-open"></i>
+                                    </span>
+
+
+                                    <span class="workspace-collection-copy">
+
+                                        <strong>
+                                            {{ collection.name }}
+                                        </strong>
+
+                                        <small>
+
+                                            {% if collection.research_group %}
+                                                {{ collection.research_group.name }}
+                                            {% else %}
+                                                No Research Group assigned
+                                            {% endif %}
+
+                                            ·
+                                            {{ collection.created_at|date:"M d, Y" }}
+
+                                        </small>
+
+                                    </span>
+
+
+                                    <i class="bi bi-chevron-right"></i>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="workspace-empty workspace-empty-padded">
+
+                            <i class="bi bi-collection"></i>
+
+                            <div>
+                                <strong>No active Collections in scope</strong>
+
+                                <span>
+                                    Create a Collection to organize
+                                    Samples into a research context.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
 
             </section>
 
@@ -689,132 +647,266 @@ Scientific research hub for your Samples, Collections, evidence and computationa
 
         <aside class="workspace-sidebar">
 
-            <section class="workspace-side-panel">
+            <section class="workspace-card">
 
-                <span class="workspace-section-kicker">
-                    Quick Actions
-                </span>
+                <div class="workspace-card-header">
 
-                <h2>
-                    Start working
-                </h2>
-
-
-                <div class="workspace-action-list">
-
-                    <a href="{% url 'sample_add' %}">
-                        <i class="bi bi-plus-circle"></i>
-
-                        <span>
-                            <strong>Register Sample</strong>
-                            <small>Create a biological resource</small>
+                    <div>
+                        <span class="workspace-card-eyebrow">
+                            Quick Actions
                         </span>
-                    </a>
+
+                        <h2>
+                            Start working
+                        </h2>
+                    </div>
+
+                </div>
 
 
-                    <a href="{% url 'collection_create' %}">
-                        <i class="bi bi-folder-plus"></i>
+                <div class="workspace-card-body">
 
-                        <span>
-                            <strong>Create Collection</strong>
-                            <small>Organize a research context</small>
-                        </span>
-                    </a>
+                    <div class="workspace-action-list">
+
+                        <a href="{% url 'sample_add' %}">
+
+                            <span class="workspace-action-icon">
+                                <i class="bi bi-plus-circle"></i>
+                            </span>
+
+                            <span>
+                                <strong>Register Sample</strong>
+                                <small>Add a biological resource</small>
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                        </a>
 
 
-                    <a href="{% url 'samples_import' %}">
-                        <i class="bi bi-file-earmark-arrow-up"></i>
+                        <a href="{% url 'collection_create' %}">
 
-                        <span>
-                            <strong>Import Samples</strong>
-                            <small>Load a structured data table</small>
-                        </span>
-                    </a>
+                            <span class="workspace-action-icon">
+                                <i class="bi bi-folder-plus"></i>
+                            </span>
+
+                            <span>
+                                <strong>Create Collection</strong>
+                                <small>Build a research context</small>
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                        </a>
 
 
-                    <a href="{% url 'notebook_create' %}">
-                        <i class="bi bi-journal-plus"></i>
+                        <a href="{% url 'samples_import' %}">
 
-                        <span>
-                            <strong>New Notebook</strong>
-                            <small>Start an ELN record</small>
-                        </span>
-                    </a>
+                            <span class="workspace-action-icon">
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                            </span>
+
+                            <span>
+                                <strong>Import Samples</strong>
+                                <small>Load structured metadata</small>
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                        </a>
+
+
+                        <a href="{% url 'notebook_create' %}">
+
+                            <span class="workspace-action-icon">
+                                <i class="bi bi-journal-plus"></i>
+                            </span>
+
+                            <span>
+                                <strong>New Notebook</strong>
+                                <small>Start an ELN record</small>
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                        </a>
+
+                    </div>
 
                 </div>
 
             </section>
 
 
-            <section class="workspace-side-panel workspace-compute">
+            <section class="workspace-card">
 
-                <span class="workspace-section-kicker">
-                    Analysis & Compute
-                </span>
+                <div class="workspace-card-header">
 
-                <h2>
-                    Scientific tools
-                </h2>
-
-                <p>
-                    Existing computational capabilities connected
-                    to the B3 LIMS research environment.
-                </p>
-
-
-                <div class="workspace-tool-list">
-
-                    <a href="{% url 'notebook_index' %}">
-                        <i class="bi bi-journal-text"></i>
-
-                        <span>
-                            <strong>Lab Notebook</strong>
-                            <small>Electronic laboratory records</small>
+                    <div>
+                        <span class="workspace-card-eyebrow">
+                            Analysis & Compute
                         </span>
 
-                        <i class="bi bi-arrow-up-right"></i>
-                    </a>
+                        <h2>
+                            Scientific tools
+                        </h2>
+                    </div>
+
+                </div>
 
 
-                    <a href="{% url 'jupyter_index' %}">
-                        <i class="bi bi-terminal"></i>
+                <div class="workspace-card-body">
 
-                        <span>
-                            <strong>Jupyter</strong>
-                            <small>Interactive computational work</small>
+                    <div class="workspace-tool-list">
+
+                        <a href="{% url 'notebook_index' %}">
+
+                            <span class="workspace-tool-icon">
+                                <i class="bi bi-journal-text"></i>
+                            </span>
+
+                            <span>
+                                <strong>Lab Notebook</strong>
+                                <small>Electronic laboratory records</small>
+                            </span>
+
+                            <i class="bi bi-arrow-up-right"></i>
+
+                        </a>
+
+
+                        <a href="{% url 'jupyter_index' %}">
+
+                            <span class="workspace-tool-icon">
+                                <i class="bi bi-terminal"></i>
+                            </span>
+
+                            <span>
+                                <strong>Jupyter</strong>
+                                <small>Interactive computational work</small>
+                            </span>
+
+                            <i class="bi bi-arrow-up-right"></i>
+
+                        </a>
+
+
+                        <a href="{% url 'molecular_registry_index' %}">
+
+                            <span class="workspace-tool-icon">
+                                <i class="bi bi-bezier2"></i>
+                            </span>
+
+                            <span>
+                                <strong>Molecular Registry</strong>
+                                <small>Sequences and molecular evidence</small>
+                            </span>
+
+                            <i class="bi bi-arrow-up-right"></i>
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="workspace-future">
+
+                        <i class="bi bi-cpu"></i>
+
+                        <div>
+                            <strong>
+                                Managed workflows
+                            </strong>
+
+                            <span>
+                                Analysis runs will appear here when
+                                provenance models are implemented.
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <section class="workspace-card">
+
+                <div class="workspace-card-header">
+
+                    <div>
+                        <span class="workspace-card-eyebrow">
+                            Traceability
                         </span>
 
-                        <i class="bi bi-arrow-up-right"></i>
-                    </a>
+                        <h2>
+                            Recent Activity
+                        </h2>
+                    </div>
 
-
-                    <a href="{% url 'molecular_registry_index' %}">
-                        <i class="bi bi-bezier2"></i>
-
-                        <span>
-                            <strong>Molecular Registry</strong>
-                            <small>Sequences and molecular evidence</small>
-                        </span>
-
-                        <i class="bi bi-arrow-up-right"></i>
+                    <a href="{% url 'lab_calendar' %}">
+                        Calendar
                     </a>
 
                 </div>
 
 
-                <div class="workspace-future-note">
+                <div class="workspace-card-body workspace-card-body-flush">
 
-                    <i class="bi bi-cpu"></i>
+                    {% if stats.recent_activity %}
 
-                    <div>
-                        <strong>Analysis workflows</strong>
+                        <div class="workspace-activity-list">
 
-                        <span>
-                            Workflow runs and managed compute jobs
-                            will appear here when their provenance
-                            models are implemented.
-                        </span>
-                    </div>
+                            {% for event in stats.recent_activity|slice:":5" %}
+
+                                <div class="workspace-activity-row">
+
+                                    <span class="workspace-activity-dot"></span>
+
+                                    <div>
+
+                                        <strong>
+                                            {{ event.get_event_type_display }}
+                                        </strong>
+
+                                        <a
+                                            href="{% url 'sample_detail' event.sample.pk %}"
+                                        >
+                                            {{ event.sample.sample_id }}
+                                        </a>
+
+                                        <small>
+                                            {{ event.timestamp|date:"M d, H:i" }}
+                                            ·
+                                            {{ event.performed_by.username|default:"System" }}
+                                        </small>
+
+                                    </div>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="workspace-empty workspace-empty-padded">
+
+                            <i class="bi bi-clock-history"></i>
+
+                            <div>
+                                <strong>No recent activity</strong>
+
+                                <span>
+                                    Sample audit events will appear here.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    {% endif %}
 
                 </div>
 
@@ -823,104 +915,116 @@ Scientific research hub for your Samples, Collections, evidence and computationa
 
             {% if user.is_superuser %}
 
-                <section class="workspace-side-panel">
+                <section class="workspace-card">
 
-                    <span class="workspace-section-kicker">
-                        Administration
-                    </span>
+                    <div class="workspace-card-header">
 
-                    <h2>
-                        System Status
-                    </h2>
-
-
-                    <div class="workspace-status-list">
-
-                        <div class="workspace-status-row">
-
-                            <span>
-                                PostgreSQL backup
+                        <div>
+                            <span class="workspace-card-eyebrow">
+                                Administration
                             </span>
 
-                            {% if postgresql_backup_status.latest_status == "ok" and not postgresql_backup_status.error %}
-
-                                <strong class="workspace-status-ok">
-                                    OK
-                                </strong>
-
-                            {% else %}
-
-                                <strong class="workspace-status-review">
-                                    Review
-                                </strong>
-
-                            {% endif %}
-
+                            <h2>
+                                System Status
+                            </h2>
                         </div>
-
-
-                        {% if postgresql_backup_status.latest_timestamp %}
-
-                            <small>
-                                Last backup:
-                                {{ postgresql_backup_status.latest_timestamp }}
-
-                                {% if postgresql_backup_status.latest_age_hours is not None %}
-                                    · {{ postgresql_backup_status.latest_age_hours }}h ago
-                                {% endif %}
-                            </small>
-
-                        {% endif %}
-
-
-                        <div class="workspace-status-row">
-
-                            <span>
-                                Media backup
-                            </span>
-
-                            {% if media_backup_status.latest_status == "ok" and not media_backup_status.error %}
-
-                                <strong class="workspace-status-ok">
-                                    OK
-                                </strong>
-
-                            {% else %}
-
-                                <strong class="workspace-status-review">
-                                    Review
-                                </strong>
-
-                            {% endif %}
-
-                        </div>
-
-
-                        {% if media_backup_status.latest_timestamp %}
-
-                            <small>
-                                Last backup:
-                                {{ media_backup_status.latest_timestamp }}
-
-                                {% if media_backup_status.latest_age_hours is not None %}
-                                    · {{ media_backup_status.latest_age_hours }}h ago
-                                {% endif %}
-                            </small>
-
-                        {% endif %}
 
                     </div>
 
 
-                    <a
-                        href="{% url 'admin:index' %}"
-                        target="_blank"
-                        rel="noopener"
-                        class="workspace-admin-link"
-                    >
-                        <i class="bi bi-shield-lock"></i>
-                        Open Admin Panel
-                    </a>
+                    <div class="workspace-card-body">
+
+                        <div class="workspace-status-list">
+
+                            <div class="workspace-status-row">
+
+                                <span>
+                                    <i class="bi bi-database-check"></i>
+                                    PostgreSQL backup
+                                </span>
+
+                                {% if postgresql_backup_status.latest_status == "ok" and not postgresql_backup_status.error %}
+
+                                    <strong class="workspace-status-ok">
+                                        OK
+                                    </strong>
+
+                                {% else %}
+
+                                    <strong class="workspace-status-review">
+                                        Review
+                                    </strong>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            {% if postgresql_backup_status.latest_timestamp %}
+
+                                <small>
+                                    Last backup:
+                                    {{ postgresql_backup_status.latest_timestamp }}
+
+                                    {% if postgresql_backup_status.latest_age_hours is not None %}
+                                        · {{ postgresql_backup_status.latest_age_hours }}h ago
+                                    {% endif %}
+                                </small>
+
+                            {% endif %}
+
+
+                            <div class="workspace-status-row">
+
+                                <span>
+                                    <i class="bi bi-folder-check"></i>
+                                    Media backup
+                                </span>
+
+                                {% if media_backup_status.latest_status == "ok" and not media_backup_status.error %}
+
+                                    <strong class="workspace-status-ok">
+                                        OK
+                                    </strong>
+
+                                {% else %}
+
+                                    <strong class="workspace-status-review">
+                                        Review
+                                    </strong>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            {% if media_backup_status.latest_timestamp %}
+
+                                <small>
+                                    Last backup:
+                                    {{ media_backup_status.latest_timestamp }}
+
+                                    {% if media_backup_status.latest_age_hours is not None %}
+                                        · {{ media_backup_status.latest_age_hours }}h ago
+                                    {% endif %}
+                                </small>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <a
+                            href="{% url 'admin:index' %}"
+                            target="_blank"
+                            rel="noopener"
+                            class="workspace-admin-link"
+                        >
+                            <i class="bi bi-shield-lock"></i>
+                            Open Admin Panel
+                        </a>
+
+                    </div>
 
                 </section>
 
