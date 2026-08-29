@@ -192,6 +192,301 @@ def _scientific_evidence_summary(
     }
 
 
+
+_WORKSPACE_CHART_COLORS = (
+    "#2f66e5",
+    "#2693b8",
+    "#18a096",
+    "#8358c7",
+    "#93a7bd",
+    "#d99a20",
+)
+
+
+def _workspace_percent(
+    value,
+    total,
+):
+    if not total:
+        return 0.0
+
+    return round(
+        (
+            value
+            /
+            total
+        )
+        *
+        100,
+        1,
+    )
+
+
+def _workspace_sample_type_chart(
+    samples_qs,
+    total_samples,
+):
+    """
+    Build one complete Sample-type distribution for the Workspace donut.
+
+    The chart remains authorization-safe because the caller supplies the
+    already-scoped Workspace Sample queryset.
+    """
+    raw_rows = list(
+        samples_qs
+        .values(
+            "sample_type",
+        )
+        .annotate(
+            total=Count(
+                "id",
+            )
+        )
+        .order_by(
+            "-total",
+            "sample_type",
+        )
+    )
+
+    normalized = {}
+
+    for row in raw_rows:
+        label = (
+            row[
+                "sample_type"
+            ]
+            or
+            "Other"
+        )
+
+        normalized[
+            label
+        ] = (
+            normalized.get(
+                label,
+                0,
+            )
+            +
+            row[
+                "total"
+            ]
+        )
+
+    ordered = sorted(
+        normalized.items(),
+        key=lambda item: (
+            -item[1],
+            item[0].casefold(),
+        ),
+    )
+
+    if len(
+        ordered
+    ) > 6:
+        visible = list(
+            ordered[:5]
+        )
+
+        remainder = sum(
+            value
+            for _, value in ordered[5:]
+        )
+
+        other_index = next(
+            (
+                index
+                for index, item in enumerate(
+                    visible
+                )
+                if item[0] == "Other"
+            ),
+            None,
+        )
+
+        if other_index is None:
+            visible.append(
+                (
+                    "Other",
+                    remainder,
+                )
+            )
+        else:
+            label, value = visible[
+                other_index
+            ]
+
+            visible[
+                other_index
+            ] = (
+                label,
+                value
+                +
+                remainder,
+            )
+
+        ordered = visible
+
+    result = []
+    cumulative = 0.0
+
+    for index, (
+        label,
+        value,
+    ) in enumerate(
+        ordered
+    ):
+        percent = _workspace_percent(
+            value,
+            total_samples,
+        )
+
+        result.append(
+            {
+                "label": label,
+                "total": value,
+                "percent": percent,
+                "dash_remainder": round(
+                    max(
+                        0.0,
+                        100.0
+                        -
+                        percent,
+                    ),
+                    1,
+                ),
+                "dashoffset": round(
+                    -cumulative,
+                    1,
+                ),
+                "color": (
+                    _WORKSPACE_CHART_COLORS[
+                        index
+                        %
+                        len(
+                            _WORKSPACE_CHART_COLORS
+                        )
+                    ]
+                ),
+            }
+        )
+
+        cumulative += percent
+
+    return result
+
+
+def _workspace_storage_chart(
+    samples_qs,
+):
+    """
+    Build the real Workspace storage-location distribution.
+
+    B3 LIMS currently stores a free-text/hierarchical storage_location rather
+    than a normalized storage-temperature condition, so this chart does not
+    infer temperatures from arbitrary location names.
+    """
+    rows = list(
+        samples_qs
+        .exclude(
+            storage_location__isnull=True,
+        )
+        .exclude(
+            storage_location="",
+        )
+        .values(
+            "storage_location",
+        )
+        .annotate(
+            total=Count(
+                "id",
+            )
+        )
+        .order_by(
+            "-total",
+            "storage_location",
+        )
+    )
+
+    if not rows:
+        return []
+
+    if len(
+        rows
+    ) > 5:
+        visible = list(
+            rows[:4]
+        )
+
+        visible.append(
+            {
+                "storage_location": (
+                    "Other locations"
+                ),
+                "total": sum(
+                    row[
+                        "total"
+                    ]
+                    for row in rows[4:]
+                ),
+            }
+        )
+
+        rows = visible
+
+    max_total = max(
+        row[
+            "total"
+        ]
+        for row in rows
+    )
+
+    result = []
+
+    for index, row in enumerate(
+        rows
+    ):
+        total = row[
+            "total"
+        ]
+
+        height_percent = round(
+            (
+                total
+                /
+                max_total
+            )
+            *
+            100,
+            1,
+        )
+
+        result.append(
+            {
+                "label": (
+                    row[
+                        "storage_location"
+                    ]
+                ),
+                "total": total,
+                "height_percent": max(
+                    10.0,
+                    height_percent,
+                ),
+                "color": (
+                    _WORKSPACE_CHART_COLORS[
+                        index
+                        %
+                        len(
+                            _WORKSPACE_CHART_COLORS
+                        )
+                    ]
+                ),
+            }
+        )
+
+    return result
+
+
 def workspace_view(request):
     """
     Scientific research Workspace.
@@ -335,6 +630,86 @@ def workspace_view(request):
         )
     )
 
+    sample_type_chart = (
+        _workspace_sample_type_chart(
+            samples_qs,
+            total_samples,
+        )
+    )
+
+    storage_location_chart = (
+        _workspace_storage_chart(
+            samples_qs
+        )
+    )
+
+    storage_annotated = (
+        samples_qs
+        .exclude(
+            storage_location__isnull=True,
+        )
+        .exclude(
+            storage_location="",
+        )
+        .count()
+    )
+
+    today = timezone.localdate()
+
+    today_activity = list(
+        events_qs
+        .filter(
+            timestamp__date=today,
+        )
+        .select_related(
+            "performed_by",
+            "sample",
+        )
+        .order_by(
+            "-timestamp",
+        )[:5]
+    )
+
+    evidence[
+        "taxonomy_coverage_percent"
+    ] = _workspace_percent(
+        evidence[
+            "samples_with_taxonomy"
+        ],
+        total_samples,
+    )
+
+    evidence[
+        "taxonomy_coverage_remainder"
+    ] = round(
+        100
+        -
+        evidence[
+            "taxonomy_coverage_percent"
+        ],
+        1,
+    )
+
+    evidence[
+        "genome_coverage_percent"
+    ] = _workspace_percent(
+        evidence[
+            "samples_with_genome"
+        ],
+        total_samples,
+    )
+
+    evidence[
+        "genome_coverage_remainder"
+    ] = round(
+        100
+        -
+        evidence[
+            "genome_coverage_percent"
+        ],
+        1,
+    )
+
     # Preserve the existing stats contract while the V2-specific
     # structures are introduced separately.
     ctx[
@@ -377,6 +752,18 @@ def workspace_view(request):
         ),
         "sample_type_distribution": (
             type_distribution
+        ),
+        "sample_type_chart": (
+            sample_type_chart
+        ),
+        "storage_location_chart": (
+            storage_location_chart
+        ),
+        "storage_annotated": (
+            storage_annotated
+        ),
+        "today_activity": (
+            today_activity
         ),
         "evidence": (
             evidence

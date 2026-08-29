@@ -10,21 +10,23 @@ from core.models import (
 )
 
 
-class WorkspaceV22Tests(
+class WorkspaceV23Tests(
     TestCase
 ):
     @classmethod
     def setUpTestData(
         cls,
     ):
-        cls.user = User.objects.create_user(
-            username="workspace-v22-user",
-            first_name="Workspace",
+        cls.user = (
+            User.objects.create_user(
+                username="workspace-v23-user",
+                first_name="Workspace",
+            )
         )
 
         cls.other_user = (
             User.objects.create_user(
-                username="workspace-v22-other",
+                username="workspace-v23-other",
             )
         )
 
@@ -50,7 +52,12 @@ class WorkspaceV22Tests(
             Sample.objects.create(
                 sample_id="WORKSPACE-VISIBLE-SAMPLE",
                 sample_type="Bacterium (Host)",
-                organism_name="Workspace visible organism",
+                organism_name=(
+                    "Workspace visible organism"
+                ),
+                storage_location=(
+                    "Freezer 1 > Shelf 2"
+                ),
                 owner=cls.user,
                 is_active=True,
                 is_public=False,
@@ -60,8 +67,15 @@ class WorkspaceV22Tests(
         cls.hidden_sample = (
             Sample.objects.create(
                 sample_id="WORKSPACE-HIDDEN-SAMPLE",
-                sample_type="Hidden type",
-                organism_name="WORKSPACE-HIDDEN-ORGANISM",
+                sample_type=(
+                    "WORKSPACE-HIDDEN-TYPE"
+                ),
+                organism_name=(
+                    "WORKSPACE-HIDDEN-ORGANISM"
+                ),
+                storage_location=(
+                    "WORKSPACE-HIDDEN-STORAGE"
+                ),
                 owner=cls.other_user,
                 is_active=True,
                 is_public=False,
@@ -77,11 +91,13 @@ class WorkspaceV22Tests(
         )
 
 
-    def test_workspace_renders_compact_scientific_dashboard(
+    def test_workspace_renders_v23_dashboard(
         self,
     ):
         response = self.client.get(
-            reverse("workspace")
+            reverse(
+                "workspace"
+            )
         )
 
         self.assertEqual(
@@ -91,15 +107,18 @@ class WorkspaceV22Tests(
 
         for text in (
             "Welcome back,",
-            "Total Samples",
-            "Pending QC",
-            "New (30d)",
-            "Collections",
-            "Sample Types Distribution",
+            "Register Sample",
+            "Create Collection",
+            "Import Samples",
+            "New Notebook",
+            "Samples by type",
+            "Samples by storage location",
+            "Today's Activity",
             "Scientific Evidence",
+            "Taxonomy coverage",
+            "Genome coverage",
             "Recent Samples",
             "Recent Collections",
-            "Quick Actions",
             "Analysis & Compute",
             "Recent Activity",
         ):
@@ -109,36 +128,128 @@ class WorkspaceV22Tests(
             )
 
 
-    def test_workspace_resources_remain_user_scoped(
+    def test_workspace_removes_v22_kpi_row_and_profile_duplicate(
         self,
     ):
         response = self.client.get(
-            reverse("workspace")
+            reverse(
+                "workspace"
+            )
         )
 
+        template = Path(
+            "core/interfaces/internal/"
+            "workspace/workspace.html"
+        ).read_text()
+
+        self.assertNotIn(
+            "workspace-kpis",
+            template,
+        )
+
+        self.assertNotContains(
+            response,
+            "Research profile",
+        )
+
+        for old_kpi_label in (
+            "Pending QC",
+            "New (30d)",
+        ):
+            self.assertNotContains(
+                response,
+                old_kpi_label,
+            )
+
+
+    def test_workspace_chart_data_is_authorization_scoped(
+        self,
+    ):
+        response = self.client.get(
+            reverse(
+                "workspace"
+            )
+        )
+
+        workspace = response.context[
+            "workspace_v2"
+        ]
+
         self.assertEqual(
-            response.context["stats"]["total_samples"],
+            response.context[
+                "stats"
+            ][
+                "total_samples"
+            ],
+            1,
+        )
+
+        sample_chart = workspace[
+            "sample_type_chart"
+        ]
+
+        self.assertEqual(
+            len(
+                sample_chart
+            ),
             1,
         )
 
         self.assertEqual(
-            response.context["stats"]["total_collections"],
+            sample_chart[
+                0
+            ][
+                "label"
+            ],
+            "Bacterium (Host)",
+        )
+
+        self.assertEqual(
+            sample_chart[
+                0
+            ][
+                "total"
+            ],
             1,
         )
 
-        self.assertContains(
-            response,
-            "WORKSPACE-VISIBLE-SAMPLE",
+        self.assertEqual(
+            sample_chart[
+                0
+            ][
+                "percent"
+            ],
+            100.0,
         )
 
-        self.assertContains(
-            response,
-            "Workspace visible organism",
+        storage_chart = workspace[
+            "storage_location_chart"
+        ]
+
+        self.assertEqual(
+            len(
+                storage_chart
+            ),
+            1,
         )
 
-        self.assertContains(
+        self.assertEqual(
+            storage_chart[
+                0
+            ][
+                "label"
+            ],
+            "Freezer 1 > Shelf 2",
+        )
+
+        self.assertNotContains(
             response,
-            "Workspace Visible Collection",
+            "WORKSPACE-HIDDEN-TYPE",
+        )
+
+        self.assertNotContains(
+            response,
+            "WORKSPACE-HIDDEN-STORAGE",
         )
 
         self.assertNotContains(
@@ -148,23 +259,69 @@ class WorkspaceV22Tests(
 
         self.assertNotContains(
             response,
-            "WORKSPACE-HIDDEN-ORGANISM",
-        )
-
-        self.assertNotContains(
-            response,
             "WORKSPACE-HIDDEN-COLLECTION",
         )
 
 
-    def test_workspace_preserves_v21_context_contract(
+    def test_workspace_exposes_real_chart_and_calendar_context(
         self,
     ):
         response = self.client.get(
-            reverse("workspace")
+            reverse(
+                "workspace"
+            )
         )
 
-        stats = response.context["stats"]
+        workspace = response.context[
+            "workspace_v2"
+        ]
+
+        for key in (
+            "sample_type_chart",
+            "storage_location_chart",
+            "storage_annotated",
+            "today_activity",
+        ):
+            self.assertIn(
+                key,
+                workspace,
+            )
+
+        self.assertEqual(
+            workspace[
+                "storage_annotated"
+            ],
+            1,
+        )
+
+        evidence = workspace[
+            "evidence"
+        ]
+
+        for key in (
+            "taxonomy_coverage_percent",
+            "taxonomy_coverage_remainder",
+            "genome_coverage_percent",
+            "genome_coverage_remainder",
+        ):
+            self.assertIn(
+                key,
+                evidence,
+            )
+
+
+    def test_workspace_preserves_existing_context_contract(
+        self,
+    ):
+        response = self.client.get(
+            reverse(
+                "workspace"
+            )
+        )
+
+        stats = response.context[
+            "stats"
+        ]
 
         for key in (
             "total_samples",
@@ -180,7 +337,7 @@ class WorkspaceV22Tests(
                 stats,
             )
 
-        workspace_v2 = response.context[
+        workspace = response.context[
             "workspace_v2"
         ]
 
@@ -194,18 +351,20 @@ class WorkspaceV22Tests(
         ):
             self.assertIn(
                 key,
-                workspace_v2,
+                workspace,
             )
 
 
-    def test_workspace_uses_existing_scientific_routes(
+    def test_workspace_uses_existing_routes(
         self,
     ):
         response = self.client.get(
-            reverse("workspace")
+            reverse(
+                "workspace"
+            )
         )
 
-        for url_name in (
+        for name in (
             "samples_list",
             "collections_list",
             "sample_add",
@@ -221,11 +380,13 @@ class WorkspaceV22Tests(
         ):
             self.assertContains(
                 response,
-                reverse(url_name),
+                reverse(
+                    name
+                ),
             )
 
 
-    def test_workspace_returns_to_compact_card_structure(
+    def test_workspace_has_svg_graphs_without_external_chart_runtime(
         self,
     ):
         template = Path(
@@ -239,60 +400,33 @@ class WorkspaceV22Tests(
         ).read_text()
 
         for token in (
-            'class="workspace"',
-            "workspace-kpis",
-            "workspace-grid",
-            "workspace-main",
-            "workspace-sidebar",
-            "workspace-card",
-            "workspace-overview-grid",
-            "workspace-distribution",
+            "workspace-donut",
+            "workspace-donut-segment",
+            "workspace-bar-chart",
+            "workspace-bar-fill",
+            "workspace-radial",
+            "workspace-calendar-card",
         ):
             self.assertIn(
                 token,
-                template,
+                template
+                +
+                css,
             )
 
-        self.assertIn(
-            (
-                "grid-template-columns: "
-                "minmax(0, 1fr) 320px;"
+        self.assertGreaterEqual(
+            template.count(
+                "<svg"
             ),
-            css,
-        )
-
-        self.assertNotIn(
-            "workspace-hero",
-            template,
-        )
-
-        self.assertNotIn(
-            "research-workspace",
-            template,
-        )
-
-
-    def test_workspace_frontend_has_no_blocking_chart_dependency(
-        self,
-    ):
-        template = Path(
-            "core/interfaces/internal/"
-            "workspace/workspace.html"
-        ).read_text()
-
-        self.assertIn(
-            (
-                "internal/workspace/"
-                "workspace.css"
-            ),
-            template,
+            3,
         )
 
         for forbidden in (
             "chart.js",
+            "echarts",
+            "d3.js",
             "<canvas",
             "<script",
-            "<style",
         ):
             self.assertNotIn(
                 forbidden,
@@ -300,7 +434,7 @@ class WorkspaceV22Tests(
             )
 
 
-    def test_workspace_preserves_authorization_and_no_fake_analysis_models(
+    def test_workspace_preserves_authorization_helpers_and_no_fake_models(
         self,
     ):
         view = Path(
@@ -332,5 +466,7 @@ class WorkspaceV22Tests(
         ):
             self.assertNotIn(
                 forbidden,
-                view + template,
+                view
+                +
+                template,
             )
