@@ -136,6 +136,19 @@
             "[data-route-list-count]"
         );
 
+        const paginationNode =
+            document.createElement("div");
+
+        paginationNode.className =
+            "shipment-route-pagination";
+
+        paginationNode.dataset.routePagination = "";
+
+        listNode.insertAdjacentElement(
+            "afterend",
+            paginationNode
+        );
+
         const visibleCountNode = root.querySelector(
             "[data-route-visible-count]"
         );
@@ -335,6 +348,11 @@
                 : null
         );
 
+
+        // SHIPMENT ROUTE PAGINATION V1
+        const pageSize = 5;
+        let currentPage = 1;
+
         function filterValue(name) {
             const node =
                 filterNodes[name];
@@ -492,18 +510,241 @@
             parent.appendChild(chip);
         }
 
+        function renderPagination(
+            filtered,
+            start,
+            end
+        ) {
+            paginationNode.replaceChildren();
+
+            if (
+                !filtered.length
+                || filtered.length <= pageSize
+            ) {
+                paginationNode.hidden = true;
+                return;
+            }
+
+            paginationNode.hidden = false;
+
+            const pageCount = Math.ceil(
+                filtered.length / pageSize
+            );
+
+            const summary = textElement(
+                "span",
+                "shipment-route-pagination-summary",
+                `${start + 1}\u2013${end} of ${filtered.length}`
+            );
+
+            const controls =
+                document.createElement("div");
+
+            controls.className =
+                "shipment-route-pagination-controls";
+
+            function goToPage(page) {
+                const target = Math.min(
+                    pageCount,
+                    Math.max(1, page)
+                );
+
+                currentPage = target;
+
+                const firstIndex =
+                    (currentPage - 1) * pageSize;
+
+                if (filtered[firstIndex]) {
+                    selectedId =
+                        filtered[firstIndex].id;
+                }
+
+                render();
+            }
+
+            function addButton(
+                label,
+                page,
+                options = {}
+            ) {
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+                button.type = "button";
+                button.className =
+                    "shipment-route-pagination-button";
+
+                button.textContent = label;
+
+                if (options.current) {
+                    button.classList.add(
+                        "is-current"
+                    );
+
+                    button.setAttribute(
+                        "aria-current",
+                        "page"
+                    );
+                }
+
+                button.disabled =
+                    Boolean(options.disabled);
+
+                button.addEventListener(
+                    "click",
+                    () => {
+                        if (!button.disabled) {
+                            goToPage(page);
+                        }
+                    }
+                );
+
+                controls.appendChild(button);
+            }
+
+            function addEllipsis() {
+                controls.appendChild(
+                    textElement(
+                        "span",
+                        "shipment-route-pagination-ellipsis",
+                        "\u2026"
+                    )
+                );
+            }
+
+            addButton(
+                "\u2039",
+                currentPage - 1,
+                {
+                    disabled:
+                        currentPage <= 1,
+                }
+            );
+
+            const pageNumbers = [];
+
+            if (pageCount <= 7) {
+                for (
+                    let page = 1;
+                    page <= pageCount;
+                    page += 1
+                ) {
+                    pageNumbers.push(page);
+                }
+            } else {
+                const candidates = new Set([
+                    1,
+                    pageCount,
+                    currentPage - 1,
+                    currentPage,
+                    currentPage + 1,
+                ]);
+
+                Array.from(candidates)
+                    .filter(
+                        (page) => (
+                            page >= 1
+                            && page <= pageCount
+                        )
+                    )
+                    .sort((a, b) => a - b)
+                    .forEach(
+                        (page) => {
+                            pageNumbers.push(page);
+                        }
+                    );
+            }
+
+            let previousPage = null;
+
+            pageNumbers.forEach((page) => {
+                if (
+                    previousPage !== null
+                    && page - previousPage > 1
+                ) {
+                    addEllipsis();
+                }
+
+                addButton(
+                    String(page),
+                    page,
+                    {
+                        current:
+                            page === currentPage,
+                    }
+                );
+
+                previousPage = page;
+            });
+
+            addButton(
+                "\u203a",
+                currentPage + 1,
+                {
+                    disabled:
+                        currentPage >= pageCount,
+                }
+            );
+
+            paginationNode.appendChild(
+                summary
+            );
+
+            paginationNode.appendChild(
+                controls
+            );
+        }
+
+
         function renderList(filtered) {
             listNode.replaceChildren();
 
+            const pageCount = Math.max(
+                1,
+                Math.ceil(
+                    filtered.length / pageSize
+                )
+            );
+
+            currentPage = Math.min(
+                currentPage,
+                pageCount
+            );
+
+            const start =
+                (currentPage - 1) * pageSize;
+
+            const end = Math.min(
+                start + pageSize,
+                filtered.length
+            );
+
+            const pageRoutes =
+                filtered.slice(
+                    start,
+                    end
+                );
+
             if (listCountNode) {
-                listCountNode.textContent =
-                    `${filtered.length} / ${routes.length}`;
+                listCountNode.textContent = (
+                    filtered.length
+                        ? `${start + 1}–${end} of ${filtered.length}`
+                        : "0 of 0"
+                );
             }
 
             if (visibleCountNode) {
                 visibleCountNode.textContent =
                     String(filtered.length);
             }
+
+            renderPagination(
+                filtered,
+                start,
+                end
+            );
 
             if (!filtered.length) {
                 listNode.appendChild(
@@ -516,7 +757,7 @@
                 return;
             }
 
-            filtered.forEach((route) => {
+            pageRoutes.forEach((route) => {
                 const button =
                     document.createElement(
                         "button"
@@ -1488,6 +1729,24 @@
             id,
             focus
         ) {
+            const filtered =
+                filteredRoutes();
+
+            const routeIndex =
+                filtered.findIndex(
+                    (route) => (
+                        String(route.id)
+                        === String(id)
+                    )
+                );
+
+            if (routeIndex >= 0) {
+                currentPage =
+                    Math.floor(
+                        routeIndex / pageSize
+                    ) + 1;
+            }
+
             selectedId = id;
             render();
 
@@ -1509,7 +1768,10 @@
 
             node.addEventListener(
                 eventName,
-                render
+                () => {
+                    currentPage = 1;
+                    render();
+                }
             );
         });
 
@@ -1522,6 +1784,8 @@
                     ).forEach((node) => {
                         node.value = "";
                     });
+
+                    currentPage = 1;
 
                     selectedId = (
                         routes.length

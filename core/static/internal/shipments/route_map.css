@@ -556,3 +556,137 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ==========================================================
+   SHIPMENT ROUTE PAGINATION V1
+   Keep the route workspace compact regardless of result count.
+   ========================================================== */
+
+.shipment-route-workspace {
+    height: 600px;
+    min-height: 600px;
+}
+
+.shipment-route-list-column {
+    min-height: 0;
+}
+
+.shipment-route-list {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.shipment-route-pagination {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 52px;
+    padding: 9px 10px;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.shipment-route-pagination[hidden] {
+    display: none;
+}
+
+.shipment-route-pagination-summary {
+    flex: 0 0 auto;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.shipment-route-pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+}
+
+.shipment-route-pagination-button {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 7px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.shipment-route-pagination-button:hover:not(:disabled),
+.shipment-route-pagination-button:focus-visible:not(:disabled) {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    color: #0f172a;
+    outline: none;
+}
+
+.shipment-route-pagination-button.is-current {
+    border-color: #6366f1;
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.shipment-route-pagination-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.shipment-route-pagination-ellipsis {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+#shipment-route-map {
+    height: 100%;
+    min-height: 0;
+}
+
+@media (max-width: 900px) {
+    .shipment-route-workspace {
+        height: auto;
+        min-height: 0;
+    }
+
+    .shipment-route-list-column {
+        max-height: none;
+    }
+
+    .shipment-route-list {
+        max-height: 430px;
+    }
+
+    #shipment-route-map {
+        height: 460px;
+        min-height: 460px;
+    }
+}
+
+@media (max-width: 620px) {
+    .shipment-route-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .shipment-route-pagination-summary {
+        text-align: center;
+    }
+
+    .shipment-route-pagination-controls {
+        justify-content: center;
+    }
+}

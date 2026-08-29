@@ -316,3 +316,63 @@ class ShipmentRouteMapTests(TestCase):
             response,
             'class="ship-side ship-side-bottom"',
         )
+
+
+    def test_route_list_frontend_has_pagination_contract(self):
+        from pathlib import Path
+
+        project_root = (
+            Path(__file__)
+            .resolve()
+            .parents[2]
+        )
+
+        js = (
+            project_root
+            / "core/static/internal/shipments/route_map.js"
+        ).read_text()
+
+        css = (
+            project_root
+            / "core/static/internal/shipments/route_map.css"
+        ).read_text()
+
+        dashboard = (
+            project_root
+            / "core/interfaces/internal/shipments/dashboard.html"
+        ).read_text()
+
+        self.assertIn(
+            "const pageSize = 5;",
+            js,
+        )
+
+        self.assertIn(
+            "let currentPage = 1;",
+            js,
+        )
+
+        self.assertIn(
+            "renderPagination(",
+            js,
+        )
+
+        self.assertIn(
+            "pageRoutes.forEach((route) => {",
+            js,
+        )
+
+        self.assertIn(
+            "shipment-route-pagination",
+            css,
+        )
+
+        self.assertIn(
+            "height: 600px;",
+            css,
+        )
+
+        self.assertIn(
+            "20260829-route-pagination-v1",
+            dashboard,
+        )
