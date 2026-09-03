@@ -17,6 +17,7 @@ from django.db.models import (
 
 from core.models import (
     Bacteria,
+    Biobank,
     Collection,
     Phage,
     Sample,
@@ -51,6 +52,105 @@ def public_samples_queryset():
         is_embargoed=False,
         deletion_requested_at__isnull=True,
     )
+
+
+def public_biobanks_queryset():
+    """
+    Return Biobanks eligible for the unauthenticated public catalog.
+
+    Publication is explicit and lifecycle-aware. Internal ownership,
+    Research Group membership, ACLs and administrative metadata never
+    expand this projection.
+    """
+    return (
+        Biobank.objects
+        .filter(
+            is_active=True,
+            is_public=True,
+        )
+        .order_by(
+            "name",
+            "pk",
+        )
+    )
+
+
+def public_biobank_record(
+    biobank,
+):
+    """
+    Build the explicit publication-safe Biobank representation.
+
+    Only institutional identity, public description and registered
+    institutional location are exposed. Ownership, ACLs, Research
+    Groups, Tags, Keywords and membership relations are deliberately
+    excluded.
+    """
+    latitude = (
+        float(biobank.latitude)
+        if biobank.latitude is not None
+        else None
+    )
+
+    longitude = (
+        float(biobank.longitude)
+        if biobank.longitude is not None
+        else None
+    )
+
+    return {
+        "id": biobank.pk,
+        "name": str(
+            biobank.name
+            or ""
+        ).strip(),
+        "description": str(
+            biobank.description
+            or ""
+        ).strip(),
+        "location": str(
+            biobank.location_label
+            or ""
+        ).strip(),
+        "latitude": latitude,
+        "longitude": longitude,
+        "mapped": (
+            latitude is not None
+            and longitude is not None
+        ),
+    }
+
+
+def public_biobank_records(
+    limit=None,
+):
+    """
+    Return publication-safe Biobank dictionaries for rendering.
+
+    Coordinates in this projection describe the registered
+    institutional Biobank location. They are not Sample collection
+    coordinates or biological-material provenance.
+    """
+    queryset = (
+        public_biobanks_queryset()
+    )
+
+    if limit is not None:
+        limit = max(
+            0,
+            int(limit),
+        )
+
+        queryset = queryset[
+            :limit
+        ]
+
+    return [
+        public_biobank_record(
+            biobank
+        )
+        for biobank in queryset
+    ]
 
 
 def public_collections_queryset():

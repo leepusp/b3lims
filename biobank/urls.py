@@ -30,6 +30,10 @@ from core.views.public.samples import (
     public_sample_list,
     public_sample_detail,
 )
+from core.views.public.biobank_directory import (
+    public_biobank_list,
+    public_biobank_detail,
+)
 
 # 2. AUTHENTICATION
 from core.views.auth import CoreLoginView, logout_user
@@ -172,6 +176,8 @@ urlpatterns = [
     path("public/collections/<int:collection_id>/", public_collection_detail, name="public_collection_detail"),
     path("public/samples/", public_sample_list, name="public_samples"),
     path("public/samples/<str:sample_id>/", public_sample_detail, name="public_sample_detail"),
+    path("public/biobanks/", public_biobank_list, name="public_biobanks"),
+    path("public/biobanks/<int:biobank_id>/", public_biobank_detail, name="public_biobank_detail"),
 
     # ---------------- ADMIN & AUTH ----------------
     path("admin/", admin.site.urls),

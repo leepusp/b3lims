@@ -1,0 +1,242 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}Biobanks | B3 LIMS Public Catalog{% endblock %}
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+>
+<link
+    rel="stylesheet"
+    href="{% static 'public/biobanks.css' %}?v=20260903-public-biobanks-v1"
+>
+{% endblock %}
+
+{% block content %}
+
+<a
+    href="{% url 'public_home' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    Public Catalog
+</a>
+
+
+<header class="public-biobank-hero">
+
+    <div class="public-biobank-kicker">
+        CEPID B3 BIOBANK NETWORK
+    </div>
+
+    <h1 class="public-biobank-title h2">
+        Public Biobanks
+    </h1>
+
+    <p class="public-biobank-intro">
+        Explore institutional Biobanks participating in the B3
+        research network. Only Biobanks explicitly approved for
+        public visibility are included in this directory.
+    </p>
+
+    <div class="public-biobank-metrics">
+
+        <span class="public-biobank-metric">
+            <i class="bi bi-building"></i>
+            {{ biobanks|length }}
+            public Biobank{{ biobanks|length|pluralize }}
+        </span>
+
+        <span class="public-biobank-metric">
+            <i class="bi bi-geo-alt"></i>
+            {{ mapped_biobanks|length }}
+            mapped location{{ mapped_biobanks|length|pluralize }}
+        </span>
+
+    </div>
+
+</header>
+
+
+{% if biobanks %}
+
+<section
+    class="public-biobank-network"
+    data-public-biobank-directory
+>
+
+    <div class="public-biobank-map-panel">
+
+        <div
+            id="public-biobank-map"
+            class="public-biobank-map"
+            data-public-biobank-map
+            aria-label="Map of public B3 Biobanks"
+        ></div>
+
+        <div class="public-biobank-map-note">
+            Markers represent the registered institutional location
+            of each public Biobank. They do not represent Sample
+            collection sites or biological-material provenance.
+        </div>
+
+    </div>
+
+
+    <aside class="public-biobank-directory-panel">
+
+        <div class="public-biobank-directory-header">
+
+            <h2>
+                Participating Biobanks
+            </h2>
+
+            <div class="small text-muted">
+                Select a Biobank to locate it on the map or open its
+                public institutional profile.
+            </div>
+
+            <div class="public-biobank-search">
+
+                <label
+                    class="visually-hidden"
+                    for="public-biobank-search"
+                >
+                    Search public Biobanks
+                </label>
+
+                <div class="input-group input-group-sm">
+
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        id="public-biobank-search"
+                        type="search"
+                        class="form-control"
+                        placeholder="Search name, location or description"
+                        data-public-biobank-search
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            class="public-biobank-list"
+            data-public-biobank-list
+        >
+
+            {% for biobank in biobanks %}
+
+                <article
+                    class="public-biobank-card"
+                    data-public-biobank-card
+                    data-biobank-id="{{ biobank.id }}"
+                    data-biobank-search="{{ biobank.name }} {{ biobank.location }} {{ biobank.description }}"
+                >
+
+                    <div class="public-biobank-card-name">
+                        {{ biobank.name }}
+                    </div>
+
+                    <div class="public-biobank-card-location">
+
+                        <i class="bi bi-geo-alt me-1"></i>
+
+                        {% if biobank.location %}
+                            {{ biobank.location }}
+                        {% else %}
+                            Location not publicly described
+                        {% endif %}
+
+                    </div>
+
+                    <div class="public-biobank-card-description">
+                        {{ biobank.description|default:"No public description provided."|truncatechars:150 }}
+                    </div>
+
+                    <div class="public-biobank-card-actions">
+
+                        {% if biobank.mapped %}
+
+                            <button
+                                type="button"
+                                class="public-biobank-focus"
+                                data-public-biobank-focus
+                            >
+                                <i class="bi bi-crosshair me-1"></i>
+                                Show on map
+                            </button>
+
+                        {% endif %}
+
+                        <a
+                            href="{% url 'public_biobank_detail' biobank.id %}"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            View profile
+                        </a>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+
+            <div
+                class="public-biobank-no-results"
+                data-public-biobank-no-results
+                hidden
+            >
+                No public Biobank matches this search.
+            </div>
+
+        </div>
+
+    </aside>
+
+</section>
+
+
+{{ mapped_biobanks|json_script:"public-biobank-map-data" }}
+
+
+{% else %}
+
+<div class="public-biobank-empty">
+
+    <i class="bi bi-building fs-3 d-block mb-2"></i>
+
+    <strong class="d-block text-dark mb-1">
+        No public Biobanks are currently published
+    </strong>
+
+    This directory will populate automatically when an active
+    Biobank is explicitly approved for public visibility.
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script
+    src="{% static 'public/biobanks.js' %}?v=20260903-public-biobanks-v1">
+</script>
+
+{% endblock %}

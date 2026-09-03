@@ -1,0 +1,435 @@
+.public-biobank-hero {
+    position: relative;
+    overflow: hidden;
+
+    margin-bottom: 1.5rem;
+    padding: 2rem;
+
+    border: 1px solid #dce8f1;
+    border-radius: 22px;
+
+    background:
+        radial-gradient(
+            100% 150% at 0% 0%,
+            rgba(220, 239, 250, 0.95) 0%,
+            transparent 54%
+        ),
+        radial-gradient(
+            90% 130% at 100% 0%,
+            rgba(246, 240, 230, 0.9) 0%,
+            transparent 58%
+        ),
+        #ffffff;
+
+    box-shadow: var(--b3-shadow);
+}
+
+.public-biobank-kicker {
+    margin-bottom: 0.55rem;
+
+    color: var(--b3-accent);
+
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+}
+
+.public-biobank-title {
+    margin-bottom: 0.75rem;
+
+    color: #1b2a4a;
+
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+.public-biobank-intro {
+    max-width: 760px;
+    margin-bottom: 0;
+
+    color: #66758b;
+}
+
+.public-biobank-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+
+    margin-top: 1.25rem;
+}
+
+.public-biobank-metric {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+
+    padding: 0.55rem 0.8rem;
+
+    border: 1px solid #dce8f1;
+    border-radius: 999px;
+
+    color: #42536d;
+    background: rgba(255, 255, 255, 0.88);
+
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.public-biobank-network {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.8fr)
+        minmax(300px, 0.8fr);
+
+    gap: 1rem;
+
+    align-items: stretch;
+}
+
+.public-biobank-map-panel,
+.public-biobank-directory-panel,
+.public-biobank-detail-panel {
+    border: 1px solid var(--b3-border);
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.96);
+
+    box-shadow: var(--b3-shadow);
+}
+
+.public-biobank-map-panel {
+    position: relative;
+    overflow: hidden;
+
+    min-height: 580px;
+}
+
+.public-biobank-map {
+    width: 100%;
+    height: 580px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #edf5fa,
+            #f8fbfd
+        );
+}
+
+.public-biobank-map-fallback {
+    display: grid;
+    place-items: center;
+
+    min-height: 580px;
+    padding: 2rem;
+
+    color: #77859a;
+
+    text-align: center;
+}
+
+.public-biobank-map-note {
+    position: absolute;
+    z-index: 500;
+    right: 1rem;
+    bottom: 1rem;
+
+    max-width: 360px;
+    padding: 0.65rem 0.8rem;
+
+    border: 1px solid rgba(214, 226, 236, 0.95);
+    border-radius: 11px;
+
+    color: #66758b;
+    background: rgba(255, 255, 255, 0.94);
+
+    box-shadow:
+        0 8px 26px -18px
+        rgba(31, 42, 55, 0.4);
+
+    font-size: 0.74rem;
+    line-height: 1.45;
+}
+
+.public-biobank-directory-panel {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+    min-height: 580px;
+    max-height: 580px;
+
+    overflow: hidden;
+}
+
+.public-biobank-directory-header {
+    flex: 0 0 auto;
+
+    padding: 1rem;
+
+    border-bottom: 1px solid #e5edf3;
+}
+
+.public-biobank-directory-header h2 {
+    margin-bottom: 0.25rem;
+
+    color: #263754;
+
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+.public-biobank-search {
+    margin-top: 0.85rem;
+}
+
+.public-biobank-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.7rem;
+
+    min-height: 0;
+    padding: 0.85rem;
+
+    overflow-y: auto;
+}
+
+.public-biobank-card {
+    padding: 0.9rem;
+
+    border: 1px solid #e1eaf1;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
+}
+
+.public-biobank-card:hover {
+    border-color: #bfd3e4;
+
+    box-shadow:
+        0 10px 22px -18px
+        rgba(31, 55, 81, 0.5);
+
+    transform: translateY(-1px);
+}
+
+.public-biobank-card.is-active {
+    border-color: #8cb8d8;
+
+    background:
+        linear-gradient(
+            145deg,
+            #f5fbff,
+            #ffffff
+        );
+
+    box-shadow:
+        0 0 0 2px
+        rgba(38, 117, 189, 0.08);
+}
+
+.public-biobank-card-name {
+    margin-bottom: 0.25rem;
+
+    color: #243651;
+
+    font-size: 0.93rem;
+    font-weight: 750;
+}
+
+.public-biobank-card-location {
+    margin-bottom: 0.45rem;
+
+    color: #718096;
+
+    font-size: 0.76rem;
+}
+
+.public-biobank-card-description {
+    margin-bottom: 0.7rem;
+
+    color: #64748b;
+
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.public-biobank-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.public-biobank-focus {
+    border: 0;
+
+    color: #2675bd;
+    background: transparent;
+
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.public-biobank-focus:hover {
+    color: #174f7e;
+
+    text-decoration: underline;
+}
+
+.public-biobank-no-results {
+    padding: 1rem;
+
+    color: #77859a;
+
+    font-size: 0.84rem;
+    text-align: center;
+}
+
+.public-biobank-empty {
+    padding: 2rem;
+
+    border: 1px dashed #cfdde8;
+    border-radius: 18px;
+
+    color: #6b7b91;
+    background: rgba(255, 255, 255, 0.85);
+
+    text-align: center;
+}
+
+.public-biobank-detail-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(360px, 0.85fr);
+
+    gap: 1rem;
+
+    align-items: start;
+}
+
+.public-biobank-detail-panel {
+    padding: 1.4rem;
+}
+
+.public-biobank-detail-label {
+    margin-bottom: 0.4rem;
+
+    color: var(--b3-accent);
+
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+
+    text-transform: uppercase;
+}
+
+.public-biobank-detail-description {
+    color: #5f6f85;
+    line-height: 1.75;
+}
+
+.public-biobank-location-block {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+
+    border-top: 1px solid #e5edf3;
+}
+
+.public-biobank-location-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+
+    width: 38px;
+    height: 38px;
+
+    border-radius: 11px;
+
+    color: #2675bd;
+    background: #eaf4fb;
+}
+
+.public-biobank-detail-map {
+    overflow: hidden;
+
+    border: 1px solid var(--b3-border);
+    border-radius: 18px;
+
+    background: #ffffff;
+
+    box-shadow: var(--b3-shadow);
+}
+
+.public-biobank-detail-map .public-biobank-map {
+    height: 470px;
+}
+
+.public-biobank-detail-map .public-biobank-map-fallback {
+    min-height: 470px;
+}
+
+.public-biobank-marker-label {
+    color: #31435e;
+
+    font-family:
+        "Inter",
+        system-ui,
+        sans-serif;
+
+    font-size: 0.77rem;
+    font-weight: 700;
+}
+
+@media (max-width: 1040px) {
+    .public-biobank-network,
+    .public-biobank-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .public-biobank-directory-panel {
+        min-height: 0;
+        max-height: none;
+    }
+
+    .public-biobank-list {
+        max-height: 430px;
+    }
+}
+
+@media (max-width: 700px) {
+    .public-biobank-hero {
+        padding: 1.35rem;
+    }
+
+    .public-biobank-map-panel,
+    .public-biobank-map {
+        min-height: 430px;
+        height: 430px;
+    }
+
+    .public-biobank-detail-map .public-biobank-map {
+        height: 410px;
+    }
+
+    .public-biobank-map-note {
+        right: 0.7rem;
+        bottom: 0.7rem;
+        left: 0.7rem;
+
+        max-width: none;
+    }
+}

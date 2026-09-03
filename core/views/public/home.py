@@ -2,6 +2,7 @@ from django.shortcuts import render
 
 from core.context import base_context
 from core.services.public_catalog import (
+    public_biobank_records,
     public_home_context,
 )
 
@@ -17,6 +18,12 @@ def public_home(
     """
     context = (
         public_home_context()
+    )
+
+    context[
+        "featured_biobanks"
+    ] = public_biobank_records(
+        limit=3,
     )
 
     context.update(

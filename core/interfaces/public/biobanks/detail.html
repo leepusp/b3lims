@@ -1,0 +1,169 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}{{ biobank.name }} | B3 LIMS{% endblock %}
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+>
+<link
+    rel="stylesheet"
+    href="{% static 'public/biobanks.css' %}?v=20260903-public-biobanks-v1"
+>
+{% endblock %}
+
+{% block content %}
+
+<a
+    href="{% url 'public_biobanks' %}"
+    class="public-back-link"
+>
+    <i class="bi bi-arrow-left"></i>
+    Public Biobanks
+</a>
+
+
+<header class="public-biobank-hero">
+
+    <div class="public-biobank-kicker">
+        PUBLIC BIOBANK PROFILE
+    </div>
+
+    <h1 class="public-biobank-title h2">
+        {{ biobank.name }}
+    </h1>
+
+    {% if biobank.location %}
+
+        <p class="public-biobank-intro">
+            <i class="bi bi-geo-alt me-1"></i>
+            {{ biobank.location }}
+        </p>
+
+    {% else %}
+
+        <p class="public-biobank-intro">
+            Institutional location not publicly described.
+        </p>
+
+    {% endif %}
+
+</header>
+
+
+<div class="public-biobank-detail-grid">
+
+    <article class="public-biobank-detail-panel">
+
+        <div class="public-biobank-detail-label">
+            About this Biobank
+        </div>
+
+        <h2 class="h5 mb-3">
+            Institutional profile
+        </h2>
+
+        <div class="public-biobank-detail-description">
+
+            {% if biobank.description %}
+
+                {{ biobank.description|linebreaks }}
+
+            {% else %}
+
+                <p>
+                    No public institutional description has been
+                    provided for this Biobank.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <div class="public-biobank-location-block">
+
+            <div class="public-biobank-location-icon">
+                <i class="bi bi-geo-alt"></i>
+            </div>
+
+            <div>
+
+                <div class="small fw-semibold text-dark">
+                    Registered institutional location
+                </div>
+
+                <div class="small text-muted">
+
+                    {% if biobank.location %}
+                        {{ biobank.location }}
+                    {% else %}
+                        Not publicly described
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </article>
+
+
+    <section
+        class="public-biobank-detail-map"
+        aria-label="Biobank location"
+    >
+
+        {% if biobank.mapped %}
+
+            <div
+                id="public-biobank-detail-map"
+                class="public-biobank-map"
+                data-public-biobank-detail-map
+                aria-label="Map showing the registered location of {{ biobank.name }}"
+            ></div>
+
+        {% else %}
+
+            <div class="public-biobank-map-fallback">
+
+                <div>
+                    <i class="bi bi-map fs-3 d-block mb-2"></i>
+                    This Biobank does not currently have a public
+                    mapped location.
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+{% if biobank.mapped %}
+    {{ biobank|json_script:"public-biobank-detail-map-data" }}
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+{% if biobank.mapped %}
+
+<script
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script
+    src="{% static 'public/biobanks.js' %}?v=20260903-public-biobanks-v1">
+</script>
+
+{% endif %}
+
+{% endblock %}
