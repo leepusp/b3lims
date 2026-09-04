@@ -577,6 +577,68 @@ find \
     -type f \
     -exec chmod 0640 {} +
 
+# git archive preserves Git's executable-bit semantics. The release
+# policy intentionally restricts regular files to root:biobank 0640,
+# so restore 0750 only for paths versioned by Git as 100755.
+#
+# This preserves both contracts:
+#
+#   Git 100644 -> release 0640
+#   Git 100755 -> release 0750
+#
+# NUL-delimited ls-tree output keeps unusual Git pathnames intact.
+RELEASE_GIT_EXECUTABLE_COUNT=0
+
+GIT_TREE_FILE="$MANIFEST/target-tree.z"
+
+repo_git ls-tree \
+    -rz \
+    "$TARGET_COMMIT" \
+    > "$GIT_TREE_FILE"
+
+test -s "$GIT_TREE_FILE" ||
+    fail "Git tree inventory is unexpectedly empty."
+
+while IFS= read -r -d "" record
+do
+    [[ "$record" == *$'\t'* ]] ||
+        fail "Malformed Git tree record while restoring executable modes."
+
+    metadata="${record%%$'\t'*}"
+    relative="${record#*$'\t'}"
+    git_mode="${metadata%% *}"
+
+    test "$git_mode" = "100755" ||
+        continue
+
+    case "$relative" in
+        /*|..|../*|*/..|*/../*)
+            fail "Unsafe executable path in Git tree: $relative"
+            ;;
+    esac
+
+    release_path="$STAGE_RELEASE/$relative"
+
+    test -f "$release_path" ||
+        fail "Git executable is missing from staged release: $relative"
+
+    chmod 0750 -- \
+        "$release_path"
+
+    test -x "$release_path" ||
+        fail "Executable mode restoration failed: $relative"
+
+    RELEASE_GIT_EXECUTABLE_COUNT=$(
+        (
+            RELEASE_GIT_EXECUTABLE_COUNT
+            + 1
+        )
+    )
+done < "$GIT_TREE_FILE"
+
+echo "release_git_executable_count=$RELEASE_GIT_EXECUTABLE_COUNT"
+echo "git_executable_mode_contract=PASS"
+
 mv \
     "$STAGE_RELEASE" \
     "$TARGET_RELEASE"
