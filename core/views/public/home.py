@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.views.decorators.http import require_safe
 
 from core.context import base_context
 from core.services.public_catalog import (
@@ -7,6 +8,7 @@ from core.services.public_catalog import (
 )
 
 
+@require_safe
 def public_home(
     request,
 ):

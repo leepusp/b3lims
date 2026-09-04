@@ -3,6 +3,7 @@ from django.shortcuts import (
     get_object_or_404,
     render,
 )
+from django.views.decorators.http import require_safe
 
 from core.context import base_context
 from core.services.public_catalog import (
@@ -13,6 +14,7 @@ from core.services.public_catalog import (
 )
 
 
+@require_safe
 def public_sample_list(
     request,
 ):
@@ -104,6 +106,7 @@ def public_sample_list(
     )
 
 
+@require_safe
 def public_sample_detail(
     request,
     sample_id,
