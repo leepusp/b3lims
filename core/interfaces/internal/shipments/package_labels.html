@@ -258,14 +258,10 @@
         <img src="{{ package_qr_data_uri }}" alt="Final shipment QR">
 
         <p class="small">
-            Scan to track the shipment.
+            Shipment identifier
         </p>
 
-        {% if public_tracking_url %}
-            <p class="small">{{ public_tracking_url }}</p>
-        {% else %}
-            <p class="small">{{ shipment.shipment_code }}</p>
-        {% endif %}
+        <p class="small">{{ shipment.shipment_code }}</p>
     </div>
 
     <div class="label-card">

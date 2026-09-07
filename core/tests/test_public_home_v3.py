@@ -264,7 +264,6 @@ class PublicHomeV3Tests(
             "public_collections",
             "public_about",
             "public_governance",
-            "public_shipments_portal",
             "login",
         ):
             self.assertContains(

@@ -94,7 +94,7 @@ class PublicPortalIdentityTests(
             template,
         )
 
-    def test_home_contains_five_quick_access_destinations(
+    def test_home_contains_four_quick_access_destinations(
         self,
     ):
         template = (
@@ -106,7 +106,6 @@ class PublicPortalIdentityTests(
             "public_collections",
             "public_about",
             "public_governance",
-            "public_shipments_portal",
             "login",
         ):
             self.assertIn(
@@ -122,7 +121,6 @@ class PublicPortalIdentityTests(
             "Browse Collections",
             "About B3 LIMS",
             "Governance",
-            "Shipments",
             "Internal Area",
         ):
             self.assertIn(

@@ -112,7 +112,6 @@ class PublicHomeV32PrototypeIntegrationTests(
             "public_collections",
             "public_about",
             "public_governance",
-            "public_shipments_portal",
             "login",
         ):
             self.assertIn(

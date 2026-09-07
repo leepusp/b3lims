@@ -4,8 +4,6 @@ from core.views.internal.shipments.views import (
     shipment_document_workspace_view,
 )
 from core.views.internal.shipments.views import shipment_edit_view
-from core.views.public.shipments.views import public_shipments_portal_view, public_shipment_new_view, public_shipment_submitted_view, public_shipment_track_view, public_shipment_documents_view, public_shipment_document_upload_view
-from core.views.public.shipments.views import public_shipment_document_file_download_view
 from core.views.internal.shipments.views import shipment_document_file_download_view
 from core.views.internal.shipments.views import shipments_list_view, shipments_dashboard_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
@@ -155,19 +153,6 @@ urlpatterns = [
         notebook_views.molecular_sequence_import_api,
         name="molecular_sequence_import_api",
     ),
-    path("public/shipments/", public_shipments_portal_view, name="public_shipments_portal"),
-    path("public/shipments/new/", public_shipment_new_view, name="public_shipment_new"),
-    path("public/shipments/submitted/<uuid:token>/", public_shipment_submitted_view, name="public_shipment_submitted"),
-    path("public/shipments/track/<uuid:token>/", public_shipment_track_view, name="public_shipment_track"),
-    path("public/shipments/documents/<uuid:token>/", public_shipment_documents_view, name="public_shipment_documents"),
-    path("public/shipments/documents/<uuid:token>/upload/<int:document_id>/", public_shipment_document_upload_view, name="public_shipment_document_upload"),
-    path(
-        "public/shipments/documents/<uuid:token>/"
-        "<int:document_id>/files/<slug:file_kind>/download/",
-        public_shipment_document_file_download_view,
-        name="public_shipment_document_file_download",
-    ),
-
     # ---------------- PUBLIC PAGES ----------------
     path("public/", public_home, name="public_home"),
     path("public/about/", public_about, name="public_about"),

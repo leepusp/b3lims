@@ -552,20 +552,8 @@ def shipment_package_labels_view(request, shipment_id):
         )
         return redirect("shipment_detail", shipment_id=shipment.id)
 
-    access_token = shipment.access_tokens.filter(
-        access_type="public_tracking",
-        is_active=True,
-    ).first()
-
-    public_tracking_url = ""
-
-    if access_token:
-        public_tracking_url = request.build_absolute_uri(
-            reverse("public_shipment_track", kwargs={"token": access_token.token})
-        )
-
     package_qr_data_uri = build_qr_data_uri(
-        public_tracking_url or shipment.shipment_code
+        shipment.shipment_code
     )
 
     classification = getattr(shipment, "classification", None)
@@ -578,7 +566,6 @@ def shipment_package_labels_view(request, shipment_id):
             "items": shipment.items.all(),
             "classification": classification,
             "label_flags": _shipment_package_label_flags(classification),
-            "public_tracking_url": public_tracking_url,
             "package_qr_data_uri": package_qr_data_uri,
             "pending_required_documents": get_pending_required_signed_documents(shipment),
         },
@@ -1386,4 +1373,3 @@ def _shipment_document_workspace_template(request):
     to the same dynamic wizard instead of exposing a second form.
     """
     return "internal/shipments/document_workspace_wizard.html"
-
