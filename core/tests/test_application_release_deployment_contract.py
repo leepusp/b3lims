@@ -1,5 +1,6 @@
 from pathlib import Path
 import stat
+import subprocess
 
 from django.test import SimpleTestCase
 
@@ -168,6 +169,65 @@ class ApplicationReleaseDeploymentContractTests(
             '    repo_git ls-tree',
             source,
         )
+
+    def test_executable_counter_runs_as_arithmetic_expansion(
+        self,
+    ):
+        source = DEPLOY.read_text()
+
+        expected = (
+            "RELEASE_GIT_EXECUTABLE_COUNT="
+            "$((RELEASE_GIT_EXECUTABLE_COUNT + 1))"
+        )
+
+        self.assertIn(
+            expected,
+            source,
+        )
+
+        self.assertNotIn(
+            "RELEASE_GIT_EXECUTABLE_COUNT=$(\n"
+            "        (",
+            source,
+        )
+
+        completed = subprocess.run(
+            [
+                "bash",
+                "-c",
+                (
+                    "set -euo pipefail\n"
+                    "RELEASE_GIT_EXECUTABLE_COUNT=0\n"
+                    f"{expected}\n"
+                    'test "$RELEASE_GIT_EXECUTABLE_COUNT" -eq 1\n'
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=completed.stderr,
+        )
+
+    def test_pre_cutover_failure_is_recorded_in_manifest(
+        self,
+    ):
+        source = DEPLOY.read_text()
+
+        for marker in (
+            '"status=failed"',
+            '"exit_code=$rc"',
+            '"failure=$message"',
+            '"mutated=$MUTATED"',
+        ):
+            self.assertIn(
+                marker,
+                source,
+            )
 
     def test_generated_python_artifacts_are_rejected(
         self,

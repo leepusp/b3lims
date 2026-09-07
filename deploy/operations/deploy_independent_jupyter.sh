@@ -628,12 +628,7 @@ do
     test -x "$release_path" ||
         fail "Executable mode restoration failed: $relative"
 
-    RELEASE_GIT_EXECUTABLE_COUNT=$(
-        (
-            RELEASE_GIT_EXECUTABLE_COUNT
-            + 1
-        )
-    )
+    RELEASE_GIT_EXECUTABLE_COUNT=$((RELEASE_GIT_EXECUTABLE_COUNT + 1))
 done < "$GIT_TREE_FILE"
 
 echo "release_git_executable_count=$RELEASE_GIT_EXECUTABLE_COUNT"

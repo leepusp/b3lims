@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 from django.test import SimpleTestCase
 
@@ -137,4 +138,47 @@ class ReleaseFileModeDeploymentContractTests(
             'done < <(\n'
             '    repo_git ls-tree',
             source,
+        )
+
+    def test_executable_counter_runs_as_arithmetic_expansion(
+        self,
+    ):
+        source = DEPLOY.read_text()
+
+        expected = (
+            "RELEASE_GIT_EXECUTABLE_COUNT="
+            "$((RELEASE_GIT_EXECUTABLE_COUNT + 1))"
+        )
+
+        self.assertIn(
+            expected,
+            source,
+        )
+
+        self.assertNotIn(
+            "RELEASE_GIT_EXECUTABLE_COUNT=$(\n"
+            "        (",
+            source,
+        )
+
+        completed = subprocess.run(
+            [
+                "bash",
+                "-c",
+                (
+                    "set -euo pipefail\n"
+                    "RELEASE_GIT_EXECUTABLE_COUNT=0\n"
+                    f"{expected}\n"
+                    'test "$RELEASE_GIT_EXECUTABLE_COUNT" -eq 1\n'
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=completed.stderr,
         )

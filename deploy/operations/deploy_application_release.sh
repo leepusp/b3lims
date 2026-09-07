@@ -268,7 +268,10 @@ cleanup_failed_release() {
 
 abort_deployment() {
     local rc="$1"
+    local message=""
+
     shift
+    message="$*"
 
     if test "$ABORTING" -eq 1
     then
@@ -279,7 +282,14 @@ abort_deployment() {
 
     trap - ERR INT TERM HUP
 
-    printf 'ERROR: %s\n' "$*" >&2
+    printf 'ERROR: %s\n' "$message" >&2
+
+    record_result \
+        "status=failed" \
+        "exit_code=$rc" \
+        "failure=$message" \
+        "mutated=$MUTATED" \
+        "timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
     rollback "$rc"
     cleanup_failed_release
@@ -626,12 +636,7 @@ do
         fail \
             "Executable mode restoration failed: $relative"
 
-    RELEASE_GIT_EXECUTABLE_COUNT=$(
-        (
-            RELEASE_GIT_EXECUTABLE_COUNT
-            + 1
-        )
-    )
+    RELEASE_GIT_EXECUTABLE_COUNT=$((RELEASE_GIT_EXECUTABLE_COUNT + 1))
 done < "$GIT_TREE_FILE"
 
 echo "release_git_executable_count=$RELEASE_GIT_EXECUTABLE_COUNT"
