@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'vendor/leaflet/1.9.4/leaflet.css' %}">
 <link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
 {% endblock %}
 
@@ -2142,6 +2142,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'vendor/leaflet/1.9.4/leaflet.js' %}"></script>
 <script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
 {% endblock %}

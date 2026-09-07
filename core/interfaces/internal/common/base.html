@@ -6,8 +6,8 @@
     <title>{% block title %}B3 LIMS{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap/5.3.2/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/1.13.1/bootstrap-icons.css' %}" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'internal/common/base.css' %}">
     <link rel="stylesheet" href="{% static 'internal/common/chips.css' %}">
@@ -174,7 +174,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'vendor/bootstrap/5.3.2/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'internal/common/base.js' %}"></script>
 
 {% block extra_js %}{% endblock %}

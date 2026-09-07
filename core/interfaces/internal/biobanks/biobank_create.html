@@ -6,7 +6,7 @@
 {% block page_subtitle %}Management of institutional biobank repositories and access policies{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'vendor/leaflet/1.9.4/leaflet.css' %}">
 
 
 
@@ -289,7 +289,7 @@
 {% include "internal/tags/add_tag.html" %}
 {% include "internal/keywords/add_keyword.html" %}
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'vendor/leaflet/1.9.4/leaflet.js' %}"></script>
 
 <script src="{% static 'internal/biobanks/biobank.js' %}"></script>
 

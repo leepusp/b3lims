@@ -4,7 +4,7 @@
 {% block extra_css %}
 <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    href="{% static 'vendor/leaflet/1.9.4/leaflet.css' %}"
 >
 <link
     rel="stylesheet"
@@ -20,7 +20,7 @@
 >
 <script
     type="text/javascript"
-    src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+    src="{% static 'vendor/vis-network/10.1.2/vis-network.min.js' %}"
 ></script>
 {% endblock %}
 
@@ -2027,7 +2027,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'vendor/leaflet/1.9.4/leaflet.js' %}"></script>
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260821-map3"></script>
 <script src="{% static 'internal/samples/sample_network.js' %}?v=20260821-network2"></script>
 {% endblock %}
