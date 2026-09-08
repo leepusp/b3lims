@@ -24,33 +24,67 @@ class SampleFileDownloadTests(TestCase):
             self.temporary_directory.cleanup
         )
 
+        self.standalone_runtime = (
+            getattr(
+                settings,
+                "BIOBANK_RUNTIME_PROFILE",
+                None,
+            )
+            == "standalone"
+        )
+
         self.user_home = (
             Path(
                 self.temporary_directory.name
             )
             / "sampleowner"
         )
-        self.user_home.mkdir()
 
-        self.settings_override = override_settings(
-            BIOBANK_SAMPLE_DATA_RELATIVE_ROOT=(
-                "biobank/data"
-            ),
+        self.sample_data_root = (
+            Path(
+                self.temporary_directory.name
+            )
+            / "sample_data"
         )
+
+        if self.standalone_runtime:
+            self.settings_override = override_settings(
+                BIOBANK_SAMPLE_DATA_ROOT=(
+                    self.sample_data_root
+                ),
+                BIOBANK_SAMPLE_DATA_RELATIVE_ROOT=(
+                    "biobank/data"
+                ),
+            )
+
+        else:
+            self.user_home.mkdir()
+
+            self.settings_override = override_settings(
+                BIOBANK_SAMPLE_DATA_RELATIVE_ROOT=(
+                    "biobank/data"
+                ),
+            )
+
         self.settings_override.enable()
         self.addCleanup(
             self.settings_override.disable
         )
 
-        self.home_patch = patch(
-            "core.services.sample_data_storage."
-            "user_home_for_username",
-            return_value=self.user_home,
-        )
-        self.home_patch.start()
-        self.addCleanup(
-            self.home_patch.stop
-        )
+        self.home_patch = None
+
+        if not self.standalone_runtime:
+            self.home_patch = patch(
+                "core.services.sample_data_storage."
+                "user_home_for_username",
+                return_value=self.user_home,
+            )
+
+            self.home_patch.start()
+
+            self.addCleanup(
+                self.home_patch.stop
+            )
 
         user_model = get_user_model()
 
@@ -85,15 +119,27 @@ class SampleFileDownloadTests(TestCase):
             "files/report.txt"
         )
 
-        self.physical = (
-            self.user_home
-            / "biobank"
-            / "data"
-            / "samples"
-            / sample_directory
-            / "files"
-            / "report.txt"
-        )
+        if self.standalone_runtime:
+            self.physical = (
+                self.sample_data_root
+                / "users"
+                / "sampleowner"
+                / "samples"
+                / sample_directory
+                / "files"
+                / "report.txt"
+            )
+
+        else:
+            self.physical = (
+                self.user_home
+                / "biobank"
+                / "data"
+                / "samples"
+                / sample_directory
+                / "files"
+                / "report.txt"
+            )
 
         self.physical.parent.mkdir(
             parents=True

@@ -85,6 +85,10 @@ BIOBANK_STORAGE_ROOT = (
     BIOBANK_LOCAL_ROOT / "storage"
 )
 
+BIOBANK_SAMPLE_DATA_ROOT = (
+    BIOBANK_STORAGE_ROOT / "sample_data"
+)
+
 MEDIA_ROOT = (
     BIOBANK_LOCAL_ROOT / "data"
 )
@@ -132,6 +136,38 @@ BIOBANK_MANIFESTS_ROOT = (
 BIOBANK_SHARED_ROOT = (
     BIOBANK_STORAGE_ROOT / "shared"
 )
+
+
+# ---------------------------------------------------------------------
+# Standalone persistent-directory bootstrap
+# ---------------------------------------------------------------------
+# A fresh local installation may point BIOBANK_LOCAL_ROOT at a path
+# that does not exist yet. SQLite cannot create its database file
+# unless the parent directory already exists, and the remaining local
+# inventory roots must likewise be available before first use.
+#
+# This bootstrap belongs only to the standalone profile; the B3 /
+# DaVinci deployment continues to manage its filesystem externally.
+
+_STANDALONE_PERSISTENT_DIRECTORIES = (
+    BIOBANK_LOCAL_ROOT,
+    BIOBANK_LOCAL_DATABASE_ROOT,
+    BIOBANK_STORAGE_ROOT,
+    BIOBANK_SAMPLE_DATA_ROOT,
+    MEDIA_ROOT,
+    BIOBANK_BACKUP_ROOT,
+    BIOBANK_GROUP_ROOT,
+    BIOBANK_INVENTORY_ROOT,
+    BIOBANK_SAMPLE_DOCS_ROOT,
+    BIOBANK_MANIFESTS_ROOT,
+    BIOBANK_SHARED_ROOT,
+)
+
+for _directory in _STANDALONE_PERSISTENT_DIRECTORIES:
+    Path(_directory).mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
 
 # ---------------------------------------------------------------------
