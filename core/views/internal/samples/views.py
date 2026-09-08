@@ -1736,8 +1736,6 @@ def sample_create_view(request):
                     files = request.FILES.getlist("file")
                     categories = request.POST.getlist("file_category")
                     descriptions = request.POST.getlist("file_description")
-                    from core.models.samples.sample import SampleStorageLevel
-
                     valid_file_categories = {
                         choice[0]
                         for choice in SampleFile.VIEW_CATEGORIES
@@ -1780,27 +1778,12 @@ def sample_create_view(request):
                             )
 
                         if storage_location:
-                            normalized_location = (
-                                storage_location
-                                .replace(">", "|")
-                                .replace(",", "|")
-                                .replace(";", "|")
+                            assign_sample_storage_from_text(
+                                sample=sample,
+                                storage_location_text=storage_location,
+                                replace_existing=True,
+                                sync_legacy_field=True,
                             )
-
-                            storage_levels = [
-                                level.strip()
-                                for level in normalized_location.split("|")
-                                if level.strip()
-                            ]
-
-                            for level_index, level_name in enumerate(
-                                storage_levels
-                            ):
-                                SampleStorageLevel.objects.create(
-                                    sample=sample,
-                                    name=level_name,
-                                    level_index=level_index,
-                                )
 
                 if intake_record is not None and created_samples:
                     intake_record.sample = created_samples[0]
