@@ -177,7 +177,9 @@ class B3LimsBruteForceContractTests(
 
         self.assertIn(
             "public/(?:$|about/$|governance/$|"
-            "collections/$|collections/[0-9]+/$)",
+            "collections/$|collections/[0-9]+/$|"
+            "samples/$|samples/[A-Za-z0-9._~-]+/$|"
+            "biobanks/$|biobanks/[0-9]+/$)",
             private_match,
         )
         self.assertIn(

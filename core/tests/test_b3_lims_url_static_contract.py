@@ -181,7 +181,9 @@ class B3LimsUrlStaticContractTests(SimpleTestCase):
         )
         self.assertIn(
             "public/(?:$|about/$|governance/$|"
-            "collections/$|collections/[0-9]+/$)",
+            "collections/$|collections/[0-9]+/$|"
+            "samples/$|samples/[A-Za-z0-9._~-]+/$|"
+            "biobanks/$|biobanks/[0-9]+/$)",
             apache,
         )
 
@@ -253,7 +255,9 @@ class B3LimsUrlStaticContractTests(SimpleTestCase):
 
         self.assertIn(
             "public/(?:$|about/$|governance/$|"
-            "collections/$|collections/[0-9]+/$)",
+            "collections/$|collections/[0-9]+/$|"
+            "samples/$|samples/[A-Za-z0-9._~-]+/$|"
+            "biobanks/$|biobanks/[0-9]+/$)",
             authentication_match,
         )
         self.assertNotIn(
