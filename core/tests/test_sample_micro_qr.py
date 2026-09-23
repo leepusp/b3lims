@@ -210,41 +210,77 @@ class SampleMicroQrFunctionalTests(TestCase):
             )
         )
 
-    def test_print_label_contains_micro_qr_and_token(
+    def test_print_label_contains_mobile_qr_and_token(
         self,
     ):
+        from unittest.mock import patch
+
+        from django.test import override_settings
+
         from core.views.internal.samples.views import (
             print_sample_label,
         )
 
-        request = self._request(
-            (
-                f"/samples/"
-                f"{self.sample.pk}/print/"
-            ),
-            self.owner,
-        )
+        with override_settings(
+            FORCE_SCRIPT_NAME="/b3lims",
+            ALLOWED_HOSTS=["testserver"],
+        ):
+            request = self.factory.get(
+                (
+                    f"/b3lims/samples/"
+                    f"{self.sample.pk}/print/"
+                ),
+                secure=True,
+                HTTP_HOST="testserver",
+            )
+            request.user = self.owner
 
-        response = print_sample_label(
-            request,
-            self.sample.pk,
-        )
+            expected_url = (
+                "HTTPS://TESTSERVER/"
+                f"{self.sample.micro_qr_token}"
+            )
+
+            with patch(
+                (
+                    "core.views.internal.samples.views."
+                    "sample_mobile_qr_png_base64"
+                ),
+                return_value="TEST_MOBILE_QR_BASE64",
+            ) as renderer:
+                response = print_sample_label(
+                    request,
+                    self.sample.pk,
+                )
 
         self.assertEqual(
             response.status_code,
             200,
         )
 
+        renderer.assert_called_once_with(
+            expected_url
+        )
+
         body = response.content.decode()
 
         self.assertIn(
-            "data:image/png;base64,",
+            (
+                "data:image/png;base64,"
+                "TEST_MOBILE_QR_BASE64"
+            ),
             body,
         )
+
         self.assertIn(
+            "Sample QR Code",
+            body,
+        )
+
+        self.assertNotIn(
             "Sample Micro QR",
             body,
         )
+
         self.assertIn(
             self.sample.micro_qr_token,
             body,

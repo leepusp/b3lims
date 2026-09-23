@@ -14,6 +14,12 @@ SAMPLE_MICRO_QR_DESIGNATOR = "M3-M"
 SAMPLE_MICRO_QR_BORDER = 2
 SAMPLE_MICRO_QR_SCALE = 10
 
+# Conventional QR used by Sample labels intended for
+# native mobile-phone camera scanning.
+SAMPLE_MOBILE_QR_ERROR = "M"
+SAMPLE_MOBILE_QR_BORDER = 4
+SAMPLE_MOBILE_QR_SCALE = 10
+
 
 class InvalidSampleMicroQrToken(ValueError):
     pass
@@ -103,4 +109,75 @@ def sample_micro_qr_png_bytes(
 def sample_micro_qr_png_base64(token):
     return base64.b64encode(
         sample_micro_qr_png_bytes(token)
+    ).decode("ascii")
+
+
+def build_sample_mobile_qr(url):
+    """
+    Build a conventional QR Code containing the absolute Sample URL.
+
+    This renderer is intentionally separate from the compact Micro QR
+    renderer so existing token and scanner workflows remain available.
+    """
+    import segno
+
+    value = str(url or "").strip()
+
+    if not value.lower().startswith(
+        ("https://", "http://")
+    ):
+        raise ValueError(
+            "Sample mobile QR payload must be "
+            "an absolute HTTP(S) URL."
+        )
+
+    qr = segno.make(
+        value,
+        error=SAMPLE_MOBILE_QR_ERROR,
+        mode="alphanumeric",
+        micro=False,
+        boost_error=False,
+    )
+
+    if qr.is_micro:
+        raise RuntimeError(
+            "Sample mobile QR renderer unexpectedly "
+            "produced a Micro QR symbol."
+        )
+
+    return qr
+
+
+def sample_mobile_qr_png_bytes(
+    url,
+    *,
+    scale=SAMPLE_MOBILE_QR_SCALE,
+):
+    qr = build_sample_mobile_qr(url)
+
+    buffer = io.BytesIO()
+
+    qr.save(
+        buffer,
+        kind="png",
+        scale=scale,
+        border=SAMPLE_MOBILE_QR_BORDER,
+    )
+
+    payload = buffer.getvalue()
+
+    if not payload.startswith(
+        b"\x89PNG\r\n\x1a\n"
+    ):
+        raise RuntimeError(
+            "Sample mobile QR renderer did not "
+            "produce a PNG image."
+        )
+
+    return payload
+
+
+def sample_mobile_qr_png_base64(url):
+    return base64.b64encode(
+        sample_mobile_qr_png_bytes(url)
     ).decode("ascii")

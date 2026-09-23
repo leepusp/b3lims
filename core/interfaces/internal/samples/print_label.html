@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Print Micro QR Label - {{ sample.sample_id }}</title>
+    <title>Print Sample QR Label - {{ sample.sample_id }}</title>
     <style>
         /* CSS otimizado para impressão de etiquetas de tubo de ensaio/criotubo */
         @media print {
@@ -29,8 +29,8 @@
             overflow: hidden;
         }
         .qr-code {
-            width: 12mm;
-            height: 12mm;
+            width: 14mm;
+            height: 14mm;
             margin-right: 2mm;
             flex: 0 0 auto;
         }
@@ -80,14 +80,14 @@
 
     <div class="no-print" style="position: absolute; top: 10px; left: 10px;">
         <button onclick="window.print()" style="padding: 10px 20px; font-weight: bold; cursor: pointer;">
-            🖨️ Print Micro QR Label
+            🖨️ Print Sample QR Label
         </button>
         <p style="font-size: 12px; color: #666;">Set margins to "None" in print dialog.</p>
     </div>
 
     <div class="label-container">
         <div class="qr-code">
-            <img src="data:image/png;base64,{{ qr_code }}" alt="Sample Micro QR">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="Sample QR Code">
         </div>
         <div class="text-info">
             <div class="sample-id">{{ sample.sample_id }}</div>

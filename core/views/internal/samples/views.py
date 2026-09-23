@@ -60,7 +60,7 @@ from core.services.sample_network import (
 from core.services.sample_micro_qr import (
     InvalidSampleMicroQrToken,
     normalize_sample_micro_qr_token,
-    sample_micro_qr_png_base64,
+    sample_mobile_qr_png_base64,
 )
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
@@ -1921,8 +1921,21 @@ def print_sample_label(request, sample_id):
     ):
         raise PermissionDenied
 
-    qr_base64 = sample_micro_qr_png_base64(
+    qr_token = normalize_sample_micro_qr_token(
         sample.micro_qr_token
+    )
+
+    # Keep the QR payload entirely inside the QR Code
+    # alphanumeric character set. Upper-case scheme/host is
+    # URI-equivalent and allows a substantially smaller symbol.
+    qr_url = (
+        f"{request.scheme.upper()}://"
+        f"{request.get_host().upper()}/"
+        f"{qr_token}"
+    )
+
+    qr_base64 = sample_mobile_qr_png_base64(
+        qr_url
     )
 
     return render(
@@ -1931,7 +1944,7 @@ def print_sample_label(request, sample_id):
         {
             "sample": sample,
             "qr_code": qr_base64,
-            "micro_qr_designator": "M3-M",
+            "qr_url": qr_url,
         },
     )
 
