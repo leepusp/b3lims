@@ -126,8 +126,15 @@
         const status =
             statusControl(map);
 
+        /*
+         * Remote raster tiles are opt-in.
+         *
+         * A remote provider can return a block/error image that
+         * still fires Leaflet's tileload event. Therefore remote
+         * tiles must never be required for the default map.
+         */
         if (
-            config.remote === false
+            config.remote !== true
             || (
                 global.navigator
                 && global.navigator.onLine === false
