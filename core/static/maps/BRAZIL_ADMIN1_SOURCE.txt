@@ -1,0 +1,26 @@
+Natural Earth — Brazil Admin-1 local map detail
+
+Dataset:
+Natural Earth 1:10m Admin 1 — States, Provinces
+
+Natural Earth version:
+5.1.1
+
+Pinned source:
+https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.1/geojson/ne_10m_admin_1_states_provinces.geojson
+
+Raw source SHA256:
+22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5
+
+Transformation:
+- filtered to Brazil only
+- retained 27 first-order administrative units
+- retained only name/name_en/postal/iso_3166_2/adm0_a3 properties
+- coordinates rounded to 5 decimal places
+- emitted as local JavaScript FeatureCollection
+
+Runtime dependency:
+None. The B3 LIMS browser does not contact Natural Earth.
+
+Output:
+core/static/maps/brazil_admin1.js

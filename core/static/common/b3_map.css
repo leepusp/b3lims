@@ -14,3 +14,34 @@
     max-width: 260px;
     padding: 5px 8px;
 }
+
+/* Local Natural Earth Admin-1 labels. */
+.b3-map-region-label {
+    display: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    pointer-events: none;
+    text-align: center;
+    text-shadow:
+        -1px -1px 0 rgba(255, 255, 255, 0.95),
+        1px -1px 0 rgba(255, 255, 255, 0.95),
+        -1px 1px 0 rgba(255, 255, 255, 0.95),
+        1px 1px 0 rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
+}
+
+.b3-map-region-label::before {
+    display: none;
+}
+
+.b3-map-show-region-labels .b3-map-region-label {
+    display: block;
+}

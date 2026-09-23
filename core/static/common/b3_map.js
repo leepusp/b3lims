@@ -83,6 +83,149 @@
         return layer;
     }
 
+    const REGION_LABEL_MIN_ZOOM = 4;
+
+    function ensureRegionalDetailPane(map) {
+        const paneName = "b3-local-admin1";
+
+        if (!map.getPane(paneName)) {
+            const pane = map.createPane(
+                paneName
+            );
+
+            pane.style.zIndex = "170";
+            pane.style.pointerEvents = "none";
+        }
+
+        return paneName;
+    }
+
+    function ensureRegionalLabelPane(map) {
+        const paneName = "b3-local-region-labels";
+
+        if (!map.getPane(paneName)) {
+            const pane = map.createPane(
+                paneName
+            );
+
+            pane.style.zIndex = "450";
+            pane.style.pointerEvents = "none";
+        }
+
+        return paneName;
+    }
+
+    function regionalFeatureName(feature) {
+        const properties =
+            feature && feature.properties
+                ? feature.properties
+                : {};
+
+        return (
+            properties.name
+            || properties.name_en
+            || properties.postal
+            || ""
+        );
+    }
+
+    function addRegionalDetail(map) {
+        requireLeaflet();
+
+        if (
+            !global.B3_BRAZIL_ADMIN1
+            || global.B3_BRAZIL_ADMIN1.type
+                !== "FeatureCollection"
+        ) {
+            return {
+                layer: null,
+                labelsAvailable: false,
+            };
+        }
+
+        const detailPane =
+            ensureRegionalDetailPane(map);
+
+        const labelPane =
+            ensureRegionalLabelPane(map);
+
+        const layer = global.L.geoJSON(
+            global.B3_BRAZIL_ADMIN1,
+            {
+                pane: detailPane,
+
+                style: function () {
+                    return {
+                        color: "#94a3b8",
+                        weight: 0.8,
+                        opacity: 0.95,
+                        fillOpacity: 0,
+                    };
+                },
+
+                interactive: false,
+
+                onEachFeature: function (
+                    feature,
+                    regionLayer
+                ) {
+                    const name =
+                        regionalFeatureName(
+                            feature
+                        );
+
+                    if (!name) {
+                        return;
+                    }
+
+                    regionLayer.bindTooltip(
+                        name,
+                        {
+                            permanent: true,
+                            direction: "center",
+                            className:
+                                "b3-map-region-label",
+                            pane: labelPane,
+                            opacity: 1,
+                            interactive: false,
+                        }
+                    );
+                },
+            }
+        ).addTo(map);
+
+        const container =
+            map.getContainer();
+
+        function syncLabels() {
+            if (
+                !container
+                || !container.classList
+            ) {
+                return;
+            }
+
+            container.classList.toggle(
+                "b3-map-show-region-labels",
+                map.getZoom()
+                    >= REGION_LABEL_MIN_ZOOM
+            );
+        }
+
+        map.on(
+            "zoomend",
+            syncLabels
+        );
+
+        syncLabels();
+
+        return {
+            layer: layer,
+            labelsAvailable: true,
+            syncLabels: syncLabels,
+        };
+    }
+
     function statusControl(map) {
         const control = global.L.control({
             position: "bottomleft",
@@ -123,6 +266,9 @@
         const localLayer =
             addLocalBasemap(map);
 
+        const regionalDetail =
+            addRegionalDetail(map);
+
         const status =
             statusControl(map);
 
@@ -147,6 +293,7 @@
 
             return {
                 localLayer: localLayer,
+                regionalDetail: regionalDetail,
                 tileLayer: null,
                 mode: "local",
             };
@@ -286,6 +433,7 @@
 
         return {
             localLayer: localLayer,
+            regionalDetail: regionalDetail,
             tileLayer: tileLayer,
 
             get mode() {
@@ -301,6 +449,9 @@
     global.B3Map = Object.freeze({
         addLocalBasemap:
             addLocalBasemap,
+
+        addRegionalDetail:
+            addRegionalDetail,
 
         addResilientBasemap:
             addResilientBasemap,
