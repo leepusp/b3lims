@@ -60,14 +60,7 @@
             }
         );
 
-        window.L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                maxZoom: 19,
-                attribution:
-                    '&copy; OpenStreetMap contributors',
-            }
-        ).addTo(
+        window.B3Map.addResilientBasemap(
             map
         );
 

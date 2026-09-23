@@ -4,7 +4,7 @@
 {% block title %}Edit Sample - {{ sample.sample_id }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% include "common/map_assets_css.html" %}
 <link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -1267,8 +1267,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'internal/samples/sample_origin_map.js' %}"></script>
+{% include "common/map_assets_js.html" %}
+<script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260923-map-resilience2"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260712-relationship-fix"></script>
 

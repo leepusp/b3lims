@@ -22,12 +22,39 @@ function initSmartLocation() {
     const map = L.map("map").setView([-15.78, -47.92], 4);
 window.biobankMap = map;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors"
-    }).addTo(map);
+    window.B3Map.addResilientBasemap(
+        map
+    );
 
     let marker = null;
-    let debounceTimer = null;
+
+    function setLocationStatus(
+        message,
+        className = "text-muted"
+    ) {
+        const statusLabel =
+            document.getElementById(
+                "searchStatus"
+            );
+
+        if (!statusLabel) {
+            return;
+        }
+
+        statusLabel.textContent = message;
+        statusLabel.className =
+            `form-text small text-end ${className}`;
+    }
+
+    function parseGeocodingResponse(response) {
+        if (!response.ok) {
+            throw new Error(
+                `Geocoding HTTP ${response.status}`
+            );
+        }
+
+        return response.json();
+    }
 
     // Atualiza os inputs do formulário
     function updateInputs(lat, lng, address) {
@@ -45,7 +72,7 @@ window.biobankMap = map;
     // Geocodificação Reversa (Pegar endereço pela coordenada)
     function reverseGeocode(lat, lng) {
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-            .then(r => r.json())
+            .then(parseGeocodingResponse)
             .then(data => {
                 if (data.display_name) {
                     updateInputs(lat, lng, data.display_name);
@@ -56,77 +83,59 @@ window.biobankMap = map;
                     }
                 }
             })
-            .catch(err => console.error("Geocode error:", err));
+            .catch(err => {
+                console.warn(
+                    "Reverse geocoding unavailable:",
+                    err
+                );
+
+                setLocationStatus(
+                    "Coordinates saved. Address lookup is temporarily unavailable.",
+                    "text-warning"
+                );
+            });
     }
 
     // Ação: Clicar no mapa
     map.on("click", e => {
         const { lat, lng } = e.latlng;
+
+        updateInputs(
+            lat,
+            lng,
+            null
+        );
+
         if (marker) {
             marker.setLatLng([lat, lng]);
         } else {
             marker = L.marker([lat, lng], { draggable: true }).addTo(map);
             marker.on('dragend', function(event) {
                 const position = marker.getLatLng();
-                reverseGeocode(position.lat, position.lng);
+
+                updateInputs(
+                    position.lat,
+                    position.lng,
+                    null
+                );
+
+                reverseGeocode(
+                    position.lat,
+                    position.lng
+                );
             });
         }
         reverseGeocode(lat, lng);
     });
 
-    // --- Escutar a digitação no campo ADDRESS ---
-    if (labelInput) {
-        const statusLabel = document.getElementById('searchStatus');
-
-        labelInput.addEventListener("input", function() {
-            clearTimeout(debounceTimer);
-            const query = this.value.trim();
-
-            if (statusLabel) {
-                statusLabel.textContent = "Typing...";
-                statusLabel.className = "form-text small text-end text-muted";
-            }
-
-            if (query.length > 4) {
-                debounceTimer = setTimeout(() => {
-                    if (statusLabel) statusLabel.textContent = "Searching...";
-                    
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data && data.length > 0) {
-                                const lat = parseFloat(data[0].lat);
-                                const lon = parseFloat(data[0].lon);
-
-                                map.flyTo([lat, lon], 16);
-
-                                if (marker) {
-                                    marker.setLatLng([lat, lon]);
-                                } else {
-                                    marker = L.marker([lat, lon], { draggable: true }).addTo(map);
-                                    marker.on('dragend', function(event) {
-                                        const position = marker.getLatLng();
-                                        reverseGeocode(position.lat, position.lng);
-                                    });
-                                }
-
-                                updateInputs(lat, lon, null);
-                                if (statusLabel) {
-                                    statusLabel.textContent = "Location found!";
-                                    statusLabel.className = "form-text small text-end text-success fw-bold";
-                                }
-                            } else {
-                                if (statusLabel) {
-                                    statusLabel.textContent = "Location not found.";
-                                    statusLabel.className = "form-text small text-end text-danger";
-                                }
-                            }
-                        })
-                        .catch(err => console.error("Erro ao buscar endereço:", err));
-                }, 1000);
-            }
-        });
-    }
+    /*
+     * The public Nominatim service is intentionally not used
+     * for client-side address autocomplete.
+     *
+     * The location label remains manually editable.
+     * Reverse geocoding is only triggered by explicit map
+     * interactions such as click or marker drag.
+     */
 }
 
 /* =========================================================

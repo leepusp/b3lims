@@ -1,0 +1,20 @@
+B3 LIMS local geographic basemap
+
+Dataset:
+Natural Earth 1:110m Admin 0 Countries
+
+Upstream project:
+nvkelso/natural-earth-vector
+
+Upstream file:
+geojson/ne_110m_admin_0_countries.geojson
+
+Natural Earth data is public domain.
+
+The B3 LIMS copy keeps only:
+- country geometry
+- English/common country name
+- ISO3 identifier
+
+This file is a build-time source only.
+B3 LIMS has no runtime dependency on Natural Earth or GitHub.

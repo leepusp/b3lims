@@ -4,10 +4,7 @@
 {% block title %}Biobanks | B3 LIMS Public Catalog{% endblock %}
 
 {% block extra_css %}
-<link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
->
+{% include "common/map_assets_css.html" %}
 <link
     rel="stylesheet"
     href="{% static 'public/biobanks.css' %}?v=20260903-public-biobanks-v1"
@@ -231,12 +228,10 @@
 
 {% block extra_js %}
 
-<script
-    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
-</script>
+{% include "common/map_assets_js.html" %}
 
 <script
-    src="{% static 'public/biobanks.js' %}?v=20260903-public-biobanks-v1">
+    src="{% static 'public/biobanks.js' %}?v=20260923-map-resilience1">
 </script>
 
 {% endblock %}

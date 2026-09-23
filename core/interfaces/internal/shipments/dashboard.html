@@ -6,7 +6,7 @@
 {% block page_subtitle %}Management of sample shipments, transfers and custody tracking{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% include "common/map_assets_css.html" %}
 <link rel="stylesheet" href="{% static 'internal/shipments/route_map.css' %}?v=20260829-route-pagination-v1">
 <style>
 .ship-dashboard-page {
@@ -933,7 +933,7 @@
         </aside>
     </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'internal/shipments/route_map.js' %}?v=20260829-route-pagination-v1"></script>
+{% include "common/map_assets_js.html" %}
+<script src="{% static 'internal/shipments/route_map.js' %}?v=20260923-map-resilience1"></script>
 
 {% endblock %}

@@ -38,20 +38,22 @@
         const noWrap =
             options.noWrap === true;
 
-        return L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        if (
+            !window.B3Map
+            || typeof window.B3Map.addResilientBasemap
+                !== "function"
+        ) {
+            throw new Error(
+                "Sample maps require B3Map."
+            );
+        }
+
+        return window.B3Map.addResilientBasemap(
+            map,
             {
-                maxZoom: 19,
                 noWrap,
-                bounds: noWrap
-                    ? [
-                        [-85.05112878, -180],
-                        [85.05112878, 180],
-                    ]
-                    : undefined,
-                attribution: "&copy; OpenStreetMap contributors",
             }
-        ).addTo(map);
+        );
     }
 
     function updateCoordinateStatus(
