@@ -16,17 +16,43 @@ function initSmartLocation() {
     const lngInput = document.getElementById("id_longitude");
     const labelInput = document.getElementById("id_location_label");
 
-    if (!mapEl || typeof L === "undefined") return;
+    const searchButton = document.getElementById(
+        "locationSearchButton"
+    );
 
-    // Inicia no Centro do Brasil
-    const map = L.map("map").setView([-15.78, -47.92], 4);
-window.biobankMap = map;
+    const searchResults = document.getElementById(
+        "locationSearchResults"
+    );
+
+    if (
+        !mapEl
+        || !labelInput
+        || typeof L === "undefined"
+        || !window.B3Map
+    ) {
+        return;
+    }
+
+    const searchUrl =
+        labelInput.dataset.geocodeSearchUrl;
+
+    const reverseUrl =
+        labelInput.dataset.geocodeReverseUrl;
+
+    const map = L.map("map").setView(
+        [-15.78, -47.92],
+        4
+    );
+
+    window.biobankMap = map;
 
     window.B3Map.addResilientBasemap(
         map
     );
 
     let marker = null;
+    let searchController = null;
+    let reverseController = null;
 
     function setLocationStatus(
         message,
@@ -41,77 +67,161 @@ window.biobankMap = map;
             return;
         }
 
-        statusLabel.textContent = message;
+        statusLabel.textContent =
+            message;
+
         statusLabel.className =
             `form-text small text-end ${className}`;
     }
 
-    function parseGeocodingResponse(response) {
-        if (!response.ok) {
+    function updateInputs(
+        lat,
+        lng,
+        address,
+        forceAddress = false
+    ) {
+        if (latInput) {
+            latInput.value =
+                Number(lat).toFixed(6);
+        }
+
+        if (lngInput) {
+            lngInput.value =
+                Number(lng).toFixed(6);
+        }
+
+        if (
+            address
+            && labelInput
+            && (
+                forceAddress
+                || document.activeElement
+                    !== labelInput
+            )
+        ) {
+            labelInput.value =
+                String(address).slice(
+                    0,
+                    255
+                );
+        }
+    }
+
+    function clearCoordinates() {
+        if (latInput) {
+            latInput.value = "";
+        }
+
+        if (lngInput) {
+            lngInput.value = "";
+        }
+    }
+
+    function clearSearchResults() {
+        if (!searchResults) {
+            return;
+        }
+
+        searchResults.replaceChildren();
+
+        searchResults.classList.add(
+            "d-none"
+        );
+    }
+
+    async function fetchJson(
+        url,
+        controller
+    ) {
+        const response = await fetch(
+            url,
+            {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "Accept":
+                        "application/json",
+                },
+                signal:
+                    controller
+                        ? controller.signal
+                        : undefined,
+            }
+        );
+
+        let payload = {};
+
+        try {
+            payload =
+                await response.json();
+
+        } catch (error) {
             throw new Error(
-                `Geocoding HTTP ${response.status}`
+                `Invalid geocoding response `
+                + `(${response.status})`
             );
         }
 
-        return response.json();
-    }
-
-    // Atualiza os inputs do formulário
-    function updateInputs(lat, lng, address) {
-        if (latInput) latInput.value = lat.toFixed(6);
-        if (lngInput) lngInput.value = lng.toFixed(6);
-
-        if (address) {
-            // Update the text only when the user is not focused on the address input.
-            if (document.activeElement !== labelInput && labelInput) {
-                labelInput.value = address;
-            }
+        if (!response.ok) {
+            throw new Error(
+                payload.error
+                || (
+                    "Geocoding HTTP "
+                    + response.status
+                )
+            );
         }
+
+        return payload;
     }
 
-    // Geocodificação Reversa (Pegar endereço pela coordenada)
-    function reverseGeocode(lat, lng) {
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-            .then(parseGeocodingResponse)
-            .then(data => {
-                if (data.display_name) {
-                    updateInputs(lat, lng, data.display_name);
-                    const statusLabel = document.getElementById('searchStatus');
-                    if (statusLabel) {
-                        statusLabel.textContent = "Location found!";
-                        statusLabel.className = "form-text small text-end text-success fw-bold";
-                    }
-                }
-            })
-            .catch(err => {
-                console.warn(
-                    "Reverse geocoding unavailable:",
-                    err
-                );
-
-                setLocationStatus(
-                    "Coordinates saved. Address lookup is temporarily unavailable.",
-                    "text-warning"
-                );
-            });
-    }
-
-    // Ação: Clicar no mapa
-    map.on("click", e => {
-        const { lat, lng } = e.latlng;
-
-        updateInputs(
-            lat,
-            lng,
-            null
+    function buildEndpoint(
+        base,
+        params
+    ) {
+        const url = new URL(
+            base,
+            window.location.origin
         );
 
+        Object.entries(
+            params
+        ).forEach(
+            ([key, value]) => {
+                url.searchParams.set(
+                    key,
+                    value
+                );
+            }
+        );
+
+        return url.toString();
+    }
+
+    function placeMarker(
+        lat,
+        lng
+    ) {
         if (marker) {
-            marker.setLatLng([lat, lng]);
-        } else {
-            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            marker.on('dragend', function(event) {
-                const position = marker.getLatLng();
+            marker.setLatLng(
+                [lat, lng]
+            );
+
+            return marker;
+        }
+
+        marker = L.marker(
+            [lat, lng],
+            {
+                draggable: true,
+            }
+        ).addTo(map);
+
+        marker.on(
+            "dragend",
+            function () {
+                const position =
+                    marker.getLatLng();
 
                 updateInputs(
                     position.lat,
@@ -123,19 +233,467 @@ window.biobankMap = map;
                     position.lat,
                     position.lng
                 );
-            });
-        }
-        reverseGeocode(lat, lng);
-    });
+            }
+        );
 
-    /*
-     * The public Nominatim service is intentionally not used
-     * for client-side address autocomplete.
-     *
-     * The location label remains manually editable.
-     * Reverse geocoding is only triggered by explicit map
-     * interactions such as click or marker drag.
-     */
+        return marker;
+    }
+
+    function removeMarker() {
+        if (!marker) {
+            return;
+        }
+
+        map.removeLayer(
+            marker
+        );
+
+        marker = null;
+    }
+
+    async function reverseGeocode(
+        lat,
+        lng
+    ) {
+        if (!reverseUrl) {
+            setLocationStatus(
+                "Coordinates saved. "
+                + "Address lookup is unavailable.",
+                "text-warning"
+            );
+
+            return;
+        }
+
+        if (reverseController) {
+            reverseController.abort();
+        }
+
+        reverseController =
+            new AbortController();
+
+        setLocationStatus(
+            "Looking up address..."
+        );
+
+        try {
+            const payload =
+                await fetchJson(
+                    buildEndpoint(
+                        reverseUrl,
+                        {
+                            lat:
+                                Number(lat)
+                                    .toFixed(7),
+                            lon:
+                                Number(lng)
+                                    .toFixed(7),
+                        }
+                    ),
+                    reverseController
+                );
+
+            if (
+                !payload.result
+                || !payload.result.label
+            ) {
+                setLocationStatus(
+                    "Coordinates saved. "
+                    + "No address was found.",
+                    "text-warning"
+                );
+
+                return;
+            }
+
+            updateInputs(
+                lat,
+                lng,
+                payload.result.label,
+                true
+            );
+
+            setLocationStatus(
+                "Location found!",
+                "text-success fw-bold"
+            );
+
+        } catch (error) {
+            if (
+                error.name
+                === "AbortError"
+            ) {
+                return;
+            }
+
+            console.warn(
+                "Reverse geocoding unavailable:",
+                error
+            );
+
+            setLocationStatus(
+                "Coordinates saved. "
+                + "Address lookup is "
+                + "temporarily unavailable.",
+                "text-warning"
+            );
+        }
+    }
+
+    function locationSubtitle(
+        result
+    ) {
+        const address =
+            result.address || {};
+
+        const locality =
+            address.city
+            || address.town
+            || address.village
+            || address.municipality
+            || "";
+
+        const values = [
+            locality,
+            address.state || "",
+            address.country || "",
+        ].filter(
+            Boolean
+        );
+
+        return [
+            ...new Set(values)
+        ].join(" · ");
+    }
+
+    function selectSearchResult(
+        result
+    ) {
+        const lat =
+            Number.parseFloat(
+                result.lat
+            );
+
+        const lng =
+            Number.parseFloat(
+                result.lon
+            );
+
+        if (
+            !Number.isFinite(lat)
+            || !Number.isFinite(lng)
+        ) {
+            setLocationStatus(
+                "The selected result "
+                + "has invalid coordinates.",
+                "text-danger"
+            );
+
+            return;
+        }
+
+        updateInputs(
+            lat,
+            lng,
+            result.label
+                || result.display_name,
+            true
+        );
+
+        placeMarker(
+            lat,
+            lng
+        );
+
+        map.flyTo(
+            [lat, lng],
+            16
+        );
+
+        clearSearchResults();
+
+        setLocationStatus(
+            "Location found!",
+            "text-success fw-bold"
+        );
+    }
+
+    function renderSearchResults(
+        results
+    ) {
+        clearSearchResults();
+
+        if (
+            !searchResults
+            || !results.length
+        ) {
+            return;
+        }
+
+        results.forEach(
+            result => {
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+                button.type = "button";
+
+                button.className =
+                    "list-group-item "
+                    + "list-group-item-action";
+
+                const title =
+                    document.createElement(
+                        "div"
+                    );
+
+                title.className =
+                    "fw-semibold small";
+
+                title.textContent =
+                    result.display_name
+                    || result.label
+                    || "Location";
+
+                button.appendChild(
+                    title
+                );
+
+                const subtitle =
+                    locationSubtitle(
+                        result
+                    );
+
+                if (subtitle) {
+                    const meta =
+                        document.createElement(
+                            "div"
+                        );
+
+                    meta.className =
+                        "text-muted small mt-1";
+
+                    meta.textContent =
+                        subtitle;
+
+                    button.appendChild(
+                        meta
+                    );
+                }
+
+                button.addEventListener(
+                    "click",
+                    () => {
+                        selectSearchResult(
+                            result
+                        );
+                    }
+                );
+
+                searchResults.appendChild(
+                    button
+                );
+            }
+        );
+
+        searchResults.classList.remove(
+            "d-none"
+        );
+    }
+
+    async function searchAddress() {
+        const query =
+            labelInput.value.trim();
+
+        clearSearchResults();
+
+        if (query.length < 3) {
+            setLocationStatus(
+                "Enter at least "
+                + "3 characters.",
+                "text-warning"
+            );
+
+            return;
+        }
+
+        if (!searchUrl) {
+            setLocationStatus(
+                "Address search is "
+                + "unavailable.",
+                "text-warning"
+            );
+
+            return;
+        }
+
+        if (searchController) {
+            searchController.abort();
+        }
+
+        searchController =
+            new AbortController();
+
+        if (searchButton) {
+            searchButton.disabled =
+                true;
+        }
+
+        setLocationStatus(
+            "Searching..."
+        );
+
+        try {
+            const payload =
+                await fetchJson(
+                    buildEndpoint(
+                        searchUrl,
+                        {
+                            q: query,
+                        }
+                    ),
+                    searchController
+                );
+
+            const results =
+                Array.isArray(
+                    payload.results
+                )
+                    ? payload.results
+                    : [];
+
+            if (!results.length) {
+                setLocationStatus(
+                    "Location not found.",
+                    "text-danger"
+                );
+
+                return;
+            }
+
+            if (
+                results.length === 1
+            ) {
+                selectSearchResult(
+                    results[0]
+                );
+
+                return;
+            }
+
+            renderSearchResults(
+                results
+            );
+
+            setLocationStatus(
+                `${results.length} locations found. `
+                + "Select one.",
+                "text-primary fw-bold"
+            );
+
+        } catch (error) {
+            if (
+                error.name
+                === "AbortError"
+            ) {
+                return;
+            }
+
+            console.warn(
+                "Address search unavailable:",
+                error
+            );
+
+            setLocationStatus(
+                error.message
+                || (
+                    "Address search is "
+                    + "temporarily unavailable."
+                ),
+                "text-warning"
+            );
+
+        } finally {
+            if (searchButton) {
+                searchButton.disabled =
+                    false;
+            }
+        }
+    }
+
+    map.on(
+        "click",
+        event => {
+            const {
+                lat,
+                lng,
+            } = event.latlng;
+
+            clearSearchResults();
+
+            updateInputs(
+                lat,
+                lng,
+                null
+            );
+
+            placeMarker(
+                lat,
+                lng
+            );
+
+            reverseGeocode(
+                lat,
+                lng
+            );
+        }
+    );
+
+    labelInput.addEventListener(
+        "input",
+        function () {
+            clearSearchResults();
+
+            /*
+             * Once the user edits the textual
+             * location manually, previously
+             * selected coordinates must not
+             * silently remain associated with
+             * a different address.
+             */
+            clearCoordinates();
+            removeMarker();
+
+            setLocationStatus(
+                "Press Enter or click "
+                + "search to locate this "
+                + "address."
+            );
+        }
+    );
+
+    labelInput.addEventListener(
+        "keydown",
+        function (event) {
+            if (
+                event.key !== "Enter"
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+
+            searchAddress();
+        }
+    );
+
+    if (searchButton) {
+        searchButton.addEventListener(
+            "click",
+            searchAddress
+        );
+    }
 }
 
 /* =========================================================

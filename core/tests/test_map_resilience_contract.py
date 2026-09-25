@@ -275,73 +275,108 @@ class MapResilienceContractTests(SimpleTestCase):
         )
 
     def test_public_nominatim_is_not_used_for_autocomplete(self):
-        text = self._source(
-            "core/static/internal/biobanks/biobank.js"
+        root = Path(__file__).resolve().parents[2]
+
+        browser_source = (
+            root
+            / "core"
+            / "static"
+            / "internal"
+            / "biobanks"
+            / "biobank.js"
+        ).read_text(
+            encoding="utf-8"
+        )
+
+        service_source = (
+            root
+            / "core"
+            / "services"
+            / "geocoding.py"
+        ).read_text(
+            encoding="utf-8"
         )
 
         self.assertNotIn(
-            "nominatim.openstreetmap.org/search",
-            text,
-        )
-
-        self.assertNotIn(
-            'labelInput.addEventListener("input"',
-            text,
+            "nominatim.openstreetmap.org",
+            browser_source,
         )
 
         self.assertEqual(
-            text.count(
-                "nominatim.openstreetmap.org/reverse"
+            service_source.count(
+                "nominatim.openstreetmap.org"
             ),
             1,
         )
 
+        self.assertIn(
+            "locationSearchButton",
+            browser_source,
+        )
+
+        self.assertIn(
+            'event.key !== "Enter"',
+            browser_source,
+        )
+
     def test_nominatim_failure_does_not_block_coordinate_capture(self):
-        text = self._source(
-            "core/static/internal/biobanks/biobank.js"
-        )
+        root = Path(__file__).resolve().parents[2]
 
-        self.assertIn(
-            "Coordinates saved. Address lookup is temporarily unavailable.",
-            text,
-        )
-
-        self.assertIn(
-            "parseGeocodingResponse",
-            text,
-        )
-
-        self.assertIn(
-            "updateInputs(",
-            text,
-        )
-
-        self.assertNotIn(
-            "nominatim.openstreetmap.org/search",
-            text,
-        )
-
-        self.assertNotIn(
-            "debounceTimer",
-            text,
+        text = (
+            root
+            / "core"
+            / "static"
+            / "internal"
+            / "biobanks"
+            / "biobank.js"
+        ).read_text(
+            encoding="utf-8"
         )
 
         click_start = text.index(
-            'map.on("click"'
+            '    map.on(\n'
+            '        "click",'
         )
 
-        click_update = text.index(
+        click_end = text.index(
+            "    labelInput.addEventListener(",
+            click_start,
+        )
+
+        click_block = text[
+            click_start:click_end
+        ]
+
+        self.assertIn(
             "updateInputs(",
-            click_start,
+            click_block,
         )
 
-        click_reverse = text.index(
+        self.assertIn(
+            "placeMarker(",
+            click_block,
+        )
+
+        self.assertIn(
             "reverseGeocode(",
-            click_start,
+            click_block,
         )
 
         self.assertLess(
-            click_update,
-            click_reverse,
-            "Coordinates must be stored before optional reverse geocoding.",
+            click_block.index(
+                "updateInputs("
+            ),
+            click_block.index(
+                "reverseGeocode("
+            ),
+        )
+
+        self.assertIn(
+            '"Coordinates saved. "',
+            text,
+        )
+
+        self.assertIn(
+            '"temporarily unavailable."',
+            text,
         )

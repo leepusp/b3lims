@@ -260,13 +260,35 @@
                         <div class="mb-3">
                             <label class="section-label">
                                 Address / Label
-                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Type the address to auto-center the map, or click anywhere on the map to auto-fill this field."></i>
+                                <i class="bi bi-info-circle text-primary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Type an address and press Enter or click the search icon. You can also click anywhere on the map to identify that location."></i>
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                                <input type="text" name="location_label" id="id_location_label" class="form-control" placeholder="Search address or click on map...">
+                                <button
+                                    type="button"
+                                    class="input-group-text bg-white"
+                                    id="locationSearchButton"
+                                    aria-label="Search address"
+                                    title="Search address"
+                                >
+                                    <i class="bi bi-search"></i>
+                                </button>
+                                <input
+                                    type="text"
+                                    name="location_label"
+                                    id="id_location_label"
+                                    class="form-control"
+                                    placeholder="Search address or click on map..."
+                                    autocomplete="off"
+                                    data-geocode-search-url="{% url 'biobank_geocode_search' %}"
+                                    data-geocode-reverse-url="{% url 'biobank_geocode_reverse' %}"
+                                >
                             </div>
-                            <div class="form-text small text-end" id="searchStatus">Type to search or click map</div>
+                            <div
+                                id="locationSearchResults"
+                                class="list-group mt-2 d-none"
+                                aria-live="polite"
+                            ></div>
+                            <div class="form-text small text-end" id="searchStatus">Press Enter or click search, or click the map.</div>
                             <input type="hidden" name="latitude" id="id_latitude">
                             <input type="hidden" name="longitude" id="id_longitude">
                         </div>
@@ -291,7 +313,7 @@
 
 {% include "common/map_assets_js.html" %}
 
-<script src="{% static 'internal/biobanks/biobank.js' %}?v=20260923-map-resilience1"></script>
+<script src="{% static 'internal/biobanks/biobank.js' %}?v=20260925-geocoding1"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {

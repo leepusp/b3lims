@@ -50,6 +50,10 @@ from core.views.internal.biobanks.views import (
     biobank_create_view,
     biobanks_dashboard_view,
 )
+from core.views.internal.biobanks.geocoding import (
+    biobank_geocode_reverse_view,
+    biobank_geocode_search_view,
+)
 from core.views.internal.biobanks.members import biobank_members_view
 from core.views.internal.collections.views import (
     collections_list_view,
@@ -189,6 +193,16 @@ urlpatterns = [
     path("biobanks/", biobanks_list_view, name="biobanks_list"),
     path("biobanks/add/", biobank_create_view, name="biobank_create"),
     path("biobanks/dashboard/", biobanks_dashboard_view, name="biobanks_dashboard"),
+    path(
+        "internal/api/geocoding/search/",
+        biobank_geocode_search_view,
+        name="biobank_geocode_search",
+    ),
+    path(
+        "internal/api/geocoding/reverse/",
+        biobank_geocode_reverse_view,
+        name="biobank_geocode_reverse",
+    ),
     path("biobanks/<int:biobank_id>/members/", biobank_members_view, name="biobank_members"),
     path("collections/", collections_list_view, name="collections_list"),
     path("collections/add/", collection_create_view, name="collection_create"),
