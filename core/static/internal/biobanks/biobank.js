@@ -47,7 +47,11 @@ function initSmartLocation() {
     window.biobankMap = map;
 
     window.B3Map.addResilientBasemap(
-        map
+        map,
+        {
+            remote: true,
+            referrerPolicy: "origin",
+        }
     );
 
     let marker = null;

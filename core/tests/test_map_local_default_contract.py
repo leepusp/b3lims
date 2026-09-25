@@ -68,7 +68,7 @@ class MapLocalDefaultContractTests(
             source,
         )
 
-    def test_current_map_call_sites_do_not_enable_remote_tiles(
+    def test_only_biobank_location_map_enables_remote_tiles(
         self,
     ):
         pattern = re.compile(
@@ -96,7 +96,10 @@ class MapLocalDefaultContractTests(
 
         self.assertEqual(
             offenders,
-            [],
+            [
+                "core/static/internal/biobanks/"
+                "biobank.js",
+            ],
         )
 
     def test_remote_support_remains_explicitly_available(

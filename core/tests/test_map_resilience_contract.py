@@ -259,6 +259,42 @@ class MapResilienceContractTests(SimpleTestCase):
             + "\n".join(failures),
         )
 
+    def test_biobank_remote_basemap_uses_origin_referrer_policy(
+        self,
+    ):
+        controller = self._source(
+            "core/static/common/b3_map.js"
+        )
+
+        biobank = self._source(
+            "core/static/internal/biobanks/biobank.js"
+        )
+
+        self.assertIn(
+            "config.referrerPolicy",
+            controller,
+        )
+
+        self.assertIn(
+            "referrerPolicy:",
+            controller,
+        )
+
+        self.assertIn(
+            "remote: true",
+            biobank,
+        )
+
+        self.assertIn(
+            'referrerPolicy: "origin"',
+            biobank,
+        )
+
+        self.assertNotIn(
+            "tile.openstreetmap.org",
+            biobank,
+        )
+
     def test_osm_standard_tile_url_is_canonical(self):
         text = self._source(
             "core/static/common/b3_map.js"

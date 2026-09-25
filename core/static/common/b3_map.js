@@ -330,6 +330,10 @@
                 attribution:
                     config.attribution
                     || DEFAULT_TILE_ATTRIBUTION,
+
+                referrerPolicy:
+                    config.referrerPolicy
+                    || false,
             }
         );
 

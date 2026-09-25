@@ -368,7 +368,7 @@ class GeocodingFrontendContractTests(
         )
 
         self.assertIn(
-            "20260925-geocoding1",
+            "20260925-street-basemap1",
             source,
         )
 
