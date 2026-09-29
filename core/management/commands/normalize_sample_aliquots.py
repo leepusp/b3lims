@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import json
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import (
@@ -10,10 +11,12 @@ from django.db import (
     connection,
     transaction,
 )
+from django.db.models import Q
 
 from core.models import (
     Bacteria,
     Event,
+    HostRange,
     Phage,
     Plasmid,
     Sample,
@@ -184,12 +187,23 @@ class Command(BaseCommand):
                 candidates
             )
 
+            hostrange_plans = (
+                self._build_hostrange_plans(
+                    plans
+                )
+            )
+
             self._validate_collisions(
                 plans
             )
 
+            self._validate_hostrange_collisions(
+                hostrange_plans
+            )
+
             self._emit_plan(
-                plans
+                plans,
+                hostrange_plans,
             )
 
             # Additional protection for non-PostgreSQL
@@ -236,15 +250,28 @@ class Command(BaseCommand):
                 candidates
             )
 
-            # All target-name and plan identity validation
-            # happens before the first UPDATE/INSERT.
+            hostrange_plans = (
+                self._build_hostrange_plans(
+                    plans,
+                    lock=True,
+                )
+            )
+
+            # All target-name, HostRange topology and plan
+            # identity validation happens before the first
+            # UPDATE/INSERT.
             self._validate_collisions(
                 plans
             )
 
+            self._validate_hostrange_collisions(
+                hostrange_plans
+            )
+
             actual_plan_sha256 = (
                 self._plan_fingerprint(
-                    plans
+                    plans,
+                    hostrange_plans,
                 )
             )
 
@@ -260,13 +287,25 @@ class Command(BaseCommand):
                 )
 
             self._emit_plan(
-                plans
+                plans,
+                hostrange_plans,
             )
 
             for plan in plans:
                 self._normalize_one(
                     plan
                 )
+
+            # HostRange rows reference concrete Bacteria /
+            # Phage Sample rows. Materialize their expanded
+            # topology only after every aliquot row exists.
+            self._materialize_hostranges(
+                hostrange_plans
+            )
+
+            self._validate_hostrange_materialization(
+                hostrange_plans
+            )
 
             source_pks = [
                 plan["sample"].pk
@@ -394,6 +433,218 @@ class Command(BaseCommand):
 
         return plans
 
+
+    def _hostrange_clone_values(
+        self,
+        relation,
+    ):
+        values = {}
+
+        for field in (
+            HostRange._meta.concrete_fields
+        ):
+            if (
+                field.primary_key
+                or field.name
+                in {
+                    "phage",
+                    "bacteria",
+                }
+            ):
+                continue
+
+            value = relation.__dict__.get(
+                field.attname
+            )
+
+            # ImageField values are persisted as their
+            # storage path. Reusing that path preserves the
+            # historical evidence without copying files.
+            if hasattr(
+                value,
+                "name",
+            ):
+                value = value.name
+
+            values[
+                field.attname
+            ] = copy.deepcopy(
+                value
+            )
+
+        return values
+
+    def _build_hostrange_plans(
+        self,
+        plans,
+        *,
+        lock=False,
+    ):
+        plans_by_pk = {
+            plan["sample"].pk: plan
+            for plan in plans
+        }
+
+        if not plans_by_pk:
+            return []
+
+        candidate_pks = list(
+            plans_by_pk
+        )
+
+        queryset = (
+            HostRange.objects
+            .filter(
+                Q(
+                    phage_id__in=candidate_pks
+                )
+                |
+                Q(
+                    bacteria_id__in=candidate_pks
+                )
+            )
+            .select_related(
+                "phage",
+                "bacteria",
+            )
+            .order_by("pk")
+        )
+
+        if lock:
+            queryset = (
+                queryset.select_for_update()
+            )
+
+        hostrange_plans = []
+
+        for relation in queryset:
+            phage_plan = (
+                plans_by_pk.get(
+                    relation.phage_id
+                )
+            )
+
+            bacteria_plan = (
+                plans_by_pk.get(
+                    relation.bacteria_id
+                )
+            )
+
+            phage_target_ids = (
+                list(
+                    phage_plan["target_ids"]
+                )
+                if phage_plan is not None
+                else [
+                    relation.phage.sample_id
+                ]
+            )
+
+            bacteria_target_ids = (
+                list(
+                    bacteria_plan[
+                        "target_ids"
+                    ]
+                )
+                if bacteria_plan is not None
+                else [
+                    relation.bacteria.sample_id
+                ]
+            )
+
+            target_pairs = [
+                (
+                    phage_target_id,
+                    bacteria_target_id,
+                )
+                for phage_target_id
+                in phage_target_ids
+                for bacteria_target_id
+                in bacteria_target_ids
+            ]
+
+            preserved_pair = (
+                phage_target_ids[0],
+                bacteria_target_ids[0],
+            )
+
+            new_pairs = [
+                pair
+                for pair in target_pairs
+                if pair != preserved_pair
+            ]
+
+            hostrange_plans.append(
+                {
+                    "source": relation,
+                    "source_pk": (
+                        relation.pk
+                    ),
+                    "phage_pk": (
+                        relation.phage_id
+                    ),
+                    "bacteria_pk": (
+                        relation.bacteria_id
+                    ),
+                    "phage_target_ids": (
+                        phage_target_ids
+                    ),
+                    "bacteria_target_ids": (
+                        bacteria_target_ids
+                    ),
+                    "target_pairs": (
+                        target_pairs
+                    ),
+                    "preserved_pair": (
+                        preserved_pair
+                    ),
+                    "new_pairs": (
+                        new_pairs
+                    ),
+                    "clone_values": (
+                        self._hostrange_clone_values(
+                            relation
+                        )
+                    ),
+                }
+            )
+
+        return hostrange_plans
+
+    def _validate_hostrange_collisions(
+        self,
+        hostrange_plans,
+    ):
+        pair_owners = {}
+
+        for plan in hostrange_plans:
+            for pair in plan[
+                "target_pairs"
+            ]:
+                previous = (
+                    pair_owners.get(
+                        pair
+                    )
+                )
+
+                if (
+                    previous is not None
+                    and previous
+                    != plan["source_pk"]
+                ):
+                    raise CommandError(
+                        "HostRange target collision "
+                        "inside normalization plan: "
+                        f"{pair[0]} -> {pair[1]} "
+                        "generated by HostRange "
+                        f"{previous} and "
+                        f"{plan['source_pk']}."
+                    )
+
+                pair_owners[
+                    pair
+                ] = plan["source_pk"]
+
     def _validate_collisions(
         self,
         plans,
@@ -434,40 +685,93 @@ class Command(BaseCommand):
     def _plan_fingerprint(
         self,
         plans,
+        hostrange_plans,
     ):
-        rows = []
+        sample_rows = []
 
         for plan in plans:
             sample = plan["sample"]
 
-            rows.append(
-                "|".join(
-                    [
-                        str(sample.pk),
-                        str(sample.uuid),
-                        str(
-                            sample.micro_qr_token
-                        ),
-                        plan["original_id"],
-                        str(
-                            plan[
-                                "original_count"
-                            ]
-                        ),
-                        str(
-                            sample.updated_at
-                        ),
-                        ",".join(
-                            plan[
-                                "target_ids"
-                            ]
-                        ),
-                    ]
-                )
+            sample_rows.append(
+                {
+                    "pk": sample.pk,
+                    "uuid": str(
+                        sample.uuid
+                    ),
+                    "micro_qr_token": (
+                        sample.micro_qr_token
+                    ),
+                    "original_id": (
+                        plan["original_id"]
+                    ),
+                    "original_count": (
+                        plan[
+                            "original_count"
+                        ]
+                    ),
+                    "updated_at": str(
+                        sample.updated_at
+                    ),
+                    "target_ids": list(
+                        plan["target_ids"]
+                    ),
+                }
             )
 
-        payload = "\n".join(
-            rows
+        hostrange_rows = []
+
+        for plan in hostrange_plans:
+            hostrange_rows.append(
+                {
+                    "source_pk": (
+                        plan["source_pk"]
+                    ),
+                    "phage_pk": (
+                        plan["phage_pk"]
+                    ),
+                    "bacteria_pk": (
+                        plan["bacteria_pk"]
+                    ),
+                    "phage_target_ids": list(
+                        plan[
+                            "phage_target_ids"
+                        ]
+                    ),
+                    "bacteria_target_ids": list(
+                        plan[
+                            "bacteria_target_ids"
+                        ]
+                    ),
+                    "target_pairs": [
+                        list(pair)
+                        for pair in plan[
+                            "target_pairs"
+                        ]
+                    ],
+                    "clone_values": (
+                        plan[
+                            "clone_values"
+                        ]
+                    ),
+                }
+            )
+
+        payload = json.dumps(
+            {
+                "samples": (
+                    sample_rows
+                ),
+                "host_ranges": (
+                    hostrange_rows
+                ),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(
+                ",",
+                ":",
+            ),
+            default=str,
         ).encode(
             "utf-8"
         )
@@ -479,10 +783,18 @@ class Command(BaseCommand):
     def _emit_plan(
         self,
         plans,
+        hostrange_plans,
     ):
         rows_to_add = sum(
             plan["original_count"] - 1
             for plan in plans
+        )
+
+        hostrange_rows_to_add = sum(
+            len(
+                plan["new_pairs"]
+            )
+            for plan in hostrange_plans
         )
 
         self.stdout.write(
@@ -494,9 +806,20 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(
+            "hostrange_records="
+            f"{len(hostrange_plans)}"
+        )
+
+        self.stdout.write(
+            "hostrange_rows_to_add="
+            f"{hostrange_rows_to_add}"
+        )
+
+        self.stdout.write(
             "plan_sha256="
             + self._plan_fingerprint(
-                plans
+                plans,
+                hostrange_plans,
             )
         )
 
@@ -510,6 +833,29 @@ class Command(BaseCommand):
                 + ",".join(
                     plan["target_ids"]
                 )
+            )
+
+        for plan in hostrange_plans:
+            targets = ",".join(
+                (
+                    f"{phage_id}"
+                    f">{bacteria_id}"
+                )
+                for (
+                    phage_id,
+                    bacteria_id,
+                )
+                in plan["target_pairs"]
+            )
+
+            self.stdout.write(
+                "hostrange="
+                f"pk:{plan['source_pk']};"
+                f"phage_pk:"
+                f"{plan['phage_pk']};"
+                f"bacteria_pk:"
+                f"{plan['bacteria_pk']};"
+                f"targets:{targets}"
             )
 
     def _normalize_one(
@@ -586,6 +932,168 @@ class Command(BaseCommand):
                 f"uuid:{clone.uuid};"
                 f"token:{clone.micro_qr_token}"
             )
+
+
+    def _materialize_hostranges(
+        self,
+        hostrange_plans,
+    ):
+        for plan in hostrange_plans:
+            for (
+                phage_sample_id,
+                bacteria_sample_id,
+            ) in plan["new_pairs"]:
+                try:
+                    phage = (
+                        Phage.objects.get(
+                            sample_id=(
+                                phage_sample_id
+                            )
+                        )
+                    )
+                except Phage.DoesNotExist as exc:
+                    raise CommandError(
+                        "HostRange materialization "
+                        "failed: Phage "
+                        f"{phage_sample_id} "
+                        "does not exist."
+                    ) from exc
+
+                try:
+                    bacteria = (
+                        Bacteria.objects.get(
+                            sample_id=(
+                                bacteria_sample_id
+                            )
+                        )
+                    )
+                except Bacteria.DoesNotExist as exc:
+                    raise CommandError(
+                        "HostRange materialization "
+                        "failed: Bacteria "
+                        f"{bacteria_sample_id} "
+                        "does not exist."
+                    ) from exc
+
+                if (
+                    HostRange.objects
+                    .filter(
+                        phage=phage,
+                        bacteria=bacteria,
+                    )
+                    .exists()
+                ):
+                    raise CommandError(
+                        "HostRange collision after "
+                        "Sample materialization: "
+                        f"{phage_sample_id} -> "
+                        f"{bacteria_sample_id}."
+                    )
+
+                relation = (
+                    HostRange.objects.create(
+                        phage=phage,
+                        bacteria=bacteria,
+                        **copy.deepcopy(
+                            plan[
+                                "clone_values"
+                            ]
+                        ),
+                    )
+                )
+
+                self.stdout.write(
+                    "hostrange_materialized="
+                    f"pk:{relation.pk};"
+                    f"source_pk:"
+                    f"{plan['source_pk']};"
+                    f"phage:"
+                    f"{phage_sample_id};"
+                    f"bacteria:"
+                    f"{bacteria_sample_id}"
+                )
+
+    def _validate_hostrange_materialization(
+        self,
+        hostrange_plans,
+    ):
+        expected_pairs = 0
+
+        for plan in hostrange_plans:
+            preserved_pair = (
+                plan["preserved_pair"]
+            )
+
+            for pair in plan[
+                "target_pairs"
+            ]:
+                (
+                    phage_sample_id,
+                    bacteria_sample_id,
+                ) = pair
+
+                try:
+                    relation = (
+                        HostRange.objects
+                        .select_related(
+                            "phage",
+                            "bacteria",
+                        )
+                        .get(
+                            phage__sample_id=(
+                                phage_sample_id
+                            ),
+                            bacteria__sample_id=(
+                                bacteria_sample_id
+                            ),
+                        )
+                    )
+                except HostRange.DoesNotExist as exc:
+                    raise CommandError(
+                        "Post-normalization HostRange "
+                        "validation failed: missing "
+                        f"{phage_sample_id} -> "
+                        f"{bacteria_sample_id}."
+                    ) from exc
+
+                if (
+                    pair == preserved_pair
+                    and relation.pk
+                    != plan["source_pk"]
+                ):
+                    raise CommandError(
+                        "Post-normalization HostRange "
+                        "validation failed: historical "
+                        f"row {plan['source_pk']} was not "
+                        "preserved for "
+                        f"{phage_sample_id} -> "
+                        f"{bacteria_sample_id}."
+                    )
+
+                current_values = (
+                    self._hostrange_clone_values(
+                        relation
+                    )
+                )
+
+                if (
+                    current_values
+                    != plan["clone_values"]
+                ):
+                    raise CommandError(
+                        "Post-normalization HostRange "
+                        "validation failed: metadata "
+                        "mismatch for "
+                        f"{phage_sample_id} -> "
+                        f"{bacteria_sample_id}."
+                    )
+
+                expected_pairs += 1
+
+        self.stdout.write(
+            "hostrange_materialized_pairs="
+            f"{expected_pairs}"
+        )
 
     def _resolve_subtype(
         self,

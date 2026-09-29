@@ -7,7 +7,9 @@ from django.test import TestCase
 from core.models import (
     Bacteria,
     Event,
+    HostRange,
     Phage,
+    Plasmid,
     Sample,
     SampleOrigin,
 )
@@ -70,6 +72,39 @@ class NormalizeSampleAliquotsCommandTests(TestCase):
             isolation_method="Enrichment",
             genome_type="dsDNA",
             temp_C="37.0",
+        )
+
+    def make_plasmid(
+        self,
+        sample_id="LEGACY-PLA",
+        aliquot_count=2,
+    ):
+        return Plasmid.objects.create(
+            sample_id=sample_id,
+            sample_type="Plasmid",
+            organism_name="Legacy plasmid",
+            owner=self.owner,
+            status="available",
+            is_public=True,
+            aliquot_count=aliquot_count,
+            backbone_name="pLegacy",
+            backbone_aliases="pLegacy alias",
+            vector_type="cloning",
+            induction_system="T7",
+            origin_of_replication="pUC",
+            backbone_size_bp=1234,
+            backbone_resistance_markers=[
+                "kanamycin",
+            ],
+            is_empty_vector=False,
+            insert_name="legacy-insert",
+            purpose="Historical test construct",
+            insert_size_bp=321,
+            insert_resistance_markers=[
+                "ampicillin",
+            ],
+            construction_name="pLegacy-insert",
+            total_size_bp=1555,
         )
 
     def add_origin(self, sample):
@@ -387,6 +422,354 @@ class NormalizeSampleAliquotsCommandTests(TestCase):
             second.genome_type,
             source.phage.genome_type,
         )
+
+
+    def test_apply_clones_plasmid_subtype(
+        self,
+    ):
+        source = self.make_plasmid()
+
+        original_pk = source.pk
+        original_uuid = source.uuid
+        original_token = (
+            source.micro_qr_token
+        )
+
+        call_command(
+            "normalize_sample_aliquots",
+            apply=True,
+            expected_candidates=1,
+            expected_plan_sha256=(
+                self.dry_run_plan_sha()
+            ),
+            stdout=StringIO(),
+        )
+
+        source.refresh_from_db()
+
+        second = Plasmid.objects.get(
+            sample_id="LEGACY-PLA_1.2"
+        )
+
+        self.assertEqual(
+            source.pk,
+            original_pk,
+        )
+
+        self.assertEqual(
+            source.uuid,
+            original_uuid,
+        )
+
+        self.assertEqual(
+            source.micro_qr_token,
+            original_token,
+        )
+
+        self.assertEqual(
+            source.sample_id,
+            "LEGACY-PLA_1.1",
+        )
+
+        self.assertEqual(
+            source.aliquot_count,
+            1,
+        )
+
+        self.assertEqual(
+            second.aliquot_count,
+            1,
+        )
+
+        self.assertNotEqual(
+            second.pk,
+            source.pk,
+        )
+
+        self.assertNotEqual(
+            second.uuid,
+            source.uuid,
+        )
+
+        self.assertNotEqual(
+            second.micro_qr_token,
+            source.micro_qr_token,
+        )
+
+        fields = (
+            "backbone_name",
+            "backbone_aliases",
+            "vector_type",
+            "induction_system",
+            "origin_of_replication",
+            "backbone_size_bp",
+            "backbone_resistance_markers",
+            "is_empty_vector",
+            "insert_name",
+            "purpose",
+            "insert_size_bp",
+            "insert_resistance_markers",
+            "construction_name",
+            "total_size_bp",
+        )
+
+        for field in fields:
+            self.assertEqual(
+                getattr(
+                    second,
+                    field,
+                ),
+                getattr(
+                    source.plasmid,
+                    field,
+                ),
+                field,
+            )
+
+    def test_plan_sha256_tracks_hostrange_topology_and_metadata(
+        self,
+    ):
+        bacteria = self.make_bacteria()
+
+        phage = self.make_phage(
+            aliquot_count=1
+        )
+
+        sha_without_relation = (
+            self.dry_run_plan_sha()
+        )
+
+        relation = HostRange.objects.create(
+            phage=phage,
+            bacteria=bacteria,
+            is_isolation_host=True,
+            efficiency_eop=0.25,
+            plaque_morphology=(
+                "plaque_images/legacy.png"
+            ),
+            notes="Legacy infection",
+        )
+
+        sha_with_relation = (
+            self.dry_run_plan_sha()
+        )
+
+        self.assertNotEqual(
+            sha_without_relation,
+            sha_with_relation,
+        )
+
+        relation.notes = (
+            "Legacy infection updated"
+        )
+
+        relation.save(
+            update_fields=[
+                "notes",
+            ]
+        )
+
+        sha_with_metadata_change = (
+            self.dry_run_plan_sha()
+        )
+
+        self.assertNotEqual(
+            sha_with_relation,
+            sha_with_metadata_change,
+        )
+
+    def test_apply_materializes_hostrange_for_one_split_endpoint(
+        self,
+    ):
+        bacteria = self.make_bacteria()
+
+        phage = self.make_phage(
+            aliquot_count=1
+        )
+
+        original = HostRange.objects.create(
+            phage=phage,
+            bacteria=bacteria,
+            is_isolation_host=True,
+            efficiency_eop=0.5,
+            plaque_morphology=(
+                "plaque_images/legacy.png"
+            ),
+            notes="One endpoint",
+        )
+
+        original_pk = original.pk
+
+        call_command(
+            "normalize_sample_aliquots",
+            apply=True,
+            expected_candidates=1,
+            expected_plan_sha256=(
+                self.dry_run_plan_sha()
+            ),
+            stdout=StringIO(),
+        )
+
+        pairs = set(
+            HostRange.objects
+            .values_list(
+                "phage__sample_id",
+                "bacteria__sample_id",
+            )
+        )
+
+        self.assertEqual(
+            pairs,
+            {
+                (
+                    "LEGACY-PHA",
+                    "LEGACY-BAC_1.1",
+                ),
+                (
+                    "LEGACY-PHA",
+                    "LEGACY-BAC_1.2",
+                ),
+            },
+        )
+
+        self.assertEqual(
+            HostRange.objects.count(),
+            2,
+        )
+
+        original.refresh_from_db()
+
+        self.assertEqual(
+            original.pk,
+            original_pk,
+        )
+
+        self.assertEqual(
+            original.phage.sample_id,
+            "LEGACY-PHA",
+        )
+
+        self.assertEqual(
+            original.bacteria.sample_id,
+            "LEGACY-BAC_1.1",
+        )
+
+        for relation in (
+            HostRange.objects.all()
+        ):
+            self.assertTrue(
+                relation.is_isolation_host
+            )
+
+            self.assertEqual(
+                relation.efficiency_eop,
+                0.5,
+            )
+
+            self.assertEqual(
+                relation.plaque_morphology.name,
+                "plaque_images/legacy.png",
+            )
+
+            self.assertEqual(
+                relation.notes,
+                "One endpoint",
+            )
+
+    def test_apply_materializes_cartesian_hostrange_when_both_split(
+        self,
+    ):
+        bacteria = self.make_bacteria()
+        phage = self.make_phage()
+
+        original = HostRange.objects.create(
+            phage=phage,
+            bacteria=bacteria,
+            is_isolation_host=False,
+            efficiency_eop=0.75,
+            notes="Both endpoints",
+        )
+
+        original_pk = original.pk
+
+        call_command(
+            "normalize_sample_aliquots",
+            apply=True,
+            expected_candidates=2,
+            expected_plan_sha256=(
+                self.dry_run_plan_sha()
+            ),
+            stdout=StringIO(),
+        )
+
+        pairs = set(
+            HostRange.objects
+            .values_list(
+                "phage__sample_id",
+                "bacteria__sample_id",
+            )
+        )
+
+        self.assertEqual(
+            pairs,
+            {
+                (
+                    "LEGACY-PHA_1.1",
+                    "LEGACY-BAC_1.1",
+                ),
+                (
+                    "LEGACY-PHA_1.1",
+                    "LEGACY-BAC_1.2",
+                ),
+                (
+                    "LEGACY-PHA_1.2",
+                    "LEGACY-BAC_1.1",
+                ),
+                (
+                    "LEGACY-PHA_1.2",
+                    "LEGACY-BAC_1.2",
+                ),
+            },
+        )
+
+        self.assertEqual(
+            HostRange.objects.count(),
+            4,
+        )
+
+        original.refresh_from_db()
+
+        self.assertEqual(
+            original.pk,
+            original_pk,
+        )
+
+        self.assertEqual(
+            original.phage.sample_id,
+            "LEGACY-PHA_1.1",
+        )
+
+        self.assertEqual(
+            original.bacteria.sample_id,
+            "LEGACY-BAC_1.1",
+        )
+
+        for relation in (
+            HostRange.objects.all()
+        ):
+            self.assertFalse(
+                relation.is_isolation_host
+            )
+
+            self.assertEqual(
+                relation.efficiency_eop,
+                0.75,
+            )
+
+            self.assertEqual(
+                relation.notes,
+                "Both endpoints",
+            )
 
     def test_apply_requires_expected_candidate_count(self):
         source = self.make_bacteria()
