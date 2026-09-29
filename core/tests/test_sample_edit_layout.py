@@ -87,7 +87,6 @@ class SampleEditLayoutTests(
             "sample_id",
             "sample_type",
             "biosafety_level",
-            "aliquot_count",
             "owner",
             "research_group",
             "biobank",
@@ -125,6 +124,32 @@ class SampleEditLayoutTests(
             'name="scientific_notes"',
             text,
         )
+
+        self.assertNotIn(
+            "form.aliquot_count",
+            text,
+        )
+
+        self.assertIn(
+            'data-physical-aliquot-contract="individual"',
+            text,
+        )
+
+        self.assertIn(
+            "Individual aliquot",
+            text,
+        )
+
+        self.assertIn(
+            "has its own",
+            text,
+        )
+
+        self.assertIn(
+            "QR code",
+            text,
+        )
+
 
     def test_standard_edit_does_not_render_status_select(
         self,

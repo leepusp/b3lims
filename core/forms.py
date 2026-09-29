@@ -97,7 +97,6 @@ class SampleForm(forms.ModelForm):
             "biosafety_level",
             "organism_name",
             "status",
-            "aliquot_count",
             "is_public",
             "is_embargoed",
             "owner",
@@ -110,7 +109,6 @@ class SampleForm(forms.ModelForm):
         ]
         labels = {
             "biosafety_level": "Biosafety Level",
-            "aliquot_count": "Aliquot Count",
             "is_embargoed": "Sample Embargo",
             "research_group": "Research Group",
             "notes": "Internal Notes",
@@ -141,13 +139,6 @@ class SampleForm(forms.ModelForm):
             "status": forms.Select(
                 attrs={
                     "class": "form-select",
-                }
-            ),
-            "aliquot_count": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "min": "1",
-                    "step": "1",
                 }
             ),
             "is_public": forms.CheckboxInput(

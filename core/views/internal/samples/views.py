@@ -1531,8 +1531,9 @@ def sample_create_view(request):
                         )
                     )
 
-                # A Biobank is optional. Without physical distribution,
-                # one Sample record is created with the default aliquot count.
+                # A Biobank is optional. Without an explicit physical
+                # distribution, the requested quantity is still materialized
+                # as individual physical Sample records.
                 if not distribution_rows:
                     distribution_rows = [
                         (
@@ -1547,210 +1548,217 @@ def sample_create_view(request):
                     for i, (biobank, qty) in enumerate(
                         distribution_rows
                     ):
-                        final_id = (
-                            sample_id_base
-                            if len(distribution_rows) == 1
-                            else f"{sample_id_base}_{i + 1}"
-                        )
-
-                        if Sample.objects.filter(sample_id=final_id).exists():
-                            raise ValueError(f"The ID '{final_id}' already exists in the system.")
-
-                        collaborator_input = request.POST.get("collaborator", "").strip()
-                        final_notes = scientific_notes
-                        if collaborator_input:
-                            final_notes = f"<p><strong>Collaborator / Provider:</strong> {collaborator_input}</p>" + (final_notes or "")
-
-                        base_data = {
-                            "sample_id": final_id,
-                            "organism_name": organism_name,
-                            "sample_type": sample_type,
-                            "biosafety_level": biosafety_level,
-                            "biobank": biobank,
-                            "research_group": selected_research_group,
-                            "scientific_notes": final_notes,
-                            "is_public": is_public,
-                            "is_embargoed": is_embargoed,
-                            "aliquot_count": qty,
-                            "owner": selected_owner,
-                            "is_active": True,
-                            "status": "pending",
-                            "storage_location": storage_location,
-                        }
-
-                        # BACTERIA
-                        if sample_type == "Bacterium (Host)":
-                            r_markers = request.POST.get("resistance_markers", "")
-                            r_list = [r.strip() for r in r_markers.split(",") if r.strip()]
-                            sample = Bacteria.objects.create(
-                                **base_data,
-                                official_name=request.POST.get("official_name", ""),
-                                aliases=request.POST.get("aliases", ""),
-                                genus=request.POST.get("genus", ""),
-                                species=request.POST.get("species", ""),
-                                strain=request.POST.get("strain", ""),
-                                genotype=request.POST.get("genotype", ""),
-                                isolation_source=request.POST.get("isolation_source", ""),
-                                resistance_markers=r_list
-                            )
-
-                        # PHAGE
-                        elif sample_type == "Phage (Virus)":
-                            sample = Phage.objects.create(
-                                **base_data,
-                                official_name=request.POST.get("official_name", ""),
-                                aliases=request.POST.get("aliases", ""),
-                                strain=request.POST.get("strain", ""),
-                                genus=request.POST.get("genus", ""),
-                                morphotype=request.POST.get("morphotype"),
-                                taxonomy=request.POST.get("taxonomy"),
-                                lifestyle=request.POST.get("lifestyle"),
-                                isolation_source=request.POST.get("isolation_source"),
-                                isolation_method=request.POST.get("isolation_method"),
-                                genome_type=request.POST.get("genome_type"),
-                                genome_size_bp=request.POST.get("genome_size_bp") or None,
-                                ncbi_accession=request.POST.get("ncbi_accession"),
-                                temp_C=request.POST.get("temp_C") or None
-                            )
-
-                        # PLASMID
-                        elif sample_type == "Plasmid":
-                            r_b_markers = request.POST.get("backbone_resistance_markers", "")
-                            r_b_list = [r.strip() for r in r_b_markers.split(",") if r.strip()]
-
-                            r_i_markers = request.POST.get("insert_resistance_markers", "")
-                            r_i_list = [r.strip() for r in r_i_markers.split(",") if r.strip()]
-
-                            is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
-
-                            b_size_raw = request.POST.get("backbone_size_bp", "")
-                            b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
-
-                            i_size_raw = request.POST.get("insert_size_bp", "")
-                            i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
-
-                            sample = Plasmid.objects.create(
-                                **base_data,
-                                backbone_name=request.POST.get("backbone_name", ""),
-                                backbone_aliases=request.POST.get("backbone_aliases", ""),
-                                vector_type=request.POST.get("vector_type", ""),
-                                induction_system=request.POST.get("induction_system", ""),
-                                origin_of_replication=request.POST.get("origin_of_replication", ""),
-                                backbone_size_bp=b_size,
-                                backbone_resistance_markers=r_b_list,
-                                is_empty_vector=is_empty,
-                                insert_name=request.POST.get("insert_name", ""),
-                                purpose=request.POST.get("purpose", ""),
-                                insert_size_bp=i_size,
-                                insert_resistance_markers=r_i_list,
-                                construction_name=request.POST.get("construction_name", "")
-                            )
-
-                        else:
-                            sample = Sample.objects.create(**base_data)
-
-                        # Collections & Parents
-                        if selected_collections:
-                            sample.collections.add(*selected_collections)
-
-                        if parent_sample_obj:
-                            SampleRelationship.objects.create(
-                                source_sample=parent_sample_obj,
-                                target_sample=sample,
-                                relationship_type=parent_rel_type,
-                                created_by=user,
-                                notes="Relationship generated automatically during registration."
-                            )
-
-                        # Tags & Keywords
-                        tag_ids = request.POST.getlist("tags")
-                        sample.tags.set(
-                            active_tags_from_ids(tag_ids)
-                        )
-
-                        for raw in request.POST.getlist("keyword_pairs"):
-                            if ":::" in raw:
-                                key, value = raw.split(":::")
-                                keyword_value, _ = (
-                                    get_or_create_active_keyword_value(
-                                        key,
-                                        value,
-                                    )
+                        for j in range(qty):
+                            final_id = (
+                                sample_id_base
+                                if (
+                                    len(distribution_rows) == 1
+                                    and qty == 1
                                 )
-                                sample.keywords.add(keyword_value)
+                                else (
+                                    f"{sample_id_base}_"
+                                    f"{i + 1}.{j + 1}"
+                                )
+                            )
 
-                        # =========================================================
-                        # BIOLOGICAL RELATIONSHIPS (DYNAMIC ROWS)
-                        # =========================================================
-                        host_bacterium_ids = request.POST.getlist("host_bacterium[]")
-                        host_bacterium_notes = request.POST.getlist("host_bacterium_notes[]")
+                            if Sample.objects.filter(sample_id=final_id).exists():
+                                raise ValueError(f"The ID '{final_id}' already exists in the system.")
 
-                        stored_plasmids_ids = request.POST.getlist("stored_plasmids[]")
-                        stored_plasmids_notes = request.POST.getlist("stored_plasmids_notes[]")
+                            collaborator_input = request.POST.get("collaborator", "").strip()
+                            final_notes = scientific_notes
+                            if collaborator_input:
+                                final_notes = f"<p><strong>Collaborator / Provider:</strong> {collaborator_input}</p>" + (final_notes or "")
 
-                        infecting_phages_ids = request.POST.getlist("infecting_phages[]")
-                        infecting_phages_notes = request.POST.getlist("infecting_phages_notes[]")
+                            base_data = {
+                                "sample_id": final_id,
+                                "organism_name": organism_name,
+                                "sample_type": sample_type,
+                                "biosafety_level": biosafety_level,
+                                "biobank": biobank,
+                                "research_group": selected_research_group,
+                                "scientific_notes": final_notes,
+                                "is_public": is_public,
+                                "is_embargoed": is_embargoed,
+                                "aliquot_count": 1,
+                                "owner": selected_owner,
+                                "is_active": True,
+                                "status": "pending",
+                                "storage_location": storage_location,
+                            }
 
-                        if "Bacterium" in sample_type:
-                            for idx, p_id in enumerate(stored_plasmids_ids):
-                                if not p_id.strip(): continue
-                                notes = stored_plasmids_notes[idx] if idx < len(stored_plasmids_notes) else ""
-                                plasmid_obj = Sample.objects.filter(sample_id=p_id.strip()).first()
-                                if plasmid_obj:
-                                    SampleRelationship.objects.create(
-                                        source_sample=sample, target_sample=plasmid_obj,
-                                        relationship_type="STORAGE", created_by=user,
-                                        notes=f"Linked during Bacterium registration. Details: {notes}"
+                            # BACTERIA
+                            if sample_type == "Bacterium (Host)":
+                                r_markers = request.POST.get("resistance_markers", "")
+                                r_list = [r.strip() for r in r_markers.split(",") if r.strip()]
+                                sample = Bacteria.objects.create(
+                                    **base_data,
+                                    official_name=request.POST.get("official_name", ""),
+                                    aliases=request.POST.get("aliases", ""),
+                                    genus=request.POST.get("genus", ""),
+                                    species=request.POST.get("species", ""),
+                                    strain=request.POST.get("strain", ""),
+                                    genotype=request.POST.get("genotype", ""),
+                                    isolation_source=request.POST.get("isolation_source", ""),
+                                    resistance_markers=r_list
+                                )
+
+                            # PHAGE
+                            elif sample_type == "Phage (Virus)":
+                                sample = Phage.objects.create(
+                                    **base_data,
+                                    official_name=request.POST.get("official_name", ""),
+                                    aliases=request.POST.get("aliases", ""),
+                                    strain=request.POST.get("strain", ""),
+                                    genus=request.POST.get("genus", ""),
+                                    morphotype=request.POST.get("morphotype"),
+                                    taxonomy=request.POST.get("taxonomy"),
+                                    lifestyle=request.POST.get("lifestyle"),
+                                    isolation_source=request.POST.get("isolation_source"),
+                                    isolation_method=request.POST.get("isolation_method"),
+                                    genome_type=request.POST.get("genome_type"),
+                                    genome_size_bp=request.POST.get("genome_size_bp") or None,
+                                    ncbi_accession=request.POST.get("ncbi_accession"),
+                                    temp_C=request.POST.get("temp_C") or None
+                                )
+
+                            # PLASMID
+                            elif sample_type == "Plasmid":
+                                r_b_markers = request.POST.get("backbone_resistance_markers", "")
+                                r_b_list = [r.strip() for r in r_b_markers.split(",") if r.strip()]
+
+                                r_i_markers = request.POST.get("insert_resistance_markers", "")
+                                r_i_list = [r.strip() for r in r_i_markers.split(",") if r.strip()]
+
+                                is_empty = request.POST.get("is_empty_vector") in ["true", "on", "1"]
+
+                                b_size_raw = request.POST.get("backbone_size_bp", "")
+                                b_size = int(b_size_raw) if b_size_raw.isdigit() else 0
+
+                                i_size_raw = request.POST.get("insert_size_bp", "")
+                                i_size = int(i_size_raw) if i_size_raw.isdigit() else 0
+
+                                sample = Plasmid.objects.create(
+                                    **base_data,
+                                    backbone_name=request.POST.get("backbone_name", ""),
+                                    backbone_aliases=request.POST.get("backbone_aliases", ""),
+                                    vector_type=request.POST.get("vector_type", ""),
+                                    induction_system=request.POST.get("induction_system", ""),
+                                    origin_of_replication=request.POST.get("origin_of_replication", ""),
+                                    backbone_size_bp=b_size,
+                                    backbone_resistance_markers=r_b_list,
+                                    is_empty_vector=is_empty,
+                                    insert_name=request.POST.get("insert_name", ""),
+                                    purpose=request.POST.get("purpose", ""),
+                                    insert_size_bp=i_size,
+                                    insert_resistance_markers=r_i_list,
+                                    construction_name=request.POST.get("construction_name", "")
+                                )
+
+                            else:
+                                sample = Sample.objects.create(**base_data)
+
+                            # Collections & Parents
+                            if selected_collections:
+                                sample.collections.add(*selected_collections)
+
+                            if parent_sample_obj:
+                                SampleRelationship.objects.create(
+                                    source_sample=parent_sample_obj,
+                                    target_sample=sample,
+                                    relationship_type=parent_rel_type,
+                                    created_by=user,
+                                    notes="Relationship generated automatically during registration."
+                                )
+
+                            # Tags & Keywords
+                            tag_ids = request.POST.getlist("tags")
+                            sample.tags.set(
+                                active_tags_from_ids(tag_ids)
+                            )
+
+                            for raw in request.POST.getlist("keyword_pairs"):
+                                if ":::" in raw:
+                                    key, value = raw.split(":::")
+                                    keyword_value, _ = (
+                                        get_or_create_active_keyword_value(
+                                            key,
+                                            value,
+                                        )
                                     )
+                                    sample.keywords.add(keyword_value)
 
-                            for idx, ph_id in enumerate(infecting_phages_ids):
-                                if not ph_id.strip(): continue
-                                notes = infecting_phages_notes[idx] if idx < len(infecting_phages_notes) else ""
-                                phage_obj = Phage.objects.filter(sample_id=ph_id.strip()).first()
-                                if phage_obj and hasattr(sample, 'bacteria'):
-                                    HostRange.objects.update_or_create(
-                                        phage=phage_obj, bacteria=sample.bacteria,
-                                        defaults={'notes': notes}
-                                    )
+                            # =========================================================
+                            # BIOLOGICAL RELATIONSHIPS (DYNAMIC ROWS)
+                            # =========================================================
+                            host_bacterium_ids = request.POST.getlist("host_bacterium[]")
+                            host_bacterium_notes = request.POST.getlist("host_bacterium_notes[]")
 
-                        elif "Phage" in sample_type:
-                            for idx, h_id in enumerate(host_bacterium_ids):
-                                if not h_id.strip(): continue
-                                notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
-                                bacterium_obj = Bacteria.objects.filter(sample_id=h_id.strip()).first()
-                                if bacterium_obj and hasattr(sample, 'phage'):
-                                    HostRange.objects.update_or_create(
-                                        phage=sample.phage, bacteria=bacterium_obj,
-                                        defaults={'notes': notes}
-                                    )
+                            stored_plasmids_ids = request.POST.getlist("stored_plasmids[]")
+                            stored_plasmids_notes = request.POST.getlist("stored_plasmids_notes[]")
 
-                        elif "Plasmid" in sample_type:
-                            for idx, h_id in enumerate(host_bacterium_ids):
-                                if not h_id.strip(): continue
-                                notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
-                                bacterium_obj = Sample.objects.filter(sample_id=h_id.strip()).first()
-                                if bacterium_obj:
-                                    SampleRelationship.objects.create(
-                                        source_sample=bacterium_obj, target_sample=sample,
-                                        relationship_type="STORAGE", created_by=user,
-                                        notes=f"Linked during Plasmid registration. Details: {notes}"
-                                    )
+                            infecting_phages_ids = request.POST.getlist("infecting_phages[]")
+                            infecting_phages_notes = request.POST.getlist("infecting_phages_notes[]")
 
-                        # Log Creation Event
-                        Event.objects.create(
-                            sample=sample,
-                            performed_by=user,
-                            event_type="entry",
-                            location_snapshot=storage_location,
-                            notes=f"Sample registered: {sample.organism_name}."
-                        )
+                            if "Bacterium" in sample_type:
+                                for idx, p_id in enumerate(stored_plasmids_ids):
+                                    if not p_id.strip(): continue
+                                    notes = stored_plasmids_notes[idx] if idx < len(stored_plasmids_notes) else ""
+                                    plasmid_obj = Sample.objects.filter(sample_id=p_id.strip()).first()
+                                    if plasmid_obj:
+                                        SampleRelationship.objects.create(
+                                            source_sample=sample, target_sample=plasmid_obj,
+                                            relationship_type="STORAGE", created_by=user,
+                                            notes=f"Linked during Bacterium registration. Details: {notes}"
+                                        )
 
-                        save_sample_origin(
-                            sample,
-                            origin_data,
-                        )
+                                for idx, ph_id in enumerate(infecting_phages_ids):
+                                    if not ph_id.strip(): continue
+                                    notes = infecting_phages_notes[idx] if idx < len(infecting_phages_notes) else ""
+                                    phage_obj = Phage.objects.filter(sample_id=ph_id.strip()).first()
+                                    if phage_obj and hasattr(sample, 'bacteria'):
+                                        HostRange.objects.update_or_create(
+                                            phage=phage_obj, bacteria=sample.bacteria,
+                                            defaults={'notes': notes}
+                                        )
 
-                        created_samples.append(sample)
+                            elif "Phage" in sample_type:
+                                for idx, h_id in enumerate(host_bacterium_ids):
+                                    if not h_id.strip(): continue
+                                    notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
+                                    bacterium_obj = Bacteria.objects.filter(sample_id=h_id.strip()).first()
+                                    if bacterium_obj and hasattr(sample, 'phage'):
+                                        HostRange.objects.update_or_create(
+                                            phage=sample.phage, bacteria=bacterium_obj,
+                                            defaults={'notes': notes}
+                                        )
+
+                            elif "Plasmid" in sample_type:
+                                for idx, h_id in enumerate(host_bacterium_ids):
+                                    if not h_id.strip(): continue
+                                    notes = host_bacterium_notes[idx] if idx < len(host_bacterium_notes) else ""
+                                    bacterium_obj = Sample.objects.filter(sample_id=h_id.strip()).first()
+                                    if bacterium_obj:
+                                        SampleRelationship.objects.create(
+                                            source_sample=bacterium_obj, target_sample=sample,
+                                            relationship_type="STORAGE", created_by=user,
+                                            notes=f"Linked during Plasmid registration. Details: {notes}"
+                                        )
+
+                            # Log Creation Event
+                            Event.objects.create(
+                                sample=sample,
+                                performed_by=user,
+                                event_type="entry",
+                                location_snapshot=storage_location,
+                                notes=f"Sample registered: {sample.organism_name}."
+                            )
+
+                            save_sample_origin(
+                                sample,
+                                origin_data,
+                            )
+
+                            created_samples.append(sample)
 
                     # Attachments
                     files = request.FILES.getlist("file")
@@ -1845,7 +1853,18 @@ def sample_create_view(request):
                         f"{total_aliquots} total aliquot(s)."
                     ),
                 )
-                return redirect("samples_list")
+                batch_label_url = reverse(
+                    "print_sample_labels"
+                )
+
+                batch_label_query = "&".join(
+                    f"sample={sample.pk}"
+                    for sample in created_samples
+                )
+
+                return redirect(
+                    f"{batch_label_url}?{batch_label_query}"
+                )
 
             except ValueError as ve:
                 messages.error(request, str(ve))
@@ -1908,8 +1927,44 @@ def sample_create_view(request):
 # =========================================================
 # 3. PRINT & QR CODE SCAN VIEW
 # =========================================================
+def _sample_label_payload(
+    request,
+    sample,
+):
+    """
+    Build the canonical printable QR-label payload for one
+    physical Sample unit.
+
+    Individual and batch printing deliberately share this
+    function so both surfaces encode the same mobile QR URL.
+    """
+    qr_token = normalize_sample_micro_qr_token(
+        sample.micro_qr_token
+    )
+
+    # Keep the payload identical to the established individual
+    # label contract: upper-case scheme/host plus the permanent
+    # compact Sample token.
+    qr_url = (
+        f"{request.scheme.upper()}://"
+        f"{request.get_host().upper()}/"
+        f"{qr_token}"
+    )
+
+    return {
+        "sample": sample,
+        "qr_code": sample_mobile_qr_png_base64(
+            qr_url
+        ),
+        "qr_url": qr_url,
+    }
+
+
 @login_required
-def print_sample_label(request, sample_id):
+def print_sample_label(
+    request,
+    sample_id,
+):
     sample = get_object_or_404(
         Sample,
         id=sample_id,
@@ -1921,32 +1976,116 @@ def print_sample_label(request, sample_id):
     ):
         raise PermissionDenied
 
-    qr_token = normalize_sample_micro_qr_token(
-        sample.micro_qr_token
-    )
-
-    # Keep the QR payload entirely inside the QR Code
-    # alphanumeric character set. Upper-case scheme/host is
-    # URI-equivalent and allows a substantially smaller symbol.
-    qr_url = (
-        f"{request.scheme.upper()}://"
-        f"{request.get_host().upper()}/"
-        f"{qr_token}"
-    )
-
-    qr_base64 = sample_mobile_qr_png_base64(
-        qr_url
+    label = _sample_label_payload(
+        request,
+        sample,
     )
 
     return render(
         request,
         "internal/samples/print_label.html",
+        label,
+    )
+
+
+@login_required
+def print_sample_labels(
+    request,
+):
+    """
+    Render one printable label for every explicitly selected
+    physical Sample unit.
+
+    Query contract:
+        ?sample=<pk>&sample=<pk>...
+    """
+    raw_sample_ids = request.GET.getlist(
+        "sample"
+    )
+
+    if not raw_sample_ids:
+        raise Http404(
+            "Select at least one Sample label to print."
+        )
+
+    try:
+        sample_ids = [
+            int(value)
+            for value in raw_sample_ids
+        ]
+    except (
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise Http404(
+            "Invalid Sample selection."
+        ) from exc
+
+    if any(
+        sample_id <= 0
+        for sample_id in sample_ids
+    ):
+        raise Http404(
+            "Invalid Sample selection."
+        )
+
+    # Prevent accidental duplicate labels when a PK appears
+    # more than once while preserving the submitted order.
+    sample_ids = list(
+        dict.fromkeys(
+            sample_ids
+        )
+    )
+
+    samples = list(
+        Sample.objects.filter(
+            pk__in=sample_ids
+        )
+    )
+
+    samples_by_pk = {
+        sample.pk: sample
+        for sample in samples
+    }
+
+    if len(samples_by_pk) != len(
+        sample_ids
+    ):
+        raise Http404(
+            "One or more selected Samples do not exist."
+        )
+
+    ordered_samples = [
+        samples_by_pk[sample_id]
+        for sample_id in sample_ids
+    ]
+
+    for sample in ordered_samples:
+        if not can_view_sample(
+            request.user,
+            sample,
+        ):
+            raise PermissionDenied(
+                "You do not have permission "
+                "to print one or more selected Samples."
+            )
+
+    labels = [
+        _sample_label_payload(
+            request,
+            sample,
+        )
+        for sample in ordered_samples
+    ]
+
+    return render(
+        request,
+        "internal/samples/print_labels.html",
         {
-            "sample": sample,
-            "qr_code": qr_base64,
-            "qr_url": qr_url,
+            "labels": labels,
         },
     )
+
 
 
 def sample_qr_scan_view(request, uuid):

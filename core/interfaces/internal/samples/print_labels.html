@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>Print Sample QR Labels</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 18px;
+            background: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .print-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            max-width: 760px;
+            margin: 0 auto 18px;
+            padding: 12px 14px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .print-toolbar button {
+            border: 0;
+            border-radius: 6px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .labels {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .label-container {
+            width: 50mm;
+            height: 25mm;
+            padding: 2mm;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border: 1px dashed #bbb;
+        }
+
+        .qr-code {
+            width: 14mm;
+            height: 14mm;
+            margin-right: 2mm;
+            flex: 0 0 auto;
+        }
+
+        .qr-code img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .text-info {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .sample-id {
+            font-size: 8pt;
+            line-height: 1.05;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .organism {
+            margin-top: 2px;
+            font-size: 6pt;
+            line-height: 1.1;
+            overflow: hidden;
+            max-height: 2.2em;
+        }
+
+        .token {
+            margin-top: 3px;
+            font-family: monospace;
+            font-size: 6pt;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        @media print {
+            @page {
+                size: 50mm 25mm;
+                margin: 0;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background: #fff;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .labels {
+                display: block;
+            }
+
+            .label-container {
+                margin: 0;
+                border: 0;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                break-after: page;
+                page-break-after: always;
+            }
+
+            .label-container:last-child {
+                break-after: auto;
+                page-break-after: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="print-toolbar no-print">
+        <div>
+            <strong>Sample QR Labels</strong>
+            <div>
+                {{ labels|length }} physical aliquot{{ labels|length|pluralize }}
+            </div>
+        </div>
+
+        <button
+            type="button"
+            onclick="window.print()"
+        >
+            Print all labels
+        </button>
+    </div>
+
+    <main class="labels">
+        {% for label in labels %}
+            <section
+                class="label-container"
+                data-sample-label="physical-aliquot"
+                data-sample-id="{{ label.sample.sample_id }}"
+            >
+                <div class="qr-code">
+                    <img
+                        src="data:image/png;base64,{{ label.qr_code }}"
+                        alt="QR code for {{ label.sample.sample_id }}"
+                    >
+                </div>
+
+                <div class="text-info">
+                    <div class="sample-id">
+                        {{ label.sample.sample_id }}
+                    </div>
+
+                    <div class="organism">
+                        {{ label.sample.organism_name|default:"No organism name" }}
+                    </div>
+
+                    <div class="token">
+                        {{ label.sample.micro_qr_token }}
+                    </div>
+                </div>
+            </section>
+        {% endfor %}
+    </main>
+</body>
+</html>

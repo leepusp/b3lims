@@ -71,6 +71,7 @@ from core.views.internal.collections.views import (
 from core.views.internal.samples.views import (
     sample_create_shipment_view,
     print_sample_label,
+    print_sample_labels,
     samples_list_view,
     samples_dashboard_view,
     samples_origin_map_view,
@@ -314,6 +315,11 @@ urlpatterns = [
         "samples/<int:sample_id>/purge/",
         sample_purge_view,
         name="sample_purge",
+    ),
+    path(
+        "samples/labels/print/",
+        print_sample_labels,
+        name="print_sample_labels",
     ),
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),

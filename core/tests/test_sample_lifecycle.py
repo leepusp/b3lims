@@ -225,7 +225,8 @@ class SampleLifecycleTests(TestCase):
             )
         )
 
-    def test_create_without_biobank_creates_one_sample(self):
+
+    def test_create_without_biobank_creates_individual_aliquots(self):
         self.client.force_login(
             self.owner
         )
@@ -248,30 +249,80 @@ class SampleLifecycleTests(TestCase):
             302,
         )
 
-        created = Sample.objects.get(
-            sample_id="LIFE-CREATE-NOBB"
+        created = list(
+            Sample.objects
+            .filter(
+                sample_id__startswith=(
+                    "LIFE-CREATE-NOBB"
+                )
+            )
+            .order_by(
+                "sample_id"
+            )
         )
 
-        self.assertIsNone(
-            created.biobank_id
-        )
         self.assertEqual(
-            created.aliquot_count,
+            [
+                record.sample_id
+                for record in created
+            ],
+            [
+                "LIFE-CREATE-NOBB_1.1",
+                "LIFE-CREATE-NOBB_1.2",
+            ],
+        )
+
+        self.assertEqual(
+            [
+                record.aliquot_count
+                for record in created
+            ],
+            [
+                1,
+                1,
+            ],
+        )
+
+        self.assertEqual(
+            {
+                record.micro_qr_token
+                for record in created
+            }.__len__(),
             2,
         )
+
         self.assertTrue(
-            created.is_embargoed
-        )
-        self.assertEqual(
-            created.research_group_id,
-            self.group.pk,
-        )
-        self.assertEqual(
-            created.owner_id,
-            self.owner.pk,
+            all(
+                record.biobank_id is None
+                for record in created
+            )
         )
 
-    def test_quantity_two_in_one_biobank_creates_one_record(self):
+        self.assertTrue(
+            all(
+                record.is_embargoed
+                for record in created
+            )
+        )
+
+        self.assertTrue(
+            all(
+                record.research_group_id
+                == self.group.pk
+                for record in created
+            )
+        )
+
+        self.assertTrue(
+            all(
+                record.owner_id
+                == self.owner.pk
+                for record in created
+            )
+        )
+
+
+    def test_quantity_two_in_one_biobank_creates_two_aliquots(self):
         self.client.force_login(
             self.owner
         )
@@ -302,33 +353,77 @@ class SampleLifecycleTests(TestCase):
             302,
         )
 
-        created = Sample.objects.filter(
-            sample_id__startswith=(
-                "LIFE-CREATE-BB"
+        created = list(
+            Sample.objects
+            .filter(
+                sample_id__startswith=(
+                    "LIFE-CREATE-BB"
+                )
+            )
+            .order_by(
+                "sample_id"
             )
         )
 
         self.assertEqual(
-            created.count(),
-            1,
+            [
+                record.sample_id
+                for record in created
+            ],
+            [
+                "LIFE-CREATE-BB_1.1",
+                "LIFE-CREATE-BB_1.2",
+            ],
         )
 
-        record = created.get()
+        self.assertEqual(
+            [
+                record.aliquot_count
+                for record in created
+            ],
+            [
+                1,
+                1,
+            ],
+        )
+
+        self.assertTrue(
+            all(
+                record.biobank_id
+                == self.biobank.pk
+                for record in created
+            )
+        )
+
+        tokens = {
+            record.micro_qr_token
+            for record in created
+        }
 
         self.assertEqual(
-            record.sample_id,
-            "LIFE-CREATE-BB",
-        )
-        self.assertEqual(
-            record.aliquot_count,
+            len(tokens),
             2,
         )
-        self.assertEqual(
-            record.biobank_id,
-            self.biobank.pk,
+
+        batch_url = reverse(
+            "print_sample_labels"
         )
 
-    def test_multiple_biobanks_create_one_record_per_biobank(self):
+        self.assertTrue(
+            response["Location"].startswith(
+                batch_url + "?"
+            ),
+            response["Location"],
+        )
+
+        for record in created:
+            self.assertIn(
+                f"sample={record.pk}",
+                response["Location"],
+            )
+
+
+    def test_multiple_biobanks_create_one_record_per_physical_aliquot(self):
         self.client.force_login(
             self.owner
         )
@@ -376,18 +471,16 @@ class SampleLifecycleTests(TestCase):
         )
 
         self.assertEqual(
-            len(records),
-            2,
-        )
-
-        self.assertEqual(
             [
                 record.sample_id
                 for record in records
             ],
             [
-                "LIFE-MULTIBB_1",
-                "LIFE-MULTIBB_2",
+                "LIFE-MULTIBB_1.1",
+                "LIFE-MULTIBB_1.2",
+                "LIFE-MULTIBB_2.1",
+                "LIFE-MULTIBB_2.2",
+                "LIFE-MULTIBB_2.3",
             ],
         )
 
@@ -397,12 +490,40 @@ class SampleLifecycleTests(TestCase):
                 for record in records
             ],
             [
-                2,
-                3,
+                1,
+                1,
+                1,
+                1,
+                1,
             ],
         )
 
-    def test_edit_exposes_and_persists_biosafety_and_aliquot_count(self):
+        self.assertEqual(
+            [
+                record.biobank_id
+                for record in records
+            ],
+            [
+                self.biobank.pk,
+                self.biobank.pk,
+                self.biobank_2.pk,
+                self.biobank_2.pk,
+                self.biobank_2.pk,
+            ],
+        )
+
+        tokens = {
+            record.micro_qr_token
+            for record in records
+        }
+
+        self.assertEqual(
+            len(tokens),
+            5,
+        )
+
+
+    def test_edit_does_not_expose_or_change_aliquot_count(self):
         self.client.force_login(
             self.owner
         )
@@ -433,17 +554,15 @@ class SampleLifecycleTests(TestCase):
             "biosafety_level",
             form.fields,
         )
-        self.assertIn(
+
+        self.assertNotIn(
             "aliquot_count",
             form.fields,
         )
+
         self.assertEqual(
             form["biosafety_level"].value(),
             "NB-2",
-        )
-        self.assertEqual(
-            form["aliquot_count"].value(),
-            1,
         )
 
         response = self.client.post(
@@ -456,7 +575,12 @@ class SampleLifecycleTests(TestCase):
                 "organism_name": self.sample.organism_name,
                 "biosafety_level": "NB-1",
                 "status": "available",
-                "aliquot_count": "2",
+
+                # Deliberately submitted to prove that a stale
+                # browser/client cannot aggregate an existing
+                # physical aliquot again.
+                "aliquot_count": "9",
+
                 "is_embargoed": "on",
                 "owner": str(
                     self.owner.pk
@@ -485,10 +609,12 @@ class SampleLifecycleTests(TestCase):
             self.sample.biosafety_level,
             "NB-1",
         )
+
         self.assertEqual(
             self.sample.aliquot_count,
-            2,
+            1,
         )
+
         self.assertTrue(
             self.sample.is_embargoed
         )
