@@ -1,0 +1,160 @@
+<div class="row g-4 mt-1" id="storage-sample-preview">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <i class="bi bi-arrow-left-right me-2 text-primary"></i>
+                <strong>Move Sample — Preview</strong>
+            </div>
+
+            <div class="card-body">
+                <p class="small text-muted">
+                    Select an existing Sample assignment and a proposed
+                    destination. Other Sample locations remain unchanged.
+                    This form does not execute transfers.
+                </p>
+
+                {% if storage_preview_editable_assignments and active_storage_locations %}
+                    <form method="get" action="{% url 'storage_workspace' %}">
+                        <input type="hidden" name="preview_sample" value="1">
+
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label for="preview-sample-assignment"
+                                       class="form-label">
+                                    Sample assignment
+                                </label>
+                                <select id="preview-sample-assignment"
+                                        name="assignment_id"
+                                        class="form-select" required>
+                                    <option value="">Select assignment</option>
+                                    {% for assignment in storage_preview_editable_assignments %}
+                                        <option value="{{ assignment.pk }}"
+                                            {% if storage_preview_assignment_id == assignment.pk %}selected{% endif %}>
+                                            {{ assignment.sample.sample_id }}
+                                            — {{ assignment.location.full_path }}
+                                            {% if assignment.position %}
+                                                ({{ assignment.position }})
+                                            {% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-lg-4">
+                                <label for="preview-sample-destination"
+                                       class="form-label">
+                                    Destination
+                                </label>
+                                <select id="preview-sample-destination"
+                                        name="destination_id"
+                                        class="form-select" required>
+                                    <option value="">Select location</option>
+                                    {% for location in active_storage_locations %}
+                                        <option value="{{ location.pk }}"
+                                            {% if storage_preview_sample_destination_id == location.pk %}selected{% endif %}>
+                                            {{ location.full_path }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-lg-2">
+                                <label for="preview-sample-position"
+                                       class="form-label">
+                                    New position
+                                </label>
+                                <input type="text"
+                                       id="preview-sample-position"
+                                       name="position"
+                                       maxlength="100"
+                                       value="{{ storage_preview_sample_position }}"
+                                       class="form-control"
+                                       placeholder="e.g. P01">
+                            </div>
+
+                            <div class="col-lg-2 d-flex align-items-end">
+                                <button type="submit"
+                                        class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Preview
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-muted small">
+                        No editable active Sample assignments
+                        or available locations.
+                    </div>
+                {% endif %}
+
+                {% if storage_sample_preview_error %}
+                    <div class="alert alert-warning mt-3 mb-0"
+                         role="alert">
+                        {{ storage_sample_preview_error }}
+                    </div>
+                {% endif %}
+
+                {% if storage_sample_preview %}
+                    <div class="alert alert-info mt-3 mb-0"
+                         role="status">
+                        <strong>Preview only — no Sample transferred.</strong>
+
+                        {% for change in storage_sample_preview.moves %}
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <div class="small text-muted">
+                                        Sample / Current location
+                                    </div>
+                                    <strong>{{ change.sample_identifier }}</strong>
+                                    <div>{{ change.origin_path }}</div>
+                                    <div class="small">
+                                        Position:
+                                        {{ change.position_before|default:"Unassigned" }}
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="small text-muted">
+                                        Proposed destination
+                                    </div>
+                                    <div class="fw-semibold">
+                                        {{ change.destination_path }}
+                                    </div>
+                                    <div class="small">
+                                        Position:
+                                        {{ change.position_after|default:"Unassigned" }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        <div class="small text-muted mt-3">
+                            Other assignments are preserved. The destination is
+                            not reserved and is revalidated on confirmation.
+                        </div>
+                        <form method="post" action="{% url 'storage_workspace' %}" class="mt-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="confirm_sample_move">
+                            {% for change in storage_sample_preview.moves %}
+                                <input type="hidden" name="assignment_id" value="{{ change.assignment_id }}">
+                                <input type="hidden" name="destination_id" value="{{ change.destination_id }}">
+                                <input type="hidden" name="position" value="{{ change.position_after }}">
+                                <input type="hidden" name="expected_location_id" value="{{ change.expected_location_id }}">
+                                <input type="hidden" name="expected_position" value="{{ change.expected_position }}">
+                                <input type="hidden" name="expected_source_path" value="{{ change.expected_source_path }}">
+                                <input type="hidden" name="expected_destination_path" value="{{ change.expected_destination_path }}">
+                            {% endfor %}
+                            <label class="form-label" for="sample-transfer-reason">Movement reason</label>
+                            <textarea class="form-control" id="sample-transfer-reason"
+                                      name="reason" maxlength="2000" rows="2" required></textarea>
+                            <button type="submit" class="btn btn-primary mt-2">
+                                Confirm Sample transfer
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

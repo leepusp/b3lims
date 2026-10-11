@@ -17,11 +17,103 @@ from django.core.files import File
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 
-from core.services.lab_tools_storage import (
-    storage_runner,
-    user_home_for_username,
-    validate_username,
+USERNAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
 )
+
+
+def _standalone_runtime():
+    return (
+        getattr(
+            settings,
+            "BIOBANK_RUNTIME_PROFILE",
+            None,
+        )
+        == "standalone"
+    )
+
+
+def _standalone_sample_data_root():
+    raw_root = getattr(
+        settings,
+        "BIOBANK_SAMPLE_DATA_ROOT",
+        None,
+    )
+
+    if raw_root is None:
+        raise ImproperlyConfigured(
+            "BIOBANK_SAMPLE_DATA_ROOT is required "
+            "for standalone Sample storage."
+        )
+
+    return Path(
+        raw_root
+    ).expanduser().resolve(
+        strict=False
+    )
+
+
+def validate_username(value):
+    """
+    Validate a Sample owner username.
+
+    Standalone users are Django-local identities and do not need
+    corresponding operating-system accounts. B3 retains the existing
+    Unix validation contract.
+    """
+
+    if _standalone_runtime():
+        username = str(
+            value or ""
+        )
+
+        if (
+            username != username.strip()
+            or not USERNAME_RE.fullmatch(
+                username
+            )
+        ):
+            raise SuspiciousFileOperation(
+                "The Sample owner username "
+                "is invalid."
+            )
+
+        return username
+
+    from core.services.lab_tools_storage import (
+        validate_username as validate_unix_username,
+    )
+
+    return validate_unix_username(
+        value
+    )
+
+
+def user_home_for_username(username):
+    """
+    Resolve a Unix home only for the institutional/B3 backend.
+
+    Kept as a module-level function so the existing B3 storage tests
+    and patch points remain compatible.
+    """
+
+    from core.services.lab_tools_storage import (
+        user_home_for_username as resolve_unix_home,
+    )
+
+    return resolve_unix_home(
+        username
+    )
+
+
+def storage_runner():
+    """Resolve the protected B3 storage runner lazily."""
+
+    from core.services.lab_tools_storage import (
+        storage_runner as resolve_storage_runner,
+    )
+
+    return resolve_storage_runner()
 
 
 SAMPLE_DIRECTORY_RE = re.compile(
@@ -134,12 +226,37 @@ def _relative_sample_data_root():
 
 
 def user_sample_data_root(username):
-    """Return /home/<user>/biobank/data for an eligible Unix user."""
+    """
+    Return the physical Sample data root for one owner.
+
+    Standalone:
+      <BIOBANK_SAMPLE_DATA_ROOT>/users/<username>
+
+    Institutional/B3:
+      <unix-home>/<BIOBANK_SAMPLE_DATA_RELATIVE_ROOT>
+    """
+
+    username = validate_username(
+        username
+    )
+
+    if _standalone_runtime():
+        return (
+            _standalone_sample_data_root()
+            / "users"
+            / username
+        ).resolve(
+            strict=False
+        )
 
     return (
-        user_home_for_username(username)
+        user_home_for_username(
+            username
+        )
         / _relative_sample_data_root()
-    ).resolve(strict=False)
+    ).resolve(
+        strict=False
+    )
 
 
 def _validated_sample_directory(value):
@@ -277,6 +394,21 @@ def prepare_sample_data_directory(username, relative_path):
         relative_path
     )
 
+    if _standalone_runtime():
+        directory = (
+            protected_sample_data_directory(
+                username,
+                relative.as_posix(),
+            )
+        )
+
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        return directory
+
     _run_sample_data_runner(
         "prepare-data-directory",
         username,
@@ -293,6 +425,20 @@ def claim_sample_data_file(username, relative_path):
     relative = _validated_sample_file(
         relative_path
     )
+
+    if _standalone_runtime():
+        path = protected_sample_data_path(
+            username,
+            relative.as_posix(),
+        )
+
+        if not path.is_file():
+            raise SampleDataStorageError(
+                "The standalone Sample data file "
+                "was not created."
+            )
+
+        return path
 
     _run_sample_data_runner(
         "claim-data-file",

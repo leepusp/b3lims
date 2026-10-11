@@ -1,0 +1,899 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Physical Storage · B3 LIMS{% endblock %}
+
+{% block page_title %}Physical Storage{% endblock %}
+{% block page_subtitle %}
+Manage the physical hierarchy and Sample occupancy.
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">
+                        Locations
+                    </div>
+                    <div class="display-6 fw-semibold">
+                        {{ storage_total }}
+                    </div>
+                    <div class="small text-muted">
+                        {{ storage_active_total }} active
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">
+                        Active assignments
+                    </div>
+                    <div class="display-6 fw-semibold">
+                        {{ storage_assignment_total }}
+                    </div>
+                    <div class="small text-muted">
+                        Sample → physical location
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">
+                        Infrastructure management
+                    </div>
+
+                    {% if can_manage_storage %}
+                        <span class="badge bg-success">
+                            Enabled
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">
+                            Read only
+                        </span>
+                    {% endif %}
+
+                    <div class="small text-muted mt-2">
+                        Sample assignment still follows
+                        Sample edit permissions.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="row g-4">
+
+        <div class="col-xl-8">
+
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div
+                    class="card-header bg-white
+                           d-flex justify-content-between
+                           align-items-center"
+                >
+                    <div>
+                        <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                        <strong>Storage hierarchy</strong>
+                    </div>
+
+                    <span class="small text-muted">
+                        Room → Freezer → Rack → Box → Position
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+
+                    <table
+                        class="table table-hover
+                               align-middle mb-0"
+                    >
+                        <thead class="table-light">
+                            <tr>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th class="text-center">
+                                    Samples
+                                </th>
+                                <th>Status</th>
+                                {% if can_manage_storage %}
+                                    <th class="text-end">
+                                        Manage
+                                    </th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for row in storage_location_rows %}
+
+                                {% with location=row.location %}
+
+                                <tr>
+
+                                    <td>
+                                        <div class="fw-semibold">
+                                            <span class="text-muted">
+                                                {{ row.prefix }}
+                                            </span>
+                                            {{ location.name }}
+                                        </div>
+
+                                        <div class="small text-muted">
+                                            {{ location.full_path }}
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ location.get_location_type_display }}
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        {{ location.active_sample_count }}
+                                    </td>
+
+                                    <td>
+                                        {% if location.is_active %}
+                                            <span class="badge bg-success-subtle text-success">
+                                                Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    {% if can_manage_storage %}
+
+                                    <td class="text-end">
+
+                                        <details class="d-inline-block text-start">
+
+                                            <summary
+                                                class="btn btn-sm btn-outline-secondary"
+                                            >
+                                                Manage
+                                            </summary>
+
+                                            <div
+                                                class="border rounded bg-white
+                                                       shadow p-3 mt-2"
+                                                style="min-width: 320px;"
+                                            >
+
+                                                <form method="post">
+
+                                                    {% csrf_token %}
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="update_location"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="location_id"
+                                                        value="{{ location.pk }}"
+                                                    >
+
+                                                    <div class="mb-2">
+                                                        <label class="form-label small">
+                                                            Name
+                                                        </label>
+                                                        <input
+                                                            class="form-control form-control-sm"
+                                                            name="name"
+                                                            value="{{ location.name }}"
+                                                            required
+                                                        >
+                                                    </div>
+
+                                                    <div class="row g-2">
+
+                                                        <div class="col-7">
+                                                            <label class="form-label small">
+                                                                Type
+                                                            </label>
+
+                                                            <select
+                                                                name="location_type"
+                                                                class="form-select form-select-sm"
+                                                            >
+                                                                {% for value, label in storage_location_types %}
+                                                                    <option
+                                                                        value="{{ value }}"
+                                                                        {% if location.location_type == value %}selected{% endif %}
+                                                                    >
+                                                                        {{ label }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="col-5">
+                                                            <label class="form-label small">
+                                                                Rank
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                name="rank"
+                                                                class="form-control form-control-sm"
+                                                                value="{{ location.rank }}"
+                                                            >
+                                                        </div>
+
+                                                    </div>
+
+                                                    <div class="mt-2">
+                                                        <label class="form-label small">
+                                                            Notes
+                                                        </label>
+                                                        <textarea
+                                                            name="notes"
+                                                            class="form-control form-control-sm"
+                                                            rows="2"
+                                                        >{{ location.notes }}</textarea>
+                                                    </div>
+
+                                                    <button
+                                                        class="btn btn-primary btn-sm mt-3"
+                                                        type="submit"
+                                                    >
+                                                        Save changes
+                                                    </button>
+
+                                                </form>
+
+                                                <hr>
+
+                                                <form method="post">
+
+                                                    {% csrf_token %}
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="location_id"
+                                                        value="{{ location.pk }}"
+                                                    >
+
+                                                    {% if location.is_active %}
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="action"
+                                                            value="deactivate_location"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn btn-outline-danger btn-sm"
+                                                        >
+                                                            Deactivate
+                                                        </button>
+
+                                                    {% else %}
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="action"
+                                                            value="reactivate_location"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn btn-outline-success btn-sm"
+                                                        >
+                                                            Reactivate
+                                                        </button>
+
+                                                    {% endif %}
+
+                                                </form>
+
+                                            </div>
+
+                                        </details>
+
+                                    </td>
+
+                                    {% endif %}
+
+                                </tr>
+
+                                {% endwith %}
+
+                            {% empty %}
+
+                                <tr>
+                                    <td
+                                        colspan="5"
+                                        class="text-center text-muted py-5"
+                                    >
+                                        No physical storage locations
+                                        are registered yet.
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-white">
+                    <i class="bi bi-box-seam me-2 text-warning"></i>
+                    <strong>Current Sample occupancy</strong>
+                </div>
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sample</th>
+                                <th>Physical location</th>
+                                <th>Primary</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for assignment in storage_assignments %}
+
+                                <tr>
+                                    <td>
+                                        <a
+                                            href="{% url 'sample_detail' assignment.sample.pk %}"
+                                            class="fw-semibold text-decoration-none"
+                                        >
+                                            {{ assignment.sample.sample_id }}
+                                        </a>
+                                    </td>
+
+                                    <td>
+                                        {{ assignment.location.full_path }}
+                                    </td>
+
+                                    <td>
+                                        {% if assignment.is_primary %}
+                                            <span class="badge bg-primary">
+                                                Primary
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                            {% empty %}
+
+                                <tr>
+                                    <td
+                                        colspan="3"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No active Sample assignments.
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-xl-4">
+
+            {% if can_manage_storage %}
+
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-header bg-white">
+                    <i class="bi bi-plus-circle me-2 text-success"></i>
+                    <strong>Add location</strong>
+                </div>
+
+                <div class="card-body">
+
+                    <form method="post">
+
+                        {% csrf_token %}
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="create_location"
+                        >
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Parent
+                            </label>
+
+                            <select
+                                name="parent_id"
+                                class="form-select"
+                            >
+                                <option value="">
+                                    Root location
+                                </option>
+
+                                {% for row in storage_location_rows %}
+                                    {% if row.location.is_active %}
+                                        <option value="{{ row.location.pk }}">
+                                            {{ row.prefix }}{{ row.location.name }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Name
+                            </label>
+
+                            <input
+                                name="name"
+                                class="form-control"
+                                placeholder="Example: Freezer A"
+                                required
+                            >
+                        </div>
+
+                        <div class="row g-2">
+
+                            <div class="col-8">
+                                <label class="form-label">
+                                    Type
+                                </label>
+
+                                <select
+                                    name="location_type"
+                                    class="form-select"
+                                >
+                                    {% for value, label in storage_location_types %}
+                                        <option value="{{ value }}">
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-4">
+                                <label class="form-label">
+                                    Rank
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="1"
+                                    name="rank"
+                                    value="1"
+                                    class="form-control"
+                                >
+                            </div>
+
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">
+                                Notes
+                            </label>
+
+                            <textarea
+                                name="notes"
+                                class="form-control"
+                                rows="2"
+                            ></textarea>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="btn btn-success w-100 mt-3"
+                        >
+                            Add location
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+            {% endif %}
+
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-white">
+                    <i class="bi bi-geo-alt me-2 text-danger"></i>
+                    <strong>Set Sample location</strong>
+                </div>
+
+                <div class="card-body">
+
+                    {% if editable_storage_samples and active_storage_locations %}
+
+                        <form method="post">
+
+                            {% csrf_token %}
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="assign_sample"
+                            >
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Sample
+                                </label>
+
+                                <select
+                                    name="sample_id"
+                                    class="form-select"
+                                    required
+                                >
+                                    {% for sample in editable_storage_samples %}
+                                        <option value="{{ sample.pk }}">
+                                            {{ sample.sample_id }}
+                                            {% if sample.organism_name %}
+                                                — {{ sample.organism_name }}
+                                            {% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Location
+                                </label>
+
+                                <select
+                                    name="location_id"
+                                    class="form-select"
+                                    required
+                                >
+                                    {% for row in storage_location_rows %}
+                                        {% if row.location.is_active %}
+                                            <option value="{{ row.location.pk }}">
+                                                {{ row.location.full_path }}
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="alert alert-light border small">
+                                Updates only the Sample's primary
+                                storage location. Additional locations
+                                are preserved. The previous position
+                                is cleared when changing containers.
+                                Existing primary transfers are audited.
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary w-100"
+                            >
+                                Set physical location
+                            </button>
+
+                        </form>
+
+                    {% else %}
+
+                        <div class="text-muted small">
+                            At least one editable Sample and one active
+                            storage location are required.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    {% if can_manage_storage %}
+    <div class="row g-4 mt-1" id="storage-container-preview">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <i class="bi bi-box-arrow-right me-2 text-primary"></i>
+                    <strong>Move Container — Preview</strong>
+                </div>
+
+                <div class="card-body">
+                    <p class="small text-muted">
+                        Inspect a proposed move of a box, rack or other
+                        supported container. This preview never changes
+                        its parent, contained Samples or positions.
+                    </p>
+
+                    <form method="get" action="{% url 'storage_workspace' %}">
+                        <input type="hidden"
+                               name="preview_container" value="1">
+
+                        <div class="row g-3">
+                            <div class="col-lg-5">
+                                <label class="form-label" for="preview-container">
+                                    Container to move
+                                </label>
+                                <select id="preview-container"
+                                        name="container_id"
+                                        class="form-select" required>
+                                    <option value="">Select container</option>
+                                    {% for row in storage_location_rows %}
+                                        {% if row.location.is_active and row.location.location_type != "room" and row.location.location_type != "position" %}
+                                            <option value="{{ row.location.pk }}"
+                                                {% if storage_preview_container_id == row.location.pk %}selected{% endif %}>
+                                                {{ row.location.full_path }}
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-lg-5">
+                                <label class="form-label" for="preview-destination">
+                                    New parent location
+                                </label>
+                                <select id="preview-destination"
+                                        name="destination_id"
+                                        class="form-select" required>
+                                    <option value="">Select destination</option>
+                                    {% for row in storage_location_rows %}
+                                        {% if row.location.is_active and row.location.location_type != "position" %}
+                                            <option value="{{ row.location.pk }}"
+                                                {% if storage_preview_destination_id == row.location.pk %}selected{% endif %}>
+                                                {{ row.location.full_path }}
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-lg-2 d-flex align-items-end">
+                                <button type="submit"
+                                        class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Preview
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {% if storage_container_preview_error %}
+                        <div class="alert alert-warning mt-3 mb-0"
+                             role="alert">
+                            {{ storage_container_preview_error }}
+                        </div>
+                    {% endif %}
+
+                    {% if storage_container_preview %}
+                        <div class="alert alert-info mt-3 mb-0"
+                             role="status">
+                            <strong>Preview only — no transfer executed.</strong>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <div class="small text-muted">Current path</div>
+                                    <div class="fw-semibold">
+                                        {{ storage_container_preview.old_path }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="small text-muted">Proposed path</div>
+                                    <div class="fw-semibold">
+                                        {{ storage_container_preview.new_path }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-3 mt-3 small">
+                                <span>
+                                    Locations in subtree:
+                                    <strong>{{ storage_container_preview.affected_location_count }}</strong>
+                                </span>
+                                <span>
+                                    Active assignments:
+                                    <strong>{{ storage_container_preview.active_assignment_count }}</strong>
+                                </span>
+                                <span>
+                                    Distinct Samples:
+                                    <strong>{{ storage_container_preview.active_sample_count }}</strong>
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Positions within the container remain unchanged.
+                                The hierarchy and permissions will be revalidated.
+                            </div>
+                            <form method="post" action="{% url 'storage_workspace' %}" class="mt-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="confirm_container_move">
+                                <input type="hidden" name="container_id" value="{{ storage_container_preview.container_id }}">
+                                <input type="hidden" name="destination_id" value="{{ storage_container_preview.destination_id }}">
+                                <input type="hidden" name="expected_parent_id" value="{{ storage_container_preview.expected_parent_id|default_if_none:'' }}">
+                                <input type="hidden" name="expected_origin_path" value="{{ storage_container_preview.old_path }}">
+                                <input type="hidden" name="expected_destination_path" value="{{ storage_container_preview.new_path }}">
+                                <label class="form-label" for="container-transfer-reason">Movement reason</label>
+                                <textarea class="form-control" id="container-transfer-reason"
+                                          name="reason" maxlength="2000" rows="2" required></textarea>
+                                <button type="submit" class="btn btn-primary mt-2">
+                                    Confirm container transfer
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% include "internal/storage/_sample_preview.html" %}
+    {% include "internal/storage/_sample_bulk_preview.html" %}
+
+    <div class="row g-4 mt-1" id="storage-movement-history">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-white d-flex flex-wrap
+                            justify-content-between align-items-center gap-2">
+                    <strong>
+                        <i class="bi bi-clock-history me-2 text-primary"></i>
+                        Movement History
+                    </strong>
+                    <span class="small text-muted">
+                        Recent authorized movements
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Origin → Destination</th>
+                                <th>Affected</th>
+                                <th>Performed by / Reason</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in storage_movements %}
+                                <tr>
+                                    <td class="small text-nowrap">
+                                        {{ movement.created_at|date:"d/m/Y H:i" }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ movement.get_movement_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="small">
+                                        <div>
+                                            {{ movement.origin_path|default:"—" }}
+                                        </div>
+                                        <i class="bi bi-arrow-down text-muted"></i>
+                                        <div>
+                                            {{ movement.destination_path|default:"—" }}
+                                        </div>
+                                    </td>
+                                    <td class="small text-nowrap">
+                                        {{ movement.affected_sample_count }}
+                                        Sample{{ movement.affected_sample_count|pluralize }}
+                                        <div class="text-muted">
+                                            {{ movement.affected_assignment_count }}
+                                            assignment{{ movement.affected_assignment_count|pluralize }}
+                                        </div>
+                                    </td>
+                                    <td class="small">
+                                        <div class="fw-semibold">
+                                            {{ movement.actor_label|default:"—" }}
+                                        </div>
+                                        <div class="text-muted">
+                                            {{ movement.reason|default:"—"|truncatechars:180 }}
+                                        </div>
+                                    </td>
+                                    <td class="small">
+                                        {% if movement.affected_assignment_count %}
+                                            <details>
+                                                <summary class="text-primary"
+                                                         style="cursor:pointer">
+                                                    View changes
+                                                </summary>
+                                                <div class="mt-2">
+                                                    {% for item in movement.items.all|slice:":5" %}
+                                                        <div class="border-bottom py-2">
+                                                            <strong>
+                                                                {{ item.sample_identifier }}
+                                                            </strong>
+                                                            <div>
+                                                                {{ item.position_before|default:"—" }}
+                                                                →
+                                                                {{ item.position_after|default:"—" }}
+                                                            </div>
+                                                            <div class="text-muted">
+                                                                {{ item.path_before|default:"—" }}
+                                                                →
+                                                                {{ item.path_after|default:"—" }}
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                    {% if movement.affected_assignment_count > 5 %}
+                                                        <span class="text-muted">
+                                                            Showing the first five assignments.
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </details>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                Infrastructure only
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6"
+                                        class="text-center text-muted py-4">
+                                        No accessible movements recorded yet.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

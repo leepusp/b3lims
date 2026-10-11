@@ -1,0 +1,177 @@
+<div class="row g-4 mt-1" id="storage-sample-bulk-preview">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <i class="bi bi-list-check me-2 text-primary"></i>
+                <strong>Bulk Transfer — Preview</strong>
+            </div>
+
+            <div class="card-body">
+                <p class="small text-muted">
+                    Preview up to five selected assignments.
+                    Each can have an independent destination and position.
+                    Empty rows are ignored. No transfer is executed.
+                </p>
+
+                {% if storage_preview_editable_assignments and active_storage_locations %}
+                    <form method="get" action="{% url 'storage_workspace' %}">
+                        <input type="hidden"
+                               name="preview_bulk_samples" value="1">
+
+                        {% for entry in storage_sample_bulk_rows %}
+                            <div class="row g-2 mb-3">
+                                <div class="col-lg-1 d-flex align-items-center">
+                                    <span class="text-muted small">
+                                        #{{ forloop.counter }}
+                                    </span>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <label class="form-label"
+                                           for="bulk-assignment-{{ forloop.counter }}">
+                                        Sample assignment
+                                    </label>
+                                    <select name="bulk_assignment_id"
+                                            id="bulk-assignment-{{ forloop.counter }}"
+                                            class="form-select">
+                                        <option value="">Not selected</option>
+                                        {% for assignment in storage_preview_editable_assignments %}
+                                            <option value="{{ assignment.pk }}"
+                                                {% if entry.assignment_id == assignment.pk %}selected{% endif %}>
+                                                {{ assignment.sample.sample_id }}
+                                                — {{ assignment.location.full_path }}
+                                                {% if assignment.position %}
+                                                    ({{ assignment.position }})
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <label class="form-label"
+                                           for="bulk-destination-{{ forloop.counter }}">
+                                        Destination
+                                    </label>
+                                    <select name="bulk_destination_id"
+                                            id="bulk-destination-{{ forloop.counter }}"
+                                            class="form-select">
+                                        <option value="">Not selected</option>
+                                        {% for location in active_storage_locations %}
+                                            <option value="{{ location.pk }}"
+                                                {% if entry.destination_id == location.pk %}selected{% endif %}>
+                                                {{ location.full_path }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-3">
+                                    <label class="form-label"
+                                           for="bulk-position-{{ forloop.counter }}">
+                                        New position
+                                    </label>
+                                    <input type="text"
+                                           name="bulk_position"
+                                           id="bulk-position-{{ forloop.counter }}"
+                                           maxlength="100"
+                                           value="{{ entry.position }}"
+                                           placeholder="e.g. P01"
+                                           class="form-control">
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        <button type="submit"
+                                class="btn btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i>
+                            Preview selected transfers
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="text-muted small">
+                        No editable active Sample assignments
+                        or available destinations.
+                    </div>
+                {% endif %}
+
+                {% if storage_sample_bulk_preview_error %}
+                    <div class="alert alert-warning mt-3 mb-0"
+                         role="alert">
+                        {{ storage_sample_bulk_preview_error }}
+                    </div>
+                {% endif %}
+
+                {% if storage_sample_bulk_preview %}
+                    <div class="alert alert-info mt-3 mb-0"
+                         role="status">
+                        <strong>
+                            Bulk preview only — no transfers executed.
+                        </strong>
+                        <div class="small mt-2">
+                            {{ storage_sample_bulk_preview.affected_sample_count }}
+                            distinct Samples;
+                            {{ storage_sample_bulk_preview.affected_assignment_count }}
+                            assignments.
+                        </div>
+
+                        <div class="table-responsive mt-3">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Sample</th>
+                                        <th>Current location / position</th>
+                                        <th>Proposed location / position</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for change in storage_sample_bulk_preview.moves %}
+                                        <tr>
+                                            <td>{{ change.sample_identifier }}</td>
+                                            <td>
+                                                {{ change.origin_path }}
+                                                <div class="small text-muted">
+                                                    {{ change.position_before|default:"Unassigned" }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {{ change.destination_path }}
+                                                <div class="small text-muted">
+                                                    {{ change.position_after|default:"Unassigned" }}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="small text-muted">
+                            All selected transfers are validated atomically.
+                            Destination positions are not reserved.
+                        </div>
+                        <form method="post" action="{% url 'storage_workspace' %}" class="mt-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="confirm_bulk_sample_move">
+                            {% for change in storage_sample_bulk_preview.moves %}
+                                <input type="hidden" name="bulk_assignment_id" value="{{ change.assignment_id }}">
+                                <input type="hidden" name="bulk_destination_id" value="{{ change.destination_id }}">
+                                <input type="hidden" name="bulk_position" value="{{ change.position_after }}">
+                                <input type="hidden" name="bulk_expected_location_id" value="{{ change.expected_location_id }}">
+                                <input type="hidden" name="bulk_expected_position" value="{{ change.expected_position }}">
+                                <input type="hidden" name="bulk_expected_source_path" value="{{ change.expected_source_path }}">
+                                <input type="hidden" name="bulk_expected_destination_path" value="{{ change.expected_destination_path }}">
+                            {% endfor %}
+                            <label class="form-label" for="bulk-transfer-reason">Movement reason</label>
+                            <textarea class="form-control" id="bulk-transfer-reason"
+                                      name="reason" maxlength="2000" rows="2" required></textarea>
+                            <button type="submit" class="btn btn-primary mt-2">
+                                Confirm selected transfers
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
