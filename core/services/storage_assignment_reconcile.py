@@ -18,6 +18,11 @@ from core.services.storage_legacy_sync import (
 )
 
 
+class StorageMetadataProtectionError(ValidationError):
+    """An edit would discard unaudited physical metadata."""
+
+
+
 @transaction.atomic
 def reconcile_sample_storage_from_text(
     *,
@@ -151,8 +156,24 @@ def reconcile_sample_storage_from_text(
             pk=assignment.pk
         ).update(rank=temporary_start + offset)
 
-    # Unmatched active rows correspond to paths removed by the user.
-    for assignment in available.values():
+    # Positions are already preserved in movement history.
+    # Other physical metadata cannot be discarded by text editing.
+    pending_removals = list(available.values())
+
+    for assignment in pending_removals:
+        if (
+            bool((assignment.container_type or "").strip())
+            or assignment.quantity is not None
+            or bool((assignment.quantity_unit or "").strip())
+            or bool((assignment.notes or "").strip())
+        ):
+            raise StorageMetadataProtectionError(
+                "An assignment with physical metadata cannot be "
+                "removed through text editing. Use a controlled "
+                "storage operation."
+            )
+
+    for assignment in pending_removals:
         assignment.delete()
 
     for index, (location, assignment) in enumerate(

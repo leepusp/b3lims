@@ -449,3 +449,69 @@ class SampleStorageEditPostTests(TestCase):
         self.assertEqual(item.path_after, "")
         self.assertEqual(item.position_before, "S01")
         self.assertEqual(item.position_after, "")
+
+
+    def test_protected_secondary_removal_rolls_back_and_shows_message(self):
+        """A rejected physical removal must not persist any edit."""
+        from decimal import Decimal
+        from django.contrib.messages import get_messages
+        from core.models.samples.storage import StorageMovement
+
+        secondary = SampleStorageAssignment.objects.get(
+            sample=self.sample,
+            rank=2,
+        )
+
+        secondary.container_type = "Cryovial"
+        secondary.quantity = Decimal("2.500")
+        secondary.quantity_unit = "mL"
+        secondary.notes = "Preserve original physical inventory."
+        secondary.save(
+            update_fields=[
+                "container_type",
+                "quantity",
+                "quantity_unit",
+                "notes",
+            ]
+        )
+
+        self.sample.refresh_from_db()
+        original_notes = self.sample.scientific_notes
+
+        data = self.form_payload()
+        data["storage_edit_intent"] = "1"
+        data["storage_location"] = self.box.full_path
+        data["scientific_notes"] = "This edit must roll back."
+
+        response = self.client.post(self.url, data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], self.url)
+
+        feedback = [
+            str(message)
+            for message in get_messages(response.wsgi_request)
+        ]
+
+        self.assertTrue(
+            any(
+                "physical metadata cannot be removed" in message
+                for message in feedback
+            ),
+            feedback,
+        )
+
+        self.sample.refresh_from_db()
+        secondary.refresh_from_db()
+
+        self.assertEqual(self.sample.scientific_notes, original_notes)
+        self.assertEqual(secondary.location_id, self.shelf.pk)
+        self.assertEqual(secondary.position, "S01")
+        self.assertEqual(secondary.container_type, "Cryovial")
+        self.assertEqual(secondary.quantity, Decimal("2.500"))
+        self.assertEqual(secondary.quantity_unit, "mL")
+        self.assertEqual(
+            secondary.notes,
+            "Preserve original physical inventory.",
+        )
+        self.assertFalse(StorageMovement.objects.exists())

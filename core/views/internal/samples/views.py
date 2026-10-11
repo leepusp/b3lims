@@ -2601,10 +2601,19 @@ def _atomic_sample_edit_post(view_function):
     @wraps(view_function)
     def wrapped(request, *args, **kwargs):
         if request.method == "POST":
-            with transaction.atomic():
-                from core.services.storage_writer_lock import acquire_storage_writer_lock
-                acquire_storage_writer_lock()
-                return view_function(request, *args, **kwargs)
+            from core.services.storage_assignment_reconcile import (
+                StorageMetadataProtectionError,
+            )
+
+            try:
+                with transaction.atomic():
+                    from core.services.storage_writer_lock import acquire_storage_writer_lock
+                    acquire_storage_writer_lock()
+                    return view_function(request, *args, **kwargs)
+            except StorageMetadataProtectionError as exc:
+                # The atomic block has rolled back before showing feedback.
+                messages.error(request, " ".join(exc.messages))
+                return redirect(request.path)
 
         return view_function(request, *args, **kwargs)
 

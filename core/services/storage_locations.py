@@ -258,6 +258,7 @@ def assign_sample_storage_from_text(
             or bool((assignment.container_type or "").strip())
             or assignment.quantity is not None
             or bool((assignment.quantity_unit or "").strip())
+            or bool((assignment.notes or "").strip())
             for assignment in existing_assignments
         ):
             raise ValidationError(
