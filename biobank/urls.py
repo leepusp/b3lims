@@ -41,6 +41,7 @@ from core.views.internal.workspace.views import home
 # --- NOVAS VIEWS: PROFILE & CALENDAR ---
 from core.views.internal.profile.views import profile_view
 from core.views.internal.calendar.views import calendar_view
+from core.views.internal.storage.views import storage_workspace_view
 
 # 4. BIOBANKS & COLLECTIONS (Gestão Interna)
 from core.views.internal.biobanks.views import (
@@ -258,6 +259,11 @@ urlpatterns = [
     path("shipments/<int:shipment_id>/documents-review/<int:document_id>/request-correction/", shipment_request_document_correction_view, name="shipment_request_document_correction"),
     path("shipments/<int:shipment_id>/edit/", shipment_edit_view, name="shipment_edit"),
     path("shipments/<int:shipment_id>/", shipment_detail_view, name="shipment_detail"),
+    path(
+        "storage/",
+        storage_workspace_view,
+        name="storage_workspace",
+    ),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/dashboard/", samples_dashboard_view, name="samples_dashboard"),
     path("samples/map/", samples_origin_map_view, name="samples_origin_map"),

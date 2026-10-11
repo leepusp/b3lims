@@ -522,7 +522,18 @@
                                         type="hidden"
                                         name="storage_location"
                                         id="storage_location_hidden"
-                                        value="{{ sample.storage_location|default:'' }}"
+                                        value="{{ form.storage_location.value|default_if_none:'' }}"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="storage_edit_intent"
+                                        id="storage_edit_intent"
+                                        value="0"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="storage_initial_paths"
+                                        value="{{ form.initial.storage_location|default_if_none:'' }}"
                                     >
 
                                     <input

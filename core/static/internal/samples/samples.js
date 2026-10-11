@@ -170,64 +170,158 @@ document.addEventListener("DOMContentLoaded", () => {
         const hiddenInput = document.getElementById('storage_location_hidden');
         const textInput = document.getElementById('storageInputVisual');
 
-        if (!container || !textInput) return;
+        if (!container || !hiddenInput || !textInput) return;
 
-        let levels = [];
+        function parsePaths(value) {
+            return String(value || '')
+                .split(';')
+                .map(path =>
+                    path.replace(/,/g, '>')
+                        .split('>')
+                        .map(v => v.trim())
+                        .filter(Boolean)
+                )
+                .filter(path => path.length > 0);
+        }
+
+        let paths = parsePaths(hiddenInput.value);
+        let nextIsNewPath = false;
+        const storageIntent = document.getElementById(
+            'storage_edit_intent'
+        );
+
+        function markStorageEdited() {
+            if (storageIntent) {
+                storageIntent.value = '1';
+            }
+        }
 
         function renderLevels() {
-            container.querySelectorAll('.storage-tag-element').forEach(el => el.remove());
+            container.querySelectorAll('.storage-tag-element')
+                .forEach(el => el.remove());
 
-            levels.forEach((lvl, index) => {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-primary text-white storage-tag-element d-flex align-items-center py-1 px-2 shadow-sm';
-                badge.innerHTML = `${lvl} <i class="bi bi-x-circle-fill ms-2" style="cursor:pointer; font-size: 0.85rem;" data-index="${index}"></i>`;
-                
-                container.insertBefore(badge, textInput);
+            paths.forEach((levels, pathIndex) => {
+                if (pathIndex > 0) {
+                    const separator = document.createElement('span');
+                    separator.className = 'storage-tag-element text-muted fw-bold mx-2';
+                    separator.textContent = '|';
+                    container.insertBefore(separator, textInput);
+                }
 
-                const arrow = document.createElement('span');
-                arrow.className = 'text-muted storage-tag-element small fw-bold mx-1';
-                arrow.innerHTML = '<i class="bi bi-chevron-right"></i>';
-                container.insertBefore(arrow, textInput);
+                levels.forEach((level, levelIndex) => {
+                    const badge = document.createElement('span');
+                    badge.className =
+                        'badge bg-primary text-white storage-tag-element d-flex align-items-center py-1 px-2';
+
+                    const label = document.createElement('span');
+                    label.textContent = level;
+
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'btn btn-link text-white p-0 ms-2';
+                    remove.textContent = '×';
+                    remove.dataset.pathIndex = String(pathIndex);
+                    remove.dataset.levelIndex = String(levelIndex);
+                    remove.setAttribute('aria-label', `Remove ${level}`);
+
+                    badge.append(label, remove);
+                    container.insertBefore(badge, textInput);
+
+                    if (levelIndex < levels.length - 1) {
+                        const arrow = document.createElement('span');
+                        arrow.className = 'storage-tag-element text-muted mx-1';
+                        arrow.textContent = '›';
+                        container.insertBefore(arrow, textInput);
+                    }
+                });
             });
 
-            hiddenInput.value = levels.join(" > ");
-            textInput.focus();
+            hiddenInput.value = paths
+                .map(levels => levels.join(' > '))
+                .join('; ');
+        }
+
+        function appendInput(value) {
+            const sections = String(value || '').split(';');
+
+            sections.forEach((section, index) => {
+                if (index > 0) nextIsNewPath = true;
+
+                const levels = section
+                    .replace(/,/g, '>')
+                    .split('>')
+                    .map(v => v.trim())
+                    .filter(Boolean);
+
+                if (!levels.length) return;
+
+                if (nextIsNewPath || paths.length === 0) {
+                    paths.push([]);
+                    nextIsNewPath = false;
+                }
+
+                paths[paths.length - 1].push(...levels);
+            });
         }
 
         window.setStorageLocationFromText = function(value) {
-            if (!value) return;
-            levels = String(value)
-                .replace(/,/g, ">")
-                .replace(/;/g, ">")
-                .split(">")
-                .map(v => v.trim())
-                .filter(Boolean);
+            paths = parsePaths(value);
+            nextIsNewPath = false;
             renderLevels();
         };
 
-        container.addEventListener('click', (e) => {
-            if (e.target.tagName === 'I' && e.target.hasAttribute('data-index')) {
-                levels.splice(e.target.dataset.index, 1);
+        container.addEventListener('click', event => {
+            const remove = event.target.closest(
+                'button[data-path-index][data-level-index]'
+            );
+
+            if (remove) {
+                const pathIndex = Number(remove.dataset.pathIndex);
+                const levelIndex = Number(remove.dataset.levelIndex);
+
+                paths[pathIndex].splice(levelIndex, 1);
+                markStorageEdited();
+                paths = paths.filter(path => path.length > 0);
+
                 renderLevels();
             } else {
                 textInput.focus();
             }
         });
 
-        textInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ',') {
-                e.preventDefault();
-                const val = this.value.trim().replace(/,$/, ''); 
-                if (val) {
-                    levels.push(val);
-                    this.value = '';
-                    renderLevels();
+        textInput.addEventListener('keydown', function(event) {
+            if (['Enter', ',', ';'].includes(event.key)) {
+                event.preventDefault();
+
+                if (this.value.trim()) {
+                    markStorageEdited();
                 }
-            } else if (e.key === 'Backspace' && this.value === '' && levels.length > 0) {
-                levels.pop();
+                appendInput(this.value);
+                this.value = '';
+
+                if (event.key === ';') {
+                    nextIsNewPath = true;
+                }
+
+                renderLevels();
+
+            } else if (
+                event.key === 'Backspace' &&
+                this.value === ''
+            ) {
+                if (nextIsNewPath) {
+                    nextIsNewPath = false;
+                } else if (paths.length > 0) {
+                    paths[paths.length - 1].pop();
+                    markStorageEdited();
+                    paths = paths.filter(path => path.length > 0);
+                }
+
                 renderLevels();
             }
         });
+
+        renderLevels();
     }
 
     /* --- 5. BIOBANK DISTRIBUTION --- */

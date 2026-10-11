@@ -1524,6 +1524,9 @@ def sample_create_view(request):
                 created_samples = []
 
                 with transaction.atomic():
+                    from core.services.storage_writer_lock import acquire_storage_writer_lock
+                    acquire_storage_writer_lock()
+
                     for i, (biobank, qty) in enumerate(
                         distribution_rows
                     ):
@@ -2412,7 +2415,32 @@ def _sample_edit_biological_fields(
     )
 
 
+def _atomic_sample_edit_post(view_function):
+    """
+    Make the complete Sample edit POST database-atomic.
+
+    GET remains outside this transaction. This protects metadata,
+    relations, and storage reconciliation as one database operation.
+
+    Filesystem side effects still require separate handling.
+    """
+    from functools import wraps
+
+    @wraps(view_function)
+    def wrapped(request, *args, **kwargs):
+        if request.method == "POST":
+            with transaction.atomic():
+                from core.services.storage_writer_lock import acquire_storage_writer_lock
+                acquire_storage_writer_lock()
+                return view_function(request, *args, **kwargs)
+
+        return view_function(request, *args, **kwargs)
+
+    return wrapped
+
+
 @login_required
+@_atomic_sample_edit_post
 def sample_edit_view(request, sample_id):
     base_sample = get_object_or_404(Sample, id=sample_id)
 
@@ -2510,6 +2538,34 @@ def sample_edit_view(request, sample_id):
         form_valid = form.is_valid()
         origin_valid = origin_form.is_valid()
 
+        from core.services.storage_locations import split_location_text
+        from core.services.storage_assignment_reconcile import (
+            reconcile_sample_storage_from_text,
+        )
+
+        storage_edit_requested = (
+            request.POST.get("storage_edit_intent") == "1"
+        )
+
+        if storage_edit_requested and form_valid:
+            original = request.POST.get("storage_initial_paths")
+            current = "; ".join(
+                get_all_storage_paths(
+                    Sample.objects.get(pk=base_sample.pk)
+                )
+            )
+
+            if original is None or (
+                split_location_text(original)
+                != split_location_text(current)
+            ):
+                form.add_error(
+                    "storage_location",
+                    "Storage changed while you were editing. "
+                    "Reload this Sample before moving it."
+                )
+                form_valid = False
+
         if keyword_pairs_error:
             form.add_error(
                 None,
@@ -2522,6 +2578,15 @@ def sample_edit_view(request, sample_id):
             and not keyword_pairs_error
         ):
             identity_before = _safe_sample_text(getattr(base_sample, "organism_name", ""))
+            persisted_storage_text = (
+                Sample.objects.values_list(
+                    "storage_location", flat=True
+                ).get(pk=base_sample.pk)
+            )
+
+            form.instance.storage_location = persisted_storage_text
+            base_sample.storage_location = persisted_storage_text
+
             real_sample = form.save()
 
             save_sample_origin(
@@ -2567,22 +2632,27 @@ def sample_edit_view(request, sample_id):
                     keyword_value
                 )
 
-            storage_location = form.cleaned_data.get("storage_location", "")
+            if storage_edit_requested:
+                requested_path = (
+                    form.cleaned_data.get("storage_location") or ""
+                )
+                current_path = "; ".join(
+                    get_all_storage_paths(base_sample)
+                )
 
-            if storage_location:
-                assign_sample_storage_from_text(
-                    sample=base_sample,
-                    storage_location_text=storage_location,
-                    replace_existing=True,
-                    sync_legacy_field=True,
-                )
-            else:
-                assign_sample_storage_from_text(
-                    sample=base_sample,
-                    storage_location_text="",
-                    replace_existing=True,
-                    sync_legacy_field=True,
-                )
+                if (
+                    split_location_text(requested_path)
+                    != split_location_text(current_path)
+                ):
+                    reconcile_sample_storage_from_text(
+                        sample=base_sample,
+                        storage_location_text=requested_path,
+                        actor=request.user,
+                        reason=(
+                            "Sample storage locations changed "
+                            "through the Sample editor."
+                        ),
+                    )
 
             remove_file_ids = request.POST.getlist("remove_file_ids")
             removed_count = 0

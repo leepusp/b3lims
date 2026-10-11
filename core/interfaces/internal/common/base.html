@@ -60,6 +60,12 @@
             <i class="bi bi-droplet"></i>
             <span class="nav-label">Samples</span>
         </a>
+
+        <a href="{% url 'storage_workspace' %}"
+           class="nav-link {% if '/storage/' in request.path %}active{% endif %}">
+            <i class="bi bi-box-seam"></i>
+            <span class="nav-label">Storage</span>
+        </a>
         <a href="{% url 'shipments' %}"
            class="nav-link {% if 'shipments' in request.path %}active{% endif %}">
             <i class="bi bi-truck"></i>

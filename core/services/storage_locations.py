@@ -1,5 +1,6 @@
 """Physical Sample storage hierarchy and compatibility helpers."""
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 
@@ -176,6 +177,9 @@ def assign_sample_storage_from_text(
     assignments does not delete shared StorageLocation records.
     """
 
+    from core.services.storage_writer_lock import acquire_storage_writer_lock
+    acquire_storage_writer_lock()
+
     from core.models.samples.storage import (
         SampleStorageAssignment,
     )
@@ -194,7 +198,74 @@ def assign_sample_storage_from_text(
         primary_levels
     )
 
+    # Repeated initialization of identical active paths must not
+    # destroy physical positions or assignment metadata.
     if replace_existing:
+        existing_assignments = list(
+            SampleStorageAssignment.objects
+            .select_for_update()
+            .select_related("location")
+            .filter(sample=sample)
+            .order_by("rank", "pk")
+        )
+
+        requested_paths = [
+            _canonical_path(levels)
+            for levels in paths
+        ]
+
+        if (
+            existing_assignments
+            and all(
+                assignment.status == "active"
+                for assignment in existing_assignments
+            )
+            and [
+                assignment.location.full_path
+                for assignment in existing_assignments
+            ] == requested_paths
+        ):
+            existing_levels = list(
+                sample.storage_levels
+                .order_by("level_index", "pk")
+                .values_list("name", flat=True)
+            )
+
+            if existing_levels != primary_levels:
+                _sync_legacy_storage_levels(
+                    sample,
+                    primary_levels,
+                )
+
+            if (
+                sync_legacy_field
+                and sample.storage_location != primary_path
+            ):
+                sample.storage_location = primary_path
+                sample.save(
+                    update_fields=["storage_location"]
+                )
+
+            return primary_levels
+
+    if replace_existing:
+        # Legacy initialization must not destroy populated physical
+        # assignments. Existing physical changes require an audited
+        # movement or an explicit lifecycle operation.
+        if any(
+            assignment.status != "active"
+            or bool((assignment.position or "").strip())
+            or bool((assignment.container_type or "").strip())
+            or assignment.quantity is not None
+            or bool((assignment.quantity_unit or "").strip())
+            for assignment in existing_assignments
+        ):
+            raise ValidationError(
+                "Existing physical assignments cannot be replaced "
+                "or cleared through legacy initialization. "
+                "Use an audited movement."
+            )
+
         (
             SampleStorageAssignment.objects
             .filter(
@@ -410,4 +481,338 @@ def build_storage_path_text(
 
     return "; ".join(
         paths
+    )
+
+
+
+def _validated_location_name(value):
+    name = _safe_text(
+        value
+    )
+
+    if not name:
+        raise ValidationError(
+            "Storage location name is required."
+        )
+
+    if len(name) > 255:
+        raise ValidationError(
+            "Storage location name is too long."
+        )
+
+    return name
+
+
+def _validated_location_type(value):
+    from core.models.samples.storage import (
+        StorageLocation,
+    )
+
+    raw = _safe_text(
+        value
+    ) or "other"
+
+    valid = {
+        choice[0]
+        for choice
+        in StorageLocation.LOCATION_TYPE_CHOICES
+    }
+
+    if raw not in valid:
+        raise ValidationError(
+            "Invalid storage location type."
+        )
+
+    return raw
+
+
+def _validated_rank(value):
+    try:
+        rank = int(
+            value
+        )
+    except (
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise ValidationError(
+            "Storage rank must be an integer."
+        ) from exc
+
+    if rank < 1:
+        raise ValidationError(
+            "Storage rank must be at least 1."
+        )
+
+    return rank
+
+
+def _ensure_unique_location_name(
+    *,
+    name,
+    parent,
+    exclude_pk=None,
+):
+    from core.models.samples.storage import (
+        StorageLocation,
+    )
+
+    query = (
+        StorageLocation.objects
+        .filter(
+            parent=parent,
+            name__iexact=name,
+        )
+    )
+
+    if exclude_pk is not None:
+        query = query.exclude(
+            pk=exclude_pk
+        )
+
+    if query.exists():
+        raise ValidationError(
+            (
+                "A storage location with this name "
+                "already exists under the same parent."
+            )
+        )
+
+
+@transaction.atomic
+def create_storage_location(
+    *,
+    name,
+    parent=None,
+    location_type="other",
+    rank=1,
+    notes="",
+):
+    """
+    Create one explicitly managed physical storage node.
+    """
+
+    from core.services.storage_writer_lock import acquire_storage_writer_lock
+    acquire_storage_writer_lock()
+
+    from core.models.samples.storage import (
+        StorageLocation,
+    )
+
+    name = _validated_location_name(
+        name
+    )
+
+    location_type = (
+        _validated_location_type(
+            location_type
+        )
+    )
+
+    rank = _validated_rank(
+        rank
+    )
+
+    if (
+        parent is not None
+        and not parent.is_active
+    ):
+        raise ValidationError(
+            (
+                "A child location cannot be created "
+                "under an inactive parent."
+            )
+        )
+
+    _ensure_unique_location_name(
+        name=name,
+        parent=parent,
+    )
+
+    return StorageLocation.objects.create(
+        name=name,
+        parent=parent,
+        location_type=location_type,
+        rank=rank,
+        notes=_safe_text(
+            notes
+        ),
+        is_active=True,
+    )
+
+
+@transaction.atomic
+def update_storage_location(
+    location,
+    *,
+    name,
+    location_type,
+    rank,
+    notes="",
+):
+    """
+    Update metadata without silently reparenting the hierarchy.
+    """
+
+    from core.services.storage_writer_lock import acquire_storage_writer_lock
+    acquire_storage_writer_lock()
+
+    name = _validated_location_name(
+        name
+    )
+
+    location_type = (
+        _validated_location_type(
+            location_type
+        )
+    )
+
+    rank = _validated_rank(
+        rank
+    )
+
+    _ensure_unique_location_name(
+        name=name,
+        parent=location.parent,
+        exclude_pk=location.pk,
+    )
+
+    location.name = name
+    location.location_type = (
+        location_type
+    )
+    location.rank = rank
+    location.notes = _safe_text(
+        notes
+    )
+
+    location.save(
+        update_fields=[
+            "name",
+            "location_type",
+            "rank",
+            "notes",
+            "updated_at",
+        ]
+    )
+
+    return location
+
+
+@transaction.atomic
+def set_storage_location_active(
+    location,
+    *,
+    is_active,
+):
+    """
+    Activate/deactivate an infrastructure node safely.
+
+    A location that still contains active Samples or active child
+    locations cannot be deactivated.
+    """
+
+    from core.services.storage_writer_lock import acquire_storage_writer_lock
+    acquire_storage_writer_lock()
+
+    desired = bool(
+        is_active
+    )
+
+    if desired == location.is_active:
+        return location
+
+    if desired:
+        if (
+            location.parent is not None
+            and not location.parent.is_active
+        ):
+            raise ValidationError(
+                (
+                    "The parent location must be active "
+                    "before this location can be reactivated."
+                )
+            )
+
+    else:
+        if location.children.filter(
+            is_active=True
+        ).exists():
+            raise ValidationError(
+                (
+                    "Deactivate active child locations "
+                    "before deactivating this location."
+                )
+            )
+
+        if location.sample_assignments.filter(
+            status="active"
+        ).exists():
+            raise ValidationError(
+                (
+                    "This location still contains active "
+                    "Sample assignments."
+                )
+            )
+
+    location.is_active = desired
+
+    location.save(
+        update_fields=[
+            "is_active",
+            "updated_at",
+        ]
+    )
+
+    return location
+
+
+@transaction.atomic
+def assign_sample_to_storage_location(
+    *,
+    sample,
+    location,
+):
+    """
+    Set one existing active location as the Sample's canonical
+    physical location.
+
+    V1 intentionally replaces the current active assignment set.
+    The legacy Sample.storage_location and SampleStorageLevel
+    representations remain synchronized by the compatibility service.
+    """
+
+    from core.services.storage_writer_lock import acquire_storage_writer_lock
+    acquire_storage_writer_lock()
+
+    if not location.is_active:
+        raise ValidationError(
+            (
+                "Samples cannot be assigned "
+                "to an inactive storage location."
+            )
+        )
+
+    assign_sample_storage_from_text(
+        sample=sample,
+        storage_location_text=(
+            location.full_path
+        ),
+        replace_existing=True,
+        sync_legacy_field=True,
+    )
+
+    return (
+        sample.storage_assignments
+        .select_related(
+            "location"
+        )
+        .filter(
+            status="active"
+        )
+        .order_by(
+            "rank",
+            "id",
+        )
+        .first()
     )
