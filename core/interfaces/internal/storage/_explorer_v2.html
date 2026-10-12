@@ -1,0 +1,147 @@
+<section class="b3-storage-explorer mb-4"
+         id="storage-location-explorer"
+         aria-label="Interactive storage explorer">
+
+    <div class="b3-storage-explorer-heading">
+        <div>
+            <div class="text-uppercase small text-muted fw-bold">
+                Inventory explorer
+            </div>
+            <h3 class="h5 fw-bold mb-1">
+                <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                Explore physical storage
+            </h3>
+            <p class="small text-muted mb-0">
+                Find locations and inspect assigned Samples.
+                Transfers remain subject to confirmation.
+            </p>
+        </div>
+        <span class="badge bg-light text-dark border">
+            Read-only explorer
+        </span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-4">
+            <div class="b3-storage-panel h-100">
+                <label for="storage-explorer-search"
+                       class="form-label small fw-semibold">
+                    Search locations
+                </label>
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="search"
+                           id="storage-explorer-search"
+                           class="form-control"
+                           placeholder="Name, type or path..."
+                           autocomplete="off">
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-semibold">Location tree</span>
+                    <span class="small text-muted"
+                          id="storage-explorer-count"></span>
+                </div>
+
+                <div id="storage-explorer-tree"
+                     class="b3-storage-tree"
+                     role="region"
+                     aria-label="Storage locations"></div>
+
+                <p class="small text-muted mt-3 mb-0">
+                    Select a location to inspect its inventory.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="b3-storage-panel h-100">
+                <h4 class="h6 fw-bold mb-3">
+                    <i class="bi bi-box-seam me-2"></i>
+                    Location details
+                </h4>
+
+                <div id="storage-explorer-details"
+                     aria-live="polite">
+                    <p class="text-muted small">
+                        Select a location from the tree.
+                    </p>
+                </div>
+                <hr class="my-3">
+                <div class="d-flex justify-content-between
+                            align-items-center mb-2">
+                    <h5 class="small fw-bold mb-0">
+                        Recorded positions
+                    </h5>
+                    <span id="storage-explorer-position-count"
+                          class="small text-muted">0</span>
+                </div>
+
+                <div id="storage-explorer-positions"
+                     class="b3-storage-position-list"
+                     aria-label="Recorded positions"></div>
+
+                <p class="small text-muted mt-2 mb-0">
+                    Only recorded positions are displayed.
+                    Free capacity is not inferred.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="b3-storage-panel h-100">
+                <div class="d-flex justify-content-between
+                            align-items-center mb-3">
+                    <h4 class="h6 fw-bold mb-0">
+                        <i class="bi bi-collection me-2"></i>
+                        Assigned Samples
+                    </h4>
+                    <span id="storage-explorer-assignment-count"
+                          class="badge bg-light text-dark border">
+                        0
+                    </span>
+                </div>
+
+                <button type="button"
+                        id="storage-explorer-clear-position"
+                        class="btn btn-sm btn-outline-secondary mb-2"
+                        hidden>
+                    Show all positions
+                </button>
+
+                <div id="storage-explorer-assignments"
+                     class="b3-storage-assignment-list"
+                     aria-live="polite">
+                    <p class="text-muted small">
+                        Choose a location to view its direct assignments.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Data is taken exclusively from the already authorized view context. #}
+<template id="storage-explorer-data">
+    {% for location in storage_locations %}
+    <span data-location-id="{{ location.pk }}"
+          data-parent-id="{{ location.parent_id|default_if_none:'' }}"
+          data-location-name="{{ location.name }}"
+          data-location-type="{{ location.get_location_type_display }}"
+          data-location-kind="{{ location.location_type }}"
+          data-location-rank="{{ location.rank }}"
+          data-location-path="{{ location.full_path }}"
+          data-location-active="{% if location.is_active %}1{% else %}0{% endif %}"></span>
+    {% endfor %}
+</template>
+
+<template id="storage-explorer-assignment-data">
+    {% for assignment in storage_assignments %}
+    <span data-assignment-location="{{ assignment.location_id }}"
+          data-assignment-sample="{{ assignment.sample.sample_id }}"
+          data-assignment-position="{{ assignment.position|default:'' }}"
+          data-assignment-status="{{ assignment.status }}"></span>
+    {% endfor %}
+</template>

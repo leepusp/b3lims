@@ -1,0 +1,76 @@
+<section class="mb-4" id="storage-spatial-viewer">
+    <details id="storage-3d-details" class="card shadow-sm border-0">
+        <summary class="card-header bg-white p-3"
+                 style="cursor:pointer">
+            <strong>
+                <i class="bi bi-box me-2 text-primary"></i>
+                Spatial Storage Viewer · 3D
+            </strong>
+            <span class="badge bg-light text-dark border ms-2">
+                Read only
+            </span>
+        </summary>
+
+        <div class="card-body">
+            <p class="small text-muted">
+                Explore the authorized storage hierarchy in 3D.
+                Objects are schematic; physical dimensions and
+                available positions are not inferred.
+            </p>
+
+            <div class="b3-storage-3d-stage">
+                <canvas id="storage-3d-canvas"
+                        aria-hidden="true"></canvas>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center
+                        gap-2 mt-3">
+                <button type="button"
+                        id="storage-3d-back"
+                        class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+
+                <button type="button"
+                        id="storage-3d-home"
+                        class="btn btn-sm btn-outline-secondary">
+                    Overview
+                </button>
+
+                <span id="storage-3d-path"
+                      class="small text-muted ms-auto"
+                      aria-live="polite">
+                    Overview
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 mt-3">
+                <button id="storage-3d-prev"
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary">
+                    Previous
+                </button>
+
+                <span id="storage-3d-page"
+                      class="small text-muted"></span>
+
+                <button id="storage-3d-next"
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary">
+                    Next
+                </button>
+            </div>
+
+            <div id="storage-3d-objects"
+                 class="b3-storage-3d-objects mt-3"
+                 aria-label="Visible storage objects">
+            </div>
+
+            <p id="storage-3d-status"
+               class="small text-muted mt-3 mb-0"
+               role="status">
+                Open the viewer to initialize the 3D scene.
+            </p>
+        </div>
+    </details>
+</section>

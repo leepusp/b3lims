@@ -26,3 +26,13 @@ artifacts. The Inter font directory includes its OFL license text.
 
 These files are part of the standalone distribution and must remain with
 the vendored assets when the application is packaged or redistributed.
+
+
+### Three.js (0.182.0)
+
+- Project: https://threejs.org/
+- Source: https://github.com/mrdoob/three.js
+- License: MIT
+- Local license: `three/0.182.0/LICENSE`
+- Distribution: vendored JavaScript modules for the
+  read-only B3 LIMS Storage 3D viewer.
