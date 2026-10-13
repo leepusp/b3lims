@@ -202,3 +202,50 @@
         height: 320px;
     }
 }
+
+/* B3 LIMS Storage Cutaway v3 — isolated styles; does not alter legacy forms. */
+.b3-cutaway{overflow:hidden;border:1px solid #d9e3e9;border-radius:13px;background:#fff}
+.b3-cutaway-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.1rem 1.25rem;border-bottom:1px solid #e2e8ed}
+.b3-cutaway-kicker,.b3-cutaway-side-label{font:600 .67rem ui-monospace,monospace;letter-spacing:.13em;color:#527787;margin-bottom:.35rem}
+.b3-cutaway-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;padding:.7rem 1.25rem;border-bottom:1px solid #e2e8ed}
+.b3-cutaway-demo-notice{padding:.55rem 1.25rem;background:#fff2d4;color:#744b09;font-weight:600;font-size:.78rem;border-bottom:1px solid #e8d3a6}
+.b3-cutaway-demo-notice[hidden]{display:none}
+.b3-cutaway-layout{display:grid;grid-template-columns:minmax(205px,270px) minmax(0,1fr);min-height:510px}
+.b3-cutaway-side{display:flex;flex-direction:column;gap:.75rem;padding:1rem;border-right:1px solid #e2e8ed;min-width:0}
+#storage-3d-breadcrumbs{display:flex;flex-wrap:wrap;gap:.3rem}
+#storage-3d-breadcrumbs button{border:0;background:transparent;text-align:left;color:#166a7b;padding:.2rem .1rem;font-size:.76rem}
+#storage-3d-breadcrumbs button:not(:last-child):after{content:' ›';color:#8c9ea6}
+.b3-cutaway-objects{display:flex;flex-direction:column;gap:.35rem;max-height:350px;overflow-y:auto}
+.b3-cutaway-objects button{text-align:left;background:#f7f9fa;color:#263c47;border:1px solid #dbe5e9;border-radius:7px;padding:.6rem .7rem;font-size:.8rem}
+.b3-cutaway-objects button:hover,.b3-cutaway-objects button:focus-visible{border-color:#2a8393;background:#e6f2f4}
+.b3-cutaway-main{min-width:0;background:#e9eff2}
+.b3-cutaway-stage{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 24%,#f7fafb 0%,#d5e0e6 75%)}
+#storage-3d-canvas{display:block;width:100%;height:520px;cursor:grab;touch-action:none}
+#storage-3d-canvas:active{cursor:grabbing}
+.b3-cutaway-hud{position:absolute;left:12px;top:12px;display:flex;gap:.4rem;flex-wrap:wrap}
+.b3-cutaway-hud .btn{box-shadow:0 1px 6px #52697730}
+.b3-cutaway-stage-footer{position:absolute;bottom:10px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);background:#ffffffdc;border-radius:5px;padding:.25rem .5rem;color:#52646d;font-size:.72rem}
+.b3-cutaway-status{padding:.55rem 1rem;color:#405662;font-size:.8rem;min-height:2.5rem}
+.b3-cutaway-footer{font-size:.75rem;padding:.6rem 1.1rem;border-top:1px solid #e2e8ed;color:#697d88}
+@media(max-width:850px){.b3-cutaway-layout{grid-template-columns:1fr}.b3-cutaway-side{border-right:0;border-bottom:1px solid #e2e8ed}#storage-3d-canvas{height:390px}.b3-cutaway-objects{flex-direction:row;flex-wrap:wrap;max-height:180px}}
+@media(prefers-reduced-motion:reduce){#storage-3d-canvas{scroll-behavior:auto}}
+
+/* B3 LIMS Storage Designer v4 — one visual workspace for browse, build and cutaway. */
+.b3-storage-designer .b3-cutaway-layout{grid-template-columns:minmax(290px,340px) minmax(0,1fr);min-height:490px}
+.b3-storage-designer .b3-cutaway-side{gap:.8rem}
+.b3-designer-tabs{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.b3-designer-tabs .btn{width:100%}
+.b3-designer-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap}
+#storage-designer-build-panel[hidden],#storage-designer-browse-panel[hidden]{display:none!important}
+#storage-designer-builder-target>.card{border:0!important;box-shadow:none!important;margin:0!important}
+#storage-designer-builder-target .card-header{padding:.65rem .2rem;background:transparent!important}
+#storage-designer-builder-target .card-body{padding:.8rem .1rem}
+#storage-designer-builder-target .form-control,#storage-designer-builder-target .form-select{max-width:100%}
+#storage-designer-builder-target .row{margin-left:0;margin-right:0}
+#storage-designer-builder-target .row>[class*="col-"]{padding-left:.15rem;padding-right:.15rem}
+.b3-storage-designer #storage-3d-canvas{height:520px}
+.b3-designer-inventory-details{border-top:1px solid #e2e8ed}
+.b3-designer-inventory-details>summary{cursor:pointer;list-style:revert;padding:.9rem 1.25rem;font-weight:600;color:#245b69;background:#f8fafb}
+.b3-designer-inventory-body{padding:1rem}
+.b3-designer-inventory-body>#storage-explorer{margin:0!important}
+@media(max-width:920px){.b3-storage-designer .b3-cutaway-layout{grid-template-columns:1fr}.b3-storage-designer .b3-cutaway-side{border-right:0;border-bottom:1px solid #e2e8ed}.b3-storage-designer #storage-3d-canvas{height:420px}}
