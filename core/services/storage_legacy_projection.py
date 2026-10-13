@@ -21,7 +21,12 @@ def build_legacy_storage_projection(records):
         raw = "\\0".join(parts).encode("utf-8")
         return "legacy:" + sha256(raw).hexdigest()[:24]
 
-    for sample_identifier, raw_path in records:
+    for record in records:
+        if len(record) == 3:
+            sample_pk, sample_identifier, raw_path = record
+        else:
+            sample_identifier, raw_path = record
+            sample_pk = None
         parts = [
             part.strip()
             for part in str(raw_path or "").split(">")
@@ -79,6 +84,7 @@ def build_legacy_storage_projection(records):
         })
 
         samples.append({
+            "id": str(sample_pk) if sample_pk is not None else None,
             "box": box_id,
             "code": str(sample_identifier),
             "position": position,

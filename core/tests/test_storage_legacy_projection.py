@@ -71,3 +71,38 @@ class StorageHistoricalFrontendContractTests(SimpleTestCase):
         self.assertIn('"b3-storage-legacy-selected"', viewer)
         self.assertIn('"b3-storage-legacy-selected"', designer)
         self.assertIn('selectedId = null;', designer)
+
+
+class StorageLegacyIdentityV5Tests(SimpleTestCase):
+    def test_historical_sample_keeps_database_identity(self):
+        projection = build_legacy_storage_projection([
+            (42, "SAMPLE-42", "Freezer Regina > Caixa 1.1 > B5"),
+        ])
+
+        sample = projection["samples"][0]
+
+        self.assertEqual(sample["id"], "42")
+        self.assertEqual(sample["code"], "SAMPLE-42")
+        self.assertEqual(sample["position"], "B5")
+        self.assertTrue(sample["legacy"])
+
+    def test_equal_codes_do_not_replace_distinct_samples(self):
+        projection = build_legacy_storage_projection([
+            (42, "SAME-CODE", "Freezer Regina > Caixa 1.1 > B5"),
+            (43, "SAME-CODE", "Freezer Regina > Caixa 1.1 > B6"),
+        ])
+
+        samples = projection["samples"]
+
+        self.assertEqual(len(samples), 2)
+        self.assertEqual(
+            {sample["id"] for sample in samples},
+            {"42", "43"},
+        )
+
+    def test_legacy_contract_supports_previous_records(self):
+        projection = build_legacy_storage_projection([
+            ("SAMPLE-OLD", "Freezer Chuck > Caixa 1.2 > B5"),
+        ])
+
+        self.assertIsNone(projection["samples"][0]["id"])

@@ -249,3 +249,24 @@
 .b3-designer-inventory-body{padding:1rem}
 .b3-designer-inventory-body>#storage-explorer{margin:0!important}
 @media(max-width:920px){.b3-storage-designer .b3-cutaway-layout{grid-template-columns:1fr}.b3-storage-designer .b3-cutaway-side{border-right:0;border-bottom:1px solid #e2e8ed}.b3-storage-designer #storage-3d-canvas{height:420px}}
+
+/* V5 integrated spatial map */
+.b3-v5-controls{display:flex;gap:.4rem;padding:.5rem;border-bottom:1px solid #dae3e8;flex-wrap:wrap}
+.b3-v5-views{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,330px)}
+.b3-v5-three{min-width:0}
+.b3-v5-two{padding:1rem;border-left:1px solid #dae3e8;min-width:0;overflow:auto}
+.b3-v5-views[data-view="3d"]{grid-template-columns:1fr}
+.b3-v5-views[data-view="3d"] .b3-v5-two{display:none}
+.b3-v5-views[data-view="2d"]{grid-template-columns:1fr}
+.b3-v5-views[data-view="2d"] .b3-v5-three{display:none}
+.b3-v5-map{display:grid;gap:3px;margin:.6rem 0}
+.b3-v5-map button{min-width:27px;min-height:27px;padding:2px;font-size:11px;border:1px solid #bfd0d8;border-radius:3px}
+.b3-v5-map button[disabled]{opacity:.6}
+.b3-v5-map button.recorded{background:#d4f1f3;color:#175e6a;opacity:1}
+.b3-v5-map button.selected{outline:2px solid #eda92b;background:#ffefd1}
+.b3-v5-samples{display:flex;flex-wrap:wrap;gap:.35rem}
+.b3-v5-detail{border-top:1px solid #dae3e8;margin-top:.8rem;padding-top:.8rem}
+@media(max-width:1150px){
+  .b3-v5-views[data-view="split"]{grid-template-columns:1fr}
+  .b3-v5-two{border-left:0;border-top:1px solid #dae3e8}
+}

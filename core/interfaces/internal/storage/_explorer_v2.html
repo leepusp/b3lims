@@ -141,6 +141,9 @@
     {% for assignment in storage_assignments %}
     <span data-assignment-location="{{ assignment.location_id }}"
           data-assignment-sample="{{ assignment.sample.sample_id }}"
+          data-assignment-id="{{ assignment.sample.pk }}"
+          data-assignment-url="{% url 'sample_detail' assignment.sample.pk %}"
+          data-assignment-organism="{{ assignment.sample.organism_name|default:'' }}"
           data-assignment-position="{{ assignment.position|default:'' }}"
           data-assignment-status="{{ assignment.status }}"></span>
     {% endfor %}

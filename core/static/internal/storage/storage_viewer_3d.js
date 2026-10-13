@@ -38,6 +38,9 @@
         samples: Array.from(source.content.querySelectorAll("[data-assignment-location]"), element => ({
             box: element.dataset.assignmentLocation,
             code: element.dataset.assignmentSample || "Sample",
+            id: element.dataset.assignmentId || null,
+            url: element.dataset.assignmentUrl || "",
+            organism: element.dataset.assignmentOrganism || "",
             position: element.dataset.assignmentPosition || "",
             status: element.dataset.assignmentStatus || "active"
         }))
@@ -88,6 +91,10 @@
 
     let mode = "live";
     let selected = null;
+    let pickedSample = null;
+    const sampleKey = s => s.id != null
+        ? String(s.id)
+        : `demo:${s.box}:${s.position}:${s.code}`;
     let model, map, children;
     let THREE, renderer, scene, camera, world, raycaster;
     let pickables = [], animations = [], frame = 0;
@@ -106,6 +113,27 @@
     function loadModel() {
         model = mode === "demo" ? demo : live;
         map = new Map(model.nodes.map(node => [node.id, node]));
+        if (mode === "live") for (const sample of model.samples) {
+            const location = map.get(sample.box);
+            let parent = location;
+
+            while (parent && semantic(parent.kind) !== "box") {
+                parent = parent.parent
+                    ? map.get(parent.parent)
+                    : null;
+            }
+
+            if (parent) {
+                if (
+                    !sample.position &&
+                    location &&
+                    /^([A-Z])([1-9][0-9]?)$/i.test(location.name)
+                ) {
+                    sample.position = location.name;
+                }
+                sample.box = parent.id;
+            }
+        }
         children = new Map();
         for (const node of model.nodes) {
             const parent = node.parent && map.has(node.parent) ? node.parent : null;
@@ -117,6 +145,7 @@
             group.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, undefined, {numeric: true}));
         }
         selected = null;
+        pickedSample = null;
         realButton.className = `btn btn-sm ${mode === "live" ? "btn-primary" : "btn-outline-secondary"}`;
         demoButton.className = `btn btn-sm ${mode === "demo" ? "btn-primary" : "btn-outline-secondary"}`;
         realButton.setAttribute("aria-pressed", String(mode === "live"));
@@ -143,6 +172,7 @@
 
     function select(id, emit = true) {
         selected = id && map.has(String(id)) ? String(id) : null;
+        pickedSample = null;
         if (emit && mode === "live") {
             const node = selected ? map.get(selected) : null;
 
@@ -260,7 +290,7 @@
             // Only place tubes whose recorded coordinates are interpretable.
             // Unpositioned assignments are never assigned fictional coordinates.
             const positions = assignments.flatMap(sample => {
-                const match = /^([A-Z])(\d{1,2})$/i.exec(sample.position.trim());
+                const match = /^([A-Z])(\d{1,2})$/i.exec(String(sample.position || "").trim());
                 if (!match) return [];
                 const row = match[1].toUpperCase().charCodeAt(0) - 65;
                 const col = Number(match[2]) - 1;
@@ -271,7 +301,7 @@
             const maxCol = Math.max(...positions.map(item => item.col), demoSlots ? 8 : 0);
             const cols = maxCol + 1, rows = maxRow + 1;
             const scale = .68 / Math.max(cols, rows, 1);
-            const tubeMaterial = new THREE.MeshStandardMaterial({color: 0x2c9fae, metalness: 0.15, roughness: .35});
+            const tubeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff, metalness: 0.15, roughness: .35});
             const instanced = new THREE.InstancedMesh(tubeGeometry, tubeMaterial, positions.length);
             const dummy = new THREE.Object3D();
             for (let i = 0; i < positions.length; i++) {
@@ -282,7 +312,27 @@
                 instanced.setMatrixAt(i, dummy.matrix);
             }
             if (positions.length) {
+                const normal = new THREE.Color(0x2c9fae);
+                const highlight = new THREE.Color(0xf0af42);
+
+                positions.forEach((s, i) =>
+                    instanced.setColorAt(
+                        i,
+                        sampleKey(s) === pickedSample
+                            ? highlight
+                            : normal
+                    )
+                );
+
+                instanced.userData.samples = positions;
+                pickables.push(instanced);
+
                 instanced.instanceMatrix.needsUpdate = true;
+
+                if (instanced.instanceColor) {
+                    instanced.instanceColor.needsUpdate = true;
+                }
+
                 b.add(instanced);
             } else {
                 tubeGeometry.dispose();
@@ -402,9 +452,48 @@
         }
     }
 
+    function publishBox() {
+        const box = ancestry(selected).findLast(
+            node => semantic(node.kind) === "box"
+        );
+
+        document.dispatchEvent(
+            new CustomEvent("b3-spatial-v5-box", {
+                detail: {
+                    mode,
+                    box: box ? {
+                        id: box.id,
+                        name: box.name,
+                        path: box.path
+                    } : null,
+                    samples: box
+                        ? model.samples
+                            .filter(s =>
+                                s.box === box.id &&
+                                s.status === "active"
+                            )
+                            .map(s => ({
+                                ...s,
+                                key: sampleKey(s)
+                            }))
+                        : [],
+                    picked: pickedSample
+                }
+            })
+        );
+    }
+
+    function pickSample(sample) {
+        if (!sample) return;
+        pickedSample = sampleKey(sample);
+        sceneContent();
+        publishBox();
+    }
+
     function update() {
         updateControls();
         sceneContent();
+        publishBox();
     }
 
     function resize() {
@@ -478,10 +567,29 @@
         ghostButton.setAttribute("aria-pressed", String(ghost));
         sceneContent();
     });
+    document.addEventListener("b3-spatial-v5-pick", event => {
+        const {
+            mode: requestedMode,
+            box,
+            key
+        } = event.detail || {};
+
+        if (mode !== requestedMode || box !== selected) {
+            return;
+        }
+
+        const sample = model.samples.find(
+            s => s.box === box && sampleKey(s) === key
+        );
+
+        if (sample) pickSample(sample);
+    });
+
     document.addEventListener("b3-storage-location-selected", event => {
         if (mode === "live") {
             const id = event.detail?.id;
             selected = id && map.has(String(id)) ? String(id) : null;
+            pickedSample = null;
             update();
         }
     });
@@ -510,6 +618,18 @@
         );
         raycaster.setFromCamera(coordinate, camera);
         const hits = raycaster.intersectObjects(pickables, false);
+        const tube = hits.find(h =>
+            Number.isInteger(h.instanceId) &&
+            Array.isArray(h.object.userData.samples)
+        );
+
+        if (tube) {
+            pickSample(
+                tube.object.userData.samples[tube.instanceId]
+            );
+            return;
+        }
+
         const hit = hits.find(item => item.object.userData.pickId)?.object.userData.pickId;
         if (hit) select(hit);
         else if (selected) select(map.get(selected)?.parent || null);

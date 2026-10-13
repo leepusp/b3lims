@@ -42,6 +42,13 @@
     </aside>
 
     <div class="b3-cutaway-main">
+      <div class="b3-v5-controls" role="group" aria-label="Spatial views">
+        <button type="button" class="btn btn-sm btn-primary" data-v5-view="split" aria-pressed="true">3D + 2D</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-v5-view="3d" aria-pressed="false">3D</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-v5-view="2d" aria-pressed="false">2D</button>
+      </div>
+      <div id="b3-v5-views" class="b3-v5-views" data-view="split">
+        <div class="b3-v5-three">
       <div class="b3-cutaway-stage">
         <canvas id="storage-3d-canvas" aria-label="Interactive 3D cutaway of storage equipment" role="img"></canvas>
         <div class="b3-cutaway-hud">
@@ -53,6 +60,18 @@
         <div class="b3-cutaway-stage-footer">Drag to orbit · wheel to zoom · click to descend · empty space to go back</div>
       </div>
       <div id="storage-3d-status" class="b3-cutaway-status" role="status">Preparing visualizer…</div>
+      </div>
+
+      <aside class="b3-v5-two" aria-label="2D box positions">
+        <h3 class="h6">2D · Recorded positions</h3>
+        <p id="b3-v5-summary" class="small text-muted" role="status">Select a Box.</p>
+        <div id="b3-v5-map" class="b3-v5-map" aria-label="Positions in this Box"></div>
+        <div id="b3-v5-samples" class="b3-v5-samples"></div>
+        <div id="b3-v5-detail" class="b3-v5-detail small" aria-live="polite">
+          Select a Sample to inspect it.
+        </div>
+      </aside>
+      </div>
     </div>
   </div>
 
@@ -66,4 +85,6 @@
       {% include "internal/storage/_explorer_v2.html" %}
     </div>
   </details>
-</section>\n\n{{ storage_legacy_projection|json_script:"storage-legacy-projection" }}\n
+</section>
+
+{{ storage_legacy_projection|json_script:"storage-legacy-projection" }}

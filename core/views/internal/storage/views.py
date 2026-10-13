@@ -716,12 +716,18 @@ def storage_workspace_view(
         .exclude(
             pk__in=assignments.values("sample_id")
         )
-        .values_list("sample_id", "storage_location")
+        .values_list("pk", "sample_id", "storage_location")
     )
 
     storage_legacy_projection = (
         build_legacy_storage_projection(historical_records)
     )
+    from django.urls import reverse
+    for sample in storage_legacy_projection["samples"]:
+        if sample.get("id") is not None:
+            sample["url"] = reverse(
+                "sample_detail", args=[sample["id"]]
+            )
 
     ctx = base_context(
         request
