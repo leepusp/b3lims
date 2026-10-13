@@ -29,6 +29,8 @@
                                     <option value="">Select assignment</option>
                                     {% for assignment in storage_preview_editable_assignments %}
                                         <option value="{{ assignment.pk }}"
+        data-b3-sample-pk="{{ assignment.sample.pk }}"
+        data-b3-location-path="{{ assignment.location.full_path }}"
                                             {% if storage_preview_assignment_id == assignment.pk %}selected{% endif %}>
                                             {{ assignment.sample.sample_id }}
                                             — {{ assignment.location.full_path }}

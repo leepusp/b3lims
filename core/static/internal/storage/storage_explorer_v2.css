@@ -340,3 +340,32 @@
         padding: .65rem;
     }
 }
+
+/* V7: contextual actions alongside spatial viewing controls */
+.b3-v7-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .15rem;
+    width: 100%;
+}
+
+.b3-v7-actions .btn {
+    white-space: nowrap;
+}
+
+.b3-v7-action-message {
+    font-size: .76rem;
+    color: #617685;
+}
+
+.b3-v7-actions button[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .b3-v7-actions {
+        align-items: stretch;
+    }
+}
