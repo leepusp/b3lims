@@ -18,6 +18,7 @@ Manage the physical hierarchy and Sample occupancy.
 {% include "internal/storage/_viewer_3d.html" %}
 
 
+<div id="b3-ops-source">
 <div class="container-fluid py-3">
 
     <div class="row g-3 mb-4">
@@ -905,6 +906,9 @@ Manage the physical hierarchy and Sample occupancy.
     </div>
 </div>
 
+
+</div><!-- End legacy operations source -->
+
 {% endblock %}
 
 {% block extra_js %}
@@ -913,4 +917,5 @@ Manage the physical hierarchy and Sample occupancy.
         src="{% static 'internal/storage/storage_viewer_3d.js' %}"></script>
 <script defer src="{% static 'internal/storage/storage_designer_v4.js' %}"></script>
 <script type="module" src="{% static 'internal/storage/storage_spatial_v5.js' %}"></script>
+<script defer src="{% static 'internal/storage/storage_operations_v6.js' %}"></script>
 {% endblock %}

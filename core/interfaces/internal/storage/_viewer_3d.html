@@ -42,6 +42,64 @@
     </aside>
 
     <div class="b3-cutaway-main">
+      <nav class="b3-v6-toolbar" aria-label="Storage workspace tools">
+        <span class="b3-v6-toolbar-label">Workspace</span>
+        <button type="button" class="btn btn-sm btn-primary"
+                data-b3-v6-tab="explore" aria-pressed="true">
+          Spatial viewer
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-b3-v6-tab="locations" aria-pressed="false">
+          Locations
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-b3-v6-tab="samples" aria-pressed="false">
+          Samples
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-b3-v6-tab="transfers" aria-pressed="false">
+          Transfers
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-b3-v6-tab="history" aria-pressed="false">
+          History
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-b3-v6-tab="more" aria-pressed="false" hidden>
+          More
+        </button>
+      </nav>
+
+      <div id="b3-v6-ops-host" class="b3-v6-ops-host" hidden>
+        <section data-b3-v6-panel="locations" class="b3-v6-pane" hidden>
+          <h3>Infrastructure &amp; locations</h3>
+          <p class="small text-muted">
+            Registered locations, infrastructure status and management.
+          </p>
+        </section>
+        <section data-b3-v6-panel="samples" class="b3-v6-pane" hidden>
+          <h3>Sample occupancy &amp; assignments</h3>
+          <p class="small text-muted">
+            Inspect assignments and set physical locations using existing permissions.
+          </p>
+        </section>
+        <section data-b3-v6-panel="transfers" class="b3-v6-pane" hidden>
+          <h3>Transfer operations</h3>
+          <p class="small text-muted">
+            Preview and confirm movements through the existing audited workflows.
+          </p>
+        </section>
+        <section data-b3-v6-panel="history" class="b3-v6-pane" hidden>
+          <h3>Movement history</h3>
+          <p class="small text-muted">
+            Recent authorized movements and recorded changes.
+          </p>
+        </section>
+        <section data-b3-v6-panel="more" class="b3-v6-pane" hidden>
+          <h3>Additional storage tools</h3>
+        </section>
+      </div>
+
       <div class="b3-v5-controls" role="group" aria-label="Spatial views">
         <button type="button" class="btn btn-sm btn-primary" data-v5-view="split" aria-pressed="true">3D + 2D</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-v5-view="3d" aria-pressed="false">3D</button>

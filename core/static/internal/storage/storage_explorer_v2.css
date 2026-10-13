@@ -270,3 +270,73 @@
   .b3-v5-views[data-view="split"]{grid-template-columns:1fr}
   .b3-v5-two{border-left:0;border-top:1px solid #dae3e8}
 }
+
+
+/* V6 integrated workspace tools */
+.b3-v6-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    padding: .75rem;
+    border-bottom: 1px solid #dbe4ea;
+    background: #f8fafb;
+}
+
+.b3-v6-toolbar-label {
+    margin-right: .55rem;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #617685;
+}
+
+.b3-v6-ops-host {
+    padding: 1rem;
+    max-height: min(72vh, 850px);
+    overflow-y: auto;
+    background: #f5f8fa;
+}
+
+.b3-v6-pane {
+    min-width: 0;
+}
+
+.b3-v6-pane > h3 {
+    margin: 0 0 .35rem;
+    font-size: 1.05rem;
+    font-weight: 650;
+}
+
+.b3-v6-pane > .card,
+.b3-v6-pane > .row {
+    margin-bottom: 1rem;
+}
+
+.b3-v6-pane .table-responsive {
+    max-width: 100%;
+}
+
+#b3-ops-source[data-integrated="true"] {
+    display: none !important;
+}
+
+.b3-v5-controls[hidden],
+#b3-v5-views[hidden],
+#b3-v6-ops-host[hidden],
+.b3-v6-pane[hidden],
+.b3-v6-toolbar button[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .b3-v6-toolbar {
+        gap: .35rem;
+    }
+
+    .b3-v6-ops-host {
+        max-height: 75vh;
+        padding: .65rem;
+    }
+}
