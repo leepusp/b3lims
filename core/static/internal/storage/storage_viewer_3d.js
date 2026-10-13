@@ -61,6 +61,31 @@
         ]
     };
 
+    // Historical locations are projected only from authorized Samples.
+    // They are visual, not registered infrastructure or movement targets.
+    const historicalData = $("storage-legacy-projection");
+
+    if (historicalData) {
+        try {
+            const projection = JSON.parse(
+                historicalData.textContent || "{}"
+            );
+
+            if (
+                Array.isArray(projection.nodes)
+                && Array.isArray(projection.samples)
+            ) {
+                live.nodes.push(...projection.nodes);
+                live.samples.push(...projection.samples);
+            }
+        } catch (error) {
+            console.error(
+                "Unable to read historical storage projection",
+                error
+            );
+        }
+    }
+
     let mode = "live";
     let selected = null;
     let model, map, children;
@@ -119,7 +144,25 @@
     function select(id, emit = true) {
         selected = id && map.has(String(id)) ? String(id) : null;
         if (emit && mode === "live") {
-            document.dispatchEvent(new CustomEvent("b3-storage-select-request", {detail: {id: selected}}));
+            const node = selected ? map.get(selected) : null;
+
+            if (node?.legacy) {
+                // Historical nodes must never become Django location IDs.
+                // Keep the 3D selection without triggering a 2D reset.
+                document.dispatchEvent(
+                    new CustomEvent(
+                        "b3-storage-legacy-selected",
+                        {detail: {id: selected}}
+                    )
+                );
+            } else {
+                document.dispatchEvent(
+                    new CustomEvent(
+                        "b3-storage-select-request",
+                        {detail: {id: selected}}
+                    )
+                );
+            }
         }
         update();
     }
@@ -256,7 +299,22 @@
     }
 
     function buildFreezer(equipment, x, focus) {
-        const racks = (children.get(equipment.id) || []).filter(item => semantic(item.kind) === "rack");
+        const equipmentChildren = children.get(equipment.id) || [];
+        const directBoxes = equipmentChildren.filter(
+            item => semantic(item.kind) === "box"
+        );
+        const registeredRacks = equipmentChildren.filter(
+            item => semantic(item.kind) === "rack"
+        );
+
+        // Visual shelf for legacy boxes lacking a registered rack.
+        // This is NOT a StorageLocation and is never persisted.
+        const displayShelf = directBoxes.length ? [{
+            id: equipment.id,
+            virtual: true
+        }] : [];
+
+        const racks = [...registeredRacks, ...displayShelf];
         const shownRacks = racks.slice(0, 5);
         const nRacks = Math.max(shownRacks.length, 1);
         const maxBoxes = Math.max(3, ...shownRacks.map(rack => (children.get(rack.id) || []).length));
@@ -280,12 +338,22 @@
             const rackGroup = new THREE.Group();
             rackGroup.position.set(0, 0, 0);
             shell.add(rackGroup);
-            const rackBoxes = (children.get(rack.id) || []).filter(node => semantic(node.kind) === "box").slice(0, 12);
+            const rackBoxes = (
+                rack.virtual
+                    ? directBoxes
+                    : (children.get(rack.id) || []).filter(
+                        node => semantic(node.kind) === "box"
+                    )
+            ).slice(0, 12);
+
+            const rackPick = rack.virtual
+                ? equipment.id
+                : rack.id;
             const levels = Math.max(3, rackBoxes.length);
-            cuboid(rackGroup, .028, levels * .45 + .18, .91, rackX - .44, levels * .225 + .19, 0, 0x718c98, 1, rack.id);
-            cuboid(rackGroup, .028, levels * .45 + .18, .91, rackX + .44, levels * .225 + .19, 0, 0x718c98, 1, rack.id);
+            cuboid(rackGroup, .028, levels * .45 + .18, .91, rackX - .44, levels * .225 + .19, 0, 0x718c98, 1, rackPick);
+            cuboid(rackGroup, .028, levels * .45 + .18, .91, rackX + .44, levels * .225 + .19, 0, 0x718c98, 1, rackPick);
             for (let row = 0; row < levels; row++) {
-                cuboid(rackGroup, .91, .03, .95, rackX, .27 + row * .45, 0, 0x9aafb8, 1, rack.id);
+                cuboid(rackGroup, .91, .03, .95, rackX, .27 + row * .45, 0, 0x9aafb8, 1, rackPick);
             }
             rackBoxes.forEach((box, row) => {
                 buildBox(rackGroup, box, .49 + row * .45, rack, rackX, selected === rack.id || selected === box.id);

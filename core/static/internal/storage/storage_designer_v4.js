@@ -125,6 +125,16 @@
         selectedId = id != null && locations.has(String(id)) ? String(id) : null;
         updateBuildButtons();
     });
+    document.addEventListener(
+        "b3-storage-legacy-selected",
+        () => {
+            // Virtual locations cannot be used as creation parents.
+            selectedId = null;
+            showPanel("browse");
+            updateBuildButtons();
+        }
+    );
+
     document.addEventListener("b3-storage-location-selected", event => {
         if (exampleMode) return;
         const id = event.detail?.id;

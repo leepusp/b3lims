@@ -703,6 +703,26 @@ def storage_workspace_view(
         )
     )
 
+    # Read-only compatibility projection. Do not create physical
+    # locations or assignments from historical free-text paths.
+    from core.services.storage_legacy_projection import (
+        build_legacy_storage_projection,
+    )
+
+    historical_records = (
+        visible_samples
+        .exclude(storage_location__isnull=True)
+        .exclude(storage_location__exact="")
+        .exclude(
+            pk__in=assignments.values("sample_id")
+        )
+        .values_list("sample_id", "storage_location")
+    )
+
+    storage_legacy_projection = (
+        build_legacy_storage_projection(historical_records)
+    )
+
     ctx = base_context(
         request
     )
@@ -721,6 +741,7 @@ def storage_workspace_view(
             "storage_assignments": (
                 assignments
             ),
+            "storage_legacy_projection": storage_legacy_projection,
             "storage_sample_bulk_preview": bulk_preview,
             "storage_sample_bulk_preview_error": bulk_preview_error,
             "storage_sample_bulk_rows": bulk_rows,
