@@ -8,6 +8,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
     StorageMovementItem,
 )
@@ -70,6 +71,21 @@ class StorageContainerMovementTests(TestCase):
                 position=f"P{index:02d}",
                 status="active",
             )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="Legacy Container Test Workspace",
+            scope="personal",
+            owner=cls.manager,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.freezer_a.pk,
+                cls.freezer_b.pk,
+                cls.box.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
     def move(self, *, actor=None, expected_parent_id=None):
         return move_storage_container(

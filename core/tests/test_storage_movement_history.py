@@ -4,6 +4,8 @@ from django.test import TestCase
 
 from core.models.samples.sample import Sample
 from core.models.samples.storage import (
+    StorageLocation,
+    StorageWorkspace,
     StorageMovement,
     StorageMovementItem,
 )
@@ -25,7 +27,12 @@ class StorageMovementHistoryTests(TestCase):
             username="history-owner-b"
         )
         cls.manager = User.objects.create_user(
-            username="history-manager",
+            username="ccalomeno",
+            is_staff=True,
+        )
+
+        cls.unrelated_staff = User.objects.create_user(
+            username="history-unrelated-staff",
             is_staff=True,
         )
 
@@ -34,6 +41,38 @@ class StorageMovementHistoryTests(TestCase):
         )
         cls.sample_b = cls.make_sample(
             "HISTORY-B-001", cls.owner_b
+        )
+
+        cls.workspace_a = StorageWorkspace.objects.create(
+            name="History Workspace A",
+            scope="personal",
+            owner=cls.owner_a,
+        )
+        cls.workspace_b = StorageWorkspace.objects.create(
+            name="History Workspace B",
+            scope="personal",
+            owner=cls.owner_b,
+        )
+
+        cls.origin_a = StorageLocation.objects.create(
+            name="History A Origin",
+            location_type="box",
+            workspace=cls.workspace_a,
+        )
+        cls.destination_a = StorageLocation.objects.create(
+            name="History A Destination",
+            location_type="box",
+            workspace=cls.workspace_a,
+        )
+        cls.origin_b = StorageLocation.objects.create(
+            name="History B Origin",
+            location_type="box",
+            workspace=cls.workspace_b,
+        )
+        cls.destination_b = StorageLocation.objects.create(
+            name="History B Destination",
+            location_type="box",
+            workspace=cls.workspace_b,
         )
 
     @staticmethod
@@ -62,11 +101,24 @@ class StorageMovementHistoryTests(TestCase):
         )
 
         for sample in samples:
+            origin = (
+                self.origin_a
+                if sample.owner_id == self.owner_a.pk
+                else self.origin_b
+            )
+            destination = (
+                self.destination_a
+                if sample.owner_id == self.owner_a.pk
+                else self.destination_b
+            )
+
             StorageMovementItem.objects.create(
                 movement=movement,
                 sample=sample,
                 sample_identifier=sample.sample_id,
                 assignment_id_snapshot=100,
+                location_id_snapshot=origin.pk,
+                destination_location_id_snapshot=destination.pk,
                 position_before="P01",
                 position_after="P02",
                 path_before="Sala X > Caixa A",
@@ -151,6 +203,83 @@ class StorageMovementHistoryTests(TestCase):
         self.assertIn(
             movement.pk,
             self.visible_ids(self.manager),
+        )
+
+    def test_unrelated_staff_cannot_view_global_history(self):
+        movement = StorageMovement.objects.create(
+            movement_type="container",
+            affected_location_count=1,
+            affected_sample_count=0,
+            affected_assignment_count=0,
+            origin_path="Restricted Lab",
+            destination_path="Restricted Freezer",
+            reason="RESTRICTED-GLOBAL-HISTORY-V8",
+        )
+
+        self.assertNotIn(
+            movement.pk,
+            self.visible_ids(self.unrelated_staff),
+        )
+
+        self.assertIn(
+            movement.pk,
+            self.visible_ids(self.manager),
+        )
+
+    def test_visible_sample_foreign_origin_is_hidden(self):
+        movement = self.create_movement(
+            [self.sample_a], movement_type="sample"
+        )
+
+        movement.items.update(
+            location_id_snapshot=self.origin_b.pk
+        )
+
+        self.assertNotIn(
+            movement.pk, self.visible_ids(self.owner_a)
+        )
+
+    def test_missing_destination_snapshot_is_hidden(self):
+        movement = self.create_movement(
+            [self.sample_a], movement_type="sample"
+        )
+
+        movement.items.update(
+            destination_location_id_snapshot=None
+        )
+
+        self.assertNotIn(
+            movement.pk, self.visible_ids(self.owner_a)
+        )
+
+    def test_empty_owned_container_history_is_visible(self):
+        movement = StorageMovement.objects.create(
+            movement_type="container",
+            moved_location=self.origin_a,
+            destination_location=self.destination_a,
+            affected_location_count=1,
+            affected_sample_count=0,
+            affected_assignment_count=0,
+            origin_path=self.origin_a.full_path,
+            destination_path=self.destination_a.full_path,
+            reason="Scoped infrastructure movement",
+        )
+
+        self.assertIn(
+            movement.pk, self.visible_ids(self.owner_a)
+        )
+        self.assertNotIn(
+            movement.pk, self.visible_ids(self.owner_b)
+        )
+
+    def test_unrelated_staff_cannot_read_sample_history(self):
+        movement = self.create_movement(
+            [self.sample_a], movement_type="sample"
+        )
+
+        self.assertNotIn(
+            movement.pk,
+            self.visible_ids(self.unrelated_staff),
         )
 
     def test_anonymous_user_has_no_history(self):

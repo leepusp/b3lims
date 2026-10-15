@@ -6,6 +6,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
 )
 
@@ -82,6 +83,20 @@ class StorageSamplePreviewHTTPTests(TestCase):
             )
         )
 
+        cls.workspace = StorageWorkspace.objects.create(
+            name="D3 Individual Preview Workspace",
+            scope="personal",
+            owner=cls.owner,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+            ]
+        ).update(workspace=cls.workspace)
+
     def preview(self, assignment_id, destination_id, position):
         return self.client.get(
             reverse("storage_workspace"),
@@ -149,6 +164,13 @@ class StorageSamplePreviewHTTPTests(TestCase):
 
         self.assertFalse(StorageMovement.objects.exists())
 
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertContains(response, 'data-b3-v89-movement-comparison="sample"', count=1)
+        self.assertContains(response, 'data-b3-v89-movement-row', count=1)
+        self.assertContains(response, 'data-b3-v89-path-before', count=1)
+        self.assertContains(response, 'data-b3-v89-path-after', count=1)
+        self.assertContains(response, 'P04')
+
     def test_foreign_assignment_is_forbidden(self):
         self.client.force_login(self.owner)
 
@@ -160,6 +182,9 @@ class StorageSamplePreviewHTTPTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(StorageMovement.objects.exists())
+
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=', status_code=403)
 
     def test_occupied_position_does_not_disclose_occupant(self):
         self.client.force_login(self.owner)
@@ -183,6 +208,9 @@ class StorageSamplePreviewHTTPTests(TestCase):
             response.context["storage_sample_preview"]
         )
 
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=')
+
     def test_invalid_assignment_identifier(self):
         self.client.force_login(self.owner)
 
@@ -201,6 +229,51 @@ class StorageSamplePreviewHTTPTests(TestCase):
             response.context["storage_sample_preview"]
         )
 
+    def test_inactive_source_can_be_evacuated(self):
+        """An authorized user can evacuate an inactive source."""
+        self.client.force_login(self.owner)
+
+        rescue_room = StorageLocation.objects.create(
+            name="D3 Evacuation Active Room",
+            location_type="room",
+            workspace=self.workspace,
+        )
+        rescue_box = StorageLocation.objects.create(
+            name="D3 Evacuation Active Box",
+            location_type="box",
+            parent=rescue_room,
+            workspace=self.workspace,
+        )
+
+        original_location_id = self.assignment.location_id
+        original_position = self.assignment.position
+
+        self.room.is_active = False
+        self.room.save(update_fields=["is_active"])
+
+        response = self.preview(
+            self.assignment.pk,
+            rescue_box.pk,
+            "P04",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(
+            response.context["storage_sample_preview"]
+        )
+
+        # Preview never executes a movement.
+        self.assignment.refresh_from_db()
+        self.assertEqual(
+            self.assignment.location_id,
+            original_location_id,
+        )
+        self.assertEqual(
+            self.assignment.position,
+            original_position,
+        )
+        self.assertFalse(StorageMovement.objects.exists())
+
     def test_inactive_hierarchy_rejected(self):
         self.client.force_login(self.owner)
 
@@ -216,6 +289,6 @@ class StorageSamplePreviewHTTPTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Source or destination hierarchy is inactive.",
+            "The destination storage hierarchy is inactive.",
         )
         self.assertFalse(StorageMovement.objects.exists())

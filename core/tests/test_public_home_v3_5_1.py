@@ -126,8 +126,7 @@ class PublicHomeV351RecoveryTests(
 
         self.assertIn(
             (
-                "npm/echarts-maps@1.1.0/"
-                "world.js"
+                "vendor/echarts-maps/1.1.0/world.js"
             ),
             source,
         )

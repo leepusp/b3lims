@@ -11,7 +11,12 @@ from core.models.samples.storage import (
     StorageMovement,
     StorageMovementItem,
 )
-from core.permissions.samples import can_edit_sample
+from core.permissions.storage_workspaces_v8 import (
+    can_operate_on_sample_storage,
+)
+from core.permissions.storage_movements_v8 import (
+    authorize_sample_storage_move_v8,
+)
 from core.services.storage_legacy_sync import (
     sync_primary_storage_legacy_for_samples,
 )
@@ -210,7 +215,7 @@ def _execute_movement(
     for sample_id in sample_ids:
         sample = samples.get(sample_id)
 
-        if sample is None or not can_edit_sample(actor, sample):
+        if sample is None or not can_operate_on_sample_storage(actor, sample):
             raise PermissionDenied(
                 "Permission to move this Sample is required."
             )
@@ -244,15 +249,22 @@ def _execute_movement(
                 "Storage changed since the request was prepared."
             )
 
+        # Authorization must be checked after the row locks
+        # have been acquired and before any assignment is updated.
+        authorize_sample_storage_move_v8(
+            actor=actor,
+            assignment=assignment,
+            destination=destination,
+        )
+
+        # A Sample can leave an inactive origin; it cannot be
+        # moved into an inactive destination.
         if StorageLocation.objects.filter(
-            pk__in=(
-                _ancestors(origin.pk)
-                | _ancestors(destination.pk)
-            ),
+            pk__in=_ancestors(destination.pk),
             is_active=False,
         ).exists():
             raise ValidationError(
-                "Source or destination hierarchy is inactive."
+                "The destination hierarchy is inactive."
             )
 
         final_position = item["position"].strip()
@@ -319,8 +331,24 @@ def _execute_movement(
 
     now = timezone.now()
 
-    # Only selected rows are updated. Their IDs, ranks,
-    # quantities and other attributes are preserved.
+    # Phase 1: release the occupied positions for all
+    # selected assignments inside this transaction.
+    #
+    # The unique_active_storage_slot_v8 constraint excludes
+    # blank positions. This allows P01 <-> P03 swaps without
+    # temporarily violating the immediate unique index.
+    #
+    # A failure anywhere below rolls back both phases.
+    SampleStorageAssignment.objects.filter(
+        pk__in=ids
+    ).update(
+        position="",
+        updated_at=now,
+    )
+
+    # Phase 2: write every authorized final destination.
+    # IDs, ranks, quantities and canonical assignment
+    # identities remain unchanged.
     for entry in snapshots:
         SampleStorageAssignment.objects.filter(
             pk=entry["assignment"].pk
@@ -385,6 +413,7 @@ def _execute_movement(
             sample_identifier=entry["sample"].sample_id,
             assignment_id_snapshot=entry["assignment"].pk,
             location_id_snapshot=entry["origin_id"],
+            destination_location_id_snapshot=entry["destination_id"],
             position_before=entry["old_position"],
             position_after=entry["new_position"],
             path_before=entry["old_path"],

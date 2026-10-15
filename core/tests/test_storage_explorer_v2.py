@@ -48,6 +48,7 @@ class StorageExplorerV2Tests(TestCase):
         from core.models.samples.storage import (
             SampleStorageAssignment,
             StorageLocation,
+            StorageWorkspace,
         )
 
         user = get_user_model().objects.create_user(
@@ -65,6 +66,16 @@ class StorageExplorerV2Tests(TestCase):
             location_type="freezer",
             parent=room,
         )
+
+        workspace = StorageWorkspace.objects.create(
+            name="Storage Explorer Populated Workspace",
+            scope="personal",
+            owner=user,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[room.pk, freezer.pk]
+        ).update(workspace=workspace)
 
         sample = Sample.objects.create(
             sample_id="ST-EXPLORER-001",

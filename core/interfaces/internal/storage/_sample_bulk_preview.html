@@ -103,6 +103,8 @@
                 {% endif %}
 
                 {% if storage_sample_bulk_preview %}
+{% include "internal/storage/_movement_comparison_v89.html" with movement_preview=storage_sample_bulk_preview movement_kind="bulk" only %}
+
                     <div class="alert alert-info mt-3 mb-0"
                          role="status">
                         <strong>

@@ -1,0 +1,332 @@
+(() => {
+  "use strict";
+
+  function initialize() {
+    const panel = document.getElementById("storage-relationship-v89");
+    const source = document.getElementById("storage-explorer-data");
+    const workspaceSource = document.getElementById(
+      "storage-relationship-workspaces-v89"
+    );
+    const assignmentSource = document.getElementById(
+      "storage-explorer-assignment-data"
+    );
+    const selector = document.getElementById(
+      "storage-relationship-workspace-select-v89"
+    );
+    const diagram = document.getElementById(
+      "storage-relationship-diagram-v89"
+    );
+    const status = document.getElementById(
+      "storage-relationship-status-v89"
+    );
+    const explorer = document.getElementById("storage-explorer-tree");
+
+    if (![panel, source, workspaceSource, selector,
+          diagram, status, explorer].every(Boolean)) return;
+
+    const numeric = value => /^\d+$/.test(String(value));
+
+    const workspaces = Array.from(
+      workspaceSource.content.querySelectorAll("[data-workspace-id]")
+    ).map(node => ({
+      id: node.dataset.workspaceId,
+      name: node.dataset.workspaceName,
+      scope: node.dataset.workspaceScope
+    })).filter(item => numeric(item.id));
+
+    const allowed = new Set(workspaces.map(item => item.id));
+
+    const entries = Array.from(
+      source.content.querySelectorAll("[data-location-id]")
+    ).map(node => ({
+      id: node.dataset.locationId,
+      parent: node.dataset.parentId || "",
+      workspace: node.dataset.workspaceId || "",
+      name: node.dataset.locationName || "Location",
+      type: node.dataset.locationType || "Location",
+      active: node.dataset.locationActive === "1"
+    })).filter(item =>
+      numeric(item.id) &&
+      allowed.has(item.workspace) &&
+      (!item.parent || numeric(item.parent))
+    );
+
+    const byId = new Map(entries.map(item => [item.id, item]));
+
+    function validChain(entry) {
+      const visited = new Set();
+      let node = entry;
+
+      while (node) {
+        if (visited.has(node.id) ||
+            node.workspace !== entry.workspace) {
+          return false;
+        }
+
+        visited.add(node.id);
+
+        if (!node.parent) return true;
+
+        node = byId.get(node.parent);
+        if (!node) return false;
+      }
+
+      return false;
+    }
+
+    const safeNodes = entries.filter(validChain);
+    const safeIds = new Set(safeNodes.map(item => item.id));
+    const children = new Map();
+
+    for (const entry of safeNodes) {
+      const key = `${entry.workspace}:${entry.parent}`;
+
+      if (!children.has(key)) children.set(key, []);
+      children.get(key).push(entry);
+    }
+
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: "base"
+    });
+
+    for (const group of children.values()) {
+      group.sort((a, b) => collator.compare(a.name, b.name));
+    }
+
+    const counts = new Map();
+
+    if (assignmentSource) {
+      for (const node of assignmentSource.content.querySelectorAll(
+        "[data-assignment-location]"
+      )) {
+        if (node.dataset.assignmentStatus !== "active") continue;
+
+        const id = node.dataset.assignmentLocation;
+        if (!safeIds.has(id)) continue;
+
+        counts.set(id, (counts.get(id) || 0) + 1);
+      }
+    }
+
+    const expanded = new Set();
+    let selectedId = "";
+
+    function element(tag, classes, value) {
+      const node = document.createElement(tag);
+      if (classes) node.className = classes;
+      if (value !== undefined) node.textContent = value;
+      return node;
+    }
+
+    function renderBranch(item, depth) {
+      const branch = element("div", "ms-3 border-start ps-2 my-1");
+      const row = element(
+        "div",
+        "d-flex align-items-center gap-2 flex-wrap"
+      );
+
+      const descendants = children.get(
+        `${item.workspace}:${item.id}`
+      ) || [];
+
+      const isExpanded = expanded.has(item.id);
+
+      const toggle = element(
+        "button",
+        "btn btn-sm btn-outline-secondary",
+        isExpanded ? "−" : "+"
+      );
+
+      toggle.type = "button";
+      toggle.disabled = !descendants.length;
+      toggle.setAttribute(
+        "aria-label",
+        `${isExpanded ? "Collapse" : "Expand"} ${item.name}`
+      );
+      toggle.setAttribute("aria-expanded", String(isExpanded));
+
+      toggle.addEventListener("click", () => {
+        if (expanded.has(item.id)) expanded.delete(item.id);
+        else expanded.add(item.id);
+        render();
+      });
+
+      const choose = element(
+        "button",
+        `btn btn-sm ${
+          item.id === selectedId
+            ? "btn-primary"
+            : "btn-outline-primary"
+        }`,
+        item.name
+      );
+
+      choose.type = "button";
+      choose.dataset.locationId = item.id;
+      choose.setAttribute(
+        "aria-pressed",
+        String(item.id === selectedId)
+      );
+      choose.addEventListener("click", () => focusExplorer(item.id));
+
+      const summary = element(
+        "span",
+        "small text-muted",
+        `${item.type} · ${counts.get(item.id) || 0} active assignment(s)` +
+        (item.active ? "" : " · inactive")
+      );
+
+      row.append(toggle, choose, summary);
+      branch.append(row);
+
+      if (isExpanded && depth < 80) {
+        for (const child of descendants) {
+          branch.append(renderBranch(child, depth + 1));
+        }
+      }
+
+      return branch;
+    }
+
+    function render() {
+      diagram.replaceChildren();
+
+      const workspaceId = selector.value;
+      const workspace = workspaces.find(
+        item => item.id === workspaceId
+      );
+
+      if (!workspace) {
+        status.textContent =
+          "No authorized physical storage workspace available.";
+        return;
+      }
+
+      const roots = children.get(`${workspaceId}:`) || [];
+      const count = safeNodes.filter(
+        item => item.workspace === workspaceId
+      ).length;
+
+      status.textContent =
+        `${workspace.name}: ${count} accessible location(s).`;
+
+      if (!roots.length) {
+        diagram.append(element(
+          "p",
+          "small text-muted",
+          "No registered hierarchy in this workspace."
+        ));
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      for (const root of roots) {
+        fragment.append(renderBranch(root, 0));
+      }
+
+      diagram.append(fragment);
+    }
+
+    function focusExplorer(id) {
+      const item = byId.get(id);
+      if (!item || !safeIds.has(id)) return;
+
+      const details = document.getElementById(
+        "storage-designer-inventory-details"
+      );
+      if (details) details.open = true;
+
+      const search = document.getElementById(
+        "storage-explorer-search"
+      );
+
+      if (search && search.value) {
+        search.value = "";
+        search.dispatchEvent(new Event("input", {bubbles: true}));
+      }
+
+      const ancestors = [];
+      const visited = new Set();
+      let current = item;
+
+      while (current &&
+             current.parent &&
+             !visited.has(current.parent)) {
+        visited.add(current.parent);
+        ancestors.unshift(current.parent);
+        current = byId.get(current.parent);
+      }
+
+      for (const ancestorId of ancestors) {
+        const toggle = explorer.querySelector(
+          `.b3-storage-tree-toggle[data-location-id="${ancestorId}"]`
+        );
+
+        if (toggle &&
+            toggle.getAttribute("aria-expanded") === "false") {
+          toggle.click();
+        }
+      }
+
+      const button = explorer.querySelector(
+        `.b3-storage-tree-item[data-location-id="${id}"]`
+      );
+
+      if (button) {
+        button.click();
+        button.focus();
+        selectedId = id;
+
+        status.textContent =
+          `Selected ${item.name}. Details opened in Inventory explorer.`;
+      } else {
+        status.textContent =
+          `Location ${item.name} is not selectable in the current view.`;
+      }
+
+      render();
+    }
+
+    for (const workspace of workspaces) {
+      const option = element(
+        "option",
+        "",
+        `${workspace.name} (${workspace.scope})`
+      );
+
+      option.value = workspace.id;
+      selector.append(option);
+    }
+
+    selector.addEventListener("change", () => {
+      selectedId = "";
+      render();
+    });
+
+    explorer.addEventListener("click", event => {
+      const button = event.target.closest(
+        ".b3-storage-tree-item[data-location-id]"
+      );
+
+      if (!button) return;
+
+      const location = byId.get(button.dataset.locationId);
+
+      if (!location || !safeIds.has(location.id)) return;
+
+      selector.value = location.workspace;
+      selectedId = location.id;
+      render();
+    });
+
+    render();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
+})();

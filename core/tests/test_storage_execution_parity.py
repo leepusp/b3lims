@@ -8,6 +8,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
 )
 from core.services.storage_sample_movement_preview import (
     preview_sample_movements,
@@ -72,6 +73,21 @@ class StorageExecutionParityTests(TestCase):
             status="active",
         )
 
+        cls.workspace = StorageWorkspace.objects.create(
+            name="E1 Movement Parity Workspace",
+            scope="personal",
+            owner=cls.owner,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.source_room.pk,
+                cls.destination_room.pk,
+                cls.source.pk,
+                cls.destination.pk,
+            ]
+        ).update(workspace=cls.workspace)
+
     def preview_request(self, position):
         return {
             "assignment_id": self.assignment.pk,
@@ -114,18 +130,46 @@ class StorageExecutionParityTests(TestCase):
             status="active",
         )
 
-    def test_inactive_source_rejected_by_both_services(self):
+    def test_inactive_source_can_be_evacuated_by_both_services(self):
+        """Preview and execution permit authorized evacuation."""
         self.source_room.is_active = False
         self.source_room.save(update_fields=["is_active"])
 
-        with self.assertRaises(ValidationError):
-            preview_sample_movements(
-                moves=[self.preview_request("P04")],
-                actor=self.owner,
-            )
+        preview = preview_sample_movements(
+            moves=[self.preview_request("P04")],
+            actor=self.owner,
+        )
 
-        with self.assertRaises(ValidationError):
-            self.execute_request("P04")
+        self.assertEqual(len(preview["moves"]), 1)
+        self.assertEqual(
+            preview["moves"][0]["position_after"],
+            "P04",
+        )
+
+        # Preview must not change the canonical assignment.
+        self.assignment.refresh_from_db()
+        self.assertEqual(
+            self.assignment.location_id,
+            self.source.pk,
+        )
+        self.assertEqual(
+            self.assignment.position,
+            "P01",
+        )
+
+        # Execution must follow the same authorization rule.
+        self.execute_request("P04")
+
+        self.assignment.refresh_from_db()
+        self.assertEqual(
+            self.assignment.location_id,
+            self.destination.pk,
+        )
+        self.assertEqual(
+            self.assignment.position,
+            "P04",
+        )
+
 
     def test_preview_normalizes_occupied_position(self):
         self.create_occupied_slot_with_whitespace()
@@ -156,6 +200,7 @@ class StorageExecutionParityTests(TestCase):
             name="E1 Alternative Source Box",
             parent=self.source_room,
             location_type="box",
+            workspace=self.workspace,
         )
 
         actual_ancestors = service._ancestors

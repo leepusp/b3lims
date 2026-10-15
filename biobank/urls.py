@@ -44,6 +44,9 @@ from core.views.internal.workspace.views import home
 from core.views.internal.profile.views import profile_view
 from core.views.internal.calendar.views import calendar_view
 from core.views.internal.storage.views import storage_workspace_view
+from core.views.internal.storage.anchor_catalog_v8 import (
+    storage_anchor_catalog_v8,
+)
 
 # 4. BIOBANKS & COLLECTIONS (Gestão Interna)
 from core.views.internal.biobanks.views import (
@@ -269,6 +272,12 @@ urlpatterns = [
         "storage/",
         storage_workspace_view,
         name="storage_workspace",
+    ),
+
+    path(
+        "storage/anchors/",
+        storage_anchor_catalog_v8,
+        name="storage_anchor_catalog_v8",
     ),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/dashboard/", samples_dashboard_view, name="samples_dashboard"),

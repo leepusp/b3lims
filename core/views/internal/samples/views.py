@@ -1542,6 +1542,26 @@ def sample_create_view(request):
                         )
                     ]
 
+                from core.services.storage_sample_intake_v8 import (
+                    prepare_storage_sample_intake_v8,
+                )
+
+                storage_plan_v8 = prepare_storage_sample_intake_v8(
+                    mode=request.POST.get("storage_mode_v8", ""),
+                    storage_text=storage_location,
+                    anchor_id=request.POST.get(
+                        "storage_anchor_id_v8", ""
+                    ),
+                    positions=request.POST.getlist(
+                        "storage_positions[]"
+                    ),
+                    expected_samples=sum(
+                        quantity
+                        for _, quantity in distribution_rows
+                    ),
+                    actor=user,
+                )
+
                 created_samples = []
 
                 with transaction.atomic():
@@ -1586,7 +1606,7 @@ def sample_create_view(request):
                                 "owner": selected_owner,
                                 "is_active": True,
                                 "status": "pending",
-                                "storage_location": storage_location,
+                                "storage_location": storage_plan_v8.initial_text,
                             }
 
                             # BACTERIA
@@ -1752,7 +1772,7 @@ def sample_create_view(request):
                                 sample=sample,
                                 performed_by=user,
                                 event_type="entry",
-                                location_snapshot=storage_location,
+                                location_snapshot=storage_plan_v8.initial_text,
                                 notes=f"Sample registered: {sample.organism_name}."
                             )
 
@@ -1777,7 +1797,7 @@ def sample_create_view(request):
                         "Other": "raw",
                     }
 
-                    for sample in created_samples:
+                    for storage_index_v8, sample in enumerate(created_samples):
                         for k, f in enumerate(files):
                             category = (
                                 categories[k]
@@ -1808,12 +1828,38 @@ def sample_create_view(request):
                                 description=description,
                             )
 
-                        if storage_location:
-                            assign_sample_storage_from_text(
+                        if storage_plan_v8.mode == "physical":
+                            from core.models.samples.storage import (
+                                StorageLocation,
+                            )
+                            from core.services.storage_registration_v8 import (
+                                register_initial_physical_storage,
+                            )
+
+                            physical_target_v8 = StorageLocation.objects.get(
+                                pk=storage_plan_v8.target_id
+                            )
+
+                            register_initial_physical_storage(
                                 sample=sample,
-                                storage_location_text=storage_location,
-                                replace_existing=True,
-                                sync_legacy_field=True,
+                                box=physical_target_v8,
+                                position=storage_plan_v8.positions[
+                                    storage_index_v8
+                                ],
+                                actor=user,
+                                mode="new",
+                                expected_legacy_path="",
+                            )
+
+                            sample.refresh_from_db(
+                                fields=["storage_location"]
+                            )
+
+                            Event.objects.filter(
+                                sample=sample,
+                                event_type="entry",
+                            ).update(
+                                location_snapshot=sample.storage_location
                             )
 
                 if intake_record is not None and created_samples:

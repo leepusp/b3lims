@@ -1,5 +1,6 @@
 """Regression tests for the standalone/local-first runtime profile."""
 
+import os
 from pathlib import Path
 from unittest import skipUnless
 
@@ -98,10 +99,12 @@ class StandaloneSettingsContractTests(SimpleTestCase):
         )
 
     def test_persistent_roots_are_local(self):
-        expected_root = (
-            Path.home()
-            / ".biobank-local"
-        )
+        expected_root = Path(
+            os.environ.get(
+                "BIOBANK_LOCAL_ROOT",
+                str(Path.home() / ".biobank-local"),
+            )
+        ).expanduser()
 
         self.assertEqual(
             settings.BIOBANK_LOCAL_ROOT,

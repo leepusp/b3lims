@@ -1,0 +1,152 @@
+<details id="storage-workspaces-v8" class="border rounded p-3 mb-3">
+  <summary class="fw-semibold">
+    My physical storage workspaces
+  </summary>
+
+  <p class="small text-muted mt-3">
+    Personal storage belongs to its owner.
+    Research Group storage is shared with authorized members.
+    Only owners, group coordinators and the global administrator
+    can manage physical infrastructure.
+  </p>
+
+  {% for workspace in storage_visible_workspaces_v8 %}
+    <div class="border rounded p-2 mb-2">
+      <strong>{{ workspace.name }}</strong>
+      <div class="small text-muted">
+        {{ workspace.get_scope_display }}
+        {% if workspace.research_group %}
+          · {{ workspace.research_group.name }}
+        {% endif %}
+        {% if workspace in storage_manageable_workspaces_v8 %}
+          · Can manage infrastructure
+        {% else %}
+          · Shared access
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <p class="small text-muted">
+      No storage workspaces are registered for your account.
+    </p>
+  {% endfor %}
+
+  <form method="post" action="{% url 'storage_workspace' %}"
+        class="border-top pt-3 mt-3">
+    {% csrf_token %}
+    <input type="hidden" name="action"
+           value="create_storage_workspace_v8">
+
+    <h3 class="h6">Create workspace</h3>
+
+    <div class="row g-2">
+      <div class="col-md-5">
+        <label class="form-label">Workspace name</label>
+        <input name="workspace_name"
+               class="form-control"
+               maxlength="120"
+               required>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Ownership</label>
+        <select name="workspace_scope" class="form-select">
+          <option value="personal">Personal</option>
+          {% if storage_group_choices_v8 %}
+            <option value="group">Research Group</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Research Group</label>
+        <select name="research_group_id" class="form-select">
+          <option value="">No group (personal)</option>
+          {% for group in storage_group_choices_v8 %}
+            <option value="{{ group.pk }}">{{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <p class="form-text">
+      Group workspaces require coordinator authorization.
+      Leave the group empty for personal storage.
+    </p>
+
+    <button class="btn btn-sm btn-primary" type="submit">
+      Create workspace
+    </button>
+  </form>
+
+  {% if storage_manageable_workspaces_v8 %}
+    <div class="border-top pt-3 mt-3">
+      <h3 class="h6">Add physical infrastructure</h3>
+
+      {% for workspace in storage_manageable_workspaces_v8 %}
+        <details class="border rounded p-2 mb-2">
+          <summary>{{ workspace.name }} — add location</summary>
+
+          <form method="post"
+                action="{% url 'storage_workspace' %}"
+                class="mt-3">
+            {% csrf_token %}
+
+            <input type="hidden" name="action"
+                   value="create_location">
+            <input type="hidden" name="workspace_id"
+                   value="{{ workspace.pk }}">
+
+            <div class="mb-2">
+              <label class="form-label">Parent location</label>
+              <select name="parent_id" class="form-select">
+                <option value="">New root location</option>
+                {% for location in storage_parent_choices_v8 %}
+                  {% if location.workspace_id == workspace.pk %}
+                    <option value="{{ location.pk }}">
+                      {{ location.full_path }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-5">
+                <label class="form-label">Location name</label>
+                <input name="name"
+                       class="form-control"
+                       maxlength="150"
+                       required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Physical type</label>
+                <select name="location_type" class="form-select">
+                  <option value="freezer">Freezer</option>
+                  <option value="room">Room</option>
+                  <option value="shelf">Shelf</option>
+                  <option value="rack">Rack</option>
+                  <option value="box">Box</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Order</label>
+                <input name="rank" type="number"
+                       class="form-control"
+                       min="1" value="1" required>
+              </div>
+            </div>
+
+            <button type="submit"
+                    class="btn btn-sm btn-outline-primary mt-3">
+              Create physical location
+            </button>
+          </form>
+        </details>
+      {% endfor %}
+    </div>
+  {% endif %}
+</details>

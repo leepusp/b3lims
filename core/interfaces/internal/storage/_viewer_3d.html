@@ -1,4 +1,54 @@
 <section id="storage-spatial-viewer" class="b3-cutaway b3-storage-designer card shadow-sm mb-4">
+  {% include "internal/storage/_workspace_management_v8.html" %}
+
+<details id="storage-relationship-v89"
+         class="border rounded p-3 mb-3">
+  <summary class="fw-semibold">
+    Hierarchy map · Physical storage
+  </summary>
+
+  <p class="small text-muted mt-3">
+    Explore authorized workspace relationships.
+    This diagram is read-only and does not execute movements.
+  </p>
+
+  <label class="form-label small fw-semibold"
+         for="storage-relationship-workspace-select-v89">
+    Storage workspace
+  </label>
+
+  <select id="storage-relationship-workspace-select-v89"
+          class="form-select form-select-sm mb-3"
+          aria-label="Select physical storage workspace">
+  </select>
+
+  <p id="storage-relationship-status-v89"
+     class="small text-muted"
+     role="status"></p>
+
+  <div id="storage-relationship-diagram-v89"
+       class="border rounded p-2"
+       role="region"
+       aria-label="Authorized physical storage hierarchy"></div>
+
+  <p class="small text-muted mt-3 mb-0">
+    Selecting a location opens its existing inventory details.
+    Workspace membership does not authorize cross-workspace transfers.
+  </p>
+</details>
+
+<template id="storage-relationship-workspaces-v89">
+  {% for workspace in storage_visible_workspaces_v8 %}
+    <span data-workspace-id="{{ workspace.pk }}"
+          data-workspace-name="{{ workspace.name }}"
+          data-workspace-scope="{{ workspace.scope }}"></span>
+  {% endfor %}
+</template>
+
+
+
+{% include "internal/storage/_scene_controls_v8.html" %}
+
   <header class="b3-cutaway-header">
     <div>
       <div class="b3-cutaway-kicker">PHYSICAL STORAGE WORKSPACE</div>
@@ -146,3 +196,6 @@
 </section>
 
 {{ storage_legacy_projection|json_script:"storage-legacy-projection" }}
+{% if storage_scene_projection_v8 %}
+{{ storage_scene_projection_v8|json_script:"storage-scene-projection-v8" }}
+{% endif %}

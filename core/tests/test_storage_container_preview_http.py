@@ -7,6 +7,7 @@ from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
     StorageMovement,
+    StorageWorkspace,
 )
 
 
@@ -57,7 +58,7 @@ class StorageContainerPreviewHTTPTests(TestCase):
             sample_id="D2-SAMPLE-001",
             sample_type="Other",
             organism_name="D2 sample",
-            owner=cls.viewer,
+            owner=cls.manager,
             status="qc",
             aliquot_count=1,
             is_active=True,
@@ -72,6 +73,62 @@ class StorageContainerPreviewHTTPTests(TestCase):
             is_primary=True,
             position="P01",
             status="active",
+        )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="D2 Container Preview Workspace",
+            scope="personal",
+            owner=cls.manager,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room_a.pk,
+                cls.room_b.pk,
+                cls.shelf_a.pk,
+                cls.shelf_b.pk,
+                cls.box.pk,
+                cls.position.pk,
+            ]
+        ).update(workspace=cls.workspace)
+
+    def test_nonstaff_workspace_owner_sees_container_panel(self):
+        """Workspace ownership does not require Django staff."""
+        self.manager.is_staff = False
+        self.manager.save(update_fields=["is_staff"])
+
+        response = self.preview(
+            self.manager,
+            self.box.pk,
+            self.shelf_b.pk,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'id="storage-container-preview"',
+        )
+        self.assertIsNotNone(
+            response.context["storage_container_preview"]
+        )
+
+    def test_unassigned_staff_cannot_see_container_panel(self):
+        """Django staff alone does not grant V8 workspace access."""
+        outsider = get_user_model().objects.create_user(
+            username="d2-unassigned-staff",
+            is_staff=True,
+        )
+
+        self.client.force_login(outsider)
+
+        response = self.client.get(
+            reverse("storage_workspace")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(
+            response,
+            'id="storage-container-preview"',
         )
 
     def preview(self, user, container, destination):
@@ -131,6 +188,12 @@ class StorageContainerPreviewHTTPTests(TestCase):
         )
         self.assertFalse(StorageMovement.objects.exists())
 
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertContains(response, 'data-b3-v89-movement-comparison="container"', count=1)
+        self.assertContains(response, 'data-b3-v89-path-before', count=1)
+        self.assertContains(response, 'data-b3-v89-path-after', count=1)
+        self.assertContains(response, 'D2 Room B &gt; Shelf B &gt; Box X')
+
     def test_non_manager_cannot_request_preview(self):
         response = self.preview(
             self.viewer,
@@ -144,6 +207,9 @@ class StorageContainerPreviewHTTPTests(TestCase):
             "Distinct Samples:",
             status_code=403,
         )
+
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=', status_code=403)
 
     def test_ordinary_get_has_no_preview_result(self):
         self.client.force_login(self.manager)
@@ -159,6 +225,9 @@ class StorageContainerPreviewHTTPTests(TestCase):
         self.assertContains(
             response, 'id="storage-container-preview"'
         )
+
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=')
 
     def test_invalid_identifier_is_handled(self):
         response = self.preview(

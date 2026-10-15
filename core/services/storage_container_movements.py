@@ -9,7 +9,12 @@ from core.models.samples.storage import (
     StorageMovement,
     StorageMovementItem,
 )
-from core.permissions.storage import can_manage_storage_infrastructure
+from core.permissions.storage_movements_v8 import (
+    authorize_storage_container_move_v8,
+)
+from core.permissions.storage_workspaces_v8 import (
+    can_operate_on_sample_storage,
+)
 from core.services.storage_legacy_sync import (
     sync_primary_storage_legacy_for_samples,
 )
@@ -39,9 +44,6 @@ def move_storage_container(
     """
     if not getattr(actor, "is_authenticated", False):
         raise PermissionDenied("Authentication is required.")
-
-    if not can_manage_storage_infrastructure(actor):
-        raise PermissionDenied("Storage management permission required.")
 
     if not reason or not reason.strip():
         raise ValidationError("A movement reason is required.")
@@ -82,6 +84,12 @@ def move_storage_container(
 
     container.refresh_from_db()
     destination.refresh_from_db()
+
+    authorize_storage_container_move_v8(
+        actor=actor,
+        container=container,
+        destination=destination,
+    )
 
     if (
         expected_origin_path is not None
@@ -135,6 +143,17 @@ def move_storage_container(
         )
         .order_by("pk")
     )
+
+    # Recheck every affected Sample after assignment rows are locked.
+    # Abort the entire transaction if any one is unauthorized.
+    for assignment in assignments:
+        if not can_operate_on_sample_storage(
+            actor, assignment.sample
+        ):
+            raise PermissionDenied(
+                "This container contains Samples "
+                "that you are not authorized to relocate."
+            )
 
     snapshot = [
         {
@@ -203,6 +222,7 @@ def move_storage_container(
             sample_identifier=entry["sample_identifier"],
             assignment_id_snapshot=entry["assignment_id"],
             location_id_snapshot=entry["location_id"],
+            destination_location_id_snapshot=entry["location_id"],
             position_before=entry["position"],
             position_after=entry["position"],
             path_before=entry["path_before"],

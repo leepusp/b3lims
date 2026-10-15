@@ -6,6 +6,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
 )
 
@@ -69,6 +70,20 @@ class StorageSampleBulkPreviewHTTPTests(TestCase):
             )
 
         cls.first, cls.second, cls.private = assignments
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="D3 Bulk Preview Workspace",
+            scope="personal",
+            owner=cls.owner,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
     def preview(self, rows):
         return self.client.get(
@@ -137,6 +152,12 @@ class StorageSampleBulkPreviewHTTPTests(TestCase):
         self.assertEqual(self.second.position, "P02")
         self.assertFalse(StorageMovement.objects.exists())
 
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertContains(response, 'data-b3-v89-movement-comparison="bulk"', count=1)
+        self.assertContains(response, 'data-b3-v89-movement-row', count=2)
+        self.assertContains(response, 'data-b3-v89-path-before', count=2)
+        self.assertContains(response, 'data-b3-v89-path-after', count=2)
+
     def test_selected_positions_can_be_swapped(self):
         self.client.force_login(self.owner)
 
@@ -180,6 +201,9 @@ class StorageSampleBulkPreviewHTTPTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertFalse(StorageMovement.objects.exists())
 
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=', status_code=403)
+
     def test_hidden_occupied_slot_does_not_reveal_sample(self):
         self.client.force_login(self.owner)
 
@@ -196,6 +220,9 @@ class StorageSampleBulkPreviewHTTPTests(TestCase):
         self.assertIsNone(
             response.context["storage_sample_bulk_preview"]
         )
+
+        # V89A5B_HTTP_ASSERTIONS: authorized preview visibility
+        self.assertNotContains(response, 'data-b3-v89-movement-comparison=')
 
     def test_incomplete_row_is_rejected(self):
         self.client.force_login(self.owner)

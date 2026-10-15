@@ -20,6 +20,7 @@ from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
 )
+from core.models.samples.storage import StorageWorkspace
 
 
 STANDALONE_RUNTIME = (
@@ -51,6 +52,12 @@ class StandaloneStorageWorkspaceTests(
 
         self.client.force_login(
             self.user
+        )
+
+        self.workspace = StorageWorkspace.objects.create(
+            name="Standalone personal storage",
+            scope="personal",
+            owner=self.user,
         )
 
     def test_workspace_is_available(
@@ -87,6 +94,7 @@ class StandaloneStorageWorkspaceTests(
             ),
             {
                 "action": "create_location",
+                "workspace_id": str(self.workspace.pk),
                 "name": "Room 1",
                 "location_type": "room",
                 "rank": "1",
@@ -109,6 +117,7 @@ class StandaloneStorageWorkspaceTests(
             ),
             {
                 "action": "create_location",
+                "workspace_id": str(self.workspace.pk),
                 "parent_id": str(
                     room.pk
                 ),
@@ -149,11 +158,13 @@ class StandaloneStorageWorkspaceTests(
         )
 
         room = StorageLocation.objects.create(
+            workspace=self.workspace,
             name="Room 1",
             location_type="room",
         )
 
         freezer = StorageLocation.objects.create(
+            workspace=self.workspace,
             name="Freezer A",
             parent=room,
             location_type="freezer",
@@ -236,6 +247,7 @@ class StandaloneStorageWorkspaceTests(
         )
 
         location = StorageLocation.objects.create(
+            workspace=self.workspace,
             name="Freezer Occupied",
             location_type="freezer",
         )
@@ -294,6 +306,12 @@ class InstitutionalStorageWorkspaceTests(
             is_staff=True,
         )
 
+        self.staff_workspace = StorageWorkspace.objects.create(
+            name="Institutional Staff-Owned Workspace",
+            scope="personal",
+            owner=self.staff,
+        )
+
     def test_non_staff_cannot_create_infrastructure(
         self,
     ):
@@ -307,6 +325,7 @@ class InstitutionalStorageWorkspaceTests(
             ),
             {
                 "action": "create_location",
+                "workspace_id": str(self.staff_workspace.pk),
                 "name": "Forbidden Freezer",
                 "location_type": "freezer",
                 "rank": "1",
@@ -326,6 +345,35 @@ class InstitutionalStorageWorkspaceTests(
             .exists()
         )
 
+    def test_non_staff_owner_can_create_infrastructure(self):
+        """Personal-workspace ownership is sufficient in V8."""
+        workspace = StorageWorkspace.objects.create(
+            name="Institutional Nonstaff-Owned Workspace",
+            scope="personal",
+            owner=self.user,
+        )
+
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("storage_workspace"),
+            {
+                "action": "create_location",
+                "workspace_id": str(workspace.pk),
+                "name": "Owner Freezer",
+                "location_type": "freezer",
+                "rank": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            StorageLocation.objects.filter(
+                name="Owner Freezer",
+                workspace=workspace,
+            ).exists()
+        )
+
     def test_staff_can_create_infrastructure(
         self,
     ):
@@ -339,6 +387,7 @@ class InstitutionalStorageWorkspaceTests(
             ),
             {
                 "action": "create_location",
+                "workspace_id": str(self.staff_workspace.pk),
                 "name": "Managed Freezer",
                 "location_type": "freezer",
                 "rank": "1",

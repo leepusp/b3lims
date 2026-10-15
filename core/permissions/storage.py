@@ -35,15 +35,8 @@ def can_manage_storage_infrastructure(user):
     ):
         return True
 
-    return bool(
-        getattr(
-            user,
-            "is_staff",
-            False,
-        )
-        or getattr(
-            user,
-            "is_superuser",
-            False,
-        )
+    from core.permissions.storage_workspaces_v8 import (
+        is_storage_global_admin,
     )
+
+    return is_storage_global_admin(user)

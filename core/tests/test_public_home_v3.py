@@ -344,8 +344,7 @@ class PublicHomeV3Tests(
 
         for token in (
             (
-                "echarts@5.5.1/"
-                "dist/echarts.min.js"
+                "vendor/echarts/5.5.1/echarts.min.js"
             ),
             "window.echarts.init",
             'type: "pie"',

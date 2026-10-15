@@ -3,7 +3,9 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 
 from core.models.samples.storage import SampleStorageAssignment, StorageLocation
-from core.permissions.samples import can_edit_sample
+from core.permissions.storage_movements_v8 import (
+    authorize_sample_storage_move_v8,
+)
 
 MAX_PREVIEW_ASSIGNMENTS = 50
 
@@ -107,7 +109,15 @@ def preview_sample_movements(*, moves, actor):
         position = entry["position"].strip()
         sample = assignment.sample
 
-        if not sample.is_active or not can_edit_sample(actor, sample):
+        # Authorize the Sample, source and destination before
+        # validating or displaying physical storage details.
+        authorize_sample_storage_move_v8(
+            actor=actor,
+            assignment=assignment,
+            destination=destination,
+        )
+
+        if not sample.is_active:
             raise PermissionDenied(
                 "Permission to move this Sample is required."
             )
@@ -117,7 +127,8 @@ def preview_sample_movements(*, moves, actor):
                 "Selected assignment is not active."
             )
 
-        _check_active_hierarchy(assignment.location)
+        # An inactive source may be evacuated by an authorized user.
+        # The destination must remain active.
         _check_active_hierarchy(destination)
 
         if (

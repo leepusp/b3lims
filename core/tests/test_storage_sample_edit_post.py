@@ -7,6 +7,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
 )
 from core.services.storage_container_movements import (
     move_storage_container,
@@ -50,6 +51,22 @@ class SampleStorageEditPostTests(TestCase):
             parent=cls.freezer_a,
             location_type="shelf",
         )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="A2 Sample Edit Workspace",
+            scope="personal",
+            owner=cls.user,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.freezer_a.pk,
+                cls.freezer_b.pk,
+                cls.box.pk,
+                cls.shelf.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
         cls.sample = Sample.objects.create(
             sample_id="A2-POST-001",
@@ -212,7 +229,7 @@ class SampleStorageEditPostTests(TestCase):
         )
         self.assertEqual(
             self.sample.storage_location,
-            "Sala A > Freezer B > Caixa Y",
+            "Sala A > Freezer B > Caixa Y > P01",
         )
         self.assertEqual(
             get_all_storage_paths(self.sample)[0],
@@ -246,7 +263,7 @@ class SampleStorageEditPostTests(TestCase):
         self.sample.refresh_from_db()
         self.assertEqual(
             self.sample.storage_location,
-            "Sala A > Freezer B > Caixa Y",
+            "Sala A > Freezer B > Caixa Y > P01",
         )
 
     def test_hidden_path_change_without_intent_is_ignored(self):

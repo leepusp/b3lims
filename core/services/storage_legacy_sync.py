@@ -56,8 +56,28 @@ def sync_primary_storage_legacy_for_samples(*, sample_ids):
 
     for sample in samples:
         assignment = primary_assignments[sample.pk]
-        path = assignment.location.full_path
         levels = list(assignment.location.full_path_parts)
+
+        # Physical positions belong to the assignment, not to a
+        # synthetic child StorageLocation under the Box.
+        position = (assignment.position or "").strip()
+
+        if assignment.location.location_type == "position":
+            # Compatibility with older hierarchies that already model
+            # the position as a physical StorageLocation node.
+            if (
+                position
+                and position.casefold()
+                != assignment.location.name.strip().casefold()
+            ):
+                raise ValidationError(
+                    f"Sample {sample.sample_id}: assignment position "
+                    "conflicts with its Position location node."
+                )
+        elif position:
+            levels.append(position)
+
+        path = " > ".join(levels)
 
         if len(path) > 255:
             raise ValidationError(

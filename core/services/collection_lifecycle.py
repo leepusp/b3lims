@@ -51,7 +51,7 @@ def deactivate_collection(
 
     locked_collection = (
         Collection.objects
-        .select_for_update()
+        .select_for_update(of=("self",))
         .select_related(
             "owner",
             "research_group",
@@ -113,7 +113,7 @@ def reactivate_collection(
 
     locked_collection = (
         Collection.objects
-        .select_for_update()
+        .select_for_update(of=("self",))
         .select_related(
             "owner",
             "research_group",

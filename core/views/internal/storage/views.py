@@ -125,11 +125,63 @@ def _flatten_storage_locations(
 def storage_workspace_view(
     request,
 ):
+    from core.permissions.storage_workspaces_v8 import (
+        can_operate_on_sample_storage,
+        can_view_storage_location,
+    )
+
     can_manage = (
         can_manage_storage_infrastructure(
             request.user
         )
     )
+
+    from core.models.research_groups.model import ResearchGroup
+    from core.permissions.storage_workspaces_v8 import (
+        can_manage_storage_workspace,
+        is_storage_global_admin,
+        visible_storage_locations_for_user,
+        visible_storage_workspaces_for_user,
+    )
+
+    storage_visible_workspaces_v8 = list(
+        visible_storage_workspaces_for_user(
+            request.user
+        ).select_related("owner", "research_group")
+    )
+
+    storage_manageable_workspaces_v8 = [
+        workspace
+        for workspace in storage_visible_workspaces_v8
+        if can_manage_storage_workspace(
+            request.user, workspace
+        )
+    ]
+
+    manageable_workspace_ids_v8 = [
+        workspace.pk
+        for workspace in storage_manageable_workspaces_v8
+    ]
+
+    storage_parent_choices_v8 = list(
+        visible_storage_locations_for_user(request.user)
+        .filter(
+            workspace_id__in=manageable_workspace_ids_v8,
+            is_active=True,
+        )
+        .order_by("name", "pk")
+    )
+
+    if is_storage_global_admin(request.user):
+        storage_group_choices_v8 = (
+            ResearchGroup.objects.all().order_by("name")
+        )
+    else:
+        storage_group_choices_v8 = (
+            ResearchGroup.objects.filter(
+                coordinator=request.user
+            ).order_by("name")
+        )
 
     if request.method == "POST":
         action = (
@@ -159,97 +211,142 @@ def storage_workspace_view(
                     f"Storage transfer completed. Movement #{movement.pk}.",
                 )
 
-            elif action == "create_location":
-                if not can_manage:
-                    raise PermissionDenied(
-                        (
-                            "You cannot manage the "
-                            "physical storage infrastructure."
-                        )
-                    )
-
-                parent_id = (
-                    request.POST.get(
-                        "parent_id",
-                        "",
-                    )
-                    .strip()
+            elif action == "save_scene_configuration_v8":
+                from django.urls import reverse
+                from core.models.samples.storage import (
+                    StorageSceneConfiguration,
+                )
+                from core.services.storage_scene_configuration_v8 import (
+                    save_storage_scene_configuration,
                 )
 
-                parent = None
+                operation = request.POST.get(
+                    "save_operation",
+                    "",
+                )
 
-                if parent_id:
-                    parent = get_object_or_404(
-                        StorageLocation,
-                        pk=parent_id,
+                if operation not in {"create", "update"}:
+                    raise ValidationError(
+                        "Invalid scene save operation."
                     )
 
-                location = create_storage_location(
-                    name=request.POST.get(
-                        "name",
+                configuration_id = None
+
+                if operation == "update":
+                    raw_id = request.POST.get(
+                        "scene_configuration_id",
                         "",
-                    ),
-                    parent=parent,
-                    location_type=(
-                        request.POST.get(
-                            "location_type",
-                            "other",
+                    )
+
+                    if not raw_id.isascii() or not raw_id.isdigit():
+                        raise ValidationError(
+                            "Select a saved scene to update."
                         )
-                    ),
-                    rank=request.POST.get(
-                        "rank",
-                        "1",
-                    ),
-                    notes=request.POST.get(
-                        "notes",
+
+                    configuration_id = int(raw_id)
+
+                    existing = (
+                        StorageSceneConfiguration.objects
+                        .filter(
+                            pk=configuration_id,
+                            owner=request.user,
+                        )
+                        .first()
+                    )
+
+                    if existing is None:
+                        raise PermissionDenied(
+                            "Scene configuration is not accessible."
+                        )
+
+                    if existing.profile_overrides:
+                        raise ValidationError(
+                            "This scene has nested geometry overrides. "
+                            "The simplified editor cannot modify it "
+                            "without losing those settings."
+                        )
+
+                configuration = save_storage_scene_configuration(
+                    actor=request.user,
+                    name=request.POST.get("name", ""),
+                    root_id=request.POST.get(
+                        "root_location_id",
                         "",
+                    ),
+                    root_profile=request.POST.get(
+                        "root_profile",
+                        "auto",
+                    ),
+                    profile_overrides={},
+                    configuration_id=configuration_id,
+                )
+
+                messages.success(
+                    request,
+                    "Spatial view configuration saved.",
+                )
+
+                return redirect(
+                    f"{reverse('storage_workspace')}"
+                    f"?scene={configuration.pk}"
+                    "#storage-scene-controls-v8"
+                )
+
+            elif action == "create_storage_workspace_v8":
+                from core.services.storage_workspaces_v8 import (
+                    create_storage_workspace_v8,
+                )
+
+                workspace = create_storage_workspace_v8(
+                    actor=request.user,
+                    name=request.POST.get("workspace_name", ""),
+                    scope=request.POST.get("workspace_scope", "personal"),
+                    research_group_id=request.POST.get(
+                        "research_group_id", ""
                     ),
                 )
 
                 messages.success(
                     request,
-                    (
-                        "Storage location created: "
-                        f"{location.full_path}"
+                    f"Storage workspace created: {workspace.name}.",
+                )
+
+            elif action == "create_location":
+                from core.services.storage_workspace_infrastructure_v8 import (
+                    create_storage_location_in_workspace_v8,
+                )
+
+                location = create_storage_location_in_workspace_v8(
+                    actor=request.user,
+                    workspace_id=request.POST.get("workspace_id"),
+                    parent_id=request.POST.get("parent_id", ""),
+                    name=request.POST.get("name", ""),
+                    location_type=request.POST.get(
+                        "location_type", "other"
                     ),
+                    rank=request.POST.get("rank", "1"),
+                    notes=request.POST.get("notes", ""),
+                )
+
+                messages.success(
+                    request,
+                    f"Storage location created: {location.full_path}",
                 )
 
             elif action == "update_location":
-                if not can_manage:
-                    raise PermissionDenied(
-                        (
-                            "You cannot manage the "
-                            "physical storage infrastructure."
-                        )
-                    )
-
-                location = get_object_or_404(
-                    StorageLocation,
-                    pk=request.POST.get(
-                        "location_id"
-                    ),
+                from core.services.storage_workspace_infrastructure_v8 import (
+                    update_storage_location_in_workspace_v8,
                 )
 
-                update_storage_location(
-                    location,
-                    name=request.POST.get(
-                        "name",
-                        "",
+                update_storage_location_in_workspace_v8(
+                    actor=request.user,
+                    location_id=request.POST.get("location_id"),
+                    name=request.POST.get("name", ""),
+                    location_type=request.POST.get(
+                        "location_type", "other"
                     ),
-                    location_type=(
-                        request.POST.get(
-                            "location_type",
-                            "other",
-                        )
-                    ),
-                    rank=request.POST.get(
-                        "rank",
-                        "1",
-                    ),
-                    notes=request.POST.get(
-                        "notes",
-                        "",
-                    ),
+                    rank=request.POST.get("rank", "1"),
+                    notes=request.POST.get("notes", ""),
                 )
 
                 messages.success(
@@ -261,38 +358,22 @@ def storage_workspace_view(
                 "deactivate_location",
                 "reactivate_location",
             }:
-                if not can_manage:
-                    raise PermissionDenied(
-                        (
-                            "You cannot manage the "
-                            "physical storage infrastructure."
-                        )
-                    )
-
-                location = get_object_or_404(
-                    StorageLocation,
-                    pk=request.POST.get(
-                        "location_id"
-                    ),
+                from core.services.storage_workspace_infrastructure_v8 import (
+                    set_storage_location_active_in_workspace_v8,
                 )
 
-                set_storage_location_active(
-                    location,
-                    is_active=(
-                        action
-                        == "reactivate_location"
-                    ),
+                location = set_storage_location_active_in_workspace_v8(
+                    actor=request.user,
+                    location_id=request.POST.get("location_id"),
+                    is_active=(action == "reactivate_location"),
                 )
 
                 messages.success(
                     request,
                     (
-                        "Storage location "
-                        + (
-                            "reactivated."
-                            if location.is_active
-                            else "deactivated."
-                        )
+                        "Storage location reactivated."
+                        if location.is_active
+                        else "Storage location deactivated."
                     ),
                 )
 
@@ -306,7 +387,7 @@ def storage_workspace_view(
                     ),
                 )
 
-                if not can_edit_sample(
+                if not can_operate_on_sample_storage(
                     request.user,
                     sample,
                 ):
@@ -325,12 +406,29 @@ def storage_workspace_view(
                     is_active=True,
                 )
 
+                if not can_view_storage_location(
+                    request.user, location
+                ):
+                    raise PermissionDenied(
+                        "Physical destination is not accessible."
+                    )
+
                 active_assignments = list(
                     sample.storage_assignments
                     .select_related("location")
                     .filter(status="active")
                     .order_by("rank", "id")
                 )
+
+                if any(
+                    not can_view_storage_location(
+                        request.user, item.location
+                    )
+                    for item in active_assignments
+                ):
+                    raise PermissionDenied(
+                        "Existing Sample storage is not accessible."
+                    )
 
                 # A primary destination cannot duplicate an
                 # existing secondary physical assignment.
@@ -417,12 +515,6 @@ def storage_workspace_view(
     if request.method == "GET" and request.GET.get(
         "preview_container"
     ) == "1":
-        if not can_manage:
-            raise PermissionDenied(
-                "Only infrastructure managers may preview "
-                "container-wide movements."
-            )
-
         container_text = request.GET.get(
             "container_id", ""
         ).strip()
@@ -455,6 +547,16 @@ def storage_workspace_view(
                 )
                 preview_destination = StorageLocation.objects.get(
                     pk=preview_destination_id
+                )
+
+                from core.permissions.storage_movements_v8 import (
+                    authorize_storage_container_move_v8,
+                )
+
+                authorize_storage_container_move_v8(
+                    actor=request.user,
+                    container=preview_container,
+                    destination=preview_destination,
                 )
 
                 container_preview = preview_storage_container_move(
@@ -619,8 +721,12 @@ def storage_workspace_view(
                 except ValidationError as exc:
                     bulk_preview_error = "; ".join(exc.messages)
 
+    from core.permissions.storage_workspaces_v8 import (
+        visible_storage_locations_for_user,
+    )
+
     locations = list(
-        StorageLocation.objects
+        visible_storage_locations_for_user(request.user)
         .select_related(
             "parent"
         )
@@ -652,6 +758,50 @@ def storage_workspace_view(
         )
     )
 
+    # Match the V8 infrastructure service authorization.
+    # A user may manage one workspace while viewing another.
+    storage_admin_v8 = is_storage_global_admin(request.user)
+    manageable_ids_v8 = set(manageable_workspace_ids_v8)
+    storage_nodes_by_id_v8 = {
+        location.pk: location
+        for location in locations
+    }
+
+    for row in location_rows:
+        location = row["location"]
+
+        allowed = (
+            storage_admin_v8
+            or (
+                location.workspace_id is not None
+                and location.workspace_id in manageable_ids_v8
+            )
+        )
+
+        # Mixed-workspace or cyclic ancestry is never editable.
+        ancestor_id = location.pk
+        visited_ids = set()
+
+        while allowed and ancestor_id is not None:
+            if ancestor_id in visited_ids:
+                allowed = False
+                break
+
+            visited_ids.add(ancestor_id)
+            ancestor = storage_nodes_by_id_v8.get(ancestor_id)
+
+            if (
+                ancestor is None
+                or ancestor.workspace_id != location.workspace_id
+            ):
+                allowed = False
+                break
+
+            ancestor_id = ancestor.parent_id
+
+        row["can_manage_location_v8"] = allowed
+
+
     active_locations = [
         location
         for location in locations
@@ -668,6 +818,25 @@ def storage_workspace_view(
         .order_by(
             "sample_id"
         )
+    )
+
+    # Physical storage details require Storage-specific access.
+    # General Sample visibility, including is_public=True, is
+    # not permission to inspect freezer, box or position.
+    from core.permissions.storage_workspaces_v8 import (
+        can_operate_on_sample_storage,
+    )
+
+    storage_authorized_sample_ids = [
+        sample.pk
+        for sample in visible_samples
+        if can_operate_on_sample_storage(
+            request.user, sample
+        )
+    ]
+
+    visible_samples = visible_samples.filter(
+        pk__in=storage_authorized_sample_ids
     )
 
     editable_samples = [
@@ -695,6 +864,9 @@ def storage_workspace_view(
                 visible_sample_ids
             ),
             status="active",
+            location_id__in=[
+                location.pk for location in locations
+            ],
         )
         .order_by(
             "sample__sample_id",
@@ -776,6 +948,14 @@ def storage_workspace_view(
             "editable_storage_samples": (
                 editable_samples
             ),
+            "storage_visible_workspaces_v8": storage_visible_workspaces_v8,
+            "storage_manageable_workspaces_v8": storage_manageable_workspaces_v8,
+            "storage_parent_choices_v8": storage_parent_choices_v8,
+            "storage_group_choices_v8": storage_group_choices_v8,
+            "can_manage_location_storage_v8": bool(storage_manageable_workspaces_v8),
+            "storage_is_global_admin_v8": is_storage_global_admin(
+                request.user
+            ),
             "can_manage_storage": (
                 can_manage
             ),
@@ -794,6 +974,83 @@ def storage_workspace_view(
             ),
         }
     )
+
+    # V8 scene configuration is private to the requesting user.
+    # It does not mutate inventory or supply Sample occupancy.
+    from core.models.samples.storage import (
+        StorageSceneConfiguration,
+    )
+    from core.services.storage_scene_configuration_v8 import (
+        get_storage_scene_projection,
+    )
+
+    scene_configs = (
+        StorageSceneConfiguration.objects
+        .filter(owner=request.user)
+        .select_related("root_location")
+        .order_by("name", "pk")
+    )
+
+    requested_scene_id = (
+        request.GET.get("scene", "") or ""
+    ).strip()
+
+    selected_scene = None
+    scene_projection = None
+    scene_error = ""
+
+    if (
+        requested_scene_id.isascii()
+        and requested_scene_id.isdigit()
+        and len(requested_scene_id) <= 18
+    ):
+        selected_scene = (
+            scene_configs
+            .filter(pk=int(requested_scene_id))
+            .first()
+        )
+
+        if selected_scene is not None:
+            try:
+                scene_projection = get_storage_scene_projection(
+                    actor=request.user,
+                    configuration_id=selected_scene.pk,
+                )
+            except ValidationError as exc:
+                scene_error = "; ".join(exc.messages)
+            except PermissionDenied:
+                scene_error = (
+                    "This saved scene is no longer accessible."
+                )
+
+    def eligible_scene_root(location):
+        visited = set()
+        node = location
+
+        while node is not None:
+            if node.pk in visited or not node.is_active:
+                return False
+
+            visited.add(node.pk)
+            node = node.parent
+
+        return True
+
+    scene_roots = [
+        location for location in active_locations
+        if eligible_scene_root(location)
+    ]
+
+    ctx.update({
+        "storage_scene_configs_v8": scene_configs,
+        "storage_scene_selected_v8": selected_scene,
+        "storage_scene_projection_v8": scene_projection,
+        "storage_scene_error_v8": scene_error,
+        "storage_scene_roots_v8": scene_roots,
+        "storage_scene_profiles_v8": (
+            StorageSceneConfiguration.PROFILE_CHOICES
+        ),
+    })
 
     return render(
         request,

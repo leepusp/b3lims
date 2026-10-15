@@ -321,6 +321,11 @@ def reconcile_sample_storage_from_text(
             StorageMovementItem(
                 movement=movement,
                 sample=sample,
+                destination_location_id_snapshot=(
+                    after["location_id"]
+                    if after is not None
+                    else None
+                ),
                 sample_identifier=sample.sample_id,
                 assignment_id_snapshot=assignment_id,
                 location_id_snapshot=(

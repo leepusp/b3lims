@@ -11,6 +11,7 @@ from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
     StorageMovement,
+    StorageWorkspace,
 )
 from core.services.storage_container_movements import (
     move_storage_container,
@@ -117,6 +118,24 @@ class StorageLegacySynchronizationTests(TestCase):
             status="active",
         )
 
+        # V8: all physical ancestors belong to the
+        # infrastructure manager's authorized workspace.
+        cls.workspace = StorageWorkspace.objects.create(
+            name="C2 Legacy Synchronization Workspace",
+            scope="personal",
+            owner=cls.manager,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.freezer_a.pk,
+                cls.freezer_b.pk,
+                cls.box.pk,
+                cls.shelf.pk,
+            ]
+        ).update(workspace=cls.workspace)
+
         _sync_legacy_storage_levels(
             cls.sample_a,
             cls.box.full_path_parts,
@@ -155,8 +174,14 @@ class StorageLegacySynchronizationTests(TestCase):
         self.sample_a.refresh_from_db()
         self.sample_b.refresh_from_db()
 
-        new_path = "Sala A > Freezer B > Caixa Y"
-        shelf_path = "Sala A > Freezer A > Prateleira"
+        new_path = "Sala A > Freezer B > Caixa Y > P01"
+        shelf_path = "Sala A > Freezer A > Prateleira > E01"
+        sample_b_primary_path = (
+            "Sala A > Freezer A > Prateleira > E02"
+        )
+        sample_b_secondary_path = (
+            "Sala A > Freezer B > Caixa Y > P02"
+        )
 
         self.assertEqual(
             self.sample_a.storage_location,
@@ -164,16 +189,22 @@ class StorageLegacySynchronizationTests(TestCase):
         )
         self.assertEqual(
             self.sample_b.storage_location,
-            shelf_path,
+            sample_b_primary_path,
         )
 
         self.assertEqual(
             get_all_storage_paths(self.sample_a),
-            [new_path, shelf_path],
+            [
+                "Sala A > Freezer B > Caixa Y",
+                "Sala A > Freezer A > Prateleira",
+            ],
         )
         self.assertEqual(
             get_all_storage_paths(self.sample_b),
-            [shelf_path, new_path],
+            [
+                "Sala A > Freezer A > Prateleira",
+                "Sala A > Freezer B > Caixa Y",
+            ],
         )
 
         levels = list(
@@ -185,7 +216,7 @@ class StorageLegacySynchronizationTests(TestCase):
 
         self.assertEqual(
             levels,
-            ["Sala A", "Freezer B", "Caixa Y"],
+            ["Sala A", "Freezer B", "Caixa Y", "P01"],
         )
 
         after = list(
@@ -233,11 +264,13 @@ class StorageLegacySynchronizationTests(TestCase):
             name="F" * 120,
             parent=self.room,
             location_type="freezer",
+            workspace=self.workspace,
         )
         long_rack = StorageLocation.objects.create(
             name="R" * 120,
             parent=long_freezer,
             location_type="rack",
+            workspace=self.workspace,
         )
 
         with self.assertRaises(ValidationError):

@@ -6,6 +6,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
 )
 from core.services.storage_sample_movement_preview import (
@@ -72,6 +73,21 @@ class StorageSampleMovementPreviewTests(TestCase):
             position="S01",
             status="active",
         )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="Legacy Sample Preview Workspace",
+            scope="personal",
+            owner=cls.owner,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+                cls.shelf.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
     def move(self, assignment, destination, position):
         return {
@@ -168,10 +184,28 @@ class StorageSampleMovementPreviewTests(TestCase):
             )
 
     def test_existing_secondary_is_not_duplicated(self):
+        # Use a valid Box destination so the duplicate-assignment
+        # validation, rather than the host-type policy, is tested.
+        self.secondary.location = self.box_b
+        self.secondary.save(update_fields=["location"])
+
         with self.assertRaises(ValidationError):
             preview_sample_movements(
                 moves=[
-                    self.move(self.assignments[0], self.shelf, "S02")
+                    self.move(self.assignments[0], self.box_b, "S02")
+                ],
+                actor=self.owner,
+            )
+
+    def test_shelf_is_not_an_assignment_host(self):
+        with self.assertRaises(PermissionDenied):
+            preview_sample_movements(
+                moves=[
+                    self.move(
+                        self.assignments[0],
+                        self.shelf,
+                        "S02",
+                    )
                 ],
                 actor=self.owner,
             )

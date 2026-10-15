@@ -91,11 +91,45 @@
 
                         <div class="col-md-3">
                             <label class="section-label">Physical Location (Path Builder)</label>
-                            <div id="dynamicStorageContainer" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
+                            <div id="dynamicStorageContainer" data-anchor-catalog-url="{% url 'storage_anchor_catalog_v8' %}" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
                                 <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ intake_prefill.storage_location|default:'' }}">
                                 <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter..." value="{{ intake_prefill.storage_location|default:'' }}">
                             </div>
                             <div class="form-text small">Type the location and press <strong>Enter</strong> to create levels. Ex: Freezer 1 ↵ Box A ↵</div>
+
+                            <input type="hidden"
+                                   name="storage_mode_v8"
+                                   id="storage_mode_v8"
+                                   value="">
+                            <input type="hidden"
+                                   name="storage_anchor_id_v8"
+                                   id="storage_anchor_id_v8"
+                                   value="">
+
+                            <div id="storageAnchorSuggestionsV8"
+                                 class="list-group mt-2"
+                                 aria-label="Registered storage suggestions">
+                            </div>
+
+                            <div id="storageAnchorStatusV8"
+                                 class="form-text"
+                                 role="status">
+                              Loading registered storage locations…
+                            </div>
+
+                            <div id="storagePositionPanelV8"
+                                 class="border rounded bg-light p-3 mt-3"
+                                 hidden>
+                              <label class="section-label">
+                                Sample positions
+                              </label>
+                              <p class="form-text mb-2">
+                                Each Sample needs a different recorded
+                                position in the selected Box or Rack.
+                              </p>
+                              <div id="storagePositionRowsV8"></div>
+                            </div>
+
                         </div>
 
                         <div class="col-md-12 border-start border-3 border-warning ps-4 mt-4">
@@ -423,6 +457,7 @@
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260923-map-resilience2"></script>
 <script src="{% static 'vendor/quill/1.3.6/quill.js' %}"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
+<script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261013-v8"></script>
 
 <script id="intakeDynamicPrefillScript">
 (function() {

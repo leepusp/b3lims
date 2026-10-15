@@ -89,6 +89,44 @@
         }
     }
 
+    // V8: scope the existing live renderer to a selected saved scene.
+    // Without a selected scene, the V7 viewer remains unchanged.
+    const savedSceneSource = $("storage-scene-projection-v8");
+
+    if (savedSceneSource) {
+        try {
+            const projection = JSON.parse(
+                savedSceneSource.textContent || "null"
+            );
+
+            if (!window.B3StorageSceneFilterV8) {
+                throw new Error(
+                    "V8 scene filter was not loaded."
+                );
+            }
+
+            const scoped = window.B3StorageSceneFilterV8.scope(
+                live.nodes,
+                live.samples,
+                projection
+            );
+
+            live.nodes = scoped.nodes;
+            live.samples = scoped.samples;
+
+        } catch (error) {
+            // A requested saved scene must never silently display
+            // unrelated live inventory after a binding failure.
+            live.nodes = [];
+            live.samples = [];
+
+            console.error(
+                "Saved spatial scene could not be applied",
+                error
+            );
+        }
+    }
+
     let mode = "live";
     let selected = null;
     let pickedSample = null;
@@ -415,12 +453,261 @@
         return {height, width, shell};
     }
 
+
+    // V8 geometry is presentation-only. Physical types, Sample IDs,
+    // transfer permissions and the V7 default renderer stay unchanged.
+    function buildSavedSceneV8() {
+        const planner = window.B3StorageSceneGeometryV8;
+
+        if (!planner) {
+            status.textContent =
+                "Saved scene geometry is unavailable.";
+            return;
+        }
+
+        let layout;
+
+        try {
+            layout = planner.plan(
+                model.nodes,
+                selected,
+                12
+            );
+        } catch (error) {
+            console.error(
+                "Unable to plan the selected storage scene",
+                error
+            );
+            status.textContent =
+                "Saved scene hierarchy could not be rendered.";
+            return;
+        }
+
+        if (!layout) {
+            status.textContent =
+                "This saved scene has no available physical locations.";
+            return;
+        }
+
+        const {node, profile, children: items} = layout;
+
+        const stage = new THREE.Group();
+        world.add(stage);
+
+        const width = 3.35;
+        const height = 2.55;
+        const depth = 1.55;
+        const opacity = ghost ? .18 : .75;
+
+        if (profile === "cabinet") {
+            // Open-front cabinet: freezer, refrigerator or cupboard.
+            cuboid(stage, width, .08, depth, 0, height, 0,
+                0x819aa6, .95);
+            cuboid(stage, width, .10, depth, 0, .06, 0,
+                0x718d9a, .95);
+            cuboid(stage, .07, height, depth,
+                -width / 2, height / 2, 0,
+                0x8ca7b5, opacity);
+            cuboid(stage, .07, height, depth,
+                width / 2, height / 2, 0,
+                0x8ca7b5, opacity);
+            cuboid(stage, width, height, .045,
+                0, height / 2, -.76,
+                0xc4d5dd, opacity);
+            border(stage, width, height, depth,
+                0, height / 2, 0);
+        } else if (profile === "space") {
+            // Symbolic physical area, not measured floor dimensions.
+            cuboid(stage, width, .10, depth,
+                0, .12, 0, 0xb6ced2, .9);
+            border(stage, width, 1.25, depth,
+                0, .7, 0);
+        } else if (profile === "shelves") {
+            // One schematic support; levels come from real children.
+            cuboid(stage, width, .11, depth,
+                0, .42, 0, 0x92adb9, .9);
+            cuboid(stage, .07, height, depth,
+                -width / 2, height / 2, 0,
+                0x7c9aa7, .8);
+            cuboid(stage, .07, height, depth,
+                width / 2, height / 2, 0,
+                0x7c9aa7, .8);
+        } else if (profile === "rack") {
+            // Rack frame; no fictitious slot capacity.
+            cuboid(stage, .075, height, depth,
+                -width / 2, height / 2, 0,
+                0x7394a4, .9);
+            cuboid(stage, .075, height, depth,
+                width / 2, height / 2, 0,
+                0x7394a4, .9);
+            cuboid(stage, width, .07, depth,
+                0, .25, 0, 0x90b2bf, .9);
+        } else if (profile === "grid") {
+            // Container footprint, not an inferred cell count.
+            cuboid(stage, width, .10, depth,
+                0, .22, 0, 0x96bbc4, .85);
+            border(stage, width, .75, depth,
+                0, .57, 0, 0x5e91a5);
+        } else {
+            cuboid(stage, width, 1.45, depth,
+                0, 1.1, 0, 0xb0c6ce, .16);
+            border(stage, width, 1.45, depth,
+                0, 1.1, 0);
+        }
+
+        // Selecting the physical structure navigates into that level.
+        cuboid(
+            stage, 1.15, .13, .10,
+            0, height + .11, depth / 2,
+            0x287f91, 1, node.id
+        );
+
+        if (
+            profile === "grid" &&
+            semantic(node.kind) === "box"
+        ) {
+            // Reuse V7's real occupied-position tube renderer.
+            // It only draws recorded coordinates.
+            buildBox(
+                stage,
+                node,
+                .48,
+                null,
+                0,
+                selected === node.id
+            );
+        }
+
+        // Display only registered immediate children.
+        // Click a child to descend to its own profile.
+        const count = items.length;
+        const columns = Math.min(
+            4,
+            Math.max(1, Math.ceil(Math.sqrt(count)))
+        );
+        const rows = Math.ceil(count / columns);
+
+        items.forEach(({node: child, profile: childProfile}, index) => {
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+
+            const x = (
+                col - (columns - 1) / 2
+            ) * .76;
+
+            const y = .73 + (
+                rows - row - 1
+            ) * .59;
+
+            const childGroup = new THREE.Group();
+            childGroup.position.set(x, y, .36);
+            stage.add(childGroup);
+
+            const color = {
+                space: 0x9cbeb2,
+                cabinet: 0x7da9c6,
+                shelves: 0xc5ab82,
+                rack: 0x89a8bd,
+                grid: 0x8ebeb9,
+                generic: 0xa4b0bd
+            }[childProfile] || 0xa4b0bd;
+
+            if (childProfile === "shelves") {
+                cuboid(
+                    childGroup, .55, .065, .38,
+                    0, 0, 0,
+                    color, 1, child.id
+                );
+            } else if (childProfile === "rack") {
+                cuboid(
+                    childGroup, .05, .37, .38,
+                    -.24, .10, 0,
+                    color, 1, child.id
+                );
+                cuboid(
+                    childGroup, .05, .37, .38,
+                    .24, .10, 0,
+                    color, 1, child.id
+                );
+                cuboid(
+                    childGroup, .54, .07, .39,
+                    0, -.04, 0,
+                    color, 1, child.id
+                );
+            } else if (childProfile === "grid") {
+                cuboid(
+                    childGroup, .57, .22, .40,
+                    0, 0, 0,
+                    color, .9, child.id
+                );
+                border(
+                    childGroup, .57, .22, .40,
+                    0, 0, 0
+                );
+            } else {
+                const tall = childProfile === "cabinet";
+                cuboid(
+                    childGroup,
+                    .55,
+                    tall ? .47 : .25,
+                    .42,
+                    0,
+                    tall ? .10 : 0,
+                    0,
+                    color,
+                    .9,
+                    child.id
+                );
+                border(
+                    childGroup,
+                    .55,
+                    tall ? .47 : .25,
+                    .42,
+                    0,
+                    tall ? .10 : 0,
+                    0
+                );
+            }
+        });
+
+        wantedDistance = profile === "grid" ? 4.6 : 5.8;
+        wantedTarget.set(0, 1.13, .18);
+
+        const hidden = layout.hiddenChildren
+            ? ` · ${layout.hiddenChildren} additional child location(s) in the list`
+            : "";
+
+        const physicalBox = semantic(node.kind) === "box";
+        const recorded = physicalBox
+            ? model.samples.filter(sample =>
+                sample.box === node.id &&
+                sample.status === "active"
+              ).length
+            : null;
+
+        status.textContent =
+            `${node.name} · ${profile} geometry · ` +
+            `${layout.totalChildren} registered child location(s)` +
+            (recorded === null
+                ? ""
+                : ` · ${recorded} recorded Sample(s)`) +
+            hidden +
+            ". Schematic layout; physical dimensions and free capacity are unknown.";
+    }
+
     function sceneContent() {
         if (!renderer) return;
         disposal();
         world = new THREE.Group();
         scene.add(world);
         cuboid(world, 14, .12, 11, 0, -.12, 0, 0xd4dfe4, 1);
+
+        // A saved V8 scene uses configurable geometry.
+        // Without one, retain the original V7 cutaway renderer.
+        if (mode === "live" && savedSceneSource) {
+            buildSavedSceneV8();
+            return;
+        }
         const focus = ancestry(selected);
         const nearestEquipment = focus.slice().reverse().find(node => semantic(node.kind) === "equipment");
         let equipment = model.nodes.filter(node => semantic(node.kind) === "equipment");

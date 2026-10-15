@@ -55,7 +55,7 @@ class StandaloneIntakeStorageTests(
             self.user
         )
 
-    def test_csv_intake_creates_canonical_storage_on_registration(
+    def test_csv_intake_preserves_unverified_storage_without_assignment(
         self,
     ):
         upload = SimpleUploadedFile(
@@ -166,53 +166,8 @@ class StandaloneIntakeStorageTests(
             "used_for_sample",
         )
 
-        assignment = (
-            SampleStorageAssignment.objects
-            .select_related(
-                "location"
-            )
-            .get(
-                sample=sample
-            )
-        )
-
-        self.assertEqual(
-            assignment.location.full_path,
-            (
-                "Room 1 > Freezer A > "
-                "Rack 01 > Box 001 > A01"
-            ),
-        )
-
-        self.assertTrue(
-            assignment.is_primary
-        )
-
-        self.assertEqual(
-            StorageLocation.objects.count(),
-            5,
-        )
-
-        self.assertEqual(
-            list(
-                sample.storage_levels
-                .order_by(
-                    "level_index"
-                )
-                .values_list(
-                    "name",
-                    flat=True,
-                )
-            ),
-            [
-                "Room 1",
-                "Freezer A",
-                "Rack 01",
-                "Box 001",
-                "A01",
-            ],
-        )
-
+        # A plain CSV path is unverified storage, not physical
+        # inventory ownership or confirmed slot occupation.
         sample.refresh_from_db()
 
         self.assertEqual(
@@ -223,11 +178,15 @@ class StandaloneIntakeStorageTests(
             ),
         )
 
+        # No physical assignment may be inferred from text alone.
+        self.assertFalse(
+            SampleStorageAssignment.objects.filter(
+                sample=sample,
+            ).exists()
+        )
+
+        # Importing a path must not create unscoped infrastructure.
         self.assertEqual(
-            SampleStorageLevel.objects
-            .filter(
-                sample=sample
-            )
-            .count(),
-            5,
+            StorageLocation.objects.count(),
+            0,
         )

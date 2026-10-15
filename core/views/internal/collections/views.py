@@ -601,7 +601,7 @@ def collection_edit_view(
     if request.method == "POST":
         with transaction.atomic():
             collection = get_object_or_404(
-                collection_qs.select_for_update(),
+                collection_qs.select_for_update(of=("self",)),
                 pk=collection_id,
                 is_active=True,
             )

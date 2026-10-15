@@ -18,6 +18,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
 )
 from core.services.storage_assignment_reconcile import (
     reconcile_sample_storage_from_text,
@@ -39,19 +40,28 @@ class StorageWriterConcurrencyTests(TransactionTestCase):
             is_staff=True,
         )
 
+        self.workspace = StorageWorkspace.objects.create(
+            name="E1C PostgreSQL Concurrency Workspace",
+            scope="personal",
+            owner=self.owner,
+        )
+
         self.room = StorageLocation.objects.create(
             name="E1C Concurrent Room",
             location_type="room",
+            workspace=self.workspace,
         )
         self.box_a = StorageLocation.objects.create(
             name="E1C Box A",
             parent=self.room,
             location_type="box",
+            workspace=self.workspace,
         )
         self.box_b = StorageLocation.objects.create(
             name="E1C Box B",
             parent=self.room,
             location_type="box",
+            workspace=self.workspace,
         )
 
         self.sample = Sample.objects.create(
@@ -64,7 +74,7 @@ class StorageWriterConcurrencyTests(TransactionTestCase):
             is_active=True,
             is_public=False,
             is_embargoed=False,
-            storage_location=self.box_a.full_path,
+            storage_location=f"{self.box_a.full_path} > P01",
         )
 
         self.assignment = SampleStorageAssignment.objects.create(
@@ -183,7 +193,7 @@ class StorageWriterConcurrencyTests(TransactionTestCase):
             is_active=True,
             is_public=False,
             is_embargoed=False,
-            storage_location=self.box_a.full_path,
+            storage_location=f"{self.box_a.full_path} > P02",
         )
 
         second_assignment = SampleStorageAssignment.objects.create(
@@ -290,5 +300,8 @@ class StorageWriterConcurrencyTests(TransactionTestCase):
 
             self.assertEqual(
                 assignment.sample.storage_location,
-                assignment.location.full_path,
+                (
+                    f"{assignment.location.full_path}"
+                    f" > {assignment.position}"
+                ),
             )

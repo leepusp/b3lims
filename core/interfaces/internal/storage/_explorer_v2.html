@@ -128,6 +128,7 @@
     {% for location in storage_locations %}
     <span data-location-id="{{ location.pk }}"
           data-parent-id="{{ location.parent_id|default_if_none:'' }}"
+           data-workspace-id="{{ location.workspace_id|default_if_none:'' }}"
           data-location-name="{{ location.name }}"
           data-location-type="{{ location.get_location_type_display }}"
           data-location-kind="{{ location.location_type }}"

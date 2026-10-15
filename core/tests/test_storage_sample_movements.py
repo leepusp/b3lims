@@ -8,6 +8,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
     StorageMovementItem,
 )
@@ -105,6 +106,21 @@ class StorageSampleMovementTests(TestCase):
             status="active",
         )
 
+        cls.workspace = StorageWorkspace.objects.create(
+            name="Legacy Sample Movement Workspace",
+            scope="personal",
+            owner=cls.owner,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+                cls.shelf.pk,
+            ]
+        ).update(workspace=cls.workspace)
+
     def request(self, assignment, destination, position):
         return {
             "assignment_id": assignment.pk,
@@ -141,7 +157,7 @@ class StorageSampleMovementTests(TestCase):
         self.assertEqual(self.secondary.position, "S01")
         self.assertEqual(
             self.samples[0].storage_location,
-            self.box_b.full_path,
+            f"{self.box_b.full_path} > P04",
         )
         self.assertEqual(movement.movement_type, "sample")
         self.assertEqual(movement.items.count(), 1)

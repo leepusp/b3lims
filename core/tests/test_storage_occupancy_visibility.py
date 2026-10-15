@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from core.models.research_groups.model import ResearchGroup
 
 from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
 )
 
 
@@ -21,25 +23,55 @@ class StorageOccupancyVisibilityTests(TestCase):
         cls.owner_b = User.objects.create_user(
             username="occupancy-owner-b"
         )
-        cls.manager = User.objects.create_user(
-            username="occupancy-manager",
-            is_staff=True,
+        # Only the designated V8 global admin can inspect
+        # all private Sample assignments across this inventory.
+        cls.manager = User.objects.create_superuser(
+            username="ccalomeno",
+            email="occupancy-admin@example.invalid",
+            password="test-only-password",
+        )
+
+        cls.coordinator = User.objects.create_user(
+            username="occupancy-coordinator",
+        )
+
+        cls.group = ResearchGroup.objects.create(
+            name="Occupancy Shared Storage Group",
+            coordinator=cls.coordinator,
+        )
+        cls.group.members.add(cls.owner_a, cls.owner_b)
+
+        cls.workspace_group = StorageWorkspace.objects.create(
+            name="Occupancy Shared Group Workspace",
+            scope="group",
+            owner=cls.coordinator,
+            research_group=cls.group,
         )
 
         room = StorageLocation.objects.create(
             name="Privacy Test Room",
             location_type="room",
+            workspace=cls.workspace_group,
         )
 
         cls.box = StorageLocation.objects.create(
             name="Privacy Test Box",
             location_type="box",
             parent=room,
+            workspace=cls.workspace_group,
         )
 
-        for identifier, owner, ranks in (
-            ("VISIBLE-OCCUPANCY-A", cls.owner_a, (1, 2)),
-            ("PRIVATE-OCCUPANCY-B", cls.owner_b, (1,)),
+        for identifier, owner, placements in (
+            (
+                "VISIBLE-OCCUPANCY-A",
+                cls.owner_a,
+                ((1, "P01"), (2, "P02")),
+            ),
+            (
+                "PRIVATE-OCCUPANCY-B",
+                cls.owner_b,
+                ((1, "P03"),),
+            ),
         ):
             sample = Sample.objects.create(
                 sample_id=identifier,
@@ -53,13 +85,13 @@ class StorageOccupancyVisibilityTests(TestCase):
                 is_embargoed=False,
             )
 
-            for rank in ranks:
+            for rank, position in placements:
                 SampleStorageAssignment.objects.create(
                     sample=sample,
                     location=cls.box,
                     rank=rank,
                     is_primary=(rank == 1),
-                    position=f"P{rank:02d}",
+                    position=position,
                     status="active",
                 )
 

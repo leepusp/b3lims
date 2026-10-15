@@ -62,7 +62,7 @@ Manage the physical hierarchy and Sample occupancy.
                         Infrastructure management
                     </div>
 
-                    {% if can_manage_storage %}
+                    {% if can_manage_location_storage_v8 or storage_is_global_admin_v8 %}
                         <span class="badge bg-success">
                             Enabled
                         </span>
@@ -118,7 +118,7 @@ Manage the physical hierarchy and Sample occupancy.
                                     Samples
                                 </th>
                                 <th>Status</th>
-                                {% if can_manage_storage %}
+                                {% if can_manage_location_storage_v8 or storage_is_global_admin_v8 %}
                                     <th class="text-end">
                                         Manage
                                     </th>
@@ -169,10 +169,11 @@ Manage the physical hierarchy and Sample occupancy.
                                         {% endif %}
                                     </td>
 
-                                    {% if can_manage_storage %}
+                                    {% if can_manage_location_storage_v8 or storage_is_global_admin_v8 %}
 
                                     <td class="text-end">
 
+                                        {% if row.can_manage_location_v8 %}
                                         <details class="d-inline-block text-start">
 
                                             <summary
@@ -321,6 +322,11 @@ Manage the physical hierarchy and Sample occupancy.
                                             </div>
 
                                         </details>
+                                        {% else %}
+                                        <span class="text-muted small">
+                                            Read only
+                                        </span>
+                                        {% endif %}
 
                                     </td>
 
@@ -334,7 +340,7 @@ Manage the physical hierarchy and Sample occupancy.
 
                                 <tr>
                                     <td
-                                        colspan="5"
+                                        colspan="{% if can_manage_location_storage_v8 or storage_is_global_admin_v8 %}5{% else %}4{% endif %}"
                                         class="text-center text-muted py-5"
                                     >
                                         No physical storage locations
@@ -429,7 +435,7 @@ Manage the physical hierarchy and Sample occupancy.
 
         <div class="col-xl-4">
 
-            {% if can_manage_storage %}
+            {% if can_manage_location_storage_v8 %}
 
             <div class="card shadow-sm border-0 mb-4">
 
@@ -449,6 +455,26 @@ Manage the physical hierarchy and Sample occupancy.
                             name="action"
                             value="create_location"
                         >
+  <div class="mb-3">
+    <label class="form-label" for="storage-create-workspace-v8">
+      Storage workspace
+    </label>
+    <select name="workspace_id"
+            id="storage-create-workspace-v8"
+            class="form-select"
+            required>
+      <option value="">Select a workspace</option>
+      {% for workspace in storage_manageable_workspaces_v8 %}
+        <option value="{{ workspace.pk }}">
+          {{ workspace.name }}
+        </option>
+      {% endfor %}
+    </select>
+    <div class="form-text">
+      The parent location must belong to this workspace.
+    </div>
+  </div>
+
 
                         <div class="mb-3">
                             <label class="form-label">
@@ -463,12 +489,13 @@ Manage the physical hierarchy and Sample occupancy.
                                     Root location
                                 </option>
 
-                                {% for row in storage_location_rows %}
-                                    {% if row.location.is_active %}
-                                        <option value="{{ row.location.pk }}">
-                                            {{ row.prefix }}{{ row.location.name }}
-                                        </option>
-                                    {% endif %}
+                                {% for location in storage_parent_choices_v8 %}
+                                    <option
+                                        value="{{ location.pk }}"
+                                        data-workspace-id="{{ location.workspace_id }}"
+                                    >
+                                        {{ location.full_path }}
+                                    </option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -647,7 +674,7 @@ Manage the physical hierarchy and Sample occupancy.
 
 
 
-    {% if can_manage_storage %}
+    {% if can_manage_location_storage_v8 or storage_is_global_admin_v8 %}
     <div class="row g-4 mt-1" id="storage-container-preview">
         <div class="col-12">
             <div class="card shadow-sm border-0">
@@ -724,6 +751,8 @@ Manage the physical hierarchy and Sample occupancy.
                     {% endif %}
 
                     {% if storage_container_preview %}
+{% include "internal/storage/_movement_comparison_v89.html" with movement_preview=storage_container_preview movement_kind="container" only %}
+
                         <div class="alert alert-info mt-3 mb-0"
                              role="status">
                             <strong>Preview only — no transfer executed.</strong>
@@ -913,6 +942,9 @@ Manage the physical hierarchy and Sample occupancy.
 
 {% block extra_js %}
 <script defer src="{% static 'internal/storage/storage_explorer_v2.js' %}"></script>
+<script defer src="{% static 'internal/storage/storage_relationship_v89.js' %}"></script>
+<script defer src="{% static 'internal/storage/storage_scene_filter_v8.js' %}"></script>
+<script defer src="{% static 'internal/storage/storage_scene_geometry_v8.js' %}"></script>
 <script type="module"
         src="{% static 'internal/storage/storage_viewer_3d.js' %}"></script>
 <script defer src="{% static 'internal/storage/storage_designer_v4.js' %}"></script>

@@ -8,6 +8,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
     StorageMovement,
 )
 from core.services.storage_movement_preview import preview_storage_container_move
@@ -57,6 +58,22 @@ class StorageConfirmationHTTPTests(TestCase):
             sample=cls.sample_b, location=cls.box_a, rank=1,
             is_primary=True, status="active", position="A02",
         )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="E3 Confirmation Workspace",
+            scope="personal",
+            owner=cls.user,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.freezer_a.pk,
+                cls.freezer_b.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
     def setUp(self):
         self.client.force_login(self.user)

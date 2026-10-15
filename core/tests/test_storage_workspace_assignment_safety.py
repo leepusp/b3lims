@@ -6,6 +6,7 @@ from core.models.samples.sample import Sample
 from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
+    StorageWorkspace,
 )
 
 
@@ -71,6 +72,21 @@ class StorageWorkspaceAssignmentSafetyTests(TestCase):
             position="S01",
             status="active",
         )
+
+        cls.workspace = StorageWorkspace.objects.create(
+            name="Workspace Assignment Safety V8",
+            scope="personal",
+            owner=cls.user,
+        )
+
+        StorageLocation.objects.filter(
+            pk__in=[
+                cls.room.pk,
+                cls.box_a.pk,
+                cls.box_b.pk,
+                cls.shelf.pk,
+            ]
+        ).update(workspace=cls.workspace)
 
     def test_workspace_assignment_preserves_other_locations(self):
         self.client.force_login(self.user)

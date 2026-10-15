@@ -21,28 +21,69 @@ class PublicHomeV32PrototypeIntegrationTests(
             "core/interfaces/public/base.html"
         ).read_text()
 
-    def test_inter_typography_is_loaded(
-        self,
-    ):
+    def test_inter_typography_is_loaded(self):
+        """The local Inter stylesheet supplies required weights."""
+        import re
+        from pathlib import Path
+        from django.contrib.staticfiles import finders
+
         source = self.base_source()
 
         self.assertIn(
-            "fonts.googleapis.com",
+            "vendor/inter/google-fonts-v20/inter.css",
             source,
+        )
+        self.assertIn('"Inter"', source)
+
+        found = finders.find(
+            "vendor/inter/google-fonts-v20/inter.css"
+        )
+        self.assertIsNotNone(found)
+
+        stylesheet = Path(found).read_text(
+            encoding="utf-8",
+            errors="replace",
         )
 
-        self.assertIn(
-            (
-                "family=Inter:"
-                "wght@400;500;600;700;800"
-            ),
-            source,
+        faces = re.findall(
+            r"@font-face\s*\{([^}]*)\}",
+            stylesheet,
+            flags=re.I | re.S,
         )
 
-        self.assertIn(
-            '"Inter"',
-            source,
-        )
+        inter_faces = [
+            face for face in faces
+            if re.search(
+                r"font-family\s*:\s*['\"]?Inter\b",
+                face,
+                flags=re.I,
+            )
+        ]
+
+        self.assertTrue(inter_faces)
+
+        ranges = []
+
+        for face in inter_faces:
+            for start, end in re.findall(
+                r"font-weight\s*:\s*(\d+)(?:\s+(\d+))?\s*;",
+                face,
+                flags=re.I,
+            ):
+                ranges.append((
+                    int(start),
+                    int(end or start),
+                ))
+
+        for weight in (400, 500, 600, 700, 800):
+            self.assertTrue(
+                any(
+                    start <= weight <= end
+                    for start, end in ranges
+                ),
+                f"Missing Inter font weight: {weight}",
+            )
+
 
     def test_prototype_design_tokens_are_available(
         self,
@@ -183,7 +224,7 @@ class PublicHomeV32PrototypeIntegrationTests(
         for token in (
             'json_script:"public-sample-type-data"',
             'json_script:"public-organism-data"',
-            "echarts@5.5.1/dist/echarts.min.js",
+            "vendor/echarts/5.5.1/echarts.min.js",
             'type: "pie"',
             'type: "treemap"',
             "publicSampleTypeChart",
