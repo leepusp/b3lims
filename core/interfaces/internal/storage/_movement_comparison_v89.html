@@ -1,5 +1,9 @@
 <section class="border rounded p-3 my-3"
          data-b3-v89-movement-comparison="{{ movement_kind }}"
+         {% if movement_kind == "container" %}
+         data-b3-v810-container-id="{{ movement_preview.container_id }}"
+         data-b3-v810-destination-id="{{ movement_preview.destination_id }}"
+         {% endif %}
          aria-label="Storage movement before and after comparison">
 
   <div class="d-flex flex-wrap gap-2

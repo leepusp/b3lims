@@ -201,6 +201,25 @@
       }
     `;
 
+
+    visualStyle.textContent += `
+      #storage-relationship-diagram-v89
+      .b3-v810-preview-origin {
+        border-left: 4px solid var(--bs-warning, #ffc107);
+      }
+
+      #storage-relationship-diagram-v89
+      .b3-v810-preview-destination {
+        border-right: 4px solid var(--bs-info, #0dcaf0);
+      }
+
+      #storage-relationship-diagram-v89
+      .b3-v810-preview-affected {
+        outline: 1px dashed var(--bs-warning, #ffc107);
+        outline-offset: -3px;
+      }
+    `;
+
     panel.append(visualStyle);
 
     const expanded = new Set();
@@ -211,6 +230,113 @@
       if (classes) node.className = classes;
       if (value !== undefined) node.textContent = value;
       return node;
+    }
+
+
+    // Movement highlights use completed Django previews only.
+    // They do not submit, validate or authorize transfers.
+    const previewOrigins = new Set();
+    const previewDestinations = new Set();
+    const previewAffected = new Set();
+
+    function uniquePathId(path) {
+      const normalized = String(path || "").trim();
+      if (!normalized) return "";
+
+      const matches = safeNodes.filter(
+        item => physicalPath(item) === normalized
+      );
+
+      return matches.length === 1 ? matches[0].id : "";
+    }
+
+    function addPreviewMarker(target, id) {
+      const key = String(id || "");
+      if (safeIds.has(key)) target.add(key);
+    }
+
+    const comparisons = document.querySelectorAll(
+      "[data-b3-v89-movement-comparison]"
+    );
+
+    for (const comparison of comparisons) {
+      const kind = comparison.dataset.b3V89MovementComparison;
+
+      if (kind === "container") {
+        const originId = String(
+          comparison.dataset.b3V810ContainerId || ""
+        );
+        const destinationId = String(
+          comparison.dataset.b3V810DestinationId || ""
+        );
+
+        if (safeIds.has(originId) && safeIds.has(destinationId)) {
+          const origin = byId.get(originId);
+          const destination = byId.get(destinationId);
+
+          // Cross-workspace movements are not represented as
+          // authorized by this visualization.
+          if (origin &&
+              destination &&
+              origin.workspace === destination.workspace) {
+            previewOrigins.add(originId);
+            previewDestinations.add(destinationId);
+
+            for (const candidate of safeNodes) {
+              if (candidate.workspace !== origin.workspace ||
+                  candidate.id === originId) continue;
+
+              const visited = new Set();
+              let ancestor = candidate.parent;
+
+              while (ancestor && !visited.has(ancestor)) {
+                if (ancestor === originId) {
+                  previewAffected.add(candidate.id);
+                  break;
+                }
+
+                visited.add(ancestor);
+
+                const parent = byId.get(ancestor);
+                if (!parent ||
+                    !safeIds.has(parent.id) ||
+                    parent.workspace !== origin.workspace) break;
+
+                ancestor = parent.parent;
+              }
+            }
+          }
+        }
+
+        continue;
+      }
+
+      if (kind !== "sample" && kind !== "bulk") continue;
+
+      for (const movement of comparison.querySelectorAll(
+        "[data-b3-v89-movement-row]"
+      )) {
+        const before = movement.querySelector(
+          "[data-b3-v89-path-before]"
+        );
+        const after = movement.querySelector(
+          "[data-b3-v89-path-after]"
+        );
+
+        const originId = uniquePathId(before?.textContent);
+        const destinationId = uniquePathId(after?.textContent);
+
+        // Do not visually endorse cross-workspace transfers.
+        const origin = byId.get(originId);
+        const destination = byId.get(destinationId);
+
+        if (origin &&
+            destination &&
+            origin.workspace === destination.workspace) {
+          addPreviewMarker(previewOrigins, originId);
+          addPreviewMarker(previewDestinations, destinationId);
+        }
+      }
     }
 
     function renderBranch(item, depth) {
@@ -283,6 +409,17 @@
               choose.title = path;
               summary.title = path;
               choose.setAttribute("aria-label", `Select ${path}`);
+
+
+        if (previewAffected.has(item.id)) {
+          row.classList.add("b3-v810-preview-affected");
+        }
+        if (previewOrigins.has(item.id)) {
+          row.classList.add("b3-v810-preview-origin");
+        }
+        if (previewDestinations.has(item.id)) {
+          row.classList.add("b3-v810-preview-destination");
+        }
 
       row.append(toggle, choose, summary);
       branch.append(row);

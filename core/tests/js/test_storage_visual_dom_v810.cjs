@@ -156,6 +156,14 @@ const listeners = {};
 const document = {
   readyState: "complete",
 
+  // No authorized movement preview is present in this fixture.
+  querySelectorAll(selector) {
+    if (selector === "[data-b3-v89-movement-comparison]") {
+      return [];
+    }
+    return [];
+  },
+
   getElementById(id) {
     return elements.get(id) || null;
   },
