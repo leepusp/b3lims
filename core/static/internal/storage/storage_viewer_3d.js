@@ -872,6 +872,20 @@
         if (sample) pickSample(sample);
     });
 
+
+    // V8.9B: accept read-only navigation from the independent 2D tree.
+    document.addEventListener("b3-storage-2d-navigate", event => {
+        if (mode !== "live" || !map) return;
+
+        const requested = event.detail?.id;
+
+        if (requested == null) {
+            select(null, false);
+        } else if (map.has(String(requested))) {
+            select(String(requested), false);
+        }
+    });
+
     document.addEventListener("b3-storage-location-selected", event => {
         if (mode === "live") {
             const id = event.detail?.id;
