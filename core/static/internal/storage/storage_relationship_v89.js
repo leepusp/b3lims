@@ -155,6 +155,54 @@
       return names.join(" > ");
     }
 
+
+    // V8.10 read-only hierarchy styling.
+    const visualStyle = document.createElement("style");
+
+    visualStyle.textContent = `
+      #storage-relationship-diagram-v89 .b3-v810-branch {
+        position: relative;
+        border-left-width: 2px !important;
+      }
+
+      #storage-relationship-diagram-v89 .b3-v810-node {
+        position: relative;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.65rem;
+        background: var(--bs-body-bg, #fff);
+        margin-bottom: 0.4rem;
+      }
+
+      #storage-relationship-diagram-v89 .b3-v810-node::before {
+        content: "";
+        position: absolute;
+        width: 0.65rem;
+        left: -0.65rem;
+        top: 50%;
+        border-top: 2px solid var(--bs-border-color, #dee2e6);
+      }
+
+      #storage-relationship-diagram-v89
+      .b3-v810-node.b3-v810-selected {
+        border-color: var(--bs-primary, #0d6efd);
+        background: var(--bs-primary-bg-subtle, #e7f1ff);
+      }
+
+      #storage-relationship-diagram-v89 .b3-v810-summary {
+        margin-left: auto;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: var(--bs-secondary-bg, #e9ecef);
+      }
+
+      #storage-relationship-diagram-v89 .b3-v810-toggle {
+        min-width: 2rem;
+      }
+    `;
+
+    panel.append(visualStyle);
+
     const expanded = new Set();
     let selectedId = "";
 
@@ -166,10 +214,10 @@
     }
 
     function renderBranch(item, depth) {
-      const branch = element("div", "ms-3 border-start ps-2 my-1");
+      const branch = element("div", "ms-3 border-start ps-2 my-1 b3-v810-branch");
       const row = element(
         "div",
-        "d-flex align-items-center gap-2 flex-wrap"
+        "d-flex align-items-center gap-2 flex-wrap b3-v810-node"
       );
 
       const descendants = children.get(
@@ -180,7 +228,7 @@
 
       const toggle = element(
         "button",
-        "btn btn-sm btn-outline-secondary",
+        "btn btn-sm btn-outline-secondary b3-v810-toggle",
         isExpanded ? "−" : "+"
       );
 
@@ -207,6 +255,10 @@
         }`,
         item.name
       );
+        if (item.id === selectedId) {
+          row.classList.add("b3-v810-selected");
+        }
+
 
       choose.type = "button";
       choose.dataset.locationId = item.id;
@@ -222,7 +274,7 @@
 
               const summary = element(
                 "span",
-                "small text-muted",
+                "small text-muted b3-v810-summary",
                 `${item.type} · ${directCount} direct · ` +
                 `${totalCount} in subtree` +
                 (item.active ? "" : " · inactive")

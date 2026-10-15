@@ -10,7 +10,12 @@ const source = fs.readFileSync(
 );
 
 const startToken = "    const subtreeCounts = new Map();";
-const endToken = "    const expanded = new Set();";
+// Stop before presentation code; this test evaluates calculations.
+const endToken = source.includes(
+  'const visualStyle = document.createElement("style");'
+)
+  ? 'const visualStyle = document.createElement("style");'
+  : "    const expanded = new Set();";
 
 const start = source.indexOf(startToken);
 const end = source.indexOf(endToken, start);
