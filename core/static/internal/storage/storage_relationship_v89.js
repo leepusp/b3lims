@@ -321,6 +321,45 @@
       render();
     });
 
+
+    // Keep the hierarchy map synchronized with authorized
+    // selections originating from other storage components.
+    document.addEventListener(
+      "b3-storage-location-selected",
+      event => {
+        const value = event.detail?.id;
+        const id = value == null ? "" : String(value);
+
+        if (!safeIds.has(id)) return;
+
+        const location = byId.get(id);
+        if (!location || !allowed.has(location.workspace)) return;
+
+        selector.value = location.workspace;
+        selectedId = id;
+
+        const visited = new Set([id]);
+        let ancestor = location.parent;
+
+        while (ancestor && !visited.has(ancestor)) {
+          visited.add(ancestor);
+
+          const parent = byId.get(ancestor);
+
+          if (!parent ||
+              !safeIds.has(ancestor) ||
+              parent.workspace !== location.workspace) {
+            break;
+          }
+
+          expanded.add(ancestor);
+          ancestor = parent.parent;
+        }
+
+        render();
+      }
+    );
+
     render();
   }
 
