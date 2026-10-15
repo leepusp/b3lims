@@ -2,7 +2,17 @@
 set -euo pipefail
 umask 077
 
-REPO="/home/ladmin/git/biobank"
+# Resolve the Git worktree containing this versioned script.
+# During development this is the feature worktree; after
+# integration this is the canonical main checkout.
+SCRIPT_DIR="$(
+    cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+    pwd -P
+)"
+
+REPO="$(
+    git -C "$SCRIPT_DIR" rev-parse --show-toplevel
+)"
 APP="/home/public/apps/biobank"
 PY="/home/public/conda/envs/biobank/bin/python"
 

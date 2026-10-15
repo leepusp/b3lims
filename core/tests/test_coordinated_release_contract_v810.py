@@ -60,3 +60,32 @@ class CoordinatedReleaseContractV810Tests(unittest.TestCase):
         self.assertIn("collectstatic", source)
         self.assertIn('cmp -s "$SRC" "$DST"', source)
         self.assertIn("static-sha256.txt", source)
+
+
+class CoordinatedReleaseSourceResolutionV810Tests(unittest.TestCase):
+
+    def test_source_is_resolved_from_script_worktree(self):
+        source = SCRIPT.read_text()
+        self.assertIn(
+            'git -C "$SCRIPT_DIR" rev-parse --show-toplevel',
+            source,
+        )
+        self.assertNotIn(
+            'REPO="/home/ladmin/git/biobank"',
+            source,
+        )
+
+    def test_exact_head_and_clean_checkout_still_required(self):
+        source = SCRIPT.read_text()
+        self.assertIn(
+            'git -C "$REPO" rev-parse HEAD',
+            source,
+        )
+        self.assertIn(
+            'git -C "$REPO" status --porcelain=v1',
+            source,
+        )
+        self.assertIn(
+            'git -C "$REPO" archive',
+            source,
+        )
