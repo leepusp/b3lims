@@ -37,6 +37,7 @@ class StorageContextualV7Tests(SimpleTestCase):
         self.assertIn('"preview-container"', js)
         self.assertIn('"preview-sample-assignment"', js)
         self.assertIn('"b3-spatial-v5-box"', js)
+        self.assertIn('"b3-spatial-v5-pick"', js)
         self.assertIn('transfersTab.click()', js)
         self.assertIn('sample.legacy', js)
         self.assertIn('assignments.length !== 1', js)

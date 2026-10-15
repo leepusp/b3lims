@@ -49,6 +49,7 @@
 
     let mode = null;
     let box = null;
+    let samples = [];
     let sample = null;
 
     function availableOptions(select) {
@@ -130,27 +131,60 @@
         }
     }
 
+    function sampleKey(item) {
+        if (!item) {
+            return "";
+        }
+
+        if (item.key != null) {
+            return String(item.key);
+        }
+
+        if (item.id != null) {
+            return String(item.id);
+        }
+
+        return "";
+    }
+
+    function selectSample(key) {
+        sample = null;
+
+        if (key == null) {
+            return;
+        }
+
+        sample = samples.find(
+            item => sampleKey(item) === String(key)
+        ) || null;
+    }
+
     document.addEventListener("b3-spatial-v5-box", event => {
         const detail = event.detail || {};
 
         mode = detail.mode || null;
         box = detail.box || null;
-        sample = null;
+        samples = Array.isArray(detail.samples)
+            ? detail.samples
+            : [];
 
-        if (detail.picked != null &&
-            Array.isArray(detail.samples)) {
+        selectSample(detail.picked);
+        render();
+    });
 
-            sample = detail.samples.find(item => {
-                const key = item.key != null
-                    ? String(item.key)
-                    : item.id != null
-                        ? String(item.id)
-                        : "";
+    document.addEventListener("b3-spatial-v5-pick", event => {
+        const detail = event.detail || {};
 
-                return key === String(detail.picked);
-            }) || null;
+        if (
+            detail.mode !== mode ||
+            !box ||
+            detail.box == null ||
+            String(detail.box) !== String(box.id)
+        ) {
+            return;
         }
 
+        selectSample(detail.key);
         render();
     });
 
