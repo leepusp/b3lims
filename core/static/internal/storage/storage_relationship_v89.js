@@ -109,6 +109,52 @@
       }
     }
 
+
+    // Aggregate direct active assignments across authorized ancestors.
+    // This count is not a measurement of physical capacity.
+    const subtreeCounts = new Map();
+
+    for (const [locationId, directCount] of counts) {
+      const origin = byId.get(locationId);
+      const visited = new Set();
+      let current = origin;
+
+      while (
+        current &&
+        safeIds.has(current.id) &&
+        !visited.has(current.id) &&
+        current.workspace === origin.workspace
+      ) {
+        visited.add(current.id);
+
+        subtreeCounts.set(
+          current.id,
+          (subtreeCounts.get(current.id) || 0) + directCount
+        );
+
+        current = byId.get(current.parent);
+      }
+    }
+
+    function physicalPath(item) {
+      const names = [];
+      const visited = new Set();
+      let current = item;
+
+      while (
+        current &&
+        safeIds.has(current.id) &&
+        !visited.has(current.id) &&
+        current.workspace === item.workspace
+      ) {
+        visited.add(current.id);
+        names.unshift(current.name);
+        current = byId.get(current.parent);
+      }
+
+      return names.join(" > ");
+    }
+
     const expanded = new Set();
     let selectedId = "";
 
@@ -170,12 +216,21 @@
       );
       choose.addEventListener("click", () => focusExplorer(item.id));
 
-      const summary = element(
-        "span",
-        "small text-muted",
-        `${item.type} · ${counts.get(item.id) || 0} active assignment(s)` +
-        (item.active ? "" : " · inactive")
-      );
+      const directCount = counts.get(item.id) || 0;
+              const totalCount = subtreeCounts.get(item.id) || 0;
+              const path = physicalPath(item);
+
+              const summary = element(
+                "span",
+                "small text-muted",
+                `${item.type} · ${directCount} direct · ` +
+                `${totalCount} in subtree` +
+                (item.active ? "" : " · inactive")
+              );
+
+              choose.title = path;
+              summary.title = path;
+              choose.setAttribute("aria-label", `Select ${path}`);
 
       row.append(toggle, choose, summary);
       branch.append(row);
