@@ -9,27 +9,55 @@
       .trim()
       .toLowerCase();
 
-  const byText = (selectors, label) => {
+  const make = (tag, klass, text) => {
+    const el = document.createElement(tag);
+    if (klass) el.className = klass;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+
+  const allTextMatches = (selectors, label) => {
     const wanted = normalize(label);
-
-    for (const node of document.querySelectorAll(selectors)) {
-      if (normalize(node.textContent) === wanted) {
-        return node;
-      }
-    }
-    return null;
+    return Array.from(document.querySelectorAll(selectors))
+      .filter(node => normalize(node.textContent) === wanted);
   };
 
-  const hideByText = label => {
-    const node = byText("button, a, summary, [role='button']", label);
-    if (node) {
-      node.hidden = true;
-      node.setAttribute("aria-hidden", "true");
-    }
-    return node;
-  };
+  const firstTextMatch = (selectors, label) =>
+    allTextMatches(selectors, label)[0] || null;
 
-  const findSectionByHeading = label => {
+  function hideExactText(label) {
+    const matches = allTextMatches(
+      "button, a, span, summary, [role='button'], .badge, .btn, .nav-link",
+      label
+    );
+
+    for (const node of matches) {
+      const target =
+        node.closest("button, a, summary, .btn, .badge") || node;
+
+      target.hidden = true;
+      target.setAttribute("aria-hidden", "true");
+      target.classList.add("b3-shell-v812-hidden-source");
+    }
+  }
+
+  function hideContainerIfEmpty(node) {
+    if (!node) return;
+
+    const parent = node.parentElement;
+    if (!parent) return;
+
+    const visibleChildren = Array.from(parent.children).filter(
+      child => !child.hidden && child.offsetParent !== null
+    );
+
+    if (!visibleChildren.length) {
+      parent.hidden = true;
+      parent.classList.add("b3-shell-v812-hidden-source");
+    }
+  }
+
+  function findSectionByHeading(label) {
     const wanted = normalize(label);
 
     const headings = document.querySelectorAll(
@@ -51,14 +79,7 @@
     }
 
     return null;
-  };
-
-  const make = (tag, klass, text) => {
-    const el = document.createElement(tag);
-    if (klass) el.className = klass;
-    if (text !== undefined) el.textContent = text;
-    return el;
-  };
+  }
 
   function installStyle() {
     if (document.getElementById("b3-v812-shell-style")) return;
@@ -82,16 +103,19 @@
         padding: 12px;
         border-bottom: 1px solid #e5edf2;
         background: #ffffff;
+        align-items: center;
       }
       .b3-shell-v812-toolbar .btn {
         border-radius: 10px;
       }
-      .b3-shell-v812-toolbar .btn-primary {
-        box-shadow: none;
-      }
       .b3-shell-v812-main {
-        padding: 0;
         background: #ffffff;
+      }
+      .b3-shell-v812-panel {
+        display: none;
+      }
+      .b3-shell-v812-panel.active {
+        display: block;
       }
       .b3-shell-v812-extras {
         border-top: 1px solid #e5edf2;
@@ -117,10 +141,6 @@
         box-shadow: none !important;
         background: transparent !important;
       }
-      .b3-shell-v812-lifted > summary,
-      .b3-shell-v812-lifted .accordion-button {
-        background: #ffffff !important;
-      }
       .b3-shell-v812-hidden-source {
         display: none !important;
       }
@@ -135,50 +155,74 @@
     document.head.append(style);
   }
 
+  function triggerViewerRefresh() {
+    const fire = () => {
+      window.dispatchEvent(new Event("resize"));
+
+      const activeMode =
+        document.querySelector(
+          'button[data-v5-view].active, button[data-v5-view][aria-pressed="true"]'
+        ) ||
+        firstTextMatch("button", "3D + 2D") ||
+        firstTextMatch("button", "3D");
+
+      if (activeMode) {
+        activeMode.click();
+      }
+
+      window.dispatchEvent(new Event("resize"));
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(fire);
+    });
+  }
+
   function init() {
+    if (document.getElementById("b3-shell-v812")) return;
+
     installStyle();
 
     const hierarchyHost = document.getElementById("b3-v810-hierarchy-view");
     if (!hierarchyHost) return;
 
-    const spatialTab = byText("button, a", "Spatial viewer");
-    const locationsTab = byText("button, a", "Locations");
-    const samplesTab = byText("button, a", "Samples");
-    const transfersTab = byText("button, a", "Transfers");
-    const historyTab = byText("button, a", "History");
+    const spatialTab = firstTextMatch("button, a", "Spatial viewer");
+    const samplesTab = firstTextMatch("button, a", "Samples");
+    const transfersTab = firstTextMatch("button, a", "Transfers");
+    const historyTab = firstTextMatch("button, a", "History");
 
     const sourceTabs = {
       spatial: spatialTab,
-      locations: locationsTab,
       samples: samplesTab,
       transfers: transfersTab,
       history: historyTab,
     };
 
     const tabBar = spatialTab?.parentElement;
-
     if (tabBar) {
       tabBar.classList.add("b3-shell-v812-hidden-source");
       tabBar.setAttribute("aria-hidden", "true");
     }
 
-    hideByText("Audited inventory");
-    hideByText("Back");
-    hideByText("Overview");
-    hideByText("Rotate");
-    hideByText("Cutaway walls");
+    hideExactText("Explore example");
+    hideExactText("Audited inventory");
+    hideExactText("Back");
+    hideExactText("Overview");
+    hideExactText("Rotate");
+    hideExactText("Cutaway walls");
+
+    hideContainerIfEmpty(firstTextMatch("button, a", "Explore example"));
+    hideContainerIfEmpty(firstTextMatch("span, a, button", "Audited inventory"));
 
     const inventoryBlock = findSectionByHeading("Detailed inventory");
     const workspacesBlock = findSectionByHeading("My physical storage workspaces");
     const configureBlock = findSectionByHeading("Configure spatial view");
 
-    const mainAnchor =
+    const currentMain =
       hierarchyHost.closest("section,article,div")?.parentElement ||
       hierarchyHost.parentElement;
 
-    if (!mainAnchor) return;
-
-    if (document.getElementById("b3-shell-v812")) return;
+    if (!currentMain || !currentMain.parentElement) return;
 
     const shell = make("section", "b3-shell-v812");
     shell.id = "b3-shell-v812";
@@ -187,41 +231,57 @@
     const note = make(
       "div",
       "b3-shell-v812-note",
-      "Single workspace panel: view switching, inventory and configuration are consolidated here."
+      "Workspace navigation and inventory tools are consolidated in a single main panel."
     );
-
     const title = make("span", "b3-shell-v812-title", "Workspace panel");
 
-    toolbar.append(title);
-
-    const internalButtons = [];
-
-    const makeButton = (label, onClick) => {
-      const btn = make("button", "btn btn-sm btn-outline-secondary", label);
-      btn.type = "button";
-      btn.addEventListener("click", onClick);
-      internalButtons.push(btn);
-      return btn;
-    };
-
-    const setActive = activeButton => {
-      for (const btn of internalButtons) {
-        btn.classList.remove("btn-primary");
-        btn.classList.remove("btn-outline-primary");
-        btn.classList.add("btn-outline-secondary");
-      }
-
-      if (activeButton) {
-        activeButton.classList.remove("btn-outline-secondary");
-        activeButton.classList.add("btn-primary");
-      }
-    };
+    const mainRegion = make("div", "b3-shell-v812-main");
+    const viewerPanel = make("div", "b3-shell-v812-panel");
+    viewerPanel.dataset.panel = "viewer";
+    viewerPanel.classList.add("active");
 
     const extras = make("div", "b3-shell-v812-extras");
     const extraPanels = new Map();
+    const buttons = new Map();
 
-    const registerExtra = (key, label, node) => {
-      if (!node) return null;
+    function setActiveButton(key) {
+      for (const [name, btn] of buttons.entries()) {
+        btn.classList.remove("btn-primary");
+        btn.classList.remove("btn-outline-primary");
+        btn.classList.add("btn-outline-secondary");
+
+        if (name === key) {
+          btn.classList.remove("btn-outline-secondary");
+          btn.classList.add("btn-primary");
+        }
+      }
+    }
+
+    function setActivePanel(key) {
+      viewerPanel.classList.toggle("active", key === "viewer");
+
+      for (const [name, panel] of extraPanels.entries()) {
+        panel.classList.toggle("active", name === key);
+      }
+
+      setActiveButton(key);
+
+      if (key === "viewer") {
+        triggerViewerRefresh();
+      }
+    }
+
+    function registerButton(key, label, callback) {
+      const btn = make("button", "btn btn-sm btn-outline-secondary", label);
+      btn.type = "button";
+      btn.addEventListener("click", callback);
+      buttons.set(key, btn);
+      toolbar.append(btn);
+      return btn;
+    }
+
+    function registerExtra(key, node) {
+      if (!node) return;
 
       const wrapper = make("div", "b3-shell-v812-extra");
       wrapper.dataset.shellExtra = key;
@@ -230,113 +290,103 @@
       wrapper.append(node);
       extraPanels.set(key, wrapper);
       extras.append(wrapper);
-
-      const btn = makeButton(label, () => {
-        showExtra(key);
-      });
-
-      return btn;
-    };
-
-    const showExtra = key => {
-      for (const [name, panel] of extraPanels.entries()) {
-        panel.classList.toggle("active", name === key);
-      }
-
-      const btn = internalButtons.find(
-        node => node.dataset.extraKey === key
-      );
-
-      if (btn) setActive(btn);
-    };
-
-    const proxyTab = (label, sourceButton) => {
-      if (!sourceButton) return null;
-
-      return makeButton(label, () => {
-        sourceButton.click();
-        for (const panel of extraPanels.values()) {
-          panel.classList.remove("active");
-        }
-      });
-    };
-
-    const spatialBtn = proxyTab("Spatial", sourceTabs.spatial);
-    const locationsBtn = proxyTab("Locations", sourceTabs.locations);
-    const samplesBtn = proxyTab("Samples", sourceTabs.samples);
-    const transfersBtn = proxyTab("Transfers", sourceTabs.transfers);
-    const historyBtn = proxyTab("History", sourceTabs.history);
-
-    for (const btn of [
-      spatialBtn,
-      locationsBtn,
-      samplesBtn,
-      transfersBtn,
-      historyBtn
-    ]) {
-      if (btn) toolbar.append(btn);
     }
 
-    const inventoryBtn = registerExtra("inventory", "Inventory", inventoryBlock);
-    const workspacesBtn = registerExtra("workspaces", "Workspaces", workspacesBlock);
-    const configureBtn = registerExtra("configure", "Configure", configureBlock);
+    registerExtra("inventory", inventoryBlock);
+    registerExtra("workspaces", workspacesBlock);
+    registerExtra("configure", configureBlock);
 
-    if (inventoryBtn) {
-      inventoryBtn.dataset.extraKey = "inventory";
-      toolbar.append(inventoryBtn);
-    }
+    const parent = currentMain.parentElement;
+    parent.insertBefore(shell, currentMain);
+    shell.append(toolbar, note, mainRegion);
 
-    if (workspacesBtn) {
-      workspacesBtn.dataset.extraKey = "workspaces";
-      toolbar.append(workspacesBtn);
-    }
-
-    if (configureBtn) {
-      configureBtn.dataset.extraKey = "configure";
-      toolbar.append(configureBtn);
-    }
-
-    const currentMain = hierarchyHost.parentElement;
-    if (!currentMain) return;
-
-    shell.append(toolbar, note);
-    currentMain.parentElement.insertBefore(shell, currentMain);
-    shell.append(currentMain);
-
-    const mainRegion = make("div", "b3-shell-v812-main");
-    shell.append(mainRegion);
-    mainRegion.append(currentMain);
+    viewerPanel.append(currentMain);
+    mainRegion.append(viewerPanel);
 
     if (extraPanels.size) {
-      shell.append(extras);
-      showExtra("inventory");
-      if (inventoryBtn) setActive(inventoryBtn);
-    } else if (spatialBtn) {
-      setActive(spatialBtn);
+      mainRegion.append(extras);
+    }
+
+    toolbar.append(title);
+
+    registerButton("viewer", "Viewer", () => {
+      if (sourceTabs.spatial) {
+        sourceTabs.spatial.click();
+      }
+      setActivePanel("viewer");
+    });
+
+    if (extraPanels.has("inventory")) {
+      registerButton("inventory", "Inventory", () => {
+        setActivePanel("inventory");
+      });
+    }
+
+    if (sourceTabs.samples) {
+      registerButton("samples", "Samples", () => {
+        sourceTabs.samples.click();
+        setActivePanel("viewer");
+      });
+    }
+
+    if (sourceTabs.transfers) {
+      registerButton("transfers", "Transfers", () => {
+        sourceTabs.transfers.click();
+        setActivePanel("viewer");
+      });
+    }
+
+    if (sourceTabs.history) {
+      registerButton("history", "History", () => {
+        sourceTabs.history.click();
+        setActivePanel("viewer");
+      });
+    }
+
+    if (extraPanels.has("workspaces")) {
+      registerButton("workspaces", "Workspaces", () => {
+        setActivePanel("workspaces");
+      });
+    }
+
+    if (extraPanels.has("configure")) {
+      registerButton("configure", "Configure", () => {
+        setActivePanel("configure");
+      });
     }
 
     const syncFromExternal = () => {
       const activeTop =
-        [sourceTabs.spatial, sourceTabs.locations, sourceTabs.samples, sourceTabs.transfers, sourceTabs.history]
-          .find(node =>
-            node?.classList.contains("active") ||
-            node?.getAttribute("aria-selected") === "true"
-          );
+        [
+          sourceTabs.spatial,
+          sourceTabs.samples,
+          sourceTabs.transfers,
+          sourceTabs.history
+        ].find(node =>
+          node?.classList.contains("active") ||
+          node?.getAttribute("aria-selected") === "true"
+        );
 
-      const mapping = new Map([
-        [sourceTabs.spatial, spatialBtn],
-        [sourceTabs.locations, locationsBtn],
-        [sourceTabs.samples, samplesBtn],
-        [sourceTabs.transfers, transfersBtn],
-        [sourceTabs.history, historyBtn],
-      ]);
-
-      if (activeTop && mapping.get(activeTop)) {
-        setActive(mapping.get(activeTop));
+      if (activeTop === sourceTabs.samples) {
+        setActiveButton("samples");
+      } else if (activeTop === sourceTabs.transfers) {
+        setActiveButton("transfers");
+      } else if (activeTop === sourceTabs.history) {
+        setActiveButton("history");
+      } else {
+        setActiveButton("viewer");
       }
     };
 
-    const observer = new MutationObserver(syncFromExternal);
+    const observer = new MutationObserver(() => {
+      syncFromExternal();
+      hideExactText("Explore example");
+      hideExactText("Audited inventory");
+      hideExactText("Back");
+      hideExactText("Overview");
+      hideExactText("Rotate");
+      hideExactText("Cutaway walls");
+    });
 
     for (const node of Object.values(sourceTabs)) {
       if (!node) continue;
@@ -346,12 +396,17 @@
       });
     }
 
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    setActivePanel("viewer");
     syncFromExternal();
+    triggerViewerRefresh();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, {once: true});
-  } else {
+  window.addEventListener("load", () => {
     init();
-  }
+  }, {once: true});
 })();
