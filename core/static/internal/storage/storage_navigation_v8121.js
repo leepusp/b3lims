@@ -272,7 +272,7 @@
     // An unavailable WebGL context is a browser limitation,
     // not a Django server failure. Use 2D instead of
     // leaving an empty 3D viewport.
-    if (!webglAvailable()) {
+    if (!window.B3StorageSVGV813?.ready && !webglAvailable()) {
       const controls = document.querySelector(
         ".b3-v5-controls"
       );
