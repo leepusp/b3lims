@@ -396,10 +396,7 @@
       });
     }
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+
 
     setActivePanel("viewer");
     syncFromExternal();
