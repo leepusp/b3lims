@@ -402,7 +402,7 @@
 
         button.type = "button";
         button.append(
-          mk("strong", child.name),
+          mk("strong", displayName(child)),
           mk("div", child.type)
         );
 
@@ -678,15 +678,45 @@
       ));
 
       for (const row of rows.slice(0, 150)) {
-        const line = mk("div", null, "b3s-record");
+        const line = mk(
+          "div",
+          null,
+          "b3s-history-record"
+        );
+
+        const location = byId.get(row.location);
+
+        const path = location
+          ? pathFor(location)
+          : "Historical location";
+
+        const position = String(
+          row.position || ""
+        ).trim();
+
+        const fullPath = position
+          ? `${path} › ${position.toUpperCase()}`
+          : `${path} · position not recorded`;
+
+        const code = String(row.sample || "Sample");
+
+        if (
+          typeof row.url === "string" &&
+          row.url.startsWith("/") &&
+          !row.url.startsWith("//")
+        ) {
+          const link = mk("a", code);
+          link.href = row.url;
+          line.append(link);
+        } else {
+          line.append(mk("strong", code));
+        }
 
         line.append(
-          mk("strong", row.sample),
           mk(
             "span",
-            row.position
-              ? `Recorded position: ${row.position}`
-              : "Position not recorded"
+            fullPath,
+            "b3s-history-path"
           )
         );
 

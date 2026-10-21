@@ -103,12 +103,12 @@ assert.match(
 
 assert.match(
   view,
-  /request\.GET\.get\("v814"\) == "1"/
+  /request\.GET\.get\("legacy"\) == "1"/
 );
 
 assert.match(
   view,
-  /response\["Location"\] \+= "\?v814=1"/
+  /response\["Location"\] \+= "\?legacy=1"/
 );
 
 console.log("V814_HISTORICAL_PROJECTION=PASS");
@@ -197,6 +197,43 @@ assert.ok(
 console.log("V8143_NEW_LOCATION_MODAL=PASS");
 console.log("V8143_MANAGE_EXISTING_ONLY=PASS");
 console.log("V8143_RECORDED_POSITIONS=PASS");
+
+
+const defaultTemplate = view.lastIndexOf(
+  '"internal/storage/index_v814.html"'
+);
+
+const fallbackTemplate = view.lastIndexOf(
+  '"internal/storage/index.html"'
+);
+
+assert.ok(defaultTemplate > fallbackTemplate);
+
+assert.doesNotMatch(
+  view,
+  /request\.GET\.get\("v814"\) == "1"/
+);
+
+assert.ok(
+  view.includes(
+    'ctx["storage_v814_assignments"]'
+  )
+);
+
+assert.ok(!html.includes("?v814=1"));
+
+assert.ok(
+  js.includes("b3s-history-record")
+);
+
+assert.ok(
+  js.includes("const fullPath = position")
+);
+
+console.log("V8144_DEFAULT_ROUTING=PASS");
+console.log("V8144_LEGACY_FALLBACK=PASS");
+console.log("V8144_CLEAN_FORM_ACTIONS=PASS");
+console.log("V8144_HISTORICAL_SAMPLE_PATHS=PASS");
 
 console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");

@@ -520,3 +520,36 @@
 #b3-storage-v814 .b3s-position-cell a {
   font-size: .82rem;
 }
+
+
+/* V8.14.4 — Canonical Storage sample paths. */
+
+#b3-storage-v814 .b3s-history-record {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 230px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-bottom: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814 .b3s-history-record a,
+#b3-storage-v814 .b3s-history-record strong {
+  font-size: .86rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+#b3-storage-v814 .b3s-history-path {
+  color: var(--b3s-muted);
+  font-size: .83rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  #b3-storage-v814 .b3s-history-record {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
