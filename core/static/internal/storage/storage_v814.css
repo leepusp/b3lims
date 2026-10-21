@@ -448,3 +448,75 @@
     flex-wrap: wrap;
   }
 }
+
+
+/* V8.14.3 — New Location modal */
+
+#b3-storage-v814 .b3s-location-dialog {
+  width: min(610px, calc(100vw - 28px));
+  max-width: 96vw;
+  max-height: 88vh;
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--b3s-line);
+  border-radius: 12px;
+  background: white;
+  color: var(--b3s-ink);
+  box-shadow: 0 16px 56px rgba(20, 40, 60, .22);
+}
+
+#b3-storage-v814 .b3s-location-dialog:not([open]) {
+  display: none;
+}
+
+#b3-storage-v814 .b3s-location-dialog::backdrop {
+  background: rgba(20, 35, 52, .46);
+}
+
+#b3-storage-v814 .b3s-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814 .b3s-dialog-body {
+  padding: 18px 20px 22px;
+}
+
+#b3-storage-v814 .b3s-dialog-body .b3s-form {
+  max-width: none;
+}
+
+#b3-storage-v814 .b3s-position-map {
+  margin-top: 14px;
+}
+
+#b3-storage-v814 .b3s-position-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(150px, 1fr));
+  gap: 9px;
+  margin-top: 10px;
+}
+
+#b3-storage-v814 .b3s-position-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px;
+  background: #eff7fb;
+  border: 1px solid #bcdce6;
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+}
+
+#b3-storage-v814 .b3s-position-cell strong {
+  color: #116b83;
+}
+
+#b3-storage-v814 .b3s-position-cell a {
+  font-size: .82rem;
+}

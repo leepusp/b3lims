@@ -135,6 +135,10 @@ Physical locations, Sample custody and movement history.
         <div id="b3s-assignments"
              class="b3s-assignments"></div>
 
+        <div id="b3s-position-map"
+             class="b3s-position-map"
+             aria-live="polite"></div>
+
         <h4>Historical registrations</h4>
         <p class="b3s-note">
           Unverified textual paths are not authorized
@@ -305,7 +309,39 @@ Physical locations, Sample custody and movement history.
 
         <hr class="b3s-management-divider">
 
-        <h3>Create physical location</h3>
+      </section>
+      {% endif %}
+
+    </main>
+  </div>
+
+
+  {% if storage_manageable_workspaces_v8 %}
+  <dialog id="b3s-location-dialog"
+          class="b3s-location-dialog"
+          aria-labelledby="b3s-dialog-title">
+
+    <div class="b3s-dialog-header">
+      <div>
+        <h2 id="b3s-dialog-title">
+          New storage location
+        </h2>
+        <p class="b3s-note">
+          Create a root location or add a child
+          inside an authorized physical location.
+        </p>
+      </div>
+
+      <button type="button"
+              id="b3s-close-location"
+              class="btn btn-sm btn-outline-secondary"
+              aria-label="Close">
+        Close
+      </button>
+    </div>
+
+    <div class="b3s-dialog-body">
+<h3>Create physical location</h3>
         <p class="b3s-note">
           Create a root location or a child of an
           existing location in an authorized workspace.
@@ -389,44 +425,10 @@ Physical locations, Sample custody and movement history.
             Create location
           </button>
         </form>
+    </div>
 
-        <hr>
-
-        <h3>Create personal workspace</h3>
-
-        <form method="post"
-              action="{% url 'storage_workspace' %}?v814=1"
-              class="b3s-form">
-
-          {% csrf_token %}
-
-          <input type="hidden"
-                 name="action"
-                 value="create_storage_workspace_v8">
-
-          <input type="hidden"
-                 name="workspace_scope"
-                 value="personal">
-
-          <label>
-            Workspace name
-            <input type="text"
-                   name="workspace_name"
-                   maxlength="120"
-                   required>
-          </label>
-
-          <button type="submit"
-                  class="btn btn-outline-primary">
-            Create personal workspace
-          </button>
-        </form>
-
-      </section>
-      {% endif %}
-
-    </main>
-  </div>
+  </dialog>
+  {% endif %}
 
   <template id="b3s-location-data">
     {% for location in storage_locations %}

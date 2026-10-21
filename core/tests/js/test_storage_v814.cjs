@@ -160,6 +160,44 @@ console.log("V8142_MANAGE_EXISTING=PASS");
 console.log("V8142_HISTORICAL_READ_ONLY=PASS");
 console.log("V8142_SAFE_STATUS_ACTIONS=PASS");
 
+
+for (const token of [
+  'id="b3s-location-dialog"',
+  'id="b3s-position-map"',
+  'id="b3s-existing-locations"',
+  'id="b3s-edit-form"'
+]) {
+  assert.ok(html.includes(token), token);
+}
+
+assert.ok(
+  !html.includes("Create personal workspace")
+);
+
+assert.ok(
+  !html.includes("<h3>Create physical location</h3>")
+  || html.indexOf("<h3>Create physical location</h3>") >
+     html.indexOf('id="b3s-location-dialog"')
+);
+
+for (const token of [
+  "function renderPositionMap()",
+  "function openLocationDialog()",
+  "function closeLocationDialog()",
+  "locationDialog.showModal()",
+  "Other positions have not been verified as free"
+]) {
+  assert.ok(js.includes(token), token);
+}
+
+assert.ok(
+  !js.includes('"+ Create child"')
+);
+
+console.log("V8143_NEW_LOCATION_MODAL=PASS");
+console.log("V8143_MANAGE_EXISTING_ONLY=PASS");
+console.log("V8143_RECORDED_POSITIONS=PASS");
+
 console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");
 console.log("V814_NEW_TEMPLATE=PASS");

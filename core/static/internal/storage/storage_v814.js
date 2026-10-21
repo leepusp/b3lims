@@ -568,6 +568,87 @@
       }
     }
 
+
+    function renderPositionMap() {
+      const host = find("b3s-position-map");
+      if (!host) return;
+
+      host.replaceChildren();
+
+      const node = byId.get(selected);
+      if (!node) return;
+
+      const items = node.historical
+        ? visibleLegacySamples.filter(
+            item => item.location === node.id
+          )
+        : samples.filter(
+            item => item.location === node.id
+          );
+
+      const withPositions = items
+        .filter(item => String(item.position || "").trim())
+        .sort((a, b) =>
+          String(a.position).localeCompare(
+            String(b.position),
+            undefined,
+            {numeric: true, sensitivity: "base"}
+          )
+        );
+
+      if (!withPositions.length) return;
+
+      const title = mk(
+        "h4",
+        "Recorded positions — " + displayName(node)
+      );
+
+      const note = mk(
+        "p",
+        "Only recorded positions are shown. " +
+        "Other positions have not been verified as free.",
+        "b3s-note"
+      );
+
+      const grid = mk(
+        "div",
+        null,
+        "b3s-position-grid"
+      );
+
+      for (const item of withPositions) {
+        const cell = mk(
+          "div",
+          null,
+          "b3s-position-cell"
+        );
+
+        cell.append(
+          mk(
+            "strong",
+            String(item.position).toUpperCase()
+          )
+        );
+
+        const code = String(item.sample || "");
+
+        if (
+          item.url &&
+          String(item.url).startsWith("/")
+        ) {
+          const link = mk("a", code);
+          link.href = item.url;
+          cell.append(link);
+        } else {
+          cell.append(mk("span", code));
+        }
+
+        grid.append(cell);
+      }
+
+      host.append(title, note, grid);
+    }
+
     function renderLegacy() {
       const host = find("b3s-legacy");
       host.replaceChildren();
@@ -871,22 +952,6 @@
 
       actions.append(edit);
 
-      if (selectedNode.active === "1") {
-        const child = mk(
-          "button",
-          "+ Create child",
-          "btn btn-sm btn-outline-secondary"
-        );
-
-        child.type = "button";
-        child.addEventListener(
-          "click",
-          () => beginChild(selectedNode)
-        );
-
-        actions.append(child);
-      }
-
       const status = mk(
         "button",
         selectedNode.active === "1"
@@ -908,6 +973,7 @@
     function render() {
       renderTree();
       renderContents();
+      renderPositionMap();
       renderLegacy();
       renderGraph();
       renderManage();
@@ -965,33 +1031,71 @@
       });
     }
 
+
     const newLocation = find("b3s-new-location");
+    const locationDialog = find("b3s-location-dialog");
 
-    if (newLocation) {
-      newLocation.addEventListener("click", () => {
-        root.querySelector(
-          '[data-b3s-tab="manage"]'
-        )?.click();
+    function closeLocationDialog() {
+      if (!locationDialog) return;
 
-        const node = byId.get(selected);
-        const workspaceSelect =
-          find("b3s-create-workspace");
-        const parentSelect =
-          find("b3s-create-parent");
-
-        if (node && node.workspace) {
-          workspaceSelect.value = node.workspace;
-        }
-
-        workspaceSelect.dispatchEvent(
-          new Event("change")
-        );
-
-        if (node && node.active === "1") {
-          parentSelect.value = node.id;
-        }
-      });
+      if (typeof locationDialog.close === "function") {
+        locationDialog.close();
+      } else {
+        locationDialog.removeAttribute("open");
+      }
     }
+
+    function openLocationDialog() {
+      if (!locationDialog) return;
+
+      const node = byId.get(selected);
+
+      const workspaceSelect =
+        find("b3s-create-workspace");
+
+      const parentSelect =
+        find("b3s-create-parent");
+
+      if (!workspaceSelect || !parentSelect) return;
+
+      const eligible =
+        node && manageable(node) && node.active === "1";
+
+      if (eligible) {
+        workspaceSelect.value = node.workspace;
+      }
+
+      workspaceSelect.dispatchEvent(
+        new Event("change")
+      );
+
+      // A historical projection is never a real parent.
+      parentSelect.value = eligible ? node.id : "";
+
+      if (
+        typeof locationDialog.showModal === "function"
+      ) {
+        if (!locationDialog.open) {
+          locationDialog.showModal();
+        }
+      } else {
+        locationDialog.setAttribute("open", "");
+      }
+
+      locationDialog.querySelector(
+        '[name="name"]'
+      )?.focus();
+    }
+
+    newLocation?.addEventListener(
+      "click",
+      openLocationDialog
+    );
+
+    find("b3s-close-location")?.addEventListener(
+      "click",
+      closeLocationDialog
+    );
 
     const createWorkspace = find("b3s-create-workspace");
     const createParent = find("b3s-create-parent");
