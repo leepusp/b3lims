@@ -196,6 +196,115 @@ Physical locations, Sample custody and movement history.
                role="tabpanel"
                hidden>
 
+
+        <div class="b3s-management">
+
+          <h3>Existing locations</h3>
+          <p class="b3s-note">
+            Select a physical location to edit its metadata,
+            create a child or change its active status.
+            Historical registrations are read-only.
+          </p>
+
+          <div id="b3s-existing-locations"
+               class="b3s-existing-locations"
+               aria-label="Existing locations"></div>
+
+          <h3 class="b3s-management-subtitle">
+            Selected location
+          </h3>
+
+          <div id="b3s-manage-selected"
+               class="b3s-selected-detail"
+               aria-live="polite"></div>
+
+          <form method="post"
+                action="{% url 'storage_workspace' %}?v814=1"
+                id="b3s-edit-form"
+                class="b3s-form"
+                hidden>
+
+            {% csrf_token %}
+
+            <input type="hidden"
+                   name="action"
+                   value="update_location">
+
+            <input type="hidden"
+                   name="location_id"
+                   value="">
+
+            <h3>Edit location</h3>
+
+            <p class="b3s-note">
+              Edit name, type, order and notes.
+              Changing the parent requires the audited
+              container movement workflow.
+            </p>
+
+            <label>
+              Name
+              <input type="text"
+                     name="name"
+                     maxlength="255"
+                     required>
+            </label>
+
+            <label>
+              Location type
+              <select name="location_type" required>
+                {% for value, label in storage_location_types %}
+                <option value="{{ value }}">
+                  {{ label }}
+                </option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              Order
+              <input type="number"
+                     name="rank"
+                     min="1"
+                     required>
+            </label>
+
+            <label>
+              Notes
+              <textarea name="notes"
+                        rows="3"></textarea>
+            </label>
+
+            <div class="b3s-form-actions">
+              <button type="submit"
+                      class="btn btn-primary">
+                Save changes
+              </button>
+
+              <button type="button"
+                      id="b3s-cancel-edit"
+                      class="btn btn-outline-secondary">
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          <form method="post"
+                action="{% url 'storage_workspace' %}?v814=1"
+                id="b3s-status-form"
+                hidden>
+
+            {% csrf_token %}
+
+            <input type="hidden" name="action" value="">
+            <input type="hidden" name="location_id" value="">
+
+          </form>
+
+        </div>
+
+        <hr class="b3s-management-divider">
+
         <h3>Create physical location</h3>
         <p class="b3s-note">
           Create a root location or a child of an
@@ -326,6 +435,8 @@ Physical locations, Sample custody and movement history.
           data-workspace="{{ location.workspace_id|default_if_none:'' }}"
           data-name="{{ location.name }}"
           data-type="{{ location.location_type }}"
+          data-rank="{{ location.rank }}"
+          data-notes="{{ location.notes }}"
           data-path="{{ location.full_path }}"
           data-active="{% if location.is_active %}1{% else %}0{% endif %}">
     </span>

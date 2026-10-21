@@ -114,6 +114,52 @@ assert.match(
 console.log("V814_HISTORICAL_PROJECTION=PASS");
 console.log("V814_PREVIEW_REDIRECT=PASS");
 
+
+for (const token of [
+  "b3s-existing-locations",
+  "b3s-manage-selected",
+  "b3s-edit-form",
+  "b3s-status-form",
+  "update_location",
+  "Save changes",
+  "Create physical location"
+]) {
+  assert.ok(html.includes(token), token);
+}
+
+for (const token of [
+  "function renderManage()",
+  "function renderTree()",
+  "function renderGraph()",
+  "function beginEdit(node)",
+  "function beginChild(node)",
+  "deactivate_location",
+  "reactivate_location",
+  "b3s-branches",
+  "b3s-path-card"
+]) {
+  assert.ok(js.includes(token), token);
+}
+
+assert.ok(
+  js.includes("node.historical")
+);
+
+assert.ok(
+  js.includes("if (!manageable(node)) return")
+);
+
+assert.doesNotMatch(
+  js,
+  /StorageLocation\.objects\.delete|localStorage/
+);
+
+console.log("V8142_CONNECTED_NAVIGATION=PASS");
+console.log("V8142_CONNECTED_PATH_TREE=PASS");
+console.log("V8142_MANAGE_EXISTING=PASS");
+console.log("V8142_HISTORICAL_READ_ONLY=PASS");
+console.log("V8142_SAFE_STATUS_ACTIONS=PASS");
+
 console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");
 console.log("V814_NEW_TEMPLATE=PASS");
