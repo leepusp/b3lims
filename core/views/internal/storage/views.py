@@ -1052,6 +1052,24 @@ def storage_workspace_view(
         ),
     })
 
+    # V8.14 preview uses the same authorized view context.
+    # Never expose assignments at locations outside the
+    # authorized StorageLocation queryset.
+    if request.method == "GET" and request.GET.get("v814") == "1":
+        visible_location_ids_v814 = [
+            location.pk for location in locations
+        ]
+
+        ctx["storage_v814_assignments"] = assignments.filter(
+            location_id__in=visible_location_ids_v814
+        )
+
+        return render(
+            request,
+            "internal/storage/index_v814.html",
+            ctx,
+        )
+
     return render(
         request,
         "internal/storage/index.html",

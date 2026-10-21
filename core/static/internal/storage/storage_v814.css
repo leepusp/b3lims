@@ -1,0 +1,235 @@
+#b3-storage-v814 {
+  --b3s-line: #dce5ec;
+  --b3s-ink: #243747;
+  --b3s-muted: #647788;
+  --b3s-accent: #146cff;
+  color: var(--b3s-ink);
+  background: #fff;
+}
+
+#b3-storage-v814 *,
+#b3-storage-v814 *::before,
+#b3-storage-v814 *::after {
+  box-sizing: border-box;
+}
+
+#b3-storage-v814 .b3s-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--b3s-line);
+  border-radius: 10px 10px 0 0;
+}
+
+#b3-storage-v814 h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+#b3-storage-v814 h3 {
+  font-size: 1.1rem;
+  margin: 0 0 10px;
+}
+
+#b3-storage-v814 h4 {
+  font-size: .85rem;
+  font-weight: 600;
+  margin: 18px 0 9px;
+}
+
+#b3-storage-v814 p {
+  margin: 0;
+}
+
+#b3-storage-v814 .b3s-header p,
+#b3-storage-v814 .b3s-note {
+  color: var(--b3s-muted);
+  font-size: .83rem;
+}
+
+#b3-storage-v814 .b3s-search input {
+  width: min(410px, 100%);
+  padding: 9px 12px;
+  border: 1px solid var(--b3s-line);
+  border-radius: 7px;
+}
+
+#b3-storage-v814 .b3s-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  border: 1px solid var(--b3s-line);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  min-height: 570px;
+}
+
+#b3-storage-v814 .b3s-tree-panel {
+  min-width: 0;
+  padding: 15px;
+  border-right: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814 .b3s-panel-heading,
+#b3-storage-v814 .b3s-location-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+#b3-storage-v814 #b3s-workspace-filter-wrap {
+  margin: 12px 0;
+}
+
+#b3-storage-v814 label {
+  display: block;
+  font-size: .82rem;
+}
+
+#b3-storage-v814 select,
+#b3-storage-v814 .b3s-form input,
+#b3-storage-v814 textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid var(--b3s-line);
+  border-radius: 6px;
+  margin-top: 5px;
+}
+
+#b3-storage-v814 #b3s-tree {
+  max-height: 590px;
+  overflow-y: auto;
+}
+
+#b3-storage-v814 .b3s-node {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: .84rem;
+  color: var(--b3s-ink);
+}
+
+#b3-storage-v814 .b3s-node:hover,
+#b3-storage-v814 .b3s-node.is-selected {
+  background: #eaf2ff;
+  color: #0c59bb;
+}
+
+#b3-storage-v814 .b3s-side-actions {
+  padding-top: 14px;
+}
+
+#b3-storage-v814 .b3s-main {
+  min-width: 0;
+}
+
+#b3-storage-v814 .b3s-breadcrumb {
+  padding: 13px 17px;
+  font-size: .82rem;
+  border-bottom: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814 .b3s-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814 .b3s-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: white;
+  padding: 11px 16px;
+  color: var(--b3s-muted);
+}
+
+#b3-storage-v814 .b3s-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--b3s-accent);
+  color: var(--b3s-accent);
+  font-weight: 600;
+}
+
+#b3-storage-v814 .b3s-section {
+  padding: 20px;
+}
+
+#b3-storage-v814 .b3s-section[hidden] {
+  display: none;
+}
+
+#b3-storage-v814 .b3s-children {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+#b3-storage-v814 .b3s-child {
+  background: white;
+  border: 1px solid var(--b3s-line);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: left;
+  color: var(--b3s-ink);
+}
+
+#b3-storage-v814 .b3s-child:hover {
+  border-color: var(--b3s-accent);
+}
+
+#b3-storage-v814 .b3s-assignments,
+#b3-storage-v814 .b3s-graph {
+  overflow: auto;
+}
+
+#b3-storage-v814 .b3s-record {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid var(--b3s-line);
+  font-size: .83rem;
+}
+
+#b3-storage-v814 .b3s-form {
+  display: grid;
+  gap: 14px;
+  max-width: 660px;
+}
+
+#b3-storage-v814 .b3s-table-wrap {
+  overflow-x: auto;
+}
+
+#b3-storage-v814 table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#b3-storage-v814 th,
+#b3-storage-v814 td {
+  border-bottom: 1px solid var(--b3s-line);
+  padding: 9px;
+  text-align: left;
+  font-size: .83rem;
+}
+
+@media (max-width: 800px) {
+  #b3-storage-v814 .b3s-layout {
+    grid-template-columns: 1fr;
+  }
+
+  #b3-storage-v814 .b3s-tree-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--b3s-line);
+  }
+}

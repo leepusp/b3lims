@@ -1,0 +1,91 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const root = path.resolve(__dirname, "../../..");
+
+const js = fs.readFileSync(
+  path.join(
+    root,
+    "core/static/internal/storage/storage_v814.js"
+  ),
+  "utf8"
+);
+
+const html = fs.readFileSync(
+  path.join(
+    root,
+    "core/interfaces/internal/storage/index_v814.html"
+  ),
+  "utf8"
+);
+
+const view = fs.readFileSync(
+  path.join(
+    root,
+    "core/views/internal/storage/views.py"
+  ),
+  "utf8"
+);
+
+const window = {};
+
+vm.runInNewContext(js, {window});
+
+const build = window.B3StorageV814.buildModel;
+
+const rows = [
+  {id: "1", parent: "", workspace: "a", name: "Room"},
+  {id: "2", parent: "1", workspace: "a", name: "Freezer"},
+  {id: "3", parent: "2", workspace: "a", name: "Box"},
+  {id: "4", parent: "3", workspace: "b", name: "Invalid"},
+  {id: "5", parent: "6", workspace: "a", name: "Cycle A"},
+  {id: "6", parent: "5", workspace: "a", name: "Cycle B"}
+];
+
+const result = build(rows);
+
+assert.deepEqual(
+  Array.from(result, item => item.id),
+  ["1", "2", "3"]
+);
+
+for (const term of [
+  "b3s-location-data",
+  "b3s-sample-data",
+  "b3s-tree",
+  "b3s-path-tree",
+  "b3s-movements",
+  "create_location",
+  "csrf_token"
+]) {
+  assert.ok(html.includes(term), term);
+}
+
+assert.ok(
+  view.includes("index_v814.html")
+);
+
+assert.ok(
+  view.includes(
+    "location_id__in=visible_location_ids_v814"
+  )
+);
+
+assert.doesNotMatch(
+  js,
+  /localStorage|sessionStorage|WebGLRenderer/
+);
+
+assert.doesNotMatch(
+  js,
+  /fetch\(|XMLHttpRequest|\.submit\(/
+);
+
+console.log("V814_HIERARCHY_MODEL=PASS");
+console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");
+console.log("V814_NEW_TEMPLATE=PASS");
+console.log("V814_NO_BROWSER_PERSISTENCE=PASS");

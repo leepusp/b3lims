@@ -1,0 +1,355 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}Storage · B3 LIMS{% endblock %}
+{% block page_title %}Storage{% endblock %}
+{% block page_subtitle %}
+Physical locations, Sample custody and movement history.
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{% static 'internal/storage/storage_v814.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="b3-storage-v814"
+         aria-label="Physical storage management">
+
+  <header class="b3s-header">
+    <div>
+      <h2>Storage</h2>
+      <p>
+        Explore locations, registered Samples and
+        physical storage paths.
+      </p>
+    </div>
+
+    <label class="b3s-search">
+      <span class="visually-hidden">
+        Search locations or Samples
+      </span>
+      <input id="b3s-search"
+             type="search"
+             placeholder="Search Sample, freezer, box or path..."
+             autocomplete="off">
+    </label>
+  </header>
+
+  <div class="b3s-layout">
+
+    <aside class="b3s-tree-panel">
+      <div class="b3s-panel-heading">
+        <strong>Storage locations</strong>
+        <span id="b3s-count"></span>
+      </div>
+
+      <div id="b3s-workspace-filter-wrap">
+        <label for="b3s-workspace-filter">
+          Workspace
+        </label>
+
+        <select id="b3s-workspace-filter">
+          <option value="">All authorized</option>
+          {% for workspace in storage_visible_workspaces_v8 %}
+          <option value="{{ workspace.pk }}">
+            {{ workspace.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <nav id="b3s-tree"
+           aria-label="Storage hierarchy"></nav>
+
+      <div class="b3s-side-actions">
+        {% if storage_manageable_workspaces_v8 %}
+        <button type="button"
+                id="b3s-new-location"
+                class="btn btn-sm btn-primary">
+          + New location
+        </button>
+        {% endif %}
+      </div>
+    </aside>
+
+    <main class="b3s-main">
+
+      <div id="b3s-breadcrumb"
+           class="b3s-breadcrumb"
+           aria-label="Selected storage path">
+        All authorized locations
+      </div>
+
+      <div class="b3s-tabs" role="tablist"
+           aria-label="Storage views">
+        <button type="button"
+                role="tab"
+                data-b3s-tab="contents"
+                aria-selected="true">
+          Contents
+        </button>
+        <button type="button"
+                role="tab"
+                data-b3s-tab="tree"
+                aria-selected="false">
+          Path tree
+        </button>
+        <button type="button"
+                role="tab"
+                data-b3s-tab="movements"
+                aria-selected="false">
+          Movements
+        </button>
+        {% if storage_manageable_workspaces_v8 %}
+        <button type="button"
+                role="tab"
+                data-b3s-tab="manage"
+                aria-selected="false">
+          Manage
+        </button>
+        {% endif %}
+      </div>
+
+      <section id="b3s-contents"
+               class="b3s-section"
+               role="tabpanel">
+
+        <header class="b3s-location-head">
+          <div>
+            <small id="b3s-type">OVERVIEW</small>
+            <h3 id="b3s-title">All storage locations</h3>
+            <p id="b3s-metadata"></p>
+          </div>
+        </header>
+
+        <h4>Child locations</h4>
+        <div id="b3s-children"
+             class="b3s-children"></div>
+
+        <h4>Recorded Samples and positions</h4>
+        <p class="b3s-note">
+          Only recorded positions are shown.
+          Unrecorded positions are not confirmed available.
+        </p>
+        <div id="b3s-assignments"
+             class="b3s-assignments"></div>
+
+        <h4>Historical registrations</h4>
+        <p class="b3s-note">
+          Unverified textual paths are not authorized
+          physical destinations.
+        </p>
+        <div id="b3s-legacy"></div>
+
+      </section>
+
+      <section id="b3s-path-tree"
+               class="b3s-section"
+               role="tabpanel"
+               hidden>
+        <h3>Physical storage hierarchy</h3>
+        <p class="b3s-note">
+          Select any location to inspect its contents.
+          Parent-child relationships determine the path.
+        </p>
+        <div id="b3s-graph"
+             class="b3s-graph"></div>
+      </section>
+
+      <section id="b3s-movements"
+               class="b3s-section"
+               role="tabpanel"
+               hidden>
+        <h3>Audited movements</h3>
+        <div class="b3s-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Movement</th>
+                <th>From</th>
+                <th>To</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for movement in storage_movements %}
+              <tr>
+                <td>{{ movement.movement_type }}</td>
+                <td>{{ movement.origin_path }}</td>
+                <td>{{ movement.destination_path }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3">
+                  No visible movement history.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {% if storage_manageable_workspaces_v8 %}
+      <section id="b3s-manage"
+               class="b3s-section"
+               role="tabpanel"
+               hidden>
+
+        <h3>Create physical location</h3>
+        <p class="b3s-note">
+          Create a root location or a child of an
+          existing location in an authorized workspace.
+        </p>
+
+        <form method="post"
+              action="{% url 'storage_workspace' %}?v814=1"
+              id="b3s-location-form"
+              class="b3s-form">
+
+          {% csrf_token %}
+
+          <input type="hidden"
+                 name="action"
+                 value="create_location">
+
+          <label>
+            Workspace
+            <select name="workspace_id"
+                    id="b3s-create-workspace"
+                    required>
+              {% for workspace in storage_manageable_workspaces_v8 %}
+              <option value="{{ workspace.pk }}">
+                {{ workspace.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label>
+            Parent location
+            <select name="parent_id"
+                    id="b3s-create-parent">
+              <option value="">Root location</option>
+              {% for location in storage_parent_choices_v8 %}
+              <option value="{{ location.pk }}"
+                      data-workspace="{{ location.workspace_id }}">
+                {{ location.full_path }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label>
+            Location name
+            <input type="text"
+                   name="name"
+                   maxlength="255"
+                   required
+                   placeholder="e.g. Freezer A">
+          </label>
+
+          <label>
+            Location type
+            <select name="location_type" required>
+              {% for value, label in storage_location_types %}
+              <option value="{{ value }}">
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label>
+            Order
+            <input type="number"
+                   name="rank"
+                   value="1"
+                   min="1"
+                   required>
+          </label>
+
+          <label>
+            Notes
+            <textarea name="notes"
+                      rows="3"></textarea>
+          </label>
+
+          <button type="submit"
+                  class="btn btn-primary">
+            Create location
+          </button>
+        </form>
+
+        <hr>
+
+        <h3>Create personal workspace</h3>
+
+        <form method="post"
+              action="{% url 'storage_workspace' %}?v814=1"
+              class="b3s-form">
+
+          {% csrf_token %}
+
+          <input type="hidden"
+                 name="action"
+                 value="create_storage_workspace_v8">
+
+          <input type="hidden"
+                 name="workspace_scope"
+                 value="personal">
+
+          <label>
+            Workspace name
+            <input type="text"
+                   name="workspace_name"
+                   maxlength="120"
+                   required>
+          </label>
+
+          <button type="submit"
+                  class="btn btn-outline-primary">
+            Create personal workspace
+          </button>
+        </form>
+
+      </section>
+      {% endif %}
+
+    </main>
+  </div>
+
+  <template id="b3s-location-data">
+    {% for location in storage_locations %}
+    <span data-id="{{ location.pk }}"
+          data-parent="{{ location.parent_id|default_if_none:'' }}"
+          data-workspace="{{ location.workspace_id|default_if_none:'' }}"
+          data-name="{{ location.name }}"
+          data-type="{{ location.location_type }}"
+          data-path="{{ location.full_path }}"
+          data-active="{% if location.is_active %}1{% else %}0{% endif %}">
+    </span>
+    {% endfor %}
+  </template>
+
+  <template id="b3s-sample-data">
+    {% for assignment in storage_v814_assignments %}
+    <span data-id="{{ assignment.pk }}"
+          data-location="{{ assignment.location_id }}"
+          data-sample="{{ assignment.sample.sample_id }}"
+          data-position="{{ assignment.position }}"
+          data-url="{% url 'sample_detail' assignment.sample.pk %}">
+    </span>
+    {% endfor %}
+  </template>
+
+  {{ storage_legacy_projection|json_script:"b3s-legacy-data" }}
+
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer
+        src="{% static 'internal/storage/storage_v814.js' %}">
+</script>
+{% endblock %}
