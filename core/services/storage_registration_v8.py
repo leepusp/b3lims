@@ -76,9 +76,9 @@ def register_initial_physical_storage(
             "Position must follow a format such as B5 or P03."
         )
 
-    if box.location_type not in {"box", "rack"}:
+    if box.location_type not in {"box", "rack", "other"}:
         raise ValidationError(
-            "Initial registration requires a physical Box."
+            "Select a Box, Rack, or user-defined storage destination."
         )
 
     node = box

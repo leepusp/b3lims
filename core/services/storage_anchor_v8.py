@@ -56,8 +56,8 @@ def validate_storage_anchor_plan(
 
     box = StorageLocation.objects.filter(pk=pk).first()
 
-    if box is None or box.location_type not in {"box", "rack"}:
-        raise ValidationError("Select a registered physical Box.")
+    if box is None or box.location_type not in {"box", "rack", "other"}:
+        raise ValidationError("Select a registered physical storage location.")
 
     if actor is not None:
         from core.permissions.storage_workspaces_v8 import (

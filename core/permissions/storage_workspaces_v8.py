@@ -224,7 +224,7 @@ def can_operate_on_sample_storage(user, sample):
 
 def can_register_at_storage_location(user, location):
     """
-    Position host access: physical Box or Rack in an
+    Position host access: Box, Rack or custom location in an
     authorized workspace, with all ancestors active.
 
     Unscoped legacy storage remains admin-only.
@@ -232,7 +232,7 @@ def can_register_at_storage_location(user, location):
     if (
         not _active_user(user)
         or location is None
-        or location.location_type not in {"box", "rack"}
+        or location.location_type not in {"box", "rack", "other"}
         or not can_view_storage_location(user, location)
     ):
         return False

@@ -45,8 +45,11 @@
         let renderedCount = -1;
 
         const eligible = anchor =>
-            ["box", "rack"].includes(
-                String(anchor.location_type).toLowerCase()
+            Boolean(
+                anchor &&
+                Number.isSafeInteger(Number(anchor.id)) &&
+                Number(anchor.id) > 0 &&
+                ["box", "rack", "other"].includes(String(anchor.location_type).toLowerCase())
             );
 
         function sampleCount() {
@@ -165,7 +168,7 @@
                 mode.value = "physical";
                 anchorId.value = String(selectedAnchor.id);
                 status.textContent =
-                    "Linked physical container: " +
+                    "Linked physical location: " +
                     selectedAnchor.full_path +
                     ". Occupancy is checked when saving.";
             } else {
@@ -179,7 +182,7 @@
                     ? "Unverified text path. No physical location " +
                       "will be created automatically."
                     : "No storage assigned. Select a registered " +
-                      "Box or Rack to register physical positions.";
+                      "physical location to register Sample positions.";
             }
 
             updatePositionRows();

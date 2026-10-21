@@ -28,7 +28,7 @@ def authorize_sample_storage_move_v8(
     The source only needs to be visible: an inactive source
     must not prevent an authorized Sample from being removed.
 
-    The destination must be an active, authorized Box or Rack.
+    The destination must be an active, authorized physical location.
     Occupancy and lifecycle checks remain responsibilities
     of the movement service.
     """
@@ -59,9 +59,9 @@ def authorize_sample_storage_move_v8(
             "The destination storage location is not accessible."
         )
 
-    if destination.location_type not in {"box", "rack"}:
+    if destination.location_type not in {"box", "rack", "other"}:
         raise PermissionDenied(
-            "Only authorized Boxes or Racks can receive Samples."
+            "This location is not authorized to receive Samples."
         )
 
     if not is_storage_global_admin(actor):
