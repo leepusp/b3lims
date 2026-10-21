@@ -166,6 +166,7 @@
     let selected = "";
     let workspace = "";
     let query = "";
+    const collapsedLocations = new Set();
 
     function displayName(node) {
       const name = String(node.name || "");
@@ -242,6 +243,7 @@
     }
 
 
+
     function renderTree() {
       const container = find("b3s-tree");
       container.replaceChildren();
@@ -260,6 +262,53 @@
         nextVisited.add(node.id);
 
         const li = mk("li", null, "b3s-branch");
+        const line = mk("div", null, "b3s-tree-line");
+
+        const descendants = (
+          children.get(node.id) || []
+        ).filter(item => ids.has(item.id));
+
+        const hasChildren = descendants.length > 0;
+
+        const expanded =
+          hasChildren && (
+            query || !collapsedLocations.has(node.id)
+          );
+
+        if (hasChildren) {
+          const toggle = mk(
+            "button",
+            expanded ? "▾" : "▸",
+            "b3s-tree-toggle"
+          );
+
+          toggle.type = "button";
+          toggle.setAttribute(
+            "aria-label",
+            (expanded ? "Collapse " : "Expand ") +
+              displayName(node)
+          );
+          toggle.setAttribute(
+            "aria-expanded",
+            String(Boolean(expanded))
+          );
+
+          toggle.addEventListener("click", () => {
+            if (collapsedLocations.has(node.id)) {
+              collapsedLocations.delete(node.id);
+            } else {
+              collapsedLocations.add(node.id);
+            }
+            renderTree();
+          });
+
+          line.append(toggle);
+        } else {
+          line.append(mk(
+            "span", "", "b3s-tree-toggle-placeholder"
+          ));
+        }
+
         const button = mk(
           "button",
           null,
@@ -267,7 +316,6 @@
         );
 
         button.type = "button";
-        button.dataset.locationId = node.id;
         button.title = pathFor(node);
 
         if (node.id === selected) {
@@ -279,60 +327,47 @@
         }
 
         button.append(
-          mk(
-            "span",
-            displayName(node),
-            "b3s-node-label"
-          )
+          mk("span", displayName(node), "b3s-node-label")
         );
 
         if (node.historical) {
           button.append(
             mk("small", "Historical", "b3s-node-status")
           );
-        } else if (node.active !== "1") {
-          button.append(
-            mk("small", "Inactive", "b3s-node-status")
-          );
         }
 
-        button.addEventListener(
-          "click",
-          () => choose(node.id)
-        );
-
-        li.append(button);
-
-        const childNodes = (
-          children.get(node.id) || []
-        ).filter(item => ids.has(item.id));
-
-        if (childNodes.length) {
-          const ul = mk("ul", null, "b3s-branches");
-
-          for (const child of childNodes) {
-            const childElement = branch(
-              child,
-              nextVisited
-            );
-
-            if (childElement) {
-              ul.append(childElement);
+        button.addEventListener("click", () => {
+          if (hasChildren) {
+            if (collapsedLocations.has(node.id)) {
+              collapsedLocations.delete(node.id);
+            } else {
+              collapsedLocations.add(node.id);
             }
           }
+          choose(node.id);
+        });
 
-          if (ul.children.length) {
-            li.append(ul);
+        line.append(button);
+        li.append(line);
+
+        if (hasChildren && expanded) {
+          const nested = mk(
+            "ul", null, "b3s-branches"
+          );
+
+          for (const child of descendants) {
+            const element = branch(child, nextVisited);
+            if (element) nested.append(element);
           }
+
+          li.append(nested);
         }
 
         return li;
       }
 
       const list = mk(
-        "ul",
-        null,
-        "b3s-branches b3s-tree-root"
+        "ul", null, "b3s-branches b3s-tree-root"
       );
 
       for (const node of roots) {
@@ -341,16 +376,6 @@
       }
 
       container.append(list);
-
-      if (!list.children.length) {
-        container.append(
-          mk(
-            "p",
-            "No locations match this filter.",
-            "b3s-note"
-          )
-        );
-      }
 
       find("b3s-count").textContent =
         String(visible.length);
@@ -809,31 +834,103 @@
       });
     }
 
-    function changeStatus(node) {
+
+    async function changeStatus(node) {
       if (!manageable(node)) return;
 
-      const action = node.active === "1"
-        ? "deactivate_location"
-        : "reactivate_location";
+      const form = find("b3s-status-form");
+      if (!form) return;
 
-      const warning = node.active === "1"
-        ? "Remove this location from active storage? " +
-          "No database record will be deleted. " +
-          "Active child locations or Sample assignments " +
-          "may prevent this operation."
-        : "Reactivate this physical location?";
+      if (node.active !== "1") {
+        if (!window.confirm("Reactivate this location?")) {
+          return;
+        }
 
-      if (!window.confirm(warning)) {
+        form.elements.namedItem("action").value =
+          "reactivate_location";
+        form.elements.namedItem("location_id").value =
+          node.id;
+        form.elements.namedItem("confirm").value = "";
+        form.requestSubmit();
         return;
       }
 
-      const form = find("b3s-status-form");
+      let preview;
+
+      try {
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.searchParams.set(
+          "b3s_delete_preview",
+          node.id
+        );
+
+        const response = await fetch(url.toString(), {
+          credentials: "same-origin",
+          headers: {"Accept": "application/json"}
+        });
+
+        preview = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            preview.error || "Unable to inspect this location."
+          );
+        }
+      } catch (error) {
+        window.alert(
+          "Storage deletion could not be validated: " +
+          error.message
+        );
+        return;
+      }
+
+      if (
+        preview.assignment_count ||
+        preview.sample_count ||
+        preview.textual_count
+      ) {
+        window.alert(
+          "This storage hierarchy contains or references " +
+          "Sample records. Deleting it could compromise " +
+          "their registered storage paths.\n\n" +
+          "Affected Samples: " + preview.sample_count +
+          "\nRecorded assignments: " +
+          preview.assignment_count +
+          "\nHistorical textual references: " +
+          preview.textual_count +
+          "\n\nTransfer or reconcile these Samples first. " +
+          "No records have been deleted."
+        );
+        return;
+      }
+
+      if (Object.keys(preview.blockers || {}).length) {
+        window.alert(
+          "This location is referenced by movement history " +
+          "or another record. Permanent deletion is blocked. " +
+          "No records have been changed."
+        );
+        return;
+      }
+
+      if (!window.confirm(
+        "Permanently delete '" + displayName(node) +
+        "' and all " + preview.descendant_count +
+        " descendant location(s)?\n\n" +
+        "No Samples are linked. This cannot be undone."
+      )) {
+        return;
+      }
 
       form.elements.namedItem("action").value =
-        action;
+        "delete_empty_subtree";
 
       form.elements.namedItem("location_id").value =
         node.id;
+
+      form.elements.namedItem("confirm").value =
+        "DELETE";
 
       form.requestSubmit();
     }
@@ -985,7 +1082,7 @@
       const status = mk(
         "button",
         selectedNode.active === "1"
-          ? "Remove from active storage"
+          ? "Delete location"
           : "Reactivate",
         "btn btn-sm btn-outline-danger"
       );

@@ -183,6 +183,36 @@ def storage_workspace_view(
             ).order_by("name")
         )
 
+
+    if (
+        request.method == "GET"
+        and request.GET.get("b3s_delete_preview")
+    ):
+        from django.http import JsonResponse
+        from core.services.storage_subtree_delete_v8145 import (
+            preview_empty_storage_subtree,
+        )
+
+        try:
+            result = preview_empty_storage_subtree(
+                actor=request.user,
+                location_id=request.GET.get(
+                    "b3s_delete_preview"
+                ),
+            )
+        except PermissionDenied:
+            return JsonResponse(
+                {"error": "Permission denied."},
+                status=403,
+            )
+        except ValidationError as exc:
+            return JsonResponse(
+                {"error": "; ".join(exc.messages)},
+                status=400,
+            )
+
+        return JsonResponse(result)
+
     if request.method == "POST":
         action = (
             request.POST.get(
@@ -309,6 +339,26 @@ def storage_workspace_view(
                 messages.success(
                     request,
                     f"Storage workspace created: {workspace.name}.",
+                )
+
+
+            elif action == "delete_empty_subtree":
+                from core.services.storage_subtree_delete_v8145 import (
+                    delete_empty_storage_subtree,
+                )
+
+                removed = delete_empty_storage_subtree(
+                    actor=request.user,
+                    location_id=request.POST.get("location_id"),
+                    confirmation=request.POST.get("confirm", ""),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"Removed {removed['location_count']} "
+                        "empty storage location(s)."
+                    ),
                 )
 
             elif action == "create_location":

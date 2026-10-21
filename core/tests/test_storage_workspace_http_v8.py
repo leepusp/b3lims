@@ -231,7 +231,62 @@ class StorageWorkspaceHTTPV8Tests(TestCase):
         )
 
     def setUp(self):
-        self.url = reverse("storage_workspace")
+        # Django is mounted externally at /b3lims.
+        # The test client must use URLconf-relative paths.
+        from django.conf import settings
+        from django.urls import resolve
+
+        public_url = reverse("storage_workspace")
+
+        prefix = (
+            settings.FORCE_SCRIPT_NAME or ""
+        ).rstrip("/")
+
+        if prefix and public_url.startswith(prefix + "/"):
+            internal_url = public_url[len(prefix):]
+        else:
+            internal_url = public_url
+
+        assert resolve(internal_url).url_name == (
+            "storage_workspace"
+        )
+
+        self.canonical_url = internal_url
+
+        # V8 HTTP tests verify the original management UI.
+        # That UI is now an explicit compatibility route.
+        self.url = internal_url + "?legacy=1"
+
+    def test_v814_storage_is_canonical(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            self.canonical_url
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(
+            response,
+            'id="b3-storage-v814"',
+        )
+
+        self.assertNotContains(
+            response,
+            "storage_isometric_v813.js",
+        )
+
+    def test_legacy_route_remains_explicit(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotContains(
+            response,
+            'id="b3-storage-v814"',
+        )
 
     def submit(self, user, data):
         self.client.force_login(user)

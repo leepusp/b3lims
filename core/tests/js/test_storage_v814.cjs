@@ -80,9 +80,30 @@ assert.doesNotMatch(
   /localStorage|sessionStorage|WebGLRenderer/
 );
 
+// Exactly one authorized, read-only preview request
+// is permitted before server-confirmed deletion.
 assert.doesNotMatch(
   js,
-  /fetch\(|XMLHttpRequest|\.submit\(/
+  /XMLHttpRequest|\.submit\(/
+);
+
+const previewFetchCalls = js.match(/\bfetch\s*\(/g) || [];
+
+assert.equal(previewFetchCalls.length, 1);
+
+assert.match(
+  js,
+  /url\.searchParams\.set\(\s*"b3s_delete_preview"/
+);
+
+assert.match(
+  js,
+  /await fetch\(url\.toString\(\), \{/
+);
+
+assert.match(
+  js,
+  /credentials:\s*"same-origin"/
 );
 
 
@@ -133,7 +154,7 @@ for (const token of [
   "function renderGraph()",
   "function beginEdit(node)",
   "function beginChild(node)",
-  "deactivate_location",
+  "delete_empty_subtree",
   "reactivate_location",
   "b3s-branches",
   "b3s-path-card"
@@ -234,6 +255,26 @@ console.log("V8144_DEFAULT_ROUTING=PASS");
 console.log("V8144_LEGACY_FALLBACK=PASS");
 console.log("V8144_CLEAN_FORM_ACTIONS=PASS");
 console.log("V8144_HISTORICAL_SAMPLE_PATHS=PASS");
+
+
+for (const token of [
+  "collapsedLocations",
+  "b3s-tree-toggle",
+  "aria-expanded",
+  "b3s_delete_preview",
+  "delete_empty_subtree",
+  "preview.assignment_count"
+]) {
+  assert.ok(js.includes(token), token);
+}
+
+assert.ok(
+  html.includes('name="confirm"')
+);
+
+console.log("V8145_TREE_COLLAPSE=PASS");
+console.log("V8145_DELETE_PREVIEW=PASS");
+console.log("V8145_SERVER_CONFIRMATION=PASS");
 
 console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");

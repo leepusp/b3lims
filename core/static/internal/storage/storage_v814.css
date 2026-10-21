@@ -553,3 +553,40 @@
     gap: 4px;
   }
 }
+
+
+/* V8.14.5 — Expandable storage navigation. */
+
+#b3-storage-v814 .b3s-tree-line {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+#b3-storage-v814 .b3s-tree-line .b3s-node {
+  flex: 1;
+  min-width: 0;
+}
+
+#b3-storage-v814 .b3s-tree-toggle,
+#b3-storage-v814 .b3s-tree-toggle-placeholder {
+  width: 23px;
+  min-width: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .94rem;
+}
+
+#b3-storage-v814 .b3s-tree-toggle {
+  border: 0;
+  background: transparent;
+  color: #647788;
+  border-radius: 5px;
+}
+
+#b3-storage-v814 .b3s-tree-toggle:hover,
+#b3-storage-v814 .b3s-tree-toggle:focus-visible {
+  color: #146cff;
+  background: #eaf2ff;
+}
