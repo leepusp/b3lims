@@ -233,3 +233,15 @@
     border-bottom: 1px solid var(--b3s-line);
   }
 }
+
+
+/* V8.14.1 — Historical paths remain visibly read-only. */
+#b3-storage-v814 .b3s-node.is-historical {
+  color: #88622a;
+}
+
+#b3-storage-v814 .b3s-node.is-historical::after {
+  content: " · historical";
+  font-size: .72rem;
+  color: #9a7851;
+}

@@ -85,6 +85,35 @@ assert.doesNotMatch(
   /fetch\(|XMLHttpRequest|\.submit\(/
 );
 
+
+assert.match(
+  js,
+  /legacyProjection\.nodes/
+);
+
+assert.match(
+  js,
+  /visibleLegacySamples/
+);
+
+assert.match(
+  js,
+  /Historical registration/
+);
+
+assert.match(
+  view,
+  /request\.GET\.get\("v814"\) == "1"/
+);
+
+assert.match(
+  view,
+  /response\["Location"\] \+= "\?v814=1"/
+);
+
+console.log("V814_HISTORICAL_PROJECTION=PASS");
+console.log("V814_PREVIEW_REDIRECT=PASS");
+
 console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");
 console.log("V814_NEW_TEMPLATE=PASS");

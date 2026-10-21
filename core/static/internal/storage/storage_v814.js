@@ -60,14 +60,75 @@
       return;
     }
 
-    const nodes = buildModel(
-      [...locSource.content.querySelectorAll("[data-id]")]
-        .map(el => ({...el.dataset}))
-    );
+    // The Django projection contains only visible historical
+    // records. Never create physical StorageLocations from it.
+    const legacySource = find("b3s-legacy-data");
+    let legacyProjection = {nodes: [], samples: []};
+
+    if (legacySource) {
+      try {
+        const parsed = JSON.parse(legacySource.textContent);
+
+        if (
+          !Array.isArray(parsed.nodes) ||
+          !Array.isArray(parsed.samples)
+        ) {
+          throw new Error("Invalid historical projection");
+        }
+
+        legacyProjection = parsed;
+      } catch (error) {
+        console.error(
+          "Historical storage projection unavailable",
+          error
+        );
+      }
+    }
+
+    const physicalNodes = [
+      ...locSource.content.querySelectorAll("[data-id]")
+    ].map(el => ({...el.dataset}));
+
+    const historicalNodes = legacyProjection.nodes
+      .filter(row => row && row.id != null)
+      .map(row => ({
+        id: "h:" + String(row.id),
+        parent: row.parent == null || row.parent === ""
+          ? ""
+          : "h:" + String(row.parent),
+        workspace: "",
+        name: String(row.name || "Historical location"),
+        type: String(row.kind || row.type || "historical"),
+        path: String(row.path || row.name || ""),
+        active: "0",
+        historical: true
+      }));
+
+    const nodes = buildModel([
+      ...physicalNodes,
+      ...historicalNodes
+    ]);
 
     const samples = [
       ...sampleSource.content.querySelectorAll("[data-id]")
     ].map(el => ({...el.dataset}));
+
+    const legacySamples = legacyProjection.samples.map(row => ({
+      location: "h:" + String(
+        row.box || row.location || ""
+      ),
+      sample: String(row.code || "Sample"),
+      position: String(row.position || ""),
+      url: String(row.url || "")
+    }));
+
+    const historicalIds = new Set(
+      nodes.filter(node => node.historical).map(node => node.id)
+    );
+
+    const visibleLegacySamples = legacySamples.filter(
+      row => historicalIds.has(row.location)
+    );
 
     const byId = new Map(
       nodes.map(node => [node.id, node])
@@ -132,6 +193,9 @@
         node.path,
         ...samples
           .filter(item => item.location === node.id)
+          .map(item => item.sample),
+        ...visibleLegacySamples
+          .filter(item => item.location === node.id)
           .map(item => item.sample)
       ].join(" ").toLowerCase();
 
@@ -194,6 +258,10 @@
             button.classList.add("is-selected");
           }
 
+          if (node.historical) {
+            button.classList.add("is-historical");
+          }
+
           button.addEventListener(
             "click",
             () => choose(node.id)
@@ -231,8 +299,10 @@
         : "All authorized locations";
 
       find("b3s-metadata").textContent = node
-        ? `${node.active === "1" ? "Active" : "Inactive"} · ` +
-          `${node.workspace ? "Registered workspace" : "Legacy unscoped"}`
+        ? node.historical
+          ? "Historical registration · Read-only"
+          : `${node.active === "1" ? "Active" : "Inactive"} · ` +
+            `${node.workspace ? "Registered workspace" : "Unscoped"}`
         : `${nodes.length} visible location records`;
 
       const descendants = node
@@ -450,9 +520,63 @@
       target.append(svg);
     }
 
+    function renderLegacy() {
+      const host = find("b3s-legacy");
+      host.replaceChildren();
+
+      const node = byId.get(selected);
+
+      const rows = visibleLegacySamples.filter(row =>
+        node
+          ? row.location === node.id
+          : !workspace
+      );
+
+      if (!rows.length) {
+        host.append(mk(
+          "p",
+          "No historical registrations at this level.",
+          "b3s-note"
+        ));
+        return;
+      }
+
+      host.append(mk(
+        "p",
+        `${rows.length} historical Sample registrations. ` +
+        "These records cannot be used as movement destinations.",
+        "b3s-note"
+      ));
+
+      for (const row of rows.slice(0, 150)) {
+        const line = mk("div", null, "b3s-record");
+
+        line.append(
+          mk("strong", row.sample),
+          mk(
+            "span",
+            row.position
+              ? `Recorded position: ${row.position}`
+              : "Position not recorded"
+          )
+        );
+
+        host.append(line);
+      }
+
+      if (rows.length > 150) {
+        host.append(mk(
+          "p",
+          "Additional historical records are not shown here.",
+          "b3s-note"
+        ));
+      }
+    }
+
     function render() {
       renderTree();
       renderContents();
+      renderLegacy();
       renderGraph();
     }
 
@@ -553,24 +677,6 @@
       createWorkspace.dispatchEvent(
         new Event("change")
       );
-    }
-
-    const history = find("b3s-legacy-data");
-    const legacyHost = find("b3s-legacy");
-
-    if (history && legacyHost) {
-      try {
-        const data = JSON.parse(history.textContent);
-        const count = Array.isArray(data.samples)
-          ? data.samples.length : 0;
-
-        legacyHost.textContent =
-          `${count} historical Sample registrations ` +
-          "are kept separate from verified physical assignments.";
-      } catch (_) {
-        legacyHost.textContent =
-          "Historical records are unavailable.";
-      }
     }
 
     render();

@@ -503,6 +503,11 @@ def storage_workspace_view(
                 ),
             )
 
+        if request.GET.get("v814") == "1":
+            response = redirect("storage_workspace")
+            response["Location"] += "?v814=1"
+            return response
+
         return redirect(
             "storage_workspace"
         )
