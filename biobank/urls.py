@@ -9,6 +9,8 @@ from core.views.internal.shipments.views import shipments_list_view, shipments_d
 # core/urls.py
 from django.contrib import admin
 from django.urls import include, path
+from core.views.internal.storage.location_child_v8146 import storage_location_child_create_v8146
+from core.views.internal.samples.storage_move_v8146 import sample_storage_move_v8146
 from django.views.generic.base import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
@@ -284,6 +286,11 @@ urlpatterns = [
     path("samples/map/", samples_origin_map_view, name="samples_origin_map"),
     path("samples/import/", sample_import_view, name="samples_import"),
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
+    path(
+        "storage/locations/create-child/v8146/",
+        storage_location_child_create_v8146,
+        name="storage_location_child_create_v8146",
+    ),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
     path(
@@ -338,6 +345,9 @@ urlpatterns = [
     ),
     path("samples/<int:sample_id>/print/", print_sample_label, name="print_sample_label"),
     path("samples/<int:sample_id>/create-shipment/", sample_create_shipment_view, name="sample_create_shipment"),
+    path("samples/<int:sample_id>/storage/move/",
+         sample_storage_move_v8146,
+         name="sample_storage_move_v8146"),
     path("samples/<int:sample_id>/edit/", sample_edit_view, name="sample_edit"),
     path(
         "samples/<int:sample_id>/external/ncbi-genome/resolve/",

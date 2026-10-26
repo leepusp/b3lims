@@ -1,0 +1,139 @@
+<section class="card shadow-sm border-0 mb-4"
+         id="sample-physical-movement-v8146"
+         data-b3-sample-movement-v8146>
+
+    <div class="card-header bg-white fw-bold">
+        <i class="bi bi-arrows-move me-2 text-primary"></i>
+        Move Physical Sample
+    </div>
+
+    <div class="card-body">
+        <p class="text-muted small">
+            Move one registered physical assignment. Other Sample
+            locations and biological metadata are preserved.
+        </p>
+
+        {% if storage_edit_assignments_v8146 %}
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label" for="storageMoveAssignmentV8146">
+                    Existing Sample assignment
+                </label>
+
+                <select id="storageMoveAssignmentV8146"
+                        name="storage_move_assignment_v8146"
+                        class="form-select">
+
+                    {% for assignment in storage_edit_assignments_v8146 %}
+                    <option value="{{ assignment.pk }}"
+                            data-source-location="{{ assignment.location_id }}"
+                            data-source-position="{{ assignment.position }}"
+                            data-source-path="{{ assignment.location.full_path }}">
+                        {{ assignment.location.full_path }}
+                        {% if assignment.position %}
+                            — {{ assignment.position }}
+                        {% endif %}
+                        {% if assignment.is_primary %}
+                            (Primary)
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label" for="storageMoveDestinationV8146">
+                    New physical destination
+                </label>
+
+                <select id="storageMoveDestinationV8146"
+                        name="storage_move_destination_v8146"
+                        class="form-select">
+                    <option value="">Select a registered location</option>
+
+                    {% for location in storage_edit_destinations_v8146 %}
+                        {% if location.location_type == "box" or location.location_type == "rack" or location.location_type == "other" %}
+                        <option value="{{ location.id }}"
+                                data-destination-path="{{ location.full_path }}">
+                            {{ location.full_path }}
+                            ({{ location.location_type }})
+                        </option>
+                        {% endif %}
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label" for="storageMovePositionV8146">
+                    Destination position
+                </label>
+
+                <input id="storageMovePositionV8146"
+                       name="storage_move_position_v8146"
+                       type="text"
+                       class="form-control"
+                       maxlength="100"
+                       placeholder="A1, B5, P03"
+                       autocomplete="off">
+            </div>
+
+            <div class="col-md-8">
+                <label class="form-label" for="storageMoveReasonV8146">
+                    Movement reason
+                </label>
+
+                <input id="storageMoveReasonV8146"
+                       name="storage_move_reason_v8146"
+                       type="text"
+                       class="form-control"
+                       maxlength="500"
+                       placeholder="Explain why this Sample is being moved"
+                       autocomplete="off">
+            </div>
+        </div>
+
+        <input type="hidden"
+               id="storageMoveExpectedLocationV8146"
+               name="storage_move_expected_location_v8146">
+
+        <input type="hidden"
+               id="storageMoveExpectedPositionV8146"
+               name="storage_move_expected_position_v8146">
+
+        <input type="hidden"
+               id="storageMoveExpectedSourcePathV8146"
+               name="storage_move_expected_source_path_v8146">
+
+        <input type="hidden"
+               id="storageMoveExpectedDestinationPathV8146"
+               name="storage_move_expected_destination_path_v8146">
+
+        <div class="d-flex align-items-center gap-3 mt-3">
+            <button type="button"
+                    id="storageMoveSubmitV8146"
+                    class="btn btn-outline-primary"
+                    data-move-url="{% url 'sample_storage_move_v8146' sample.pk %}"
+                    disabled>
+                Confirm Physical Movement
+            </button>
+
+            <span id="storageMoveStatusV8146"
+                  class="form-text"
+                  role="status">
+                Select a destination and enter a movement reason.
+            </span>
+        </div>
+
+        {% else %}
+        <p class="mb-0 text-muted">
+            This Sample has no active structured physical assignment.
+            Historical text paths must be verified before a physical
+            movement can be performed.
+        </p>
+        {% endif %}
+    </div>
+</section>

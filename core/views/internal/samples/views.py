@@ -2669,6 +2669,7 @@ def _atomic_sample_edit_post(view_function):
 @login_required
 @_atomic_sample_edit_post
 def sample_edit_view(request, sample_id):
+    from core.services.storage_anchor_catalog_v8 import build_storage_anchor_catalog
     base_sample = get_object_or_404(Sample, id=sample_id)
 
     if hasattr(base_sample, 'bacteria'):
@@ -3054,6 +3055,8 @@ def sample_edit_view(request, sample_id):
         'current_phages_string': current_phages_string,
         'current_storage_location': current_storage_location,
         'current_storage_paths': current_storage_paths,
+        'storage_edit_destinations_v8146': build_storage_anchor_catalog(user=request.user),
+        'storage_edit_assignments_v8146': base_sample.storage_assignments.filter(status='active').select_related('location').order_by('rank', 'pk'),
         'all_tags': all_tags,
         'selected_tag_ids': selected_tag_ids,
         'keyword_pairs_text': keyword_pairs_text,

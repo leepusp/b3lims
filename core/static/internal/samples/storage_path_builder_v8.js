@@ -335,6 +335,28 @@
             }
         });
 
+        document.addEventListener(
+            "b3:storage-child-created-v8146",
+            event => {
+                const anchor = event.detail?.anchor;
+
+                if (
+                    !anchor ||
+                    !Number.isSafeInteger(Number(anchor.id)) ||
+                    Number(anchor.id) <= 0
+                ) return;
+
+                anchors = anchors.filter(
+                    item => String(item.id) !== String(anchor.id)
+                );
+                anchors.push(anchor);
+
+                if (eligible(anchor)) {
+                    choose(anchor);
+                }
+            }
+        );
+
         synchronize();
 
         fetch(container.dataset.anchorCatalogUrl, {
@@ -348,9 +370,19 @@
                 return response.json();
             })
             .then(payload => {
-                anchors = Array.isArray(payload.anchors)
-                    ? payload.anchors
-                    : [];
+                const fetchedAnchors =
+                    Array.isArray(payload.anchors)
+                        ? payload.anchors
+                        : [];
+
+                const newlyCreated = anchors.filter(
+                    item => !fetchedAnchors.some(
+                        serverItem =>
+                            String(serverItem.id) === String(item.id)
+                    )
+                );
+
+                anchors = fetchedAnchors.concat(newlyCreated);
 
                 if (!path.value.trim()) {
                     status.textContent = anchors.length
