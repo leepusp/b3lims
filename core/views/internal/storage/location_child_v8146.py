@@ -2,13 +2,15 @@
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 
-from core.models.samples.storage import StorageLocation
+from core.models.samples.storage import StorageLocation, StorageWorkspace
 from core.permissions.storage_workspaces_v8 import (
     can_view_storage_location,
+    can_manage_storage_workspace,
+    visible_storage_workspaces_for_user,
 )
 from core.services.storage_workspace_infrastructure_v8 import (
     create_storage_location_in_workspace_v8,
@@ -128,3 +130,159 @@ def storage_location_child_create_v8146(request):
         },
         status=201,
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def storage_path_register_v8146(request):
+    """Register a named hierarchy within an authorized workspace."""
+
+    if request.method == "GET":
+        rows = [
+            {
+                "id": ws.pk,
+                "name": ws.name,
+                "scope": ws.scope,
+            }
+            for ws in visible_storage_workspaces_for_user(request.user)
+            if can_manage_storage_workspace(request.user, ws)
+        ]
+        response = JsonResponse({
+            "ok": True,
+            "workspaces": rows,
+        })
+        response["Cache-Control"] = "no-store"
+        return response
+
+    try:
+        token = str(request.POST.get("workspace_id", "")).strip()
+
+        if not (
+            token.isascii()
+            and token.isdecimal()
+            and 1 <= len(token) <= 18
+            and int(token) > 0
+        ):
+            raise ValidationError(
+                "Select an authorized storage workspace."
+            )
+
+        raw = request.POST.get("path", "")
+
+        if not isinstance(raw, str) or not raw.strip():
+            raise ValidationError("Enter a storage path.")
+
+        if len(raw) > 2600:
+            raise ValidationError("Storage path is too long.")
+
+        parts = [part.strip() for part in raw.split(">")]
+
+        if (
+            len(parts) > 16
+            or any(
+                not part
+                or len(part) > 150
+                or any(c in part for c in (";", ",", "\\n", "\\r"))
+                for part in parts
+            )
+        ):
+            raise ValidationError(
+                "Use 1 to 16 names of up to 150 characters "
+                "without >, commas or semicolons."
+            )
+
+        with transaction.atomic():
+            workspace = (
+                StorageWorkspace.objects.select_for_update()
+                .filter(pk=int(token)).first()
+            )
+
+            if (
+                workspace is None
+                or not can_manage_storage_workspace(
+                    request.user, workspace
+                )
+            ):
+                raise PermissionDenied(
+                    "Storage workspace management denied."
+                )
+
+            parent = None
+            created_count = 0
+
+            for name in parts:
+                matches = list(
+                    StorageLocation.objects
+                    .select_for_update(of=("self",))
+                    .filter(
+                        workspace=workspace,
+                        parent=parent,
+                        name__iexact=name,
+                    )
+                    .order_by("pk")[:2]
+                )
+
+                if len(matches) > 1:
+                    raise ValidationError(
+                        "Ambiguous duplicate storage locations."
+                    )
+
+                if matches:
+                    node = matches[0]
+                    if (
+                        not node.is_active
+                        or node.location_type == "position"
+                        or not can_view_storage_location(
+                            request.user, node
+                        )
+                    ):
+                        raise ValidationError(
+                            "Storage parent is inactive or inaccessible."
+                        )
+                else:
+                    node = create_storage_location_in_workspace_v8(
+                        actor=request.user,
+                        workspace_id=workspace.pk,
+                        parent_id=parent.pk if parent else None,
+                        name=name,
+                        location_type="other",
+                        rank=1,
+                    )
+                    created_count += 1
+
+                parent = node
+
+            anchor = {
+                "id": parent.pk,
+                "parent_id": parent.parent_id,
+                "name": parent.name,
+                "location_type": parent.location_type,
+                "full_path": parent.full_path,
+                "depth": len(parent.full_path_parts) - 1,
+                "rank": parent.rank,
+            }
+
+    except ValidationError as exc:
+        return JsonResponse(
+            {"ok": False, "error": " ".join(exc.messages)},
+            status=400,
+        )
+    except PermissionDenied:
+        return JsonResponse(
+            {"ok": False, "error": "Storage management denied."},
+            status=403,
+        )
+    except IntegrityError:
+        return JsonResponse(
+            {"ok": False, "error": "Storage hierarchy conflict."},
+            status=409,
+        )
+
+    response = JsonResponse({
+        "ok": True,
+        "created_count": created_count,
+        "reused_count": len(parts) - created_count,
+        "anchor": anchor,
+    }, status=201 if created_count else 200)
+    response["Cache-Control"] = "no-store"
+    return response

@@ -1,139 +1,133 @@
 /*
- * B3 LIMS V8.14.6B3
- * Explicit child creation shared by New Sample and Edit Sample.
- * Never converts typed text into an implicit StorageLocation.
+ * V8.14.6C1 — Register the existing chip-based Path Builder.
+ * No predefined type selection and no implicit creation on typing.
  */
 (() => {
     "use strict";
-
-    const EVENT_NAME = "b3:storage-child-created-v8146";
 
     function init() {
         const panel = document.querySelector(
             "[data-b3-storage-child-v8146]"
         );
-
         if (!panel) return;
 
-        const parent = document.getElementById(
-            "storageChildParentV8146"
+        const workspace = document.getElementById(
+            "storageChildWorkspaceV8146"
         );
-        const name = document.getElementById(
-            "storageChildNameV8146"
+        const display = document.getElementById(
+            "storageChildCurrentPathV8146"
         );
-        const type = document.getElementById(
-            "storageChildTypeV8146"
-        );
-        const create = document.getElementById(
+        const button = document.getElementById(
             "storageChildCreateV8146"
         );
         const status = document.getElementById(
             "storageChildStatusV8146"
         );
+        const path = document.getElementById(
+            "storage_location_hidden"
+        );
+        const input = document.getElementById(
+            "storageInputVisual"
+        );
+        const chips = document.getElementById(
+            "dynamicStorageContainer"
+        );
 
-        if (!parent || !name || !type || !create || !status) {
-            return;
-        }
+        if (!workspace || !display || !button ||
+            !status || !path || !input || !chips) return;
 
         let busy = true;
+        let available = 0;
 
         function update() {
-            create.disabled = busy ||
-                !parent.value ||
-                !name.value.trim() ||
-                !type.value;
+            const value = path.value.trim();
+            display.textContent = value || "No path entered";
+
+            button.disabled = (
+                busy ||
+                available === 0 ||
+                !workspace.value ||
+                !value ||
+                Boolean(input.value.trim())
+            );
         }
 
-        function addOption(anchor) {
-            if (!anchor || !anchor.id) return;
-
-            const id = String(anchor.id);
-            const exists = Array.from(parent.options)
-                .some(option => option.value === id);
-
-            if (exists) return;
-
-            const option = document.createElement("option");
-            option.value = id;
-            option.textContent =
-                anchor.full_path + " [" + anchor.location_type + "]";
-
-            parent.add(option);
-        }
-
-        async function loadParents() {
+        async function loadWorkspaces() {
             try {
                 const response = await fetch(
                     panel.dataset.catalogUrl,
                     {
                         credentials: "same-origin",
-                        headers: {
-                            "Accept": "application/json"
-                        }
+                        headers: {"Accept": "application/json"}
                     }
                 );
 
                 if (!response.ok) {
                     throw new Error(
-                        "Unable to load authorized storage locations."
+                        "Cannot load authorized workspaces."
                     );
                 }
 
-                const payload = await response.json();
-                const anchors = Array.isArray(payload.anchors)
-                    ? payload.anchors
-                    : [];
+                const data = await response.json();
+                const rows = Array.isArray(data.workspaces)
+                    ? data.workspaces : [];
 
-                parent.replaceChildren();
+                available = rows.length;
+                workspace.replaceChildren();
 
-                const placeholder = document.createElement("option");
-                placeholder.value = "";
-                placeholder.textContent = "Select an existing parent";
-                parent.add(placeholder);
+                const empty = document.createElement("option");
+                empty.value = "";
+                empty.textContent = "Select workspace";
+                workspace.add(empty);
 
-                for (const anchor of anchors) {
-                    addOption(anchor);
+                for (const item of rows) {
+                    const option = document.createElement("option");
+                    option.value = String(item.id);
+                    option.textContent = item.name;
+                    workspace.add(option);
                 }
 
-                status.textContent = anchors.length
-                    ? "Choose a parent in the registered hierarchy."
-                    : "No accessible storage parents are registered.";
+                if (rows.length === 1) {
+                    workspace.value = String(rows[0].id);
+                }
+
+                status.textContent = rows.length
+                    ? "Finish entering your path, then register it."
+                    : "No manageable workspace is available. " +
+                      "Open Storage management.";
 
             } catch (error) {
-                status.textContent = error.message ||
-                    "The physical storage catalog is unavailable.";
+                status.textContent = error.message;
             } finally {
                 busy = false;
                 update();
             }
         }
 
-        async function createChild() {
-            if (create.disabled || busy) return;
+        async function registerPath() {
+            update();
+            if (busy || button.disabled) return;
 
-            const csrf = document.querySelector(
+            const token = document.querySelector(
                 '#mainSampleForm input[name="csrfmiddlewaretoken"]'
             )?.value;
 
-            if (!csrf) {
-                status.textContent =
-                    "CSRF token unavailable. Reload the form.";
+            if (!token) {
+                status.textContent = "CSRF token unavailable.";
                 return;
             }
 
-            const selectedParent = parent.value;
-            const newName = name.value.trim();
+            const submittedPath = path.value.trim();
+            const body = new URLSearchParams({
+                workspace_id: workspace.value,
+                path: submittedPath
+            });
 
             busy = true;
             update();
-            status.textContent = "Creating the physical location...";
+            status.textContent = "Registering physical hierarchy...";
 
             try {
-                const body = new URLSearchParams();
-                body.set("parent_id", selectedParent);
-                body.set("name", newName);
-                body.set("location_type", type.value);
-
                 const response = await fetch(
                     panel.dataset.createUrl,
                     {
@@ -143,61 +137,61 @@
                             "Accept": "application/json",
                             "Content-Type":
                                 "application/x-www-form-urlencoded;charset=UTF-8",
-                            "X-CSRFToken": csrf
+                            "X-CSRFToken": token
                         },
                         body: body.toString()
                     }
                 );
 
-                const payload = await response.json();
+                const result = await response.json();
 
-                if (!response.ok || !payload.ok || !payload.anchor) {
+                if (!response.ok || !result.ok || !result.anchor) {
                     throw new Error(
-                        payload.error ||
-                        "The location could not be created."
+                        result.error ||
+                        "Unable to register this path."
                     );
                 }
 
-                const anchor = payload.anchor;
-
-                addOption(anchor);
-                parent.value = String(anchor.id);
-                name.value = "";
+                if (path.value.trim() !== submittedPath) {
+                    status.textContent =
+                        "Path registered, but the editor changed. " +
+                        "Select the registered destination again.";
+                    return;
+                }
 
                 document.dispatchEvent(
-                    new CustomEvent(EVENT_NAME, {
-                        detail: {anchor}
-                    })
+                    new CustomEvent(
+                        "b3:storage-child-created-v8146",
+                        {detail: {anchor: result.anchor}}
+                    )
                 );
 
-                const host = ["box", "rack", "other"].includes(
-                    String(anchor.location_type).toLowerCase()
-                );
-
-                status.textContent = host
-                    ? "Location created: " + anchor.full_path +
-                      ". You can now assign a Sample position."
-                    : "Hierarchy level created: " +
-                      anchor.full_path +
-                      ". Select it as the parent to create another child.";
+                status.textContent =
+                    "Physical path registered: " +
+                    result.anchor.full_path +
+                    ". New levels: " + result.created_count +
+                    "; existing levels: " + result.reused_count + ".";
 
             } catch (error) {
-                status.textContent = error.message ||
-                    "Unable to create this location.";
+                status.textContent = error.message;
             } finally {
                 busy = false;
                 update();
             }
         }
 
-        for (const field of [parent, name, type]) {
-            field.addEventListener("input", update);
-            field.addEventListener("change", update);
-        }
+        workspace.addEventListener("change", update);
+        input.addEventListener("input", update);
+        input.addEventListener("keydown", () =>
+            setTimeout(update, 0)
+        );
+        chips.addEventListener("click", () =>
+            setTimeout(update, 0)
+        );
 
-        create.addEventListener("click", createChild);
+        button.addEventListener("click", registerPath);
 
-        loadParents();
+        loadWorkspaces();
     }
 
     if (document.readyState === "loading") {

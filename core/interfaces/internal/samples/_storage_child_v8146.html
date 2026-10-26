@@ -1,79 +1,55 @@
-<details
-    class="border rounded p-3 mt-3 mb-3"
-    data-b3-storage-child-v8146
-    data-catalog-url="{% url 'storage_anchor_catalog_v8' %}"
-    data-create-url="{% url 'storage_location_child_create_v8146' %}"
->
-    <summary class="fw-semibold">
-        Create Child Location
-    </summary>
+<section class="border rounded p-3 mt-3 mb-3"
+         data-b3-storage-child-v8146
+         data-catalog-url="{% url 'storage_path_register_v8146' %}"
+         data-create-url="{% url 'storage_path_register_v8146' %}"
+         aria-label="Register physical storage path">
 
-    <p class="form-text mt-3">
-        Select an existing parent and create a named child.
-        Names are user-defined; the parent-child relationship
-        is recorded in the physical storage hierarchy.
-        Infrastructure management permission is required.
+    <div class="fw-semibold mb-2">
+        Register Physical Path
+    </div>
+
+    <p class="form-text">
+        Enter your own level names in the Path Builder above,
+        pressing Enter after each level. Register the complete
+        hierarchy when ready.
     </p>
 
-    <div class="row g-2">
-        <div class="col-md-6">
-            <label class="form-label" for="storageChildParentV8146">
-                Parent location
-            </label>
-            <select
-                id="storageChildParentV8146"
-                class="form-select"
-                autocomplete="off"
-            >
-                <option value="">Loading storage hierarchy...</option>
-            </select>
-        </div>
+    <label class="form-label"
+           for="storageChildWorkspaceV8146">
+        Storage workspace
+    </label>
 
-        <div class="col-md-6">
-            <label class="form-label" for="storageChildNameV8146">
-                New location name
-            </label>
-            <input
-                id="storageChildNameV8146"
-                type="text"
-                class="form-control"
-                maxlength="255"
-                autocomplete="off"
-                placeholder="e.g. BBAMS"
-            >
-        </div>
+    <select id="storageChildWorkspaceV8146"
+            class="form-select"
+            autocomplete="off">
+        <option value="">Loading workspaces...</option>
+    </select>
 
-        <div class="col-md-5">
-            <label class="form-label" for="storageChildTypeV8146">
-                Classification
-            </label>
-            <select id="storageChildTypeV8146"
-                    class="form-select">
-                <option value="other" selected>Custom location</option>
-                <option value="box">Box</option>
-                <option value="rack">Rack</option>
-                <option value="shelf">Shelf</option>
-                <option value="freezer">Freezer</option>
-                <option value="room">Room</option>
-            </select>
-        </div>
+    <p class="form-text mt-2">
+        Path:
+        <strong id="storageChildCurrentPathV8146">
+            No path entered
+        </strong>
+    </p>
 
-        <div class="col-md-7 d-flex align-items-end">
-            <button
-                id="storageChildCreateV8146"
-                class="btn btn-outline-primary"
-                type="button"
-                disabled
-            >
-                Create Child Location
-            </button>
-        </div>
-    </div>
+    <button id="storageChildCreateV8146"
+            type="button"
+            class="btn btn-outline-primary"
+            disabled>
+        Register Physical Path
+    </button>
 
     <p id="storageChildStatusV8146"
        class="form-text mt-2 mb-0"
        role="status"
        aria-live="polite">
-        Select a parent and enter a name.
+        Select a workspace and enter a path.
     </p>
-</details>
+
+    <p class="form-text mt-2 mb-0">
+        No authorized workspace?
+        <a href="{% url 'storage_workspace' %}">
+            Open Storage management
+        </a>.
+    </p>
+</section>

@@ -9,7 +9,7 @@ from core.views.internal.shipments.views import shipments_list_view, shipments_d
 # core/urls.py
 from django.contrib import admin
 from django.urls import include, path
-from core.views.internal.storage.location_child_v8146 import storage_location_child_create_v8146
+from core.views.internal.storage.location_child_v8146 import storage_location_child_create_v8146, storage_path_register_v8146
 from core.views.internal.samples.storage_move_v8146 import sample_storage_move_v8146
 from django.views.generic.base import RedirectView
 from django.conf import settings
@@ -290,6 +290,11 @@ urlpatterns = [
         "storage/locations/create-child/v8146/",
         storage_location_child_create_v8146,
         name="storage_location_child_create_v8146",
+    ),
+    path(
+        "storage/locations/register-path/v8146/",
+        storage_path_register_v8146,
+        name="storage_path_register_v8146",
     ),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
