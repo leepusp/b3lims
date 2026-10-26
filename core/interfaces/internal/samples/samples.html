@@ -89,13 +89,20 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3">
-                            <label class="section-label">Physical Location (Path Builder)</label>
+                        <div class="col-12">
+                            <div class="row g-3 align-items-start">
+                                <div class="col-lg-7">
+
                             <div id="dynamicStorageContainer" data-anchor-catalog-url="{% url 'storage_anchor_catalog_v8' %}" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
                                 <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ intake_prefill.storage_location|default:'' }}">
                                 <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter..." value="{{ intake_prefill.storage_location|default:'' }}">
                             </div>
-                            <div class="form-text small">Type the location and press <strong>Enter</strong> to create levels. Ex: Freezer 1 ↵ Box A ↵</div>
+                            <div class="form-text small">
+                                Enter each level and press <strong>Enter</strong>.
+                                The <strong>last level is the exact Sample position</strong>;
+                                all previous levels describe the physical storage hierarchy.
+                                Example: Freezer 1 &gt; Box A &gt; A4.
+                            </div>
 
                             <input type="hidden"
                                    name="storage_mode_v8"
@@ -105,6 +112,11 @@
                                    name="storage_anchor_id_v8"
                                    id="storage_anchor_id_v8"
                                    value="">
+
+                            <input type="hidden"
+                                   name="storage_position_leaf_v8146c2"
+                                   id="storage_position_leaf_v8146c2"
+                                   value="0">
 
                             <div id="storageAnchorSuggestionsV8"
                                  class="list-group mt-2"
@@ -117,7 +129,7 @@
                               Loading registered storage locations…
                             </div>
 
-                            {% include "internal/samples/_storage_child_v8146.html" %}
+
                             <div id="storagePositionPanelV8"
                                  class="border rounded bg-light p-3 mt-3"
                                  hidden>
@@ -125,12 +137,20 @@
                                 Sample positions
                               </label>
                               <p class="form-text mb-2">
-                                Each Sample needs a different recorded
-                                position in the selected Box or Rack.
+                                For multiple aliquots, the first position comes from
+                                the final Path Builder level. Enter a distinct
+                                position for every additional aliquot.
                               </p>
                               <div id="storagePositionRowsV8"></div>
                             </div>
 
+
+
+                                </div>
+                                <div class="col-lg-5">
+                                    {% include "internal/samples/_storage_child_v8146.html" %}
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-12 border-start border-3 border-warning ps-4 mt-4">
@@ -458,8 +478,8 @@
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260923-map-resilience2"></script>
 <script src="{% static 'vendor/quill/1.3.6/quill.js' %}"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
-<script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261026-v8146-cache1"></script>
-<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261026-v8146c1"></script>
+<script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261026-v8146c2"></script>
+<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261026-v8146c2"></script>
 
 <script id="intakeDynamicPrefillScript">
 (function() {

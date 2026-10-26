@@ -25,6 +25,7 @@ def prepare_storage_sample_intake_v8(
     positions,
     expected_samples,
     actor,
+    position_leaf_mode=False,
 ):
     if (
         isinstance(expected_samples, bool)
@@ -107,7 +108,23 @@ def prepare_storage_sample_intake_v8(
     )
 
     # The ID is authoritative. Do not accept a substituted path.
-    if storage_text != plan.box_path:
+    if position_leaf_mode:
+        from core.services.storage_position_names_v8146c2 import (
+            normalize_physical_position_v8146c2,
+        )
+
+        prefix = f"{plan.box_path} > "
+
+        valid_path = (
+            storage_text.startswith(prefix)
+            and normalize_physical_position_v8146c2(
+                storage_text[len(prefix):]
+            ) == plan.positions[0]
+        )
+    else:
+        valid_path = storage_text == plan.box_path
+
+    if not valid_path:
         raise ValidationError(
             "The selected storage path changed. "
             "Select the registered location again."

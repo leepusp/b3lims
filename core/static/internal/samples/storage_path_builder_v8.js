@@ -42,6 +42,10 @@
 
         let anchors = [];
         let selectedAnchor = null;
+        let selectedSamplePosition = "";
+        const positionLeafFlag = document.getElementById(
+            "storage_position_leaf_v8146c2"
+        );
         let renderedCount = -1;
 
         const eligible = anchor =>
@@ -93,7 +97,8 @@
 
         function updatePositionRows() {
             const physical = mode.value === "physical";
-            panel.hidden = !physical;
+            panel.hidden = !physical ||
+                (sampleCount() === 1 && Boolean(selectedSamplePosition));
 
             if (!physical) {
                 rows.querySelectorAll("input").forEach(node => {
@@ -118,8 +123,14 @@
             }
 
             if (count === renderedCount) {
-                rows.querySelectorAll("input").forEach(node => {
+                rows.querySelectorAll("input").forEach((node, index) => {
                     node.disabled = false;
+                    node.readOnly = (
+                        index === 0 && Boolean(selectedSamplePosition)
+                    );
+                    if (node.readOnly) {
+                        node.value = selectedSamplePosition;
+                    }
                 });
                 return;
             }
@@ -146,7 +157,14 @@
                 field.autocomplete = "off";
                 field.maxLength = 100;
                 field.required = true;
-                field.value = existing[index] || "";
+                field.value = (
+                    index === 0 && selectedSamplePosition
+                        ? selectedSamplePosition
+                        : existing[index] || ""
+                );
+                field.readOnly = (
+                    index === 0 && Boolean(selectedSamplePosition)
+                );
 
                 wrapper.append(label, field);
                 rows.append(wrapper);
@@ -158,9 +176,15 @@
         function synchronize() {
             if (
                 selectedAnchor &&
-                path.value.trim() !== selectedAnchor.full_path
+                path.value.trim() !== (
+                    selectedAnchor.full_path +
+                    (selectedSamplePosition
+                        ? " > " + selectedSamplePosition
+                        : "")
+                )
             ) {
                 selectedAnchor = null;
+                selectedSamplePosition = "";
                 anchorId.value = "";
             }
 
@@ -185,10 +209,16 @@
                       "physical location to register Sample positions.";
             }
 
+            if (positionLeafFlag) {
+                positionLeafFlag.value = (
+                    selectedAnchor && selectedSamplePosition
+                ) ? "1" : "0";
+            }
+
             updatePositionRows();
         }
 
-        function choose(anchor) {
+        function choose(anchor, position = "") {
             if (
                 typeof window.setStorageLocationFromText !== "function"
             ) {
@@ -197,9 +227,15 @@
                 return;
             }
 
-            window.setStorageLocationFromText(anchor.full_path);
+            const leaf = String(position || "").trim();
+
+            window.setStorageLocationFromText(
+                anchor.full_path + (leaf ? " > " + leaf : "")
+            );
+
             input.value = "";
             selectedAnchor = eligible(anchor) ? anchor : null;
+            selectedSamplePosition = selectedAnchor ? leaf : "";
             suggestions.replaceChildren();
             synchronize();
         }
@@ -260,6 +296,7 @@
             window.setStorageLocationFromText = value => {
                 previousSetter(value);
                 selectedAnchor = null;
+                selectedSamplePosition = "";
                 synchronize();
             };
         }
@@ -318,14 +355,25 @@
             );
 
             const values = fields.map(field =>
-                field.value.trim().toUpperCase()
+                field.value.trim()
             );
+
+            const validPosition = value =>
+                value.length > 0 &&
+                value.length <= 100 &&
+                !/[>,;\x00-\x1f\x7f]/u.test(value);
 
             if (
                 input.value.trim() ||
                 fields.length !== sampleCount() ||
-                values.some(value => !/^[A-Z]+[0-9]+$/.test(value)) ||
-                new Set(values).size !== values.length
+                values.some(value => !validPosition(value)) ||
+                new Set(
+                    values.map(value => value.toLocaleLowerCase())
+                ).size !== values.length ||
+                (
+                    Boolean(selectedSamplePosition) &&
+                    values[0] !== selectedSamplePosition
+                )
             ) {
                 event.preventDefault();
 
@@ -352,7 +400,10 @@
                 anchors.push(anchor);
 
                 if (eligible(anchor)) {
-                    choose(anchor);
+                    const position = event.detail?.samplePosition
+                        ? event.detail.position
+                        : "";
+                    choose(anchor, position);
                 }
             }
         );

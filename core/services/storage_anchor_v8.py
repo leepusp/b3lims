@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from core.services.storage_position_names_v8146c2 import normalize_physical_position_v8146c2
 
 from core.models.samples.storage import (
     SampleStorageAssignment,
@@ -96,7 +97,7 @@ def validate_storage_anchor_plan(
         )
 
     normalized = tuple(
-        str(value or "").strip().upper()
+        normalize_physical_position_v8146c2(value)
         for value in positions
     )
 
@@ -105,15 +106,7 @@ def validate_storage_anchor_plan(
             "Provide one position for every Sample being created."
         )
 
-    if any(
-        re.fullmatch(r"[A-Z]+[0-9]+", value) is None
-        for value in normalized
-    ):
-        raise ValidationError(
-            "Every position must have a valid code, such as A1 or B5."
-        )
-
-    if len(set(normalized)) != len(normalized):
+    if len({value.casefold() for value in normalized}) != len(normalized):
         raise ValidationError(
             "Two new Samples cannot use the same Box position."
         )

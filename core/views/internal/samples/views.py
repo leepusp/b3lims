@@ -1560,6 +1560,11 @@ def sample_create_view(request):
                         for _, quantity in distribution_rows
                     ),
                     actor=user,
+                    position_leaf_mode=(
+                        request.POST.get(
+                            "storage_position_leaf_v8146c2", ""
+                        ) == "1"
+                    ),
                 )
 
                 created_samples = []

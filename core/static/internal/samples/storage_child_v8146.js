@@ -118,9 +118,35 @@
             }
 
             const submittedPath = path.value.trim();
+            const sampleIntake = Boolean(
+                document.getElementById("storagePositionPanelV8")
+            );
+
+            let hierarchyPath = submittedPath;
+            let samplePosition = "";
+
+            if (sampleIntake) {
+                const parts = submittedPath.split(">")
+                    .map(part => part.trim());
+
+                if (
+                    submittedPath.includes(";") ||
+                    parts.length < 2 ||
+                    parts.some(part => !part)
+                ) {
+                    status.textContent =
+                        "Enter a physical location followed by " +
+                        "the Sample position as the final level.";
+                    return;
+                }
+
+                samplePosition = parts.pop();
+                hierarchyPath = parts.join(" > ");
+            }
+
             const body = new URLSearchParams({
                 workspace_id: workspace.value,
-                path: submittedPath
+                path: hierarchyPath
             });
 
             busy = true;
@@ -162,15 +188,26 @@
                 document.dispatchEvent(
                     new CustomEvent(
                         "b3:storage-child-created-v8146",
-                        {detail: {anchor: result.anchor}}
+                        {
+                            detail: {
+                                anchor: result.anchor,
+                                samplePosition: sampleIntake,
+                                position: samplePosition
+                            }
+                        }
                     )
                 );
 
-                status.textContent =
-                    "Physical path registered: " +
-                    result.anchor.full_path +
-                    ". New levels: " + result.created_count +
-                    "; existing levels: " + result.reused_count + ".";
+                status.textContent = sampleIntake
+                    ? "Physical destination registered: " +
+                      result.anchor.full_path +
+                      ". Sample position: " + samplePosition +
+                      ". The position will be occupied when " +
+                      "you save the Sample."
+                    : "Physical path registered: " +
+                      result.anchor.full_path +
+                      ". New levels: " + result.created_count +
+                      "; existing levels: " + result.reused_count + ".";
 
             } catch (error) {
                 status.textContent = error.message;

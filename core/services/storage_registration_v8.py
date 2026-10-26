@@ -4,6 +4,7 @@ import re
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from core.services.storage_position_names_v8146c2 import normalize_physical_position_v8146c2
 
 from core.models.samples.sample import Sample
 from core.models.samples.storage import (
@@ -69,12 +70,7 @@ def register_initial_physical_storage(
             "You cannot register storage at this location."
         )
 
-    position = str(position or "").strip().upper()
-
-    if not re.fullmatch(r"[A-Z]+[0-9]+", position):
-        raise ValidationError(
-            "Position must follow a format such as B5 or P03."
-        )
+    position = normalize_physical_position_v8146c2(position)
 
     if box.location_type not in {"box", "rack", "other"}:
         raise ValidationError(
