@@ -75,6 +75,14 @@ Physical locations, Sample custody and movement history.
 
     <main class="b3s-main">
 
+      {% if messages %}
+      <div class="b3s-c3-feedback" role="status">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       <div id="b3s-breadcrumb"
            class="b3s-breadcrumb"
            aria-label="Selected storage path">
@@ -415,6 +423,72 @@ Physical locations, Sample custody and movement history.
                    required>
           </label>
 
+          <fieldset class="b3s-c3-layout">
+            <legend>Storage organization</legend>
+
+            <label>
+              Descriptive type (optional)
+              <input type="text"
+                     name="type_label"
+                     maxlength="80"
+                     placeholder="e.g. Cryogenic box">
+            </label>
+
+            <label>
+              Temperature (optional)
+              <input type="text"
+                     name="temperature_label"
+                     maxlength="60"
+                     placeholder="e.g. -80 °C">
+            </label>
+
+            <label>
+              Organization
+              <select name="organization"
+                      id="b3s-c3-organization"
+                      required>
+                <option value="free">
+                  Free organization
+                </option>
+                <option value="grid">
+                  Position grid
+                </option>
+              </select>
+            </label>
+
+            <div id="b3s-c3-dimensions"
+                 class="b3s-c3-dimensions"
+                 hidden>
+              <label>
+                Rows
+                <input type="number"
+                       name="rows"
+                       id="b3s-c3-rows"
+                       min="1"
+                       max="26"
+                       value="9"
+                       disabled>
+              </label>
+
+              <label>
+                Columns
+                <input type="number"
+                       name="columns"
+                       id="b3s-c3-columns"
+                       min="1"
+                       max="24"
+                       value="9"
+                       disabled>
+              </label>
+            </div>
+
+            <p id="b3s-c3-capacity"
+               class="b3s-note"
+               role="status">
+              No fixed position capacity.
+            </p>
+          </fieldset>
+
           <label>
             Notes
             <textarea name="notes"
@@ -422,10 +496,14 @@ Physical locations, Sample custody and movement history.
           </label>
 
           <button type="submit"
+                   formaction="{% url 'storage_location_create_with_layout_v8146c3' %}"
                   class="btn btn-primary">
             Create location
           </button>
         </form>
+        <script defer
+                src="{% static 'internal/storage/storage_layout_v8146c3.js' %}?v=20261027-v8146c3b"></script>
+
     </div>
 
   </dialog>

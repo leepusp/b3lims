@@ -385,3 +385,98 @@ class StorageSceneConfiguration(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class StorageLocationLayoutV8146C3(models.Model):
+    """Optional organization and capacity for a real storage location."""
+
+    ORGANIZATION_CHOICES = (
+        ("free", "Free organization"),
+        ("grid", "Position grid"),
+    )
+
+    location = models.OneToOneField(
+        StorageLocation,
+        on_delete=models.CASCADE,
+        related_name="layout_v8146c3",
+    )
+
+    organization = models.CharField(
+        max_length=10,
+        choices=ORGANIZATION_CHOICES,
+        default="free",
+    )
+
+    rows = models.PositiveSmallIntegerField(default=0)
+    columns = models.PositiveSmallIntegerField(default=0)
+
+    type_label = models.CharField(
+        max_length=80,
+        blank=True,
+    )
+
+    temperature_label = models.CharField(
+        max_length=60,
+        blank=True,
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        organization="free",
+                        rows=0,
+                        columns=0,
+                    )
+                    | models.Q(
+                        organization="grid",
+                        rows__gte=1,
+                        rows__lte=26,
+                        columns__gte=1,
+                        columns__lte=24,
+                    )
+                ),
+                name="valid_storage_layout_v8146c3",
+            ),
+        ]
+
+    @property
+    def capacity(self):
+        if self.organization != "grid":
+            return None
+        return self.rows * self.columns
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+
+        if self.organization == "free":
+            if self.rows != 0 or self.columns != 0:
+                raise ValidationError(
+                    "Free organization must not define grid dimensions."
+                )
+            return
+
+        if self.organization == "grid":
+            if not (
+                1 <= self.rows <= 26
+                and 1 <= self.columns <= 24
+            ):
+                raise ValidationError(
+                    "Grid dimensions must contain 1 to 26 rows "
+                    "and 1 to 24 columns."
+                )
+            return
+
+        raise ValidationError("Invalid storage organization.")
+
+    def __str__(self):
+        return (
+            f"{self.location_id}: {self.rows}x{self.columns}"
+            if self.organization == "grid"
+            else f"{self.location_id}: free"
+        )
