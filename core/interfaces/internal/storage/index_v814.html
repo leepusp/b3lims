@@ -9,7 +9,7 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}?v=20261027-v8147c4c">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261027-v8147c4d">
 <link rel="stylesheet"
       href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261027-c3d">
 {% endblock %}
@@ -52,7 +52,7 @@ Physical locations, Sample custody and movement history.
 
       <div id="b3s-workspace-filter-wrap">
         <label for="b3s-workspace-filter">
-          Workspace
+          Storage
         </label>
 
         <select id="b3s-workspace-filter">
@@ -69,11 +69,16 @@ Physical locations, Sample custody and movement history.
            aria-label="Storage hierarchy"></nav>
 
       <div class="b3s-side-actions">
+        <button type="button"
+                id="b3s-new-storage"
+                class="btn btn-sm btn-primary">
+          + New Storage
+        </button>
         {% if storage_manageable_workspaces_v8 %}
         <button type="button"
                 id="b3s-new-location"
                 class="btn btn-sm btn-primary">
-          + New location
+          + Add location
         </button>
         {% endif %}
       </div>
@@ -520,6 +525,116 @@ Physical locations, Sample custody and movement history.
   </div>
 
 
+
+  <dialog id="b3s-new-storage-dialog"
+          class="b3s-new-storage-dialog"
+          aria-labelledby="b3s-new-storage-title"
+          aria-describedby="b3s-new-storage-description">
+
+    <div class="b3s-dialog-header">
+      <div>
+        <h2 id="b3s-new-storage-title">
+          Create new Storage
+        </h2>
+        <p id="b3s-new-storage-description"
+           class="b3s-note">
+          Create an independent Storage for your
+          physical inventory and locations.
+        </p>
+      </div>
+
+      <button type="button"
+              id="b3s-close-new-storage"
+              class="btn btn-sm btn-outline-secondary">
+        Close
+      </button>
+    </div>
+
+    <div class="b3s-dialog-body">
+      <form method="post"
+            action="{% url 'storage_workspace' %}"
+            id="b3s-new-storage-form"
+            class="b3s-form">
+
+        {% csrf_token %}
+
+        <input type="hidden"
+               name="action"
+               value="create_storage_workspace_v8">
+
+        <label for="b3s-new-storage-name">
+          Storage name
+          <input id="b3s-new-storage-name"
+                 type="text"
+                 name="workspace_name"
+                 maxlength="120"
+                 autocomplete="off"
+                 placeholder="e.g. Clinical Biobank"
+                 required>
+        </label>
+
+        <label for="b3s-new-storage-scope">
+          Ownership
+          <select id="b3s-new-storage-scope"
+                  name="workspace_scope"
+                  required>
+            <option value="personal">
+              Personal Storage
+            </option>
+            {% if storage_group_choices_v8 %}
+            <option value="group">
+              Research Group Storage
+            </option>
+            {% endif %}
+          </select>
+        </label>
+
+        <label id="b3s-new-storage-group-field"
+               for="b3s-new-storage-group"
+               hidden>
+          Research Group
+          <select id="b3s-new-storage-group"
+                  name="research_group_id"
+                  disabled>
+            <option value="">
+              Select a Research Group
+            </option>
+            {% for group in storage_group_choices_v8 %}
+            <option value="{{ group.pk }}">
+              {{ group.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <p class="b3s-note">
+          Personal Storage belongs to your account.
+          Group Storage is managed by the coordinator
+          or an authorized administrator.
+        </p>
+
+        <p class="b3s-note">
+          After creating the Storage, select it
+          and use Add location to build its
+          physical hierarchy.
+        </p>
+
+        <div class="b3s-form-actions">
+          <button type="submit"
+                  class="btn btn-primary">
+            Create Storage
+          </button>
+
+          <button type="button"
+                  id="b3s-cancel-new-storage"
+                  class="btn btn-outline-secondary">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   {% if storage_manageable_workspaces_v8 %}
   <dialog id="b3s-location-dialog"
           class="b3s-location-dialog"
@@ -563,7 +678,7 @@ Physical locations, Sample custody and movement history.
                  value="create_location">
 
           <label>
-            Workspace
+            Storage
             <select name="workspace_id"
                     id="b3s-create-workspace"
                     required>
@@ -741,6 +856,9 @@ Physical locations, Sample custody and movement history.
 {% endblock %}
 
 {% block extra_js %}
+<script defer
+        src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4d">
+</script>
 <script defer
         src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8147c4c">
 </script>
