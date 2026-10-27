@@ -45,8 +45,15 @@ class CoordinatedReleaseTransaction:
             re.fullmatch(r"[0-9a-f]{40}", value)
         )
 
-    @staticmethod
-    def _expected_link(kind, commit):
+    def _expected_link(self, kind, commit):
+        # Preserve the link representation already in use.
+        # Existing deployments may use absolute targets;
+        # isolated transaction tests use relative targets.
+        if (
+            self.current.is_symlink()
+            and os.path.isabs(os.readlink(self.current))
+        ):
+            return str(self.root / kind / commit)
         return f"{kind}/{commit}"
 
     def _assert_links(self, commit):
