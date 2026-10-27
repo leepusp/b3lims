@@ -383,6 +383,21 @@
 
     function renderContents() {
       const node = byId.get(selected);
+
+      // Notify optional, read-only position visualizations.
+      // The microtask runs after synchronous content rendering.
+      queueMicrotask(() => {
+        document.dispatchEvent(
+          new CustomEvent(
+            "b3:storage-v814-contents-rendered",
+            {
+              detail: {
+                locationId: node ? node.id : ""
+              }
+            }
+          )
+        );
+      });
       const direct = samples.filter(sample =>
         node
           ? sample.location === node.id

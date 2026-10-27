@@ -783,7 +783,8 @@ def storage_workspace_view(
     locations = list(
         visible_storage_locations_for_user(request.user)
         .select_related(
-            "parent"
+            "parent",
+            "layout_v8146c3",
         )
         .annotate(
             active_sample_count=Count(

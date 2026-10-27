@@ -10,6 +10,8 @@ Physical locations, Sample custody and movement history.
 {% block extra_css %}
 <link rel="stylesheet"
       href="{% static 'internal/storage/storage_v814.css' %}">
+<link rel="stylesheet"
+      href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261027-c3c">
 {% endblock %}
 
 {% block content %}
@@ -519,6 +521,11 @@ Physical locations, Sample custody and movement history.
           data-rank="{{ location.rank }}"
           data-notes="{{ location.notes }}"
           data-path="{{ location.full_path }}"
+          data-c3-organization="{{ location.layout_v8146c3.organization|default:'' }}"
+          data-c3-rows="{{ location.layout_v8146c3.rows|default:'' }}"
+          data-c3-columns="{{ location.layout_v8146c3.columns|default:'' }}"
+          data-c3-type="{{ location.layout_v8146c3.type_label|default:'' }}"
+          data-c3-temperature="{{ location.layout_v8146c3.temperature_label|default:'' }}"
           data-active="{% if location.is_active %}1{% else %}0{% endif %}">
     </span>
     {% endfor %}
@@ -542,6 +549,9 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_js %}
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8146c3c">
+</script>
+<script defer
+        src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">
 </script>
 {% endblock %}
