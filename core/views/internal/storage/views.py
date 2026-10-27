@@ -158,6 +158,19 @@ def storage_workspace_view(
         )
     ]
 
+    requested_storage_token = str(
+        request.GET.get("storage", "")
+    ).strip()
+
+    b3s_selected_storage_pk_v8147 = next(
+        (
+            item.pk
+            for item in storage_visible_workspaces_v8
+            if str(item.pk) == requested_storage_token
+        ),
+        None,
+    )
+
     manageable_workspace_ids_v8 = [
         workspace.pk
         for workspace in storage_manageable_workspaces_v8
@@ -341,6 +354,15 @@ def storage_workspace_view(
                     f"Storage workspace created: {workspace.name}.",
                 )
 
+
+                if (
+                    request.POST.get(
+                        "b3s_select_created_storage"
+                    ) == "1"
+                ):
+                    response = redirect("storage_workspace")
+                    response["Location"] += f"?storage={workspace.pk}"
+                    return response
 
             elif action == "delete_empty_subtree":
                 from core.services.storage_subtree_delete_v8145 import (
@@ -1005,6 +1027,7 @@ def storage_workspace_view(
                 editable_samples
             ),
             "storage_visible_workspaces_v8": storage_visible_workspaces_v8,
+            "b3s_selected_storage_pk_v8147": b3s_selected_storage_pk_v8147,
             "storage_manageable_workspaces_v8": storage_manageable_workspaces_v8,
             "storage_parent_choices_v8": storage_parent_choices_v8,
             "storage_group_choices_v8": storage_group_choices_v8,

@@ -72,5 +72,87 @@
     }
   });
 
+  const storageFilter = find("b3s-workspace-filter");
+  const physicalData = find("b3s-location-data");
+  const emptyNotice = find("b3s-empty-storage");
+
+  const storageRoots = [
+    ...root.querySelectorAll(
+      "[data-b3s-storage-root]"
+    )
+  ];
+
+  function syncStorageRoots() {
+    if (!storageFilter) return;
+
+    const activeId = storageFilter.value;
+
+    root.dataset.b3sRootSelected =
+      activeId ? "1" : "0";
+
+    for (const button of storageRoots) {
+      button.setAttribute(
+        "aria-pressed",
+        String(
+          button.dataset.b3sStorageRoot === activeId
+        )
+      );
+    }
+
+    const locations = physicalData
+      ? [...physicalData.content.querySelectorAll(
+          "span[data-workspace]"
+        )]
+      : [];
+
+    const hasLocations = locations.some(
+      item => item.dataset.workspace === activeId
+    );
+
+    const manageable = find("b3s-create-workspace");
+
+    const canManage = Boolean(
+      manageable &&
+      [...manageable.options].some(
+        item => item.value === activeId
+      )
+    );
+
+    const addLocation = find("b3s-new-location");
+
+    if (addLocation) {
+      addLocation.hidden = Boolean(activeId) && !canManage;
+    }
+
+    if (emptyNotice) {
+      emptyNotice.hidden = !activeId || hasLocations;
+
+      if (!emptyNotice.hidden) {
+        emptyNotice.textContent = canManage
+          ? "No physical locations yet. Use Add location to create the first root location."
+          : "This Storage has no registered physical locations.";
+      }
+    }
+  }
+
+  for (const button of storageRoots) {
+    button.addEventListener("click", () => {
+      if (!storageFilter) return;
+
+      storageFilter.value =
+        button.dataset.b3sStorageRoot;
+
+      storageFilter.dispatchEvent(
+        new Event("change", {bubbles: true})
+      );
+    });
+  }
+
+  storageFilter?.addEventListener(
+    "change",
+    syncStorageRoots
+  );
+
   syncGroup();
+  syncStorageRoots();
 })();

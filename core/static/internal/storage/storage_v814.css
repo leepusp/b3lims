@@ -1304,3 +1304,67 @@
     padding: 16px;
   }
 }
+
+
+/* V8.14.7 C4-E — logical Storage roots */
+
+.b3s-light .b3s-storage-roots {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0 10px;
+}
+
+.b3s-light .b3s-storage-root {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid #cbd9e8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #24364b;
+  text-align: left;
+  cursor: pointer;
+}
+
+.b3s-light .b3s-storage-root:hover {
+  border-color: #8faecd;
+  background: #f5f9ff;
+}
+
+.b3s-light .b3s-storage-root[aria-pressed="true"] {
+  border-color: #487eaf;
+  background: #eaf3ff;
+  box-shadow: inset 3px 0 #487eaf;
+}
+
+.b3s-light .b3s-storage-root-name {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.b3s-light .b3s-storage-root-scope {
+  font-size: .77rem;
+  color: #51667d;
+}
+
+#b3-storage-v814[data-b3s-root-selected="1"] #b3s-tree {
+  margin-left: 12px;
+  padding-left: 10px;
+  border-left: 2px solid #d8e4f1;
+}
+
+.b3s-light .b3s-storage-empty {
+  margin: 10px 0;
+  padding: 11px 12px;
+  border: 1px dashed #bdcfe2;
+  border-radius: 8px;
+  background: #f7faff;
+}
+
+.b3s-light #b3s-empty-storage[hidden] {
+  display: none !important;
+}

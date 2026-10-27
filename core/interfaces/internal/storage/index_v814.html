@@ -9,7 +9,7 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}?v=20261027-v8147c4d">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261027-v8147c4e">
 <link rel="stylesheet"
       href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261027-c3d">
 {% endblock %}
@@ -58,15 +58,46 @@ Physical locations, Sample custody and movement history.
         <select id="b3s-workspace-filter">
           <option value="">All authorized</option>
           {% for workspace in storage_visible_workspaces_v8 %}
-          <option value="{{ workspace.pk }}">
+          <option value="{{ workspace.pk }}"{% if workspace.pk == b3s_selected_storage_pk_v8147 %} selected{% endif %}>
             {{ workspace.name }}
           </option>
           {% endfor %}
         </select>
       </div>
 
+      <nav id="b3s-storage-roots"
+           class="b3s-storage-roots"
+           aria-label="Available Storages">
+        {% for workspace in storage_visible_workspaces_v8 %}
+        <button type="button"
+                class="b3s-storage-root"
+                data-b3s-storage-root="{{ workspace.pk }}"
+                aria-controls="b3s-tree"
+                aria-pressed="false">
+          <span class="b3s-storage-root-name">
+            {{ workspace.name }}
+          </span>
+          <span class="b3s-storage-root-scope">
+            {{ workspace.get_scope_display }}
+          </span>
+        </button>
+        {% empty %}
+        <p class="b3s-note">
+          No Storage registered yet.
+          Use New Storage to create one.
+        </p>
+        {% endfor %}
+      </nav>
+
       <nav id="b3s-tree"
-           aria-label="Storage hierarchy"></nav>
+           aria-label="Physical locations in selected Storage"></nav>
+
+      <p id="b3s-empty-storage"
+         class="b3s-note b3s-storage-empty"
+         role="status"
+         hidden>
+        No physical locations registered.
+      </p>
 
       <div class="b3s-side-actions">
         <button type="button"
@@ -562,6 +593,10 @@ Physical locations, Sample custody and movement history.
                name="action"
                value="create_storage_workspace_v8">
 
+        <input type="hidden"
+               name="b3s_select_created_storage"
+               value="1">
+
         <label for="b3s-new-storage-name">
           Storage name
           <input id="b3s-new-storage-name"
@@ -857,10 +892,10 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_js %}
 <script defer
-        src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4d">
+        src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4e">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8147c4c">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8147c4e">
 </script>
 <script defer
         src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">

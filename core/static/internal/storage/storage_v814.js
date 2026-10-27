@@ -164,7 +164,8 @@
     };
 
     let selected = "";
-    let workspace = "";
+    let workspace =
+      find("b3s-workspace-filter")?.value || "";
     let query = "";
     const collapsedLocations = new Set();
 
@@ -1980,6 +1981,18 @@
 
       if (eligible) {
         workspaceSelect.value = node.workspace;
+      } else {
+        const currentStorage =
+          find("b3s-workspace-filter")?.value || "";
+
+        if (
+          currentStorage &&
+          [...workspaceSelect.options].some(
+            option => option.value === currentStorage
+          )
+        ) {
+          workspaceSelect.value = currentStorage;
+        }
       }
 
       workspaceSelect.dispatchEvent(
