@@ -1368,3 +1368,58 @@
 .b3s-light #b3s-empty-storage[hidden] {
   display: none !important;
 }
+
+
+/* V8.14.7 C4-F — Sample movement components */
+
+.b3s-light .b3s-sample-transfers {
+  margin: 0 0 18px;
+  border: 1px solid #d6e1ed;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #24364b;
+  overflow: visible;
+}
+
+.b3s-light .b3s-sample-transfers > details > summary {
+  cursor: pointer;
+  padding: 14px 18px;
+  font-weight: 650;
+  color: #24364b;
+}
+
+.b3s-light .b3s-transfer-subtitle {
+  margin-left: 8px;
+  font-size: .85rem;
+  font-weight: 400;
+  color: #61748a;
+}
+
+.b3s-light .b3s-sample-transfer-body {
+  border-top: 1px solid #e2e9f2;
+  padding: 16px;
+  min-width: 0;
+}
+
+.b3s-light .b3s-sample-transfer-body input,
+.b3s-light .b3s-sample-transfer-body select,
+.b3s-light .b3s-sample-transfer-body textarea {
+  max-width: 100%;
+}
+
+.b3s-light .b3s-sample-transfer-body table {
+  max-width: 100%;
+}
+
+@media (max-width: 700px) {
+  .b3s-light .b3s-sample-transfer-body {
+    padding: 12px;
+    overflow-x: auto;
+  }
+
+  .b3s-light .b3s-transfer-subtitle {
+    display: block;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}
