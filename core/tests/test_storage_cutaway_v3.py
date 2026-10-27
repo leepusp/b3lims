@@ -13,7 +13,7 @@ class StorageCutawayV3ContractTests(SimpleTestCase):
             'id="storage-3d-real"',
             'id="storage-3d-example"',
             'id="storage-3d-example-notice"',
-            'id="storage-3d-canvas"',
+            'id="storage-isometric-v813"',
             'id="storage-3d-objects"',
         ):
             self.assertIn(expected, html)
@@ -44,4 +44,5 @@ class StorageCutawayV3ContractTests(SimpleTestCase):
             'internal/storage/_explorer_v2.html',
             viewer,
         )
-        self.assertIn("storage_viewer_3d.js", index)
+        self.assertIn("storage_isometric_v813.js", index)
+        self.assertIn("storage_spatial_v5.js", index)

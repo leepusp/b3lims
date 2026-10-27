@@ -55,10 +55,7 @@ class StorageSceneRendererBindingV8Tests(TestCase):
         self.url = reverse("storage_workspace")
 
     def test_selected_scene_embeds_projection(self):
-        response = self.client.get(
-            self.url,
-            {"scene": self.saved.pk},
-        )
+        response = self.client.get(self.url, {"legacy": "1", "scene": self.saved.pk})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(

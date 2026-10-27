@@ -11,7 +11,7 @@ class StorageDesignerV4ContractTests(SimpleTestCase):
         self.assertEqual(index.count('{% include "internal/storage/_viewer_3d.html" %}'), 1)
         self.assertEqual(index.count('{% include "internal/storage/_explorer_v2.html" %}'), 0)
         self.assertEqual(viewer.count('{% include "internal/storage/_explorer_v2.html" %}'), 1)
-        for token in ('id="storage-3d-canvas"', 'id="storage-designer-build-panel"',
+        for token in ('id="storage-isometric-v813"', 'id="storage-designer-build-panel"',
                       'id="storage-designer-builder-target"', 'id="storage-designer-add-child"'):
             self.assertIn(token, viewer)
 

@@ -80,7 +80,7 @@ class StorageSceneUITests(TestCase):
         )
 
     def test_scene_controls_render(self):
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, {"legacy": "1"})
 
         self.assertEqual(response.status_code, 200)
 

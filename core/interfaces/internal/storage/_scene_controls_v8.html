@@ -25,7 +25,7 @@
 
         {% for scene in storage_scene_configs_v8 %}
 
-        <a href="?scene={{ scene.pk }}#storage-scene-controls-v8"
+        <a href="?legacy=1&amp;scene={{ scene.pk }}#storage-scene-controls-v8"
            class="btn btn-sm {% if storage_scene_selected_v8.pk == scene.pk %}btn-primary{% else %}btn-outline-secondary{% endif %}">
           {{ scene.name }}
         </a>

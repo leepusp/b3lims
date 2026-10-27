@@ -12,9 +12,7 @@ class StorageExplorerV2Tests(TestCase):
         )
         self.client.force_login(user)
 
-        response = self.client.get(
-            reverse("storage_workspace")
-        )
+        response = self.client.get(reverse("storage_workspace"), {"legacy": "1"})
 
         self.assertEqual(response.status_code, 200)
 
@@ -100,9 +98,7 @@ class StorageExplorerV2Tests(TestCase):
         )
 
         self.client.force_login(user)
-        response = self.client.get(
-            reverse("storage_workspace")
-        )
+        response = self.client.get(reverse("storage_workspace"), {"legacy": "1"})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(

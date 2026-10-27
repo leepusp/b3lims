@@ -51,9 +51,7 @@ class StorageRelationshipMapV89Tests(TestCase):
         self.client.force_login(self.owner)
 
     def test_relationship_map_loads_authorized_inventory(self):
-        response = self.client.get(
-            reverse("storage_workspace")
-        )
+        response = self.client.get(reverse("storage_workspace"), {"legacy": "1"})
 
         self.assertEqual(response.status_code, 200)
 
