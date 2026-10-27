@@ -189,6 +189,117 @@
       return parts.join(" › ");
     }
 
+    // V8.14.7 — summaries used by cards, tree and move mode.
+    const TYPE_LABELS = {
+      room: "Room",
+      freezer: "Freezer",
+      shelf: "Shelf",
+      rack: "Rack",
+      box: "Box",
+      position: "Position",
+      other: "Other",
+      historical: "Historical"
+    };
+
+    function typeLabel(node) {
+      if (!node) return "";
+      return node.c3Type ||
+        TYPE_LABELS[node.type] ||
+        String(node.type || "");
+    }
+
+    function ancestorsOf(node) {
+      const result = [];
+      const seen = new Set();
+      let current = node ? byId.get(node.parent) : null;
+
+      while (current && !seen.has(current.id)) {
+        seen.add(current.id);
+        result.unshift(current);
+        current = byId.get(current.parent);
+      }
+
+      return result;
+    }
+
+    function subtreeIds(node) {
+      const found = new Set();
+      const stack = node ? [node.id] : [];
+
+      while (stack.length) {
+        const id = stack.pop();
+        if (found.has(id)) continue;
+        found.add(id);
+
+        for (const child of children.get(id) || []) {
+          stack.push(child.id);
+        }
+      }
+
+      return found;
+    }
+
+    const directSampleCount = new Map();
+
+    for (const item of [...samples, ...visibleLegacySamples]) {
+      directSampleCount.set(
+        item.location,
+        (directSampleCount.get(item.location) || 0) + 1
+      );
+    }
+
+    function gridCapacity(node) {
+      if (!node || node.c3Organization !== "grid") return 0;
+
+      const rows = Number(node.c3Rows);
+      const columns = Number(node.c3Columns);
+
+      return Number.isInteger(rows) && Number.isInteger(columns)
+        ? rows * columns
+        : 0;
+    }
+
+    function occupiedPositions(node) {
+      const names = new Set();
+
+      for (const item of samples) {
+        if (item.location !== node.id) continue;
+        const position = String(item.position || "").trim();
+        if (position) names.add(position.toUpperCase());
+      }
+
+      return names.size;
+    }
+
+    const summaryCache = new Map();
+
+    function summary(node) {
+      if (!node) return {samples: 0, locations: 0, capacity: 0, used: 0};
+      if (summaryCache.has(node.id)) return summaryCache.get(node.id);
+
+      const result = {samples: 0, locations: -1, capacity: 0, used: 0};
+
+      for (const id of subtreeIds(node)) {
+        const item = byId.get(id);
+        result.locations += 1;
+        result.samples += directSampleCount.get(id) || 0;
+
+        const capacity = gridCapacity(item);
+
+        if (capacity) {
+          result.capacity += capacity;
+          result.used += Math.min(capacity, occupiedPositions(item));
+        }
+      }
+
+      summaryCache.set(node.id, result);
+      return result;
+    }
+
+    function plural(count, word) {
+      return `${count} ${word}${count === 1 ? "" : "s"}`;
+    }
+
     function matches(node) {
       if (workspace && node.workspace !== workspace) {
         return false;
@@ -336,14 +447,18 @@
           );
         }
 
+        const treeCount = summary(node).samples;
+
+        if (treeCount) {
+          const badge = mk("small", String(treeCount), "b3s-node-count");
+          badge.title = plural(treeCount, "Sample") + " inside";
+          button.append(badge);
+        }
+
+        // Selecting a location always reveals its children.
+        // Collapsing is done only with the arrow toggle.
         button.addEventListener("click", () => {
-          if (hasChildren) {
-            if (collapsedLocations.has(node.id)) {
-              collapsedLocations.delete(node.id);
-            } else {
-              collapsedLocations.add(node.id);
-            }
-          }
+          collapsedLocations.delete(node.id);
           choose(node.id);
         });
 
@@ -424,6 +539,14 @@
             `${node.workspace ? "Registered workspace" : "Unscoped"}`
         : `${nodes.length} visible location records`;
 
+      if (node && node.c3Type) {
+        find("b3s-type").textContent =
+          `${node.type.toUpperCase()} · ${node.c3Type}`;
+      }
+
+      renderStats(node);
+      renderHeadActions(node);
+
       const descendants = node
         ? children.get(node.id) || []
         : children.get("") || [];
@@ -436,21 +559,7 @@
           continue;
         }
 
-        const button = mk(
-          "button", null, "b3s-child"
-        );
-
-        button.type = "button";
-        button.append(
-          mk("strong", displayName(child)),
-          mk("div", child.type)
-        );
-
-        button.addEventListener(
-          "click", () => choose(child.id)
-        );
-
-        host.append(button);
+        host.append(childCard(child));
       }
 
       if (!host.children.length) {
@@ -461,6 +570,22 @@
 
       const records = find("b3s-assignments");
       records.replaceChildren();
+
+      // In a configured grid the position map is the main view;
+      // the full list stays available but collapsed.
+      let listHost = records;
+
+      if (node && gridCapacity(node) && direct.length) {
+        const details = mk("details", null, "b3s-record-list");
+        details.append(
+          mk(
+            "summary",
+            `Show the list of ${plural(direct.length, "recorded Sample")}`
+          )
+        );
+        records.append(details);
+        listHost = details;
+      }
 
       for (const item of direct) {
         const line = mk("div", null, "b3s-record");
@@ -478,7 +603,7 @@
           )
         );
 
-        records.append(line);
+        listHost.append(line);
       }
 
       if (!records.children.length) {
@@ -493,11 +618,649 @@
     }
 
 
+    function childCard(child) {
+      const info = summary(child);
+      const button = mk("button", null, "b3s-child");
+
+      button.type = "button";
+      button.title = pathFor(child);
+
+      if (child.historical) button.classList.add("is-historical");
+      if (child.active === "0" && !child.historical) {
+        button.classList.add("is-inactive");
+      }
+
+      const top = mk("div", null, "b3s-child-top");
+      top.append(
+        mk("span", typeLabel(child), "b3s-chip"),
+        child.c3Temperature
+          ? mk("span", child.c3Temperature, "b3s-temp")
+          : mk("span", "")
+      );
+
+      button.append(top, mk("strong", displayName(child)));
+
+      if (info.capacity) {
+        const bar = mk("div", null, "b3s-bar");
+        const fill = mk("i");
+        const ratio = info.used / info.capacity;
+
+        fill.style.width = `${Math.round(ratio * 100)}%`;
+        if (ratio >= 0.9) bar.classList.add("is-full");
+        bar.append(fill);
+        bar.setAttribute("role", "img");
+        bar.setAttribute(
+          "aria-label",
+          `${info.used} of ${info.capacity} positions recorded as occupied`
+        );
+
+        button.append(
+          bar,
+          mk(
+            "small",
+            `${info.used}/${info.capacity} positions · ` +
+              plural(info.samples, "Sample"),
+            "b3s-child-meta"
+          )
+        );
+      } else {
+        const parts = [plural(info.samples, "Sample")];
+        if (info.locations > 0) {
+          parts.push(plural(info.locations, "location") + " inside");
+        }
+        button.append(mk("small", parts.join(" · "), "b3s-child-meta"));
+      }
+
+      button.addEventListener("click", () => choose(child.id));
+      return button;
+    }
+
+    function renderStats(node) {
+      const host = find("b3s-stats");
+      if (!host) return;
+      host.replaceChildren();
+
+      const add = (label, value) => {
+        const item = mk("div", null, "b3s-stat");
+        item.append(mk("dt", label), mk("dd", value));
+        host.append(item);
+      };
+
+      if (!node) {
+        const roots = (children.get("") || []).filter(item =>
+          !workspace || item.workspace === workspace
+        );
+        let total = 0;
+        for (const item of roots) total += summary(item).samples;
+        add("Root locations", String(roots.length));
+        add("Samples recorded", String(total));
+        return;
+      }
+
+      const info = summary(node);
+      add("Samples inside", String(info.samples));
+      add("Locations inside", String(Math.max(0, info.locations)));
+
+      if (gridCapacity(node)) {
+        add("Grid", `${node.c3Rows} × ${node.c3Columns}`);
+      }
+
+      if (info.capacity) {
+        add(
+          "Occupancy",
+          `${Math.round((info.used / info.capacity) * 100)}%`
+        );
+      }
+
+      if (node.c3Temperature) add("Temperature", node.c3Temperature);
+      add("Level", String(ancestorsOf(node).length + 1));
+    }
+
+    function renderHeadActions(node) {
+      const host = find("b3s-head-actions");
+      if (!host) return;
+      host.replaceChildren();
+
+      if (!node) return;
+
+      const tree = mk(
+        "button",
+        "Show in path tree",
+        "btn btn-sm btn-outline-secondary"
+      );
+      tree.type = "button";
+      tree.addEventListener("click", () => showTab("tree"));
+      host.append(tree);
+
+      if (movable(node)) {
+        const move = mk(
+          "button",
+          "Move this location",
+          "btn btn-sm btn-outline-primary"
+        );
+        move.type = "button";
+        move.addEventListener("click", () => beginMove(node));
+        host.append(move);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // V8.14.7 — Path tree drawn by level, with move selection.
+    // The browser only proposes a destination. The server
+    // preview (?preview_container=1) validates, authorizes and
+    // renders the confirmation form.
+    // ---------------------------------------------------------
+
+    let moveState = null;
+
+    function movable(node) {
+      return Boolean(
+        node &&
+        manageable(node) &&
+        node.active === "1" &&
+        node.type !== "room" &&
+        node.type !== "position"
+      );
+    }
+
+    function destinationProblem(container, target) {
+      if (!target) return "Choose a location.";
+      if (target.historical) return "Historical records are read-only.";
+      if (target.active !== "1") return "Inactive location.";
+      if (!manageable(target)) return "You cannot manage this location.";
+      if (target.workspace !== container.workspace) {
+        return "Different workspace.";
+      }
+      if (target.type === "position") {
+        return "A position cannot hold a container.";
+      }
+      if (subtreeIds(container).has(target.id)) {
+        return "Cannot move inside itself.";
+      }
+      if (target.id === container.parent) {
+        return "Already here.";
+      }
+
+      const lowered = String(container.name).toLowerCase();
+      const clash = (children.get(target.id) || []).some(item =>
+        item.id !== container.id &&
+        String(item.name).toLowerCase() === lowered
+      );
+
+      return clash ? "A location with this name already exists there." : "";
+    }
+
+    function beginMove(node) {
+      if (!movable(node)) return;
+      moveState = {id: node.id, destination: ""};
+      selected = node.id;
+      showTab("tree");
+      render();
+    }
+
+    function cancelMove() {
+      moveState = null;
+      render();
+    }
+
+    function previewUrl(containerId, destinationId) {
+      const url = new URL(window.location.href);
+      url.search = "";
+      url.hash = "storage-container-preview";
+      url.searchParams.set("preview_container", "1");
+      url.searchParams.set("container_id", containerId);
+      url.searchParams.set("destination_id", destinationId);
+      return url.toString();
+    }
+
+    function renderLegend() {
+      const host = find("b3s-tree-legend");
+      if (!host) return;
+      host.replaceChildren();
+
+      const items = moveState
+        ? [
+            ["is-moving", "Moves together"],
+            ["is-destination", "Destination"],
+            ["is-blocked", "Cannot receive"]
+          ]
+        : [
+            ["is-path", "Path to selected location"],
+            ["", "Other locations"],
+            ["is-historical", "Historical (read-only)"]
+          ];
+
+      for (const [className, label] of items) {
+        const item = mk("span", null, "b3s-legend-item");
+        item.append(mk("i", null, "b3s-swatch " + className), label);
+        host.append(item);
+      }
+    }
+
+    function renderPathPanel() {
+      const host = find("b3s-path-panel");
+      if (!host) return;
+      host.replaceChildren();
+
+      if (moveState) {
+        const container = byId.get(moveState.id);
+
+        if (!container) {
+          moveState = null;
+          return renderPathPanel();
+        }
+
+        const info = summary(container);
+
+        host.append(
+          mk("h4", "Moving " + typeLabel(container).toLowerCase()),
+          mk("p", displayName(container), "b3s-panel-title"),
+          mk(
+            "p",
+            `Carries ${plural(Math.max(0, info.locations), "location")} ` +
+              `and ${plural(info.samples, "Sample")} with it.`,
+            "b3s-note"
+          )
+        );
+
+        const before = mk("div", null, "b3s-compare is-before");
+        before.append(mk("b", "Before"), mk("span", pathFor(container)));
+        host.append(before);
+
+        const target = byId.get(moveState.destination);
+
+        if (!target) {
+          host.append(
+            mk(
+              "p",
+              "Click the new parent in the tree. Faded locations " +
+                "cannot receive this item.",
+              "b3s-note"
+            )
+          );
+        } else {
+          const after = mk("div", null, "b3s-compare is-after");
+          after.append(
+            mk("b", "After"),
+            mk("span", `${pathFor(target)} › ${displayName(container)}`)
+          );
+          host.append(
+            after,
+            mk(
+              "p",
+              "The server checks this move again and asks for a " +
+                "reason before anything changes.",
+              "b3s-note"
+            )
+          );
+
+          const go = mk(
+            "a",
+            "Review and confirm",
+            "btn btn-sm btn-primary"
+          );
+          go.href = previewUrl(container.id, target.id);
+          host.append(go);
+        }
+
+        const cancel = mk(
+          "button",
+          "Cancel move",
+          "btn btn-sm btn-outline-secondary"
+        );
+        cancel.type = "button";
+        cancel.addEventListener("click", cancelMove);
+        host.append(cancel);
+        return;
+      }
+
+      const node = byId.get(selected);
+
+      if (!node) {
+        host.append(
+          mk("h4", "Path to the root"),
+          mk(
+            "p",
+            "Select any location to see its full path and " +
+              "everything that depends on it.",
+            "b3s-note"
+          )
+        );
+        return;
+      }
+
+      host.append(mk("h4", "Path to the root"));
+
+      const list = mk("ol", null, "b3s-levels");
+      const chain = [...ancestorsOf(node), node];
+
+      chain.forEach((item, index) => {
+        const li = mk("li", null, item.id === node.id ? "is-current" : "");
+        const link = mk("button", displayName(item), "b3s-level-link");
+        link.type = "button";
+        link.addEventListener("click", () => choose(item.id));
+        li.append(mk("span", `Level ${index + 1}`, "b3s-level-no"), link);
+        list.append(li);
+      });
+
+      host.append(list);
+
+      const info = summary(node);
+      host.append(
+        mk(
+          "p",
+          `${plural(Math.max(0, info.locations), "location")} and ` +
+            `${plural(info.samples, "Sample")} depend on this level. ` +
+            "Moving it updates all of their addresses at once.",
+          "b3s-note"
+        )
+      );
+
+      const actions = mk("div", null, "b3s-manage-actions");
+      const open = mk("button", "Open contents", "btn btn-sm btn-outline-secondary");
+      open.type = "button";
+      open.addEventListener("click", () => showTab("contents"));
+      actions.append(open);
+
+      if (movable(node)) {
+        const move = mk("button", "Move this location", "btn btn-sm btn-primary");
+        move.type = "button";
+        move.addEventListener("click", () => beginMove(node));
+        actions.append(move);
+      }
+
+      host.append(actions);
+    }
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    function svg(tag, attributes, text) {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [key, value] of Object.entries(attributes || {})) {
+        el.setAttribute(key, String(value));
+      }
+      if (text != null) el.textContent = text;
+      return el;
+    }
+
+    function clip(text, size) {
+      const value = String(text || "");
+      return value.length > size ? value.slice(0, size - 1) + "…" : value;
+    }
+
+    const GRAPH_LIMIT = 400;
+
     function renderGraph() {
       const target = find("b3s-graph");
       target.replaceChildren();
+      renderLegend();
+      renderPathPanel();
 
       const visible = visibleNodes();
+
+      if (!visible.length) {
+        target.append(
+          mk("p", "No locations available for this view.", "b3s-note")
+        );
+        return;
+      }
+
+      if (visible.length > GRAPH_LIMIT) {
+        target.append(
+          mk(
+            "p",
+            `${visible.length} locations: showing the list view. ` +
+              "Filter by workspace or search to see the diagram.",
+            "b3s-note"
+          )
+        );
+        renderGraphList(target, visible);
+        return;
+      }
+
+      const ids = new Set(visible.map(item => item.id));
+      const W = 184;
+      const H = 52;
+      const COLUMN = 226;
+      const ROW = 64;
+      const PAD_X = 14;
+      const PAD_Y = 34;
+      const ROOT = "__root__";
+
+      const kidsOf = id => (
+        id === ROOT
+          ? visible.filter(item => !item.parent || !ids.has(item.parent))
+          : (children.get(id) || []).filter(item => ids.has(item.id))
+      );
+
+      const place = new Map();
+      let leaf = 0;
+      let depthMax = 0;
+
+      (function walk(id, depth, seen) {
+        if (seen.has(id)) return 0;
+        const nextSeen = new Set(seen).add(id);
+        const kids = kidsOf(id);
+        let y;
+
+        if (!kids.length) {
+          y = leaf++;
+        } else {
+          const ys = kids.map(child => walk(child.id, depth + 1, nextSeen));
+          y = (ys[0] + ys[ys.length - 1]) / 2;
+        }
+
+        place.set(id, {x: depth * COLUMN + PAD_X, y: y * ROW + PAD_Y, depth});
+        depthMax = Math.max(depthMax, depth);
+        return y;
+      })(ROOT, 0, new Set());
+
+      const width = depthMax * COLUMN + W + PAD_X * 2;
+      const height = Math.max(leaf, 1) * ROW + PAD_Y + 6;
+
+      const selectedNode = byId.get(selected);
+      const pathIds = new Set([ROOT]);
+      if (selectedNode) {
+        for (const item of [...ancestorsOf(selectedNode), selectedNode]) {
+          pathIds.add(item.id);
+        }
+      }
+
+      const container = moveState ? byId.get(moveState.id) : null;
+      const moving = container ? subtreeIds(container) : new Set();
+      const destinationIds = new Set();
+
+      if (container && moveState.destination) {
+        const destination = byId.get(moveState.destination);
+        if (destination) {
+          destinationIds.add(ROOT);
+          for (const item of [...ancestorsOf(destination), destination]) {
+            destinationIds.add(item.id);
+          }
+        }
+      }
+
+      const drawing = svg("svg", {
+        width,
+        height,
+        viewBox: `0 0 ${width} ${height}`,
+        role: "group",
+        "aria-label": "Storage path tree by level",
+        class: "b3s-svg-tree"
+      });
+
+      for (let depth = 0; depth <= depthMax; depth++) {
+        drawing.append(
+          svg(
+            "text",
+            {x: depth * COLUMN + PAD_X, y: 18, class: "b3s-level-label"},
+            depth === 0 ? "Storage" : `Level ${depth}`
+          )
+        );
+      }
+
+      const edges = svg("g", {class: "b3s-edges"});
+      const shapes = svg("g", {class: "b3s-nodes"});
+      drawing.append(edges, shapes);
+
+      for (const [id, point] of place) {
+        if (id === ROOT) continue;
+        const node = byId.get(id);
+        const parentId = node.parent && ids.has(node.parent) ? node.parent : ROOT;
+        const from = place.get(parentId);
+        if (!from) continue;
+
+        let className = "b3s-edge";
+        if (moving.has(id) && id !== moveState?.id) className += " is-moving";
+        else if (!moveState && pathIds.has(id) && pathIds.has(parentId)) {
+          className += " is-path";
+        } else if (destinationIds.has(id) && destinationIds.has(parentId)) {
+          className += " is-destination";
+        }
+
+        const x1 = from.x + W;
+        const y1 = from.y + H / 2;
+        const x2 = point.x;
+        const y2 = point.y + H / 2;
+        const mid = (x1 + x2) / 2;
+
+        edges.append(
+          svg("path", {
+            class: className,
+            d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`
+          })
+        );
+      }
+
+      const drawNode = (id, name, subtitle, info, node) => {
+        const point = place.get(id);
+        let className = "b3s-path-card b3s-svg-node";
+        let blocked = false;
+
+        if (moveState && container) {
+          if (moving.has(id)) className += " is-moving";
+          if (id === moveState.destination) className += " is-destination";
+          else if (destinationIds.has(id)) className += " is-path";
+
+          if (!moving.has(id)) {
+            blocked = id === ROOT || Boolean(destinationProblem(container, node));
+            if (blocked) className += " is-blocked";
+          }
+        } else {
+          if (pathIds.has(id)) className += " is-path";
+          if (id === (selected || ROOT)) className += " is-selected";
+        }
+
+        if (node?.historical) className += " is-historical";
+        if (node && node.active === "0" && !node.historical) {
+          className += " is-inactive";
+        }
+
+        const group = svg("g", {
+          class: className,
+          transform: `translate(${point.x},${point.y})`,
+          tabindex: blocked ? -1 : 0,
+          role: "button",
+          "aria-label": node ? pathFor(node) : "All storage locations",
+          "data-location-id": id === ROOT ? "" : id
+        });
+
+        if (node && moveState && blocked && !moving.has(id)) {
+          group.append(svg("title", {}, destinationProblem(container, node)));
+        } else {
+          group.append(svg("title", {}, node ? pathFor(node) : "All authorized locations"));
+        }
+
+        group.append(
+          svg("rect", {class: "b3s-svg-box", width: W, height: H, rx: 8}),
+          svg("text", {class: "b3s-svg-name", x: 11, y: 20}, clip(name, 24)),
+          svg("text", {class: "b3s-svg-sub", x: 11, y: 36}, clip(subtitle, 30))
+        );
+
+        if (info && info.capacity) {
+          const inner = W - 22;
+          group.append(
+            svg("rect", {class: "b3s-svg-track", x: 11, y: H - 9, width: inner, height: 3, rx: 1.5}),
+            svg("rect", {
+              class: "b3s-svg-fill",
+              x: 11,
+              y: H - 9,
+              width: Math.max(2, inner * info.used / info.capacity),
+              height: 3,
+              rx: 1.5
+            })
+          );
+        }
+
+        const activate = () => {
+          if (moveState && container) {
+            if (moving.has(id) || blocked) return;
+            moveState.destination = id;
+            render();
+            return;
+          }
+          choose(id === ROOT ? "" : id);
+        };
+
+        group.addEventListener("click", activate);
+        group.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            activate();
+          }
+        });
+
+        shapes.append(group);
+      };
+
+      let rootTotal = 0;
+      for (const item of kidsOf(ROOT)) rootTotal += summary(item).samples;
+
+      drawNode(ROOT, "All locations", `root · ${plural(rootTotal, "Sample")}`, null, null);
+
+      for (const id of place.keys()) {
+        if (id === ROOT) continue;
+        const node = byId.get(id);
+        const info = summary(node);
+        const grid = gridCapacity(node) ? ` ${node.c3Rows}×${node.c3Columns}` : "";
+        drawNode(
+          id,
+          displayName(node),
+          node.historical
+            ? `Historical · ${info.samples}`
+            : `${typeLabel(node)}${grid} · ${info.samples}`,
+          info,
+          node
+        );
+      }
+
+      target.append(drawing);
+      revealGraphFocus();
+    }
+
+    // Scroll the diagram (not the page) to the selected node.
+    function revealGraphFocus() {
+      const target = find("b3s-graph");
+      if (!target || find("b3s-path-tree")?.hidden) return;
+
+      const focus = target.querySelector(
+        ".b3s-svg-node.is-destination, .b3s-svg-node.is-selected"
+      );
+      if (!focus || typeof focus.getBBox !== "function") return;
+
+      const box = focus.getBoundingClientRect();
+      const frame = target.getBoundingClientRect();
+
+      if (box.right > frame.right || box.left < frame.left) {
+        target.scrollLeft += box.left - frame.left - frame.width / 2 + box.width / 2;
+      }
+      if (box.bottom > frame.bottom || box.top < frame.top) {
+        target.scrollTop += box.top - frame.top - frame.height / 2 + box.height / 2;
+      }
+    }
+
+    // Accessible list fallback for very large hierarchies.
+    function renderGraphList(target, visible) {
       const ids = new Set(visible.map(item => item.id));
 
       const roots = visible.filter(item =>
@@ -617,6 +1380,10 @@
 
       const node = byId.get(selected);
       if (!node) return;
+
+      // Configured grids are drawn by the position map
+      // (storage_position_grid_v8146c3.js); avoid a duplicate.
+      if (!node.historical && gridCapacity(node)) return;
 
       const items = node.historical
         ? visibleLegacySamples.filter(
@@ -1121,34 +1888,42 @@
       renderManage();
     }
 
+    function showTab(tab) {
+      for (const other of root.querySelectorAll(
+        "[data-b3s-tab]"
+      )) {
+        other.setAttribute(
+          "aria-selected",
+          String(other.dataset.b3sTab === tab)
+        );
+      }
+
+      for (const [name, id] of [
+        ["contents", "b3s-contents"],
+        ["tree", "b3s-path-tree"],
+        ["movements", "b3s-movements"],
+        ["manage", "b3s-manage"]
+      ]) {
+        const section = find(id);
+        if (section) {
+          section.hidden = name !== tab;
+        }
+      }
+
+      if (tab === "tree") revealGraphFocus();
+    }
+
     for (const button of root.querySelectorAll(
       "[data-b3s-tab]"
     )) {
       button.addEventListener("click", () => {
-        const tab = button.dataset.b3sTab;
-
-        for (const other of root.querySelectorAll(
-          "[data-b3s-tab]"
-        )) {
-          other.setAttribute(
-            "aria-selected",
-            String(other === button)
-          );
-        }
-
-        for (const [name, id] of [
-          ["contents", "b3s-contents"],
-          ["tree", "b3s-path-tree"],
-          ["movements", "b3s-movements"],
-          ["manage", "b3s-manage"]
-        ]) {
-          const section = find(id);
-          if (section) {
-            section.hidden = name !== tab;
-          }
-        }
+        showTab(button.dataset.b3sTab);
       });
     }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && moveState) cancelMove();
+    });
 
     find("b3s-search").addEventListener(
       "input", event => {
@@ -1269,7 +2044,24 @@
       );
     }
 
+    // A server-side move preview (or its error) reopens the
+    // path tree with the container selected.
+    const previewContainer = String(
+      root.dataset.b3sPreviewContainer || ""
+    );
+
+    if (byId.has(previewContainer)) {
+      selected = previewContainer;
+    }
+
     render();
+
+    if (root.dataset.b3sPreviewOpen === "1") {
+      showTab("tree");
+      find("storage-container-preview")?.scrollIntoView({
+        block: "start"
+      });
+    }
   }
 
   if (document.readyState === "loading") {

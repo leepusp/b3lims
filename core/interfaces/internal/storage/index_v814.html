@@ -9,13 +9,17 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261027-v8147c4c">
 <link rel="stylesheet"
       href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261027-c3d">
 {% endblock %}
 
 {% block content %}
 <section id="b3-storage-v814"
+         class="b3s-light"
+         data-b3s-preview-container="{{ storage_preview_container_id|default_if_none:'' }}"
+         data-b3s-preview-destination="{{ storage_preview_destination_id|default_if_none:'' }}"
+         data-b3s-preview-open="{% if storage_container_preview or storage_container_preview_error %}1{% endif %}"
          aria-label="Physical storage management">
 
   <header class="b3s-header">
@@ -131,7 +135,13 @@ Physical locations, Sample custody and movement history.
             <h3 id="b3s-title">All storage locations</h3>
             <p id="b3s-metadata"></p>
           </div>
+          <div id="b3s-head-actions"
+               class="b3s-head-actions"></div>
         </header>
+
+        <dl id="b3s-stats"
+            class="b3s-stats"
+            aria-label="Selected location summary"></dl>
 
         <h4>Child locations</h4>
         <div id="b3s-children"
@@ -162,39 +172,222 @@ Physical locations, Sample custody and movement history.
                class="b3s-section"
                role="tabpanel"
                hidden>
-        <h3>Physical storage hierarchy</h3>
-        <p class="b3s-note">
-          Select any location to inspect its contents.
-          Parent-child relationships determine the path.
-        </p>
-        <div id="b3s-graph"
-             class="b3s-graph"></div>
+        <div class="b3s-tree-head">
+          <div>
+            <h3>Physical storage hierarchy</h3>
+            <p class="b3s-note">
+              Each column is one level of the path.
+              Every location stores only a link to the level
+              above it, so moving a location carries everything
+              inside it.
+            </p>
+          </div>
+          <div id="b3s-tree-legend"
+               class="b3s-legend"
+               aria-hidden="true"></div>
+        </div>
+
+        <div class="b3s-tree-split">
+          <div id="b3s-graph"
+               class="b3s-graph"></div>
+          <aside id="b3s-path-panel"
+                 class="b3s-path-panel"
+                 aria-live="polite"></aside>
+        </div>
+
+        {% if storage_manageable_workspaces_v8 %}
+        <section id="storage-container-preview"
+                 class="b3s-move-panel"
+                 aria-labelledby="b3s-move-title">
+
+          <h3 id="b3s-move-title">Move Container</h3>
+
+          {% if storage_container_preview_error %}
+          <div class="b3s-alert b3s-alert-danger"
+               role="alert">
+            {{ storage_container_preview_error }}
+          </div>
+          {% endif %}
+
+          {% if storage_container_preview %}
+          <p class="b3s-note">
+            Preview only — no transfer executed.
+          </p>
+
+          {% include "internal/storage/_movement_comparison_v89.html" with movement_kind="container" movement_preview=storage_container_preview %}
+
+          <form method="post"
+                action="{% url 'storage_workspace' %}"
+                class="b3s-form b3s-move-confirm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="confirm_container_move">
+            <input type="hidden" name="container_id" value="{{ storage_container_preview.container_id }}">
+            <input type="hidden" name="destination_id" value="{{ storage_container_preview.destination_id }}">
+            <input type="hidden" name="expected_parent_id" value="{{ storage_container_preview.expected_parent_id|default_if_none:'' }}">
+            <input type="hidden" name="expected_origin_path" value="{{ storage_container_preview.old_path }}">
+            <input type="hidden" name="expected_destination_path" value="{{ storage_container_preview.new_path }}">
+
+            <label for="b3s-move-reason">
+              Movement reason
+              <textarea id="b3s-move-reason"
+                        name="reason"
+                        maxlength="2000"
+                        rows="2"
+                        required
+                        placeholder="e.g. Freezer A defrost, rack moved to Freezer B"></textarea>
+            </label>
+
+            <p class="b3s-note">
+              Positions inside the container stay the same.
+              The hierarchy and your permissions are checked again
+              when you confirm.
+            </p>
+
+            <div class="b3s-form-actions">
+              <button type="submit" class="btn btn-primary">
+                Confirm container transfer
+              </button>
+              <a href="{% url 'storage_workspace' %}"
+                 class="btn btn-outline-secondary">
+                Cancel
+              </a>
+            </div>
+          </form>
+          {% else %}
+          <p class="b3s-note">
+            Select a location in the tree and choose
+            <strong>Move this location</strong>, then click the
+            destination. You can also pick both below.
+          </p>
+
+          <form method="get"
+                action="{% url 'storage_workspace' %}"
+                class="b3s-move-select">
+            <input type="hidden" name="preview_container" value="1">
+
+            <label>
+              Container to move
+              <select name="container_id" required>
+                <option value="">Select a location</option>
+                {% for location in storage_parent_choices_v8 %}
+                {% if location.location_type != "room" and location.location_type != "position" %}
+                <option value="{{ location.pk }}"{% if location.pk == storage_preview_container_id %} selected{% endif %}>
+                  {{ location.full_path }}
+                </option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              New parent
+              <select name="destination_id" required>
+                <option value="">Select a destination</option>
+                {% for location in storage_parent_choices_v8 %}
+                {% if location.location_type != "position" %}
+                <option value="{{ location.pk }}"{% if location.pk == storage_preview_destination_id %} selected{% endif %}>
+                  {{ location.full_path }}
+                </option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </label>
+
+            <button type="submit"
+                    class="btn btn-outline-primary">
+              Preview move
+            </button>
+          </form>
+          {% endif %}
+        </section>
+        {% endif %}
       </section>
 
       <section id="b3s-movements"
                class="b3s-section"
                role="tabpanel"
                hidden>
-        <h3>Audited movements</h3>
+        <h3>Movement History</h3>
+        <p class="b3s-note">
+          Recent audited movements you are allowed to see.
+          Moving a location records one event and lists every
+          Sample address that changed with it.
+        </p>
         <div class="b3s-table-wrap">
-          <table>
+          <table class="b3s-history-table">
             <thead>
               <tr>
-                <th>Movement</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Origin → Destination</th>
+                <th>Affected</th>
+                <th>Performed by / Reason</th>
+                <th>Details</th>
               </tr>
             </thead>
             <tbody>
               {% for movement in storage_movements %}
               <tr>
-                <td>{{ movement.movement_type }}</td>
-                <td>{{ movement.origin_path }}</td>
-                <td>{{ movement.destination_path }}</td>
+                <td class="b3s-nowrap">
+                  {{ movement.created_at|date:"d/m/Y H:i" }}
+                </td>
+                <td>
+                  <span class="b3s-chip b3s-chip-{{ movement.movement_type }}">
+                    {{ movement.get_movement_type_display }}
+                  </span>
+                </td>
+                <td class="b3s-route">
+                  <span class="b3s-route-from">{{ movement.origin_path|default:"—" }}</span>
+                  <span class="b3s-route-arrow" aria-hidden="true">↓</span>
+                  <span class="b3s-route-to">{{ movement.destination_path|default:"—" }}</span>
+                </td>
+                <td class="b3s-nowrap">
+                  {{ movement.affected_sample_count }}
+                  Sample{{ movement.affected_sample_count|pluralize }}
+                  <div class="b3s-note">
+                    {{ movement.affected_assignment_count }}
+                    assignment{{ movement.affected_assignment_count|pluralize }}
+                  </div>
+                </td>
+                <td>
+                  <strong>{{ movement.actor_label|default:"—" }}</strong>
+                  <div class="b3s-note">
+                    {{ movement.reason|default:"—"|truncatechars:180 }}
+                  </div>
+                </td>
+                <td>
+                  {% if movement.affected_assignment_count %}
+                  <details class="b3s-changes">
+                    <summary>View changes</summary>
+                    {% for item in movement.items.all|slice:":5" %}
+                    <div class="b3s-change">
+                      <strong>{{ item.sample_identifier }}</strong>
+                      <div>
+                        {{ item.position_before|default:"—" }}
+                        →
+                        {{ item.position_after|default:"—" }}
+                      </div>
+                      <div class="b3s-note">
+                        {{ item.path_before|default:"—" }}
+                        →
+                        {{ item.path_after|default:"—" }}
+                      </div>
+                    </div>
+                    {% endfor %}
+                    {% if movement.affected_assignment_count > 5 %}
+                    <p class="b3s-note">
+                      Showing the first five assignments.
+                    </p>
+                    {% endif %}
+                  </details>
+                  {% else %}
+                  <span class="b3s-note">Infrastructure only</span>
+                  {% endif %}
+                </td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="3">
+                <td colspan="6" class="b3s-empty-row">
                   No visible movement history.
                 </td>
               </tr>
@@ -549,7 +742,7 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_js %}
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8146c3c">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261027-v8147c4c">
 </script>
 <script defer
         src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">
