@@ -3,6 +3,44 @@
 set -euo pipefail
 umask 0027
 
+# B3_CUTOVER_LOCK_BEGIN
+# Shared with the root-owned C4-G cutover executor.
+# Hold this descriptor for the entire script execution.
+B3_RELEASE_LOCK="/run/lock/b3lims-c4g-cutover.lock"
+B3_RELEASE_LOCK_EXPECTED_UID=0
+B3_RELEASE_LOCK_EXPECTED_GID="$(id -g ladmin)"
+
+if test -L "$B3_RELEASE_LOCK" ||
+   test ! -f "$B3_RELEASE_LOCK"
+then
+    echo "ERROR: B3 release lock unavailable." >&2
+    exit 73
+fi
+
+B3_RELEASE_LOCK_META="$(
+    stat -c '%u:%g:%a:%h' "$B3_RELEASE_LOCK"
+)"
+
+if test "$B3_RELEASE_LOCK_META" != \
+   "${B3_RELEASE_LOCK_EXPECTED_UID}:${B3_RELEASE_LOCK_EXPECTED_GID}:660:1"
+then
+    echo "ERROR: B3 release lock metadata invalid." >&2
+    exit 73
+fi
+
+if ! exec {B3_RELEASE_LOCK_FD}<>"$B3_RELEASE_LOCK"
+then
+    echo "ERROR: B3 release lock cannot be opened." >&2
+    exit 73
+fi
+
+if ! flock -n -x "$B3_RELEASE_LOCK_FD"
+then
+    echo "ERROR: B3 release operation already active." >&2
+    exit 75
+fi
+# B3_CUTOVER_LOCK_END
+
 REPO="/home/ladmin/git/biobank"
 
 APP_ROOT="/home/public/apps/biobank"
