@@ -2085,3 +2085,9 @@
     cursor: pointer;
     font-weight: 600;
 }
+
+
+/* Storage: search UI disabled */
+#b3-storage-v814.b3s-light .b3s-search {
+    display: none !important;
+}
