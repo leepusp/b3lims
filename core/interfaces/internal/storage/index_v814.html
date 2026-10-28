@@ -9,7 +9,7 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}?v=20261028-v8147-main">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261028-v8147-dock">
 <link rel="stylesheet"
       href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261027-c3d">
 {% endblock %}
@@ -122,24 +122,6 @@ Physical locations, Sample custody and movement history.
                class="b3s-sample-transfers"
                aria-labelledby="b3s-sample-transfers-heading">
 
-        <details id="b3s-sample-transfer-details"
-                 {% if storage_sample_preview or storage_sample_preview_error or storage_sample_bulk_preview or storage_sample_bulk_preview_error %}open{% endif %}>
-
-          <summary id="b3s-sample-transfers-heading">
-            Sample transfers
-            <span class="b3s-transfer-subtitle">
-              Individual and bulk movements
-            </span>
-          </summary>
-
-          <div class="b3s-sample-transfer-body">
-
-            {% include "internal/storage/_sample_preview.html" %}
-
-            {% include "internal/storage/_sample_bulk_preview.html" %}
-
-          </div>
-        </details>
       </section>
 
 
@@ -457,6 +439,26 @@ Physical locations, Sample custody and movement history.
               {% endfor %}
             </tbody>
           </table>
+        </div>
+        <div class="b3s-transfer-dock" aria-label="Sample transfer tools">
+        <details id="b3s-sample-transfer-details"
+                 {% if storage_sample_preview or storage_sample_preview_error or storage_sample_bulk_preview or storage_sample_bulk_preview_error %}open{% endif %}>
+
+          <summary id="b3s-sample-transfers-heading">
+            Sample transfers
+            <span class="b3s-transfer-subtitle">
+              Individual and bulk movements
+            </span>
+          </summary>
+
+          <div class="b3s-sample-transfer-body">
+
+            {% include "internal/storage/_sample_preview.html" %}
+
+            {% include "internal/storage/_sample_bulk_preview.html" %}
+
+          </div>
+        </details>
         </div>
       </section>
 

@@ -2061,3 +2061,27 @@
 #b3-storage-v814.b3s-light .b3s-record-list .b3s-record:last-child {
   border-bottom: 0;
 }
+
+
+/* Storage V8.14.7 — Movements transfer dock */
+#b3-storage-v814.b3s-light .b3s-transfer-dock {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--b3s-line);
+}
+
+#b3-storage-v814.b3s-light
+.b3s-transfer-dock #b3s-sample-transfer-details {
+    background: var(--b3s-panel);
+    border: 1px solid var(--b3s-line);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#b3-storage-v814.b3s-light
+.b3s-transfer-dock #b3s-sample-transfer-details > summary {
+    padding: 12px 16px;
+    color: var(--b3s-ink);
+    cursor: pointer;
+    font-weight: 600;
+}
