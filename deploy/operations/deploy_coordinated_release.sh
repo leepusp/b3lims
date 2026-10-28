@@ -5,7 +5,7 @@ umask 077
 # B3_CUTOVER_LOCK_BEGIN
 # Shared with the root-owned C4-G cutover executor.
 # Hold this descriptor for the entire script execution.
-B3_RELEASE_LOCK="/run/lock/b3lims-c4g-cutover.lock"
+B3_RELEASE_LOCK="/run/lock/b3lims-deploy-shared.lock"
 B3_RELEASE_LOCK_EXPECTED_UID=0
 B3_RELEASE_LOCK_EXPECTED_GID="$(id -g ladmin)"
 
