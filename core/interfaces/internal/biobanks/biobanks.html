@@ -146,7 +146,17 @@
                 {% for biobank in biobanks %}
                     <tr>
                         <td>
-                            <div class="biobank-name">{{ biobank.name }}</div>
+                            <div class="biobank-name">
+                                {% if biobank.can_view %}
+                                <a href="{% url 'biobank_profile' biobank.id %}"
+                                   class="text-decoration-none fw-semibold"
+                                   aria-label="View dashboard for {{ biobank.name }}">
+                                    {{ biobank.name }}
+                                </a>
+                                {% else %}
+                                {{ biobank.name }}
+                                {% endif %}
+                            </div>
                             <div class="biobank-description">
                                 {{ biobank.description|default:"No description registered."|truncatechars:90 }}
                             </div>

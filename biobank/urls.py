@@ -62,6 +62,7 @@ from core.views.internal.biobanks.geocoding import (
     biobank_geocode_search_view,
 )
 from core.views.internal.biobanks.members import biobank_members_view
+from core.views.internal.biobanks.profile import biobank_profile_view
 from core.views.internal.collections.views import (
     collections_list_view,
     collection_create_view,
@@ -210,6 +211,11 @@ urlpatterns = [
         "internal/api/geocoding/reverse/",
         biobank_geocode_reverse_view,
         name="biobank_geocode_reverse",
+    ),
+    path(
+        "biobanks/<int:biobank_id>/",
+        biobank_profile_view,
+        name="biobank_profile",
     ),
     path("biobanks/<int:biobank_id>/members/", biobank_members_view, name="biobank_members"),
     path("collections/", collections_list_view, name="collections_list"),

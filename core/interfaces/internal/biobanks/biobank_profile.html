@@ -1,0 +1,395 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}{{ profile_bank.name }} · Biobank Dashboard{% endblock %}
+{% block page_title %}Biobank Dashboard{% endblock %}
+{% block page_subtitle %}Institutional scientific overview{% endblock %}
+
+{% block content %}
+<style>
+#bb-profile {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 18px 45px;
+  color: #1b3657;
+}
+#bb-profile .bb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 18px 0 24px;
+}
+#bb-profile h1 { font-weight: 750; font-size: 2rem; }
+#bb-profile h2 { font-size: 1.08rem; font-weight: 750; }
+#bb-profile .bb-muted { color: #64748b; font-size: .87rem; }
+#bb-profile .bb-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+#bb-profile .bb-kpi, #bb-profile .bb-panel {
+  background: #fff;
+  border: 1px solid #dfe7f0;
+  border-radius: 12px;
+  padding: 21px;
+  min-width: 0;
+}
+#bb-profile .bb-kpi strong {
+  display: block;
+  font-size: 2.05rem;
+}
+#bb-profile .bb-kpi span { color: #64748b; font-size: .83rem; }
+#bb-profile .bb-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.15fr) minmax(0,1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+#bb-profile .bb-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 20px;
+}
+#bb-profile .bb-switch button {
+  background: white;
+  color: #21518b;
+  border: 1px solid #d5e0ee;
+  border-radius: 7px;
+  padding: 7px 13px;
+}
+#bb-profile .bb-switch button[aria-pressed="true"] {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+#bb-profile [hidden] { display: none !important; }
+#bb-profile .bb-bar { margin: 0 0 16px; }
+#bb-profile .bb-bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: .84rem;
+  margin-bottom: 7px;
+}
+#bb-profile .bb-track {
+  height: 10px;
+  background: #edf2f8;
+  overflow: hidden;
+  border-radius: 999px;
+}
+#bb-profile .bb-fill {
+  height: 100%;
+  background: #286ddd;
+  border-radius: inherit;
+}
+#bb-profile .bb-fill.alt { background: #1498a5; }
+#bb-profile .bb-fact {
+  border-bottom: 1px solid #edf1f6;
+  padding: 12px 0;
+}
+#bb-profile .bb-fact small {
+  display: block;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+#bb-profile .bb-members {
+  display: grid;
+  gap: 9px;
+  max-height: 460px;
+  overflow: auto;
+}
+#bb-profile .bb-member {
+  border: 1px solid #e1e8f1;
+  border-radius: 9px;
+  padding: 12px;
+  display: flex;
+  gap: 11px;
+  align-items: center;
+}
+#bb-profile .bb-avatar {
+  background: #e8f0ff;
+  color: #1857a9;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+#bb-profile .bb-search {
+  width: 100%;
+  border: 1px solid #d5e0ee;
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin: 12px 0;
+}
+@media (max-width: 900px) {
+  #bb-profile .bb-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  #bb-profile .bb-kpis { grid-template-columns: 1fr; }
+}
+</style>
+
+<div id="bb-profile">
+  <a href="{% url 'biobanks_list' %}" class="text-decoration-none">
+    ← Back to Biobanks
+  </a>
+
+  <header class="bb-head">
+    <div>
+      <div class="small text-primary fw-bold">
+        INSTITUTIONAL BIOBANK DASHBOARD
+      </div>
+      <h1>{{ profile_bank.name }}</h1>
+      <div class="bb-muted">
+        {{ profile_bank.location_label|default:"Location not registered" }}
+      </div>
+    </div>
+    <span class="badge bg-primary-subtle text-primary border p-2">
+      {% if profile_bank.is_active %}Operational{% else %}Inactive{% endif %}
+      ·
+      {% if profile_bank.is_public %}Public{% else %}Restricted{% endif %}
+    </span>
+  </header>
+
+  <div class="bb-kpis">
+    <div class="bb-kpi">
+      <strong>{% if internal_access %}{{ sample_total }}{% else %}—{% endif %}</strong>
+      <span>Registered Samples</span>
+    </div>
+    <div class="bb-kpi">
+      <strong>{% if internal_access %}{{ collection_total }}{% else %}—{% endif %}</strong>
+      <span>Collections represented</span>
+    </div>
+    <div class="bb-kpi">
+      <strong>{% if internal_access %}{{ member_total }}{% else %}—{% endif %}</strong>
+      <span>Registered members</span>
+    </div>
+  </div>
+
+  <div class="bb-grid">
+    <section class="bb-panel">
+      <h2>Sample composition</h2>
+
+      {% if internal_access %}
+      <div class="bb-switch" role="group" aria-label="Chart dimension">
+        <button type="button" data-bb-select="types"
+                aria-pressed="true">By type</button>
+        <button type="button" data-bb-select="statuses"
+                aria-pressed="false">By status</button>
+      </div>
+
+      <div data-bb-chart="types">
+        {% for row in sample_types %}
+        <div class="bb-bar">
+          <div class="bb-bar-label">
+            <span>{{ row.name }}</span>
+            <strong>{{ row.total }} · {{ row.percentage }}%</strong>
+          </div>
+          <div class="bb-track">
+            <div class="bb-fill" style="width:{{ row.width }}%"></div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="bb-muted">No Samples linked to this Biobank.</p>
+        {% endfor %}
+      </div>
+
+      <div data-bb-chart="statuses" hidden>
+        {% for row in sample_statuses %}
+        <div class="bb-bar">
+          <div class="bb-bar-label">
+            <span>{{ row.name }}</span>
+            <strong>{{ row.total }} · {{ row.percentage }}%</strong>
+          </div>
+          <div class="bb-track">
+            <div class="bb-fill alt" style="width:{{ row.width }}%"></div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="bb-muted">No status data available.</p>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="bb-muted">
+        Detailed statistics are restricted to authorized participants.
+      </p>
+      {% endif %}
+    </section>
+
+    <section class="bb-panel">
+      <h2>Institutional profile</h2>
+
+      <div class="bb-fact">
+        <small>Description</small>
+        {{ profile_bank.description|default:"No description registered."|linebreaksbr }}
+      </div>
+
+      <div class="bb-fact">
+        <small>Primary manager</small>
+        <strong>
+          {{ profile_bank.owner.get_full_name|default:profile_bank.owner.username }}
+        </strong>
+      </div>
+
+      <div class="bb-fact">
+        <small>Research Group</small>
+        <strong>
+          {{ profile_bank.research_group.name|default:"Unassigned" }}
+        </strong>
+      </div>
+
+      <div class="bb-fact">
+        <small>Location</small>
+        {{ profile_bank.location_label|default:"Not registered" }}
+      </div>
+
+      <div class="bb-fact">
+        <small>Visibility</small>
+        {% if profile_bank.is_public %}Public{% else %}Restricted{% endif %}
+      </div>
+    </section>
+
+    <section class="bb-panel">
+      <h2>Collections represented</h2>
+
+      {% if internal_access %}
+      <p class="bb-muted">
+        Collections containing Samples from this Biobank.
+        One Sample may belong to multiple Collections.
+      </p>
+
+      {% for collection in collection_stats %}
+      <div class="bb-bar">
+        <div class="bb-bar-label">
+          <span>{{ collection.name }}</span>
+          <strong>{{ collection.linked_samples }} Samples</strong>
+        </div>
+        <div class="bb-track">
+          <div class="bb-fill alt"
+               style="width:{% widthratio collection.linked_samples sample_total 100 %}%">
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="bb-muted">No associated Collections found.</p>
+      {% endfor %}
+      {% else %}
+      <p class="bb-muted">
+        Collection statistics are restricted to authorized participants.
+      </p>
+      {% endif %}
+    </section>
+
+    <section class="bb-panel">
+      <h2>Members</h2>
+
+      {% if internal_access %}
+      <p class="bb-muted">
+        Primary owner and formally registered Biobank members.
+      </p>
+
+      <label class="visually-hidden" for="bb-member-search">
+        Filter members
+      </label>
+      <input id="bb-member-search"
+             class="bb-search"
+             type="search"
+             placeholder="Filter by name or role..."
+             autocomplete="off">
+
+      <div id="bb-member-list" class="bb-members">
+        {% for member in profile_members %}
+        <div class="bb-member">
+          <span class="bb-avatar" aria-hidden="true">
+            {{ member.name|slice:":1"|upper }}
+          </span>
+          <div>
+            <div class="fw-semibold">{{ member.name }}</div>
+            <div class="bb-muted">
+              {{ member.username }} · {{ member.role }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <p id="bb-members-empty" class="bb-muted" hidden>
+        No matching members.
+      </p>
+      {% else %}
+      <p class="bb-muted">
+        The member directory is restricted to authorized participants.
+      </p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  function init() {
+    const root = document.getElementById("bb-profile");
+    if (!root) return;
+
+    const buttons = Array.from(
+      root.querySelectorAll("[data-bb-select]")
+    );
+    const charts = Array.from(
+      root.querySelectorAll("[data-bb-chart]")
+    );
+
+    buttons.forEach(button => {
+      button.addEventListener("click", () => {
+        const selected = button.dataset.bbSelect;
+
+        buttons.forEach(item => {
+          item.setAttribute(
+            "aria-pressed",
+            String(item.dataset.bbSelect === selected)
+          );
+        });
+
+        charts.forEach(chart => {
+          chart.hidden = chart.dataset.bbChart !== selected;
+        });
+      });
+    });
+
+    const search = document.getElementById("bb-member-search");
+    const list = document.getElementById("bb-member-list");
+    const empty = document.getElementById("bb-members-empty");
+
+    if (!search || !list || !empty) return;
+
+    search.addEventListener("input", () => {
+      const query = search.value.trim().toLocaleLowerCase();
+      let visible = 0;
+
+      Array.from(list.children).forEach(member => {
+        const match = member.textContent
+          .toLocaleLowerCase()
+          .includes(query);
+
+        member.hidden = !match;
+        if (match) visible++;
+      });
+
+      empty.hidden = visible !== 0;
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+{% endblock %}
