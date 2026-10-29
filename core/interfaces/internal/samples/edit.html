@@ -201,6 +201,36 @@
             position: static;
         }
     }
+
+    #b3-edit-unified-storage .b3-edit-workspace-pane,
+    #b3-edit-unified-storage .b3-edit-path-pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    #b3-edit-unified-storage .b3-edit-path-pane {
+        background: #f8fbff;
+        border: 1px solid #dce5f0;
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    #b3-edit-unified-storage .b3-edit-path-pane > .col-12 {
+        width: 100%;
+    }
+
+    #b3-edit-unified-storage .b3-edit-workspace-pane > section {
+        margin: 0 !important;
+        height: 100%;
+        background: #f8fbff;
+        border-color: #dce5f0 !important;
+    }
+
+    #b3-edit-unified-storage #dynamicStorageContainer {
+        width: 100%;
+    }
+
 </style>
 {% endblock %}
 
@@ -286,6 +316,34 @@
         novalidate
     >
         {% csrf_token %}
+        {% if form.errors or origin_form.errors %}
+        <div id="sample-edit-validation-summary"
+             class="alert alert-danger mt-3"
+             role="alert">
+            <div class="fw-semibold mb-2">
+                Changes were not saved. Review the fields below.
+            </div>
+            <ul class="mb-0">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                {% for field in origin_form %}
+                    {% for error in field.errors %}
+                    <li>Origin — {{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in origin_form.non_field_errors %}
+                    <li>Origin: {{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
 
         {% if form.non_field_errors %}
             <div
@@ -506,64 +564,89 @@
                                 </div>
                             </div>
 
-                            <div class="col-12">
-                                <label
-                                    for="storageInputVisual"
-                                    class="form-label fw-semibold"
-                                >
-                                    Physical Storage Location
-                                </label>
 
-                                <div
-                                    id="dynamicStorageContainer"
-                                    class="form-control d-flex flex-wrap align-items-center gap-1 bg-light"
-                                    style="min-height: 42px; cursor: text;"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="storage_location"
-                                        id="storage_location_hidden"
-                                        value="{{ form.storage_location.value|default_if_none:'' }}"
-                                    >
-                                    <input
-                                        type="hidden"
-                                        name="storage_edit_intent"
-                                        id="storage_edit_intent"
-                                        value="0"
-                                    >
-                                    <input
-                                        type="hidden"
-                                        name="storage_initial_paths"
-                                        value="{{ form.initial.storage_location|default_if_none:'' }}"
-                                    >
-
-                                    <input
-                                        type="text"
-                                        id="storageInputVisual"
-                                        class="border-0 p-0 m-0 bg-transparent"
-                                        style="outline: none; flex-grow: 1; min-width: 150px;"
-                                        placeholder="Add level and press Enter..."
-                                    >
-                                </div>
-
-                                <div class="form-text">
-                                    Example: Freezer 1 → Box A.
-                                </div>
-
-                                {% for error in form.storage_location.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ error }}
-                                    </div>
-                                {% endfor %}
-                            </div>
                         </div>
                     </div>
                 </section>
 
 
                 <!-- ================================================== -->
-                {% include "internal/samples/_storage_child_v8146.html" %}
-{% include "internal/samples/_storage_move_v8146.html" %}
+                <section id="b3-edit-unified-storage"
+                         class="card shadow-sm border-0 mb-4"
+                         data-sample-edit-section="physical-storage">
+                    <div class="card-header bg-white fw-bold">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>
+                        Physical storage
+                    </div>
+                    <div class="card-body p-3 p-lg-4">
+                        <p class="small text-muted mb-3">
+                            Select a workspace, review the existing physical
+                            hierarchy, and edit the Sample position when authorized.
+                        </p>
+                        <div class="row g-3 align-items-stretch">
+                            <div class="col-lg-5 b3-edit-workspace-pane">
+                                {% include "internal/samples/_storage_child_v8146.html" %}
+                            </div>
+                            <div class="col-lg-7 b3-edit-path-pane">
+                                <div class="fw-semibold mb-2">
+                                    Physical path and Sample position
+                                </div>
+                <div class="col-12">
+                    <label
+                        for="storageInputVisual"
+                        class="form-label fw-semibold"
+                    >
+                        Physical Storage Location
+                    </label>
+
+                    <div
+                        id="dynamicStorageContainer"
+                        class="form-control d-flex flex-wrap align-items-center gap-1 bg-light"
+                        style="min-height: 42px; cursor: text;"
+                    >
+                        <input
+                            type="hidden"
+                            name="storage_location"
+                            id="storage_location_hidden"
+                            value="{{ form.storage_location.value|default_if_none:'' }}"
+                        >
+                        <input
+                            type="hidden"
+                            name="storage_edit_intent"
+                            id="storage_edit_intent"
+                            value="0"
+                        >
+                        <input
+                            type="hidden"
+                            name="storage_initial_paths"
+                            value="{{ form.initial.storage_location|default_if_none:'' }}"
+                        >
+
+                        <input
+                            type="text"
+                            id="storageInputVisual"
+                            class="border-0 p-0 m-0 bg-transparent"
+                            style="outline: none; flex-grow: 1; min-width: 150px;"
+                            placeholder="Add level and press Enter..."
+                        >
+                    </div>
+
+                    <div class="form-text">
+                        Example: Freezer 1 → Box A.
+                    </div>
+
+                    {% for error in form.storage_location.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {% include "internal/samples/_storage_move_v8146.html" %}
                 <!-- Biological subtype metadata                        -->
                 <!-- ================================================== -->
                 {% if biological_fields %}
