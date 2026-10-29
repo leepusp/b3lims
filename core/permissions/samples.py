@@ -200,6 +200,21 @@ def can_view_sample(user, sample):
     if _is_owner(user, sample):
         return True
 
+    # Biobank membership grants internal Sample visibility.
+    # Public Biobank metadata alone never grants Sample access.
+    if getattr(sample, 'biobank_id', None):
+        from core.permissions.biobanks import (
+            VIEW_ROLES,
+            user_has_biobank_role,
+            user_is_biobank_owner,
+        )
+        bank = sample.biobank
+        if bank.is_active and (
+            user_is_biobank_owner(user, bank)
+            or user_has_biobank_role(user, bank, VIEW_ROLES)
+        ):
+            return True
+
     if _has_direct_sample_access(
         user,
         sample,
@@ -234,6 +249,13 @@ def can_edit_sample(user, sample):
 
     if _is_owner(user, sample):
         return True
+
+    # An Editor or Manager may edit Samples belonging
+    # to their active Biobank, regardless of Sample owner.
+    if getattr(sample, 'biobank_id', None):
+        from core.permissions.biobanks import can_edit_biobank
+        if can_edit_biobank(user, sample.biobank):
+            return True
 
     if _has_direct_sample_access(
         user,

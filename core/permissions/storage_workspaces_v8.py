@@ -197,6 +197,13 @@ def can_operate_on_sample_storage(user, sample):
     if is_storage_global_admin(user):
         return True
 
+    # Honor the same active Biobank editing roles used
+    # for Sample metadata, without bypassing trash checks.
+    if getattr(sample, 'biobank_id', None):
+        from core.permissions.biobanks import can_edit_biobank
+        if can_edit_biobank(user, sample.biobank):
+            return True
+
     if sample.owner_id == user.pk:
         return True
 

@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 
 from core.models.biobanks.biobank import Biobank
@@ -9,6 +10,7 @@ from core.models.biobanks.biobank_user_role import BiobankUserRole
 from core.permissions.biobanks import can_manage_biobank_permissions
 
 
+@login_required
 def biobank_members_view(request, biobank_id):
     """
     Manage members and roles of a Biobank.
@@ -42,9 +44,21 @@ def biobank_members_view(request, biobank_id):
                 request,
                 "Only one OWNER is allowed per biobank."
             )
-            return redirect(f"/biobanks/{biobank.id}/members/")
+            return redirect("biobank_members", biobank_id=biobank.pk)
+
+        allowed_roles = {
+            BiobankUserRole.VIEWER,
+            BiobankUserRole.EDITOR,
+            BiobankUserRole.MANAGER,
+        }
+        if role not in allowed_roles:
+            messages.error(request, 'Invalid Biobank role.')
+            return redirect('biobank_members', biobank_id=biobank.pk)
 
         member = get_object_or_404(User, id=uid)
+        if member.pk == biobank.owner_id:
+            messages.error(request, 'The Biobank owner cannot be reassigned.')
+            return redirect('biobank_members', biobank_id=biobank.pk)
 
         BiobankUserRole.objects.update_or_create(
             user=member,
@@ -53,7 +67,7 @@ def biobank_members_view(request, biobank_id):
         )
 
         messages.success(request, "Member added successfully.")
-        return redirect(f"/biobanks/{biobank.id}/members/")
+        return redirect("biobank_members", biobank_id=biobank.pk)
 
     # ==================================================
     # UPDATE ROLE
@@ -75,20 +89,28 @@ def biobank_members_view(request, biobank_id):
                 request,
                 "The OWNER role cannot be modified."
             )
-            return redirect(f"/biobanks/{biobank.id}/members/")
+            return redirect("biobank_members", biobank_id=biobank.pk)
 
         if new_role == BiobankUserRole.OWNER:
             messages.error(
                 request,
                 "You cannot promote another user to OWNER."
             )
-            return redirect(f"/biobanks/{biobank.id}/members/")
+            return redirect("biobank_members", biobank_id=biobank.pk)
+
+        if new_role not in {
+            BiobankUserRole.VIEWER,
+            BiobankUserRole.EDITOR,
+            BiobankUserRole.MANAGER,
+        }:
+            messages.error(request, 'Invalid Biobank role.')
+            return redirect('biobank_members', biobank_id=biobank.pk)
 
         role_obj.role = new_role
         role_obj.save()
 
         messages.success(request, "Member role updated.")
-        return redirect(f"/biobanks/{biobank.id}/members/")
+        return redirect("biobank_members", biobank_id=biobank.pk)
 
     # ==================================================
     # REMOVE MEMBER
@@ -107,11 +129,11 @@ def biobank_members_view(request, biobank_id):
                 request,
                 "The Biobank OWNER cannot be removed."
             )
-            return redirect(f"/biobanks/{biobank.id}/members/")
+            return redirect("biobank_members", biobank_id=biobank.pk)
 
         role_obj.delete()
         messages.success(request, "Member removed.")
-        return redirect(f"/biobanks/{biobank.id}/members/")
+        return redirect("biobank_members", biobank_id=biobank.pk)
 
     # ==================================================
     # CONTEXT
