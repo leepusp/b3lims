@@ -33,15 +33,41 @@
             "dynamicStorageContainer"
         );
 
+        const prefix = document.getElementById(
+            "storageChildWorkspacePrefixV8146"
+        );
+        const separator = document.getElementById(
+            "storageChildWorkspaceSeparatorV8146"
+        );
+
         if (!workspace || !display || !button ||
-            !status || !path || !input || !chips) return;
+            !status || !path || !input || !chips ||
+            !prefix || !separator) return;
 
         let busy = true;
         let available = 0;
 
         function update() {
             const value = path.value.trim();
-            display.textContent = value || "No path entered";
+            const option = workspace.selectedOptions[0];
+            const name = workspace.value && option
+                ? option.textContent.trim()
+                : "";
+
+            prefix.textContent = name
+                ? "Workspace: " + name
+                : "";
+
+            prefix.hidden = !name;
+            prefix.style.display = name ? "" : "none";
+
+            separator.hidden = !(name && value);
+            separator.style.display =
+                name && value ? "" : "none";
+
+            display.textContent =
+                [name, value].filter(Boolean).join(" > ") ||
+                "No path entered";
 
             button.disabled = (
                 busy ||
@@ -118,6 +144,7 @@
             }
 
             const submittedPath = path.value.trim();
+            const submittedWorkspace = workspace.value;
             const sampleIntake = Boolean(
                 document.getElementById("storagePositionPanelV8")
             );
@@ -145,7 +172,7 @@
             }
 
             const body = new URLSearchParams({
-                workspace_id: workspace.value,
+                workspace_id: submittedWorkspace,
                 path: hierarchyPath
             });
 
@@ -178,7 +205,10 @@
                     );
                 }
 
-                if (path.value.trim() !== submittedPath) {
+                if (
+                    path.value.trim() !== submittedPath ||
+                    workspace.value !== submittedWorkspace
+                ) {
                     status.textContent =
                         "Path registered, but the editor changed. " +
                         "Select the registered destination again.";
@@ -217,7 +247,23 @@
             }
         }
 
-        workspace.addEventListener("change", update);
+        workspace.addEventListener("change", () => {
+            if (path.value.trim()) {
+                if (
+                    typeof window.setStorageLocationFromText !==
+                    "function"
+                ) {
+                    status.textContent =
+                        "Path Builder unavailable. Reload this page.";
+                    return;
+                }
+
+                window.setStorageLocationFromText("");
+                input.value = "";
+            }
+
+            update();
+        });
         input.addEventListener("input", update);
         input.addEventListener("keydown", () =>
             setTimeout(update, 0)

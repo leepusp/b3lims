@@ -91,9 +91,27 @@
 
                         <div class="col-12">
                             <div class="row g-3 align-items-start">
+                                <div class="col-lg-5">
+                                    {% include "internal/samples/_storage_child_v8146.html" %}
+                                </div>
                                 <div class="col-lg-7">
+                                    <label class="form-label fw-semibold"
+                                           for="storageInputVisual">
+                                        2. Physical path and Sample position
+                                    </label>
 
                             <div id="dynamicStorageContainer" data-anchor-catalog-url="{% url 'storage_anchor_catalog_v8' %}" class="form-control d-flex flex-wrap align-items-center gap-1 bg-light" style="min-height: 38px; cursor: text;">
+
+                                    <span id="storageChildWorkspacePrefixV8146"
+                                          class="badge bg-primary text-white fw-semibold"
+                                          hidden
+                                          style="display:none"></span>
+                                    <span id="storageChildWorkspaceSeparatorV8146"
+                                          class="text-muted fw-semibold"
+                                          aria-hidden="true"
+                                          hidden
+                                          style="display:none">›</span>
+
                                 <input type="hidden" name="storage_location" id="storage_location_hidden" value="{{ intake_prefill.storage_location|default:'' }}">
                                 <input type="text" id="storageInputVisual" class="border-0 p-0 m-0 bg-transparent" style="outline: none; flex-grow: 1; min-width: 150px;" placeholder="Add level and press Enter..." value="{{ intake_prefill.storage_location|default:'' }}">
                             </div>
@@ -146,9 +164,6 @@
 
 
 
-                                </div>
-                                <div class="col-lg-5">
-                                    {% include "internal/samples/_storage_child_v8146.html" %}
                                 </div>
                             </div>
                         </div>
@@ -479,7 +494,7 @@
 <script src="{% static 'vendor/quill/1.3.6/quill.js' %}"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
 <script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261026-v8146c2"></script>
-<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261026-v8146c2"></script>
+<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261029-workspace-first-v2"></script>
 
 <script id="intakeDynamicPrefillScript">
 (function() {
