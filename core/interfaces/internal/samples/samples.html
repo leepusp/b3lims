@@ -8,6 +8,71 @@
 {% include "common/map_assets_css.html" %}
 <link rel="stylesheet" href="{% static 'internal/samples/sample_origin_map.css' %}">
 <link rel="stylesheet" href="{% static 'internal/samples/samples.css' %}">
+
+<style id="b3s-unified-storage-style">
+    #b3s-unified-storage-card {
+        background: #fff;
+        border: 1px solid #dce5f0;
+        border-radius: 14px;
+        padding: 20px;
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+
+    #b3s-unified-storage-card > .row {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 5fr) minmax(0, 7fr);
+        gap: 16px;
+        align-items: stretch;
+        margin: 0;
+    }
+
+    #b3s-unified-storage-card > .row > .col-lg-5,
+    #b3s-unified-storage-card > .row > .col-lg-7 {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid #dce5f0;
+        border-radius: 10px;
+        background: #f8fbff;
+    }
+
+    #b3s-unified-storage-card > .row > .col-lg-5 {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /*
+     * Select the existing workspace section by
+     * structural position, not by its data attribute.
+     */
+    #b3s-unified-storage-card
+    > .row > .col-lg-5 > section {
+        flex: 1 1 auto;
+        width: 100%;
+        margin: 0 !important;
+        border-color: #dce5f0 !important;
+        background: transparent;
+    }
+
+    #b3s-unified-storage-card
+    #dynamicStorageContainer {
+        width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        #b3s-unified-storage-card {
+            padding: 16px;
+        }
+
+        #b3s-unified-storage-card > .row {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+</style>
+
 <link href="{% static 'vendor/quill/1.3.6/quill.snow.css' %}" rel="stylesheet">
 {% endblock %}
 
@@ -89,7 +154,18 @@
                             </div>
                         </div>
 
-                        <div class="col-12">
+                        <div id="b3s-unified-storage-card" class="col-12">
+                            <header class="b3s-storage-heading mb-3">
+                                <h6 class="fw-bold mb-1">
+                                    <i class="bi bi-box-seam me-2 text-primary"></i>
+                                    Physical storage
+                                </h6>
+                                <p class="small text-muted mb-0">
+                                    Select a storage workspace first, then define
+                                    the physical hierarchy and Sample position.
+                                </p>
+                            </header>
+
                             <div class="row g-3 align-items-start">
                                 <div class="col-lg-5">
                                     {% include "internal/samples/_storage_child_v8146.html" %}
