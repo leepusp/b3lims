@@ -471,6 +471,71 @@ Physical locations, Sample custody and movement history.
 
         <div class="b3s-management">
 
+          <details id="b3s-delete-storage-v8150"
+                   class="b3s-changes">
+            <summary>Delete empty Storage</summary>
+
+            <p class="b3s-note">
+              Remove a personal Storage you own after all
+              physical locations have been deleted.
+              Research Group Storages cannot be deleted here.
+              Samples are not deleted.
+            </p>
+
+            <form method="post"
+                  action="{% url 'storage_workspace' %}"
+                  id="b3s-delete-storage-form-v8150"
+                  class="b3s-form">
+              {% csrf_token %}
+
+              <input type="hidden"
+                     name="action"
+                     value="delete_empty_personal_storage_v8150">
+
+              <label for="b3s-delete-workspace-id-v8150">
+                Personal Storage
+                <select name="workspace_id"
+                        id="b3s-delete-workspace-id-v8150"
+                        required>
+                  <option value="">
+                    Select a personal Storage
+                  </option>
+                  {% for workspace in storage_manageable_workspaces_v8 %}
+                    {% if workspace.scope == "personal" and workspace.owner_id == request.user.pk %}
+                      <option value="{{ workspace.pk }}"
+                              {% if workspace.pk == b3s_selected_storage_pk_v8147 %}selected{% endif %}>
+                        {{ workspace.name }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </label>
+
+              <label for="b3s-confirm-workspace-name-v8150">
+                Type the exact Storage name to confirm
+                <input type="text"
+                       id="b3s-confirm-workspace-name-v8150"
+                       name="confirm_workspace_name"
+                       maxlength="120"
+                       autocomplete="off"
+                       required>
+              </label>
+
+              <p class="b3s-note">
+                This operation is permanent. It will be
+                rejected if any physical location remains,
+                including inactive locations.
+              </p>
+
+              <div class="b3s-form-actions">
+                <button type="submit"
+                        class="btn btn-outline-danger">
+                  Delete empty Storage
+                </button>
+              </div>
+            </form>
+          </details>
+
           <h3>Existing locations</h3>
           <p class="b3s-note">
             Select a physical location to edit its metadata,

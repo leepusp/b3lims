@@ -364,6 +364,28 @@ def storage_workspace_view(
                     response["Location"] += f"?storage={workspace.pk}"
                     return response
 
+            elif action == "delete_empty_personal_storage_v8150":
+                from core.services.storage_workspace_delete_v8150 import (
+                    delete_empty_personal_storage_workspace_v8150,
+                )
+
+                removed = delete_empty_personal_storage_workspace_v8150(
+                    actor=request.user,
+                    workspace_id=request.POST.get("workspace_id"),
+                    confirmation=request.POST.get(
+                        "confirm_workspace_name", ""
+                    ),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        "Storage deleted: "
+                        f"{removed['workspace_name']}. "
+                        "No Samples or physical locations were deleted."
+                    ),
+                )
+
             elif action == "delete_subtree_and_unassign":
                 from core.services.storage_subtree_unassign_v8149 import (
                     delete_storage_subtree_unassign_v8149,
