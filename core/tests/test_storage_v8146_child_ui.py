@@ -53,7 +53,7 @@ class StorageChildUIV8146Tests(TestCase):
             response, 'id="storageChildCreateV8146"'
         )
 
-    def test_edit_sample_has_child_and_move_panels(self):
+    def test_edit_sample_has_child_without_move_panel(self):
         response = self.client.get(
             reverse("sample_edit", args=[self.sample.pk])
         )
@@ -65,7 +65,7 @@ class StorageChildUIV8146Tests(TestCase):
         self.assertContains(
             response, "storage_child_v8146.js", count=1
         )
-        self.assertContains(
+        self.assertNotContains(
             response, 'id="sample-physical-movement-v8146"'
         )
 

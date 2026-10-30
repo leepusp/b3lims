@@ -145,18 +145,21 @@ class SampleStorageEditMoveV8146Tests(TestCase):
         payload.update(overrides)
         return payload
 
-    def test_editor_contains_structured_move_panel(self):
+    def test_editor_excludes_structured_move_panel(self):
         response = self.client.get(self.edit_url)
 
         self.assertEqual(response.status_code, 200)
 
-        self.assertContains(
+        self.assertNotContains(
             response,
             'id="sample-physical-movement-v8146"',
         )
 
         self.assertContains(response, "BBAMS")
-        self.assertContains(response, "Custom destination")
+        self.assertNotContains(response, "Custom destination")
+        self.assertContains(
+            response, "Current registered physical storage"
+        )
         self.assertContains(
             response,
             "storage_edit_move_v8146.js",
