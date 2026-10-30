@@ -1,0 +1,67 @@
+{% extends "internal/common/base.html" %}
+{% block title %}Move Selected to Storage · B3 LIMS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" data-b3-bulk-storage-v8148>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div><h1 class="h4 mb-1">Move Selected to Storage</h1>
+      <p class="text-muted mb-0">Assign an unregistered Sample or transfer its existing primary assignment.</p></div>
+    <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">Back to Samples</a>
+  </div>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      {% if bulk_stage == "choose" %}
+      <form method="post" action="{% url 'sample_bulk_storage' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="preview">
+        {% for id in bulk_ids %}<input type="hidden" name="sample_ids" value="{{ id }}">{% endfor %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="bulkStorageDestination">Registered storage destination</label>
+          <select id="bulkStorageDestination" class="form-select" name="destination_id" required>
+            <option value="">Select a Box, Rack or custom destination</option>
+            {% for loc in bulk_destinations %}
+              <option value="{{ loc.pk }}">{{ loc.workspace.name }} — {{ loc.full_path }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Only destinations authorized for physical registration are listed.</div>
+        </div>
+        <div class="table-responsive"><table class="table table-sm align-middle">
+          <thead><tr><th>Sample</th><th>Existing physical storage</th><th>Operation</th><th>New position</th></tr></thead>
+          <tbody>
+          {% for entry in bulk_rows %}<tr>
+            <td><strong>{{ entry.sample.sample_id }}</strong></td>
+            <td>{{ entry.old_path }}{% if entry.assignment and entry.assignment.position %} — {{ entry.assignment.position }}{% endif %}</td>
+            <td>{% if entry.kind == "register" %}Initial registration{% else %}Move primary assignment{% endif %}</td>
+            <td><input class="form-control form-control-sm" name="position_{{ entry.sample.pk }}"
+                       maxlength="100" pattern="[A-Za-z]+[0-9]+" placeholder="e.g. B5" required
+                       aria-label="New position for {{ entry.sample.sample_id }}"></td>
+          </tr>{% endfor %}
+          </tbody>
+        </table></div>
+        <p class="small text-muted">Each Sample needs its own unoccupied position. Secondary assignments remain unchanged. No change occurs during preview.</p>
+        <button type="submit" class="btn btn-outline-primary">Preview selected operations</button>
+      </form>
+      {% else %}
+      <p class="fw-semibold">Confirm the following {{ bulk_rows|length }} physical storage operation(s)</p>
+      <p>Destination: <strong>{{ bulk_destination.full_path }}</strong></p>
+      <div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Sample</th><th>Current location</th><th>Operation</th><th>Destination position</th></tr></thead>
+      <tbody>{% for entry in bulk_rows %}<tr>
+        <td>{{ entry.sample.sample_id }}</td><td>{{ entry.old_path }}</td>
+        <td>{% if entry.kind == "register" %}Initial registration{% else %}Audited movement{% endif %}</td>
+        <td>{{ entry.position }}</td>
+      </tr>{% endfor %}</tbody></table></div>
+      <form method="post" action="{% url 'sample_bulk_storage' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <input type="hidden" name="confirm_token" value="{{ bulk_token }}">
+        <div class="mb-3"><label class="form-label fw-semibold" for="bulkStorageReason">Reason (required)</label>
+          <textarea id="bulkStorageReason" name="reason" class="form-control" maxlength="2000" rows="2" required></textarea></div>
+        <div class="alert alert-warning small">Physical assignments and their audit histories will change only after confirmation.</div>
+        <button type="submit" class="btn btn-primary">Confirm storage operations</button>
+        <a href="{% url 'samples_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

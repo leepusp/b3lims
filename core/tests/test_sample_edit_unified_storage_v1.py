@@ -42,7 +42,6 @@ class EditSampleStorageLayoutTests(SimpleTestCase):
     def test_only_one_workspace_and_movement_component(self):
         for marker in (
             '_storage_child_v8146.html',
-            '_storage_move_v8146.html',
         ):
             self.assertEqual(self.html.count(marker), 1)
 

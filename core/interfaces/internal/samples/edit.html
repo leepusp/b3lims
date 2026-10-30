@@ -129,6 +129,7 @@
                 "inventory biological"
                 "relationships biological"
                 "traceability biological"
+                "physical-storage physical-storage"
                 "origin origin"
                 "metadata scientific"
                 "files files";
@@ -231,6 +232,17 @@
         width: 100%;
     }
 
+
+    /* B3 LIMS V8.14.8: registered storage spans the desktop editing grid. */
+    @media (min-width: 1200px) {
+        .sample-edit-main > [data-sample-edit-section="physical-storage"] {
+            grid-area: physical-storage;
+            min-width: 0;
+        }
+    }
+    [data-b3-current-sample-storage] {
+        overflow-wrap: anywhere;
+    }
 </style>
 {% endblock %}
 
@@ -591,6 +603,28 @@
                                 <div class="fw-semibold mb-2">
                                     Physical path and Sample position
                                 </div>
+                                <div class="border rounded-3 bg-light p-3 mb-3"
+                                     data-b3-current-sample-storage>
+                                    <div class="small fw-semibold mb-2">
+                                        Current registered physical storage
+                                    </div>
+                                    {% for assignment in storage_edit_assignments_v8146 %}
+                                        <div class="small mb-2" data-b3-current-assignment>
+                                            <span class="fw-semibold">{{ assignment.location.full_path }}</span>
+                                            {% if assignment.position %}
+                                                <span class="text-muted"> — {{ assignment.position }}</span>
+                                            {% endif %}
+                                            {% if assignment.is_primary %}
+                                                <span class="badge bg-secondary ms-1">Primary</span>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <p class="small text-muted mb-0">
+                                            No registered physical assignment. Historical text
+                                            paths are not confirmed physical destinations.
+                                        </p>
+                                    {% endfor %}
+                                </div>
                 <div class="col-12">
                     <label
                         for="storageInputVisual"
@@ -644,14 +678,6 @@
                             </div>
                         </div>
                     </div>
-                <div class="card-body pt-0" data-b3-edit-storage-movement>
-                    <div class="border-top pt-3">
-                        <p class="small text-muted mb-3">
-                            Moving an existing registered Sample location is a separate, audited operation.
-                        </p>
-                        {% include "internal/samples/_storage_move_v8146.html" %}
-                    </div>
-                </div>
                 </section>
                 <!-- Biological subtype metadata                        -->
                 <!-- ================================================== -->

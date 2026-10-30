@@ -155,7 +155,10 @@ from core.views.internal.samples.views import (
     sample_share_view,
 )
 
+from core.views.internal.samples.bulk_storage_v8148 import sample_bulk_storage_view
+
 urlpatterns = [
+    path("samples/bulk-storage/", sample_bulk_storage_view, name="sample_bulk_storage"),
     path(
         "samples/files/<int:sample_file_id>/download/",
         sample_file_download_view,

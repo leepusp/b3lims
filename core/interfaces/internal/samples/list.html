@@ -1,4 +1,5 @@
 {% extends "internal/common/manage_base.html" %}
+{% load storage_selection_v8148 %}
 
 {% block title %}Samples · B3 LIMS{% endblock %}
 {% block page_title %}Samples{% endblock %}
@@ -610,6 +611,12 @@
                     Share Selected
                     (<span id="shareSelectedSamplesCount">0</span>)
                 </button>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        id="moveSelectedSamplesButton" disabled>
+                    <i class="bi bi-box-arrow-in-right me-1"></i>
+                    Move Selected to Storage
+                    (<span id="moveSelectedSamplesCount">0</span>)
+                </button>
 
                 {% if active_filter_count %}
                     <a
@@ -625,6 +632,12 @@
         </div>
 
     </div>
+</form>
+<form method="post" action="{% url 'sample_bulk_storage' %}"
+      id="bulkStorageStartForm" class="d-none">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="choose">
+  <div id="bulkStorageSelectedInputs"></div>
 </form>
 {% endblock %}
 
@@ -659,10 +672,12 @@
 <tr>
 
     <td class="align-middle text-center">
-        {% if sample.can_manage_sharing_current_user %}
+        {% if sample.can_manage_sharing_current_user or sample|can_select_for_storage:request.user %}
             <input
                 type="checkbox"
                 class="form-check-input sample-share-select"
+                data-b3-can-share="{% if sample.can_manage_sharing_current_user %}1{% else %}0{% endif %}"
+                data-b3-can-storage="{% if sample|can_select_for_storage:request.user %}1{% else %}0{% endif %}"
                 value="{{ sample.pk }}"
                 id="share-sample-{{ sample.pk }}"
                 aria-label="Select {{ sample.sample_id }} for sharing"
@@ -1433,5 +1448,51 @@
     );
 })();
 </script>
+<script data-b3-bulk-storage-selection-v8148>
+(function () {
+    "use strict";
+    function refresh() {
+        var selected = Array.from(document.querySelectorAll(".sample-share-select:checked"));
+        var moveButton = document.getElementById("moveSelectedSamplesButton");
+        var shareButton = document.getElementById("shareSelectedSamplesButton");
+        var moveCount = document.getElementById("moveSelectedSamplesCount");
+        if (moveCount) moveCount.textContent = String(selected.length);
+        if (moveButton) {
+            moveButton.disabled = !selected.length || !selected.every(function (x) {
+                return x.dataset.b3CanStorage === "1";
+            });
+        }
+        if (shareButton) {
+            shareButton.disabled = !selected.length || !selected.every(function (x) {
+                return x.dataset.b3CanShare === "1";
+            });
+        }
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+        var button = document.getElementById("moveSelectedSamplesButton");
+        var form = document.getElementById("bulkStorageStartForm");
+        var inputs = document.getElementById("bulkStorageSelectedInputs");
+        if (!button || !form || !inputs) return;
+        button.addEventListener("click", function () {
+            refresh();
+            if (button.disabled) return;
+            inputs.replaceChildren();
+            document.querySelectorAll(".sample-share-select:checked").forEach(function (checkbox) {
+                var hidden = document.createElement("input");
+                hidden.type = "hidden";
+                hidden.name = "sample_ids";
+                hidden.value = checkbox.value;
+                inputs.appendChild(hidden);
+            });
+            form.submit();
+        });
+        document.addEventListener("change", function (event) {
+            if (event.target.matches(".sample-share-select, #sampleShareSelectAll")) refresh();
+        });
+        refresh();
+    });
+})();
+</script>
+
 
 {% endblock %}
