@@ -202,12 +202,12 @@ def storage_workspace_view(
         and request.GET.get("b3s_delete_preview")
     ):
         from django.http import JsonResponse
-        from core.services.storage_subtree_delete_v8145 import (
-            preview_empty_storage_subtree,
+        from core.services.storage_subtree_unassign_v8149 import (
+            preview_storage_subtree_unassign_v8149,
         )
 
         try:
-            result = preview_empty_storage_subtree(
+            result = preview_storage_subtree_unassign_v8149(
                 actor=request.user,
                 location_id=request.GET.get(
                     "b3s_delete_preview"
@@ -363,6 +363,32 @@ def storage_workspace_view(
                     response = redirect("storage_workspace")
                     response["Location"] += f"?storage={workspace.pk}"
                     return response
+
+            elif action == "delete_subtree_and_unassign":
+                from core.services.storage_subtree_unassign_v8149 import (
+                    delete_storage_subtree_unassign_v8149,
+                )
+
+                removed = delete_storage_subtree_unassign_v8149(
+                    actor=request.user,
+                    location_id=request.POST.get("location_id"),
+                    confirmation=request.POST.get("confirm", ""),
+                    preview_token=request.POST.get(
+                        "preview_token", ""
+                    ),
+                    reason=request.POST.get("reason", ""),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"Removed {removed['location_count']} "
+                        "storage location(s). "
+                        f"Released {removed['assignment_count']} "
+                        "assignment(s) from "
+                        f"{removed['sample_count']} Sample(s)."
+                    ),
+                )
 
             elif action == "delete_empty_subtree":
                 from core.services.storage_subtree_delete_v8145 import (

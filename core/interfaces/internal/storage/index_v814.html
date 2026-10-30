@@ -571,6 +571,8 @@ Physical locations, Sample custody and movement history.
             <input type="hidden" name="action" value="">
             <input type="hidden" name="location_id" value="">
             <input type="hidden" name="confirm" value="">
+            <input type="hidden" name="preview_token" value="">
+            <input type="hidden" name="reason" value="">
 
           </form>
 
@@ -700,6 +702,101 @@ Physical locations, Sample custody and movement history.
   </dialog>
 
   {% if storage_manageable_workspaces_v8 %}
+  <dialog id="b3s-delete-dialog"
+          class="b3s-location-dialog"
+          aria-labelledby="b3s-delete-title"
+          aria-describedby="b3s-delete-description">
+
+    <div class="b3s-dialog-header">
+      <div>
+        <h2 id="b3s-delete-title">
+          Delete storage hierarchy
+        </h2>
+
+        <p id="b3s-delete-description"
+           class="b3s-note">
+          Review all affected locations and Samples
+          before confirming deletion.
+        </p>
+      </div>
+
+      <button type="button"
+              id="b3s-delete-cancel"
+              class="btn btn-sm btn-outline-secondary">
+        Cancel
+      </button>
+    </div>
+
+    <div class="b3s-dialog-body">
+
+      <p>
+        <strong id="b3s-delete-target"></strong>
+      </p>
+
+      <dl>
+        <dt>Locations to delete</dt>
+        <dd id="b3s-delete-locations"></dd>
+
+        <dt>Affected Samples</dt>
+        <dd id="b3s-delete-samples"></dd>
+
+        <dt>Storage assignments to release</dt>
+        <dd id="b3s-delete-assignments"></dd>
+
+        <dt>Samples becoming Unassigned</dt>
+        <dd id="b3s-delete-orphaned"></dd>
+
+        <dt>Historical textual references</dt>
+        <dd id="b3s-delete-textual"></dd>
+      </dl>
+
+      <p id="b3s-delete-dependencies"
+         class="b3s-note"></p>
+
+      <p role="alert">
+        Samples will not be deleted.
+        Physical assignments inside this hierarchy
+        will be removed. Valid assignments outside
+        the hierarchy will be preserved.
+        Historical movement records will remain.
+      </p>
+
+      <p class="b3s-note">
+        This operation cannot be undone automatically.
+      </p>
+
+      <label for="b3s-delete-reason">
+        Reason for deletion
+      </label>
+
+      <textarea id="b3s-delete-reason"
+                class="form-control"
+                rows="3"
+                minlength="5"
+                maxlength="1000"
+                required></textarea>
+
+      <label for="b3s-delete-confirm-text">
+        Type DELETE to confirm
+      </label>
+
+      <input id="b3s-delete-confirm-text"
+             class="form-control"
+             type="text"
+             autocomplete="off"
+             maxlength="20">
+
+      <div class="d-flex gap-2 justify-content-end mt-3">
+        <button type="button"
+                id="b3s-delete-submit"
+                class="btn btn-danger">
+          Delete hierarchy and release Samples
+        </button>
+      </div>
+
+    </div>
+  </dialog>
+
   <dialog id="b3s-location-dialog"
           class="b3s-location-dialog"
           aria-labelledby="b3s-dialog-title">
@@ -924,7 +1021,7 @@ Physical locations, Sample custody and movement history.
         src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4e">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261028-v8147-main">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261030-v8149">
 </script>
 <script defer
         src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">

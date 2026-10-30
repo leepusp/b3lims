@@ -280,3 +280,22 @@ console.log("V814_HIERARCHY_MODEL=PASS");
 console.log("V814_AUTHORIZED_ASSIGNMENTS=PASS");
 console.log("V814_NEW_TEMPLATE=PASS");
 console.log("V814_NO_BROWSER_PERSISTENCE=PASS");
+
+// V8149 controlled occupied-subtree deletion contract
+for (const token of [
+  "delete_subtree_and_unassign",
+  "preview.can_unassign",
+  "preview.confirm_token",
+  "b3s-delete-dialog",
+  "b3s-delete-orphaned",
+  "b3s-delete-reason",
+  "b3s-delete-confirm-text"
+]) {
+  assert.ok(js.includes(token), token);
+}
+
+assert.ok(html.includes('id="b3s-delete-dialog"'));
+assert.ok(html.includes('name="preview_token"'));
+assert.ok(html.includes('name="reason"'));
+
+console.log("V8149_DELETE_CONFIRMATION=PASS");

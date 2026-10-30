@@ -1668,55 +1668,167 @@
         return;
       }
 
-      if (
-        preview.assignment_count ||
-        preview.sample_count ||
-        preview.textual_count
-      ) {
+      if (preview.can_delete) {
+        if (!window.confirm(
+          "Permanently delete '" + displayName(node) +
+          "' and " + preview.descendant_count +
+          " descendant location(s)?\n\n" +
+          "No Samples are linked. This cannot be undone."
+        )) {
+          return;
+        }
+
+        form.elements.namedItem("action").value =
+          "delete_empty_subtree";
+
+        form.elements.namedItem("location_id").value =
+          node.id;
+
+        form.elements.namedItem("confirm").value =
+          "DELETE";
+
+        form.elements.namedItem("preview_token").value = "";
+        form.elements.namedItem("reason").value = "";
+
+        form.requestSubmit();
+        return;
+      }
+
+      if (!preview.can_unassign || !preview.confirm_token) {
         window.alert(
-          "This storage hierarchy contains or references " +
-          "Sample records. Deleting it could compromise " +
-          "their registered storage paths.\n\n" +
+          "Deletion is blocked by protected dependencies " +
+          "or insufficient Sample permissions.\n\n" +
           "Affected Samples: " + preview.sample_count +
-          "\nRecorded assignments: " +
-          preview.assignment_count +
-          "\nHistorical textual references: " +
-          preview.textual_count +
-          "\n\nTransfer or reconcile these Samples first. " +
-          "No records have been deleted."
+          "\nAssignments: " + preview.assignment_count +
+          "\nUnauthorized Samples: " +
+          preview.unauthorized_sample_count +
+          "\nLegacy path conflicts: " +
+          preview.legacy_conflict_count +
+          "\n\nReconcile conflicting legacy paths before " +
+          "deletion. No records have been changed."
         );
         return;
       }
 
-      if (Object.keys(preview.blockers || {}).length) {
+      const dialog = find("b3s-delete-dialog");
+
+      if (!dialog || typeof dialog.showModal !== "function") {
         window.alert(
-          "This location is referenced by movement history " +
-          "or another record. Permanent deletion is blocked. " +
+          "The deletion confirmation dialog is unavailable. " +
           "No records have been changed."
         );
         return;
       }
 
-      if (!window.confirm(
-        "Permanently delete '" + displayName(node) +
-        "' and all " + preview.descendant_count +
-        " descendant location(s)?\n\n" +
-        "No Samples are linked. This cannot be undone."
-      )) {
-        return;
+      const values = {
+        "b3s-delete-target": preview.root_path,
+        "b3s-delete-locations": preview.location_count,
+        "b3s-delete-samples": preview.sample_count,
+        "b3s-delete-assignments": preview.assignment_count,
+        "b3s-delete-orphaned": preview.orphaned_count,
+        "b3s-delete-textual": preview.textual_count
+      };
+
+      for (const [id, value] of Object.entries(values)) {
+        const element = find(id);
+
+        if (!element) {
+          window.alert(
+            "Deletion confirmation form is incomplete."
+          );
+          return;
+        }
+
+        element.textContent = String(value);
       }
 
-      form.elements.namedItem("action").value =
-        "delete_empty_subtree";
+      const dependencies = Object.entries(
+        preview.blockers || {}
+      ).filter(([name]) =>
+        name === "core.StorageSceneConfiguration" ||
+        name === "core.StorageLocationLayoutV8146C3"
+      );
 
-      form.elements.namedItem("location_id").value =
-        node.id;
+      find("b3s-delete-dependencies").textContent =
+        dependencies.length
+          ? "Related scene/layout configurations that will " +
+            "also be removed: " +
+            dependencies.map(([name, count]) =>
+              name + ": " + count
+            ).join(", ")
+          : "No related scene/layout configurations found.";
 
-      form.elements.namedItem("confirm").value =
-        "DELETE";
+      dialog.dataset.locationId = node.id;
+      dialog.dataset.previewToken = preview.confirm_token;
 
-      form.requestSubmit();
+      find("b3s-delete-reason").value = "";
+      find("b3s-delete-confirm-text").value = "";
+
+      dialog.showModal();
     }
+
+    const deletionDialog = find("b3s-delete-dialog");
+
+    find("b3s-delete-cancel")?.addEventListener(
+      "click",
+      () => deletionDialog?.close()
+    );
+
+    find("b3s-delete-submit")?.addEventListener(
+      "click",
+      () => {
+        if (!deletionDialog?.open) return;
+
+        const reason = find("b3s-delete-reason").value.trim();
+
+        const confirmation =
+          find("b3s-delete-confirm-text").value.trim();
+
+        if (reason.length < 5 || reason.length > 1000) {
+          window.alert(
+            "Provide a deletion reason between 5 and " +
+            "1000 characters."
+          );
+          return;
+        }
+
+        if (confirmation !== "DELETE") {
+          window.alert(
+            "Type DELETE to confirm deletion."
+          );
+          return;
+        }
+
+        const form = find("b3s-status-form");
+        const token = deletionDialog.dataset.previewToken;
+        const location = deletionDialog.dataset.locationId;
+
+        if (!form || !token || !location) {
+          window.alert(
+            "Deletion confirmation is incomplete."
+          );
+          return;
+        }
+
+        form.elements.namedItem("action").value =
+          "delete_subtree_and_unassign";
+
+        form.elements.namedItem("location_id").value =
+          location;
+
+        form.elements.namedItem("confirm").value =
+          confirmation;
+
+        form.elements.namedItem("preview_token").value =
+          token;
+
+        form.elements.namedItem("reason").value =
+          reason;
+
+        deletionDialog.close();
+        form.requestSubmit();
+      }
+    );
 
     function renderManage() {
       const list = find("b3s-existing-locations");
