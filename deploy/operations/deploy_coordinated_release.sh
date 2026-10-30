@@ -119,8 +119,56 @@ esac
 ACTIVE="$(basename "$CURRENT")"
 STATIC_ID="$(basename "$STATIC")"
 
-test "$ACTIVE" = "$STATIC_ID" ||
-    fail "Live application and static release identifiers differ."
+# Application-only deployments may retain an older,
+# immutable static release.
+#
+# Accept different identifiers only after proving:
+# - Git ancestry;
+# - no static source differences;
+# - official HTTPS asset integrity.
+#
+# No direct filesystem access to biobank-proxy is needed.
+
+if test "$ACTIVE" != "$STATIC_ID"; then
+
+    git -C "$REPO" cat-file -e         "${STATIC_ID}^{commit}" ||
+        fail "Static release is not a Git commit."
+
+    git -C "$REPO" merge-base --is-ancestor         "$STATIC_ID" "$ACTIVE" ||
+        fail "Static release is not an ancestor."
+
+    git -C "$REPO" diff --quiet         "$STATIC_ID" "$ACTIVE" --         core/static static biobank/static ||
+        fail "Static source differs between releases."
+
+    STATIC_URL="https://davinci.icb.usp.br/b3lims/static/internal/storage"
+
+    for FILE in         storage_v814.js         storage_contextual_v7.js         storage_relationship_v89.js
+    do
+        SOURCE="core/static/internal/storage/$FILE"
+
+        EXPECTED_SHA="$(
+            git -C "$REPO" show "${STATIC_ID}:$SOURCE" |
+            sha256sum |
+            awk '{print $1}'
+        )" ||
+            fail "Unable to hash Git asset: $FILE"
+
+        LIVE_SHA="$(
+            curl                 --fail                 --silent                 --show-error                 --proto '=https'                 --tlsv1.2                 --connect-timeout 5                 --max-time 30                 --header 'Cache-Control: no-cache'                 "$STATIC_URL/$FILE?integrity=$STATIC_ID" |
+            sha256sum |
+            awk '{print $1}'
+        )" ||
+            fail "Unable to verify HTTPS asset: $FILE"
+
+        test -n "$EXPECTED_SHA" ||
+            fail "Empty Git checksum: $FILE"
+
+        test "$EXPECTED_SHA" = "$LIVE_SHA" ||
+            fail "Live static checksum mismatch: $FILE"
+
+        echo "verified_live_static_asset=$FILE"
+    done
+fi
 
 test -d "$CURRENT" || fail "Active code release missing."
 test -d "$STATIC" || fail "Active static release missing."
@@ -163,6 +211,7 @@ echo "target=$TARGET"
 echo "active=$ACTIVE"
 echo "current=$CURRENT"
 echo "static_current=$STATIC"
+echo "static_base=$STATIC_ID"
 echo "migration_delta=NONE"
 echo "production_modified=NO"
 echo "preflight=PASS"
@@ -247,7 +296,8 @@ echo "=== VERIFY STORAGE JAVASCRIPT ==="
 
 for file in \
     storage_contextual_v7.js \
-    storage_relationship_v89.js
+    storage_relationship_v89.js \
+    storage_v814.js
 do
     SRC="core/static/internal/storage/$file"
     DST="staticfiles/internal/storage/$file"
@@ -267,6 +317,9 @@ echo "=== VERIFY STAGED JAVASCRIPT TESTS ==="
 node --check \
     core/static/internal/storage/storage_relationship_v89.js
 
+node --check \
+    core/static/internal/storage/storage_v814.js
+
 for test_file in \
     core/tests/js/test_storage_visual_tree_v810.cjs \
     core/tests/js/test_storage_visual_dom_v810.cjs \
@@ -282,6 +335,7 @@ echo "=== BUILD MANIFEST ==="
 {
     echo "target=$TARGET"
     echo "base=$ACTIVE"
+    echo "static_base=$STATIC_ID"
     echo "status=offline_candidate"
     echo "production_modified=NO"
     echo "migration_delta=NONE"
