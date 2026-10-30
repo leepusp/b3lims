@@ -644,9 +644,15 @@
                             </div>
                         </div>
                     </div>
+                <div class="card-body pt-0" data-b3-edit-storage-movement>
+                    <div class="border-top pt-3">
+                        <p class="small text-muted mb-3">
+                            Moving an existing registered Sample location is a separate, audited operation.
+                        </p>
+                        {% include "internal/samples/_storage_move_v8146.html" %}
+                    </div>
+                </div>
                 </section>
-
-                {% include "internal/samples/_storage_move_v8146.html" %}
                 <!-- Biological subtype metadata                        -->
                 <!-- ================================================== -->
                 {% if biological_fields %}
