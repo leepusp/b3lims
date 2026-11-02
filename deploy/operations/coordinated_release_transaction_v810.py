@@ -28,9 +28,15 @@ class CoordinatedReleaseTransaction:
         quiesce,
         restart,
         verify,
+        active_static_commit=None,
     ):
         self.root = Path(app_root)
         self.active = active_commit
+        self.active_static = (
+            active_commit
+            if active_static_commit is None
+            else active_static_commit
+        )
         self.target = target_commit
         self.quiesce = quiesce
         self.restart = restart
@@ -56,7 +62,10 @@ class CoordinatedReleaseTransaction:
             return str(self.root / kind / commit)
         return f"{kind}/{commit}"
 
-    def _assert_links(self, commit):
+    def _assert_links(self, commit, static_commit=None):
+        if static_commit is None:
+            static_commit = commit
+
         expected = (
             (
                 self.current,
@@ -64,7 +73,7 @@ class CoordinatedReleaseTransaction:
             ),
             (
                 self.static,
-                self._expected_link("static-releases", commit),
+                self._expected_link("static-releases", static_commit),
             ),
         )
 
@@ -89,11 +98,14 @@ class CoordinatedReleaseTransaction:
         if self.active == self.target:
             raise RuntimeError("Target already active")
 
-        self._assert_links(self.active)
+        if not self._validate_commit(self.active_static):
+            raise RuntimeError("Invalid active static release ID")
+
+        self._assert_links(self.active, self.active_static)
 
         for directory in (
             self.root / "releases" / self.active,
-            self.root / "static-releases" / self.active,
+            self.root / "static-releases" / self.active_static,
             self.root / "releases" / self.target,
             self.root / "static-releases" / self.target,
         ):
@@ -114,7 +126,10 @@ class CoordinatedReleaseTransaction:
         finally:
             temporary.unlink(missing_ok=True)
 
-    def _set_links(self, commit):
+    def _set_links(self, commit, static_commit=None):
+        if static_commit is None:
+            static_commit = commit
+
         self._replace_symlink(
             self.current,
             self._expected_link("releases", commit),
@@ -122,10 +137,10 @@ class CoordinatedReleaseTransaction:
 
         self._replace_symlink(
             self.static,
-            self._expected_link("static-releases", commit),
+            self._expected_link("static-releases", static_commit),
         )
 
-        self._assert_links(commit)
+        self._assert_links(commit, static_commit)
 
     def execute(self):
         self._preflight()
@@ -151,9 +166,15 @@ class CoordinatedReleaseTransaction:
                 raise
 
             try:
-                self._set_links(self.active)
+                self._set_links(
+                    self.active,
+                    self.active_static,
+                )
                 self.restart()
-                self._assert_links(self.active)
+                self._assert_links(
+                    self.active,
+                    self.active_static,
+                )
                 self.verify(self.active)
 
             except Exception as rollback_error:
