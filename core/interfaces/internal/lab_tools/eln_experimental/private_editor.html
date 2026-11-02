@@ -1,0 +1,184 @@
+{% extends "internal/common/base.html" %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:1250px">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <div class="text-muted small">
+        B3 LIMS / ELN / Private workspace
+      </div>
+      <h1 class="h3 mb-1">
+        {% if entry %}Edit experiment{% else %}New experiment{% endif %}
+      </h1>
+      <p class="text-muted mb-0">
+        Private draft — stored in your personal Biobank directory
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary"
+       href="{% url 'eln_private_drafts' %}">
+      My private drafts
+    </a>
+  </div>
+
+  {% if entry %}
+  <div class="alert alert-info py-2">
+    Entry ID: <code>{{ entry.entry_id }}</code>
+    · Revision {{ entry.revision }}.
+    Saving creates a new revision.
+  </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <div class="col-xl-8">
+      <form method="post" action="{{ action_url }}"
+            class="card shadow-sm">
+        {% csrf_token %}
+        <div class="card-body">
+          {% if entry %}
+          <input type="hidden" name="expected_revision"
+                 value="{{ entry.revision }}">
+          {% endif %}
+
+          <label class="form-label fw-semibold"
+                 for="eln-project">Project</label>
+
+          {% if entry %}
+          <input id="eln-project" class="form-control mb-3"
+                 value="{{ values.project }}" readonly>
+          {% else %}
+          <input id="eln-project" name="project"
+                 class="form-control mb-3" required
+                 maxlength="80"
+                 pattern="[A-Za-z0-9][A-Za-z0-9_.-]*"
+                 value="{{ values.project }}"
+                 placeholder="e.g. T2SS">
+          <div class="form-text mb-3">
+            A new project directory is created within your personal
+            Biobank ELN area when you save its first experiment.
+          </div>
+          {% endif %}
+
+          <label class="form-label fw-semibold"
+                 for="eln-title">Title</label>
+          <input id="eln-title" name="title"
+                 class="form-control mb-3"
+                 value="{{ values.title }}"
+                 required maxlength="300">
+
+          <label class="form-label fw-semibold"
+                 for="eln-content">Objective and observations</label>
+          <textarea id="eln-content" name="content" rows="6"
+                    class="form-control mb-3">{{ values.content }}</textarea>
+
+          <label class="form-label fw-semibold"
+                 for="eln-protocol">Protocol / methods</label>
+          <textarea id="eln-protocol" name="protocol" rows="6"
+                    class="form-control mb-3">{{ values.protocol }}</textarea>
+
+          <label class="form-label fw-semibold"
+                 for="eln-results">Results and conclusions</label>
+          <textarea id="eln-results" name="results" rows="5"
+                    class="form-control mb-3">{{ values.results }}</textarea>
+
+          <h2 class="h5 mt-3">Linked Samples and Reagents</h2>
+          <p class="text-muted small">
+            Select permitted materials. Use Ctrl / Cmd for multiple
+            selection. Linking does not modify the source records.
+          </p>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="eln-samples"
+                     class="form-label">Biobank Samples</label>
+              <select id="eln-samples" name="sample_ids"
+                      class="form-select" size="7" multiple>
+                {% for sample in samples %}
+                <option value="{{ sample.pk }}"
+                  {% if sample.pk in values.sample_ids %}selected{% endif %}>
+                  {{ sample.sample_id }} · {{ sample.organism_name }}
+                  (#{{ sample.pk }})
+                </option>
+                {% empty %}
+                <option disabled>No accessible samples in current filter</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="eln-chemicals"
+                     class="form-label">Biobank Reagents</label>
+              <select id="eln-chemicals" name="chemical_ids"
+                      class="form-select" size="7" multiple>
+                {% for chemical in chemicals %}
+                <option value="{{ chemical.pk }}"
+                  {% if chemical.pk in values.chemical_ids %}selected{% endif %}>
+                  {{ chemical.name }} · lot {{ chemical.lot_number }}
+                  (#{{ chemical.pk }})
+                </option>
+                {% empty %}
+                <option disabled>No accessible reagents in current filter</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center justify-content-between mt-4 flex-wrap gap-2">
+            <span class="small text-muted">
+              Private draft — not published to eLabFTW
+            </span>
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-save me-1"></i>
+              {% if entry %}Save new revision{% else %}Save draft{% endif %}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="col-xl-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6">Find permitted materials</h2>
+          <p class="text-muted small">
+            Search before filling a new entry, or save the entry first.
+            Searching reloads the form; unsaved changes are not retained.
+          </p>
+          <form method="get">
+            <label class="form-label small"
+                   for="sample-q">Sample ID or organism</label>
+            <input id="sample-q" name="sample_q"
+                   class="form-control mb-2"
+                   maxlength="80" value="{{ sample_q }}">
+
+            <label class="form-label small"
+                   for="chemical-q">Reagent name or lot</label>
+            <input id="chemical-q" name="chemical_q"
+                   class="form-control mb-3"
+                   maxlength="80" value="{{ chemical_q }}">
+
+            <button class="btn btn-outline-primary btn-sm"
+                    type="submit">Search materials</button>
+            <a class="btn btn-link btn-sm"
+               href="{{ action_url }}">Clear filters</a>
+          </form>
+          <p class="small text-muted mt-3 mb-0">
+            Only accessible materials are displayed.
+            Up to 75 search results per category.
+          </p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6">Revision storage</h2>
+          <p class="small mb-0">
+            Every save creates a separate JSON revision under
+            <code>~/biobank/lab_tools/eln/projects/</code>.
+            Attachments, signatures, templates and eLabFTW publishing
+            are not enabled in this initial editor.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

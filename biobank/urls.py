@@ -158,6 +158,7 @@ from core.views.internal.samples.views import (
 from core.views.internal.samples.bulk_storage_v8148 import sample_bulk_storage_view
 
 from core.views.internal.lab_tools.eln_experimental import eln_experimental_index
+from core.views.internal.lab_tools import eln_private_web as private_eln_views
 
 urlpatterns = [
     path("samples/bulk-storage/", sample_bulk_storage_view, name="sample_bulk_storage"),
@@ -431,6 +432,21 @@ urlpatterns = [
     path("ajax/add_tag/", create_tag_ajax_view, name="ajax_add_tag"),
 
     # ---------------- INTERNAL: LAB TOOLS ----------------
+    path(
+        "internal/lab-tools/eln-experimental/private/",
+        private_eln_views.eln_private_drafts,
+        name="eln_private_drafts",
+    ),
+    path(
+        "internal/lab-tools/eln-experimental/private/new/",
+        private_eln_views.eln_private_new,
+        name="eln_private_new",
+    ),
+    path(
+        "internal/lab-tools/eln-experimental/private/<str:project>/<uuid:entry_id>/",
+        private_eln_views.eln_private_detail,
+        name="eln_private_detail",
+    ),
     path(
         "internal/lab-tools/eln-experimental/",
         eln_experimental_index,

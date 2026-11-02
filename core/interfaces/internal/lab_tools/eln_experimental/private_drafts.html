@@ -1,0 +1,67 @@
+{% extends "internal/common/base.html" %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:1250px">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <div class="text-muted small">B3 LIMS / ELN Experimental</div>
+      <h1 class="h3 mb-1">My private experiments</h1>
+      <p class="text-muted mb-0">
+        Owner-scoped drafts in your personal Biobank directory
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary"
+         href="{% url 'eln_experimental_index' %}">
+        Visual preview
+      </a>
+      <a class="btn btn-primary"
+         href="{% url 'eln_private_new' %}">
+        <i class="bi bi-plus-lg me-1"></i>New entry
+      </a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between">
+      <strong>Private drafts</strong>
+      <span class="text-muted small">
+        {{ total_entries }} entries (up to 200 shown)
+      </span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Project</th>
+            <th>Revision</th>
+            <th>Saved (UTC)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td>
+              <a href="{% url 'eln_private_detail' project=entry.project entry_id=entry.entry_id %}">
+                {{ entry.title }}
+              </a>
+            </td>
+            <td>{{ entry.project }}</td>
+            <td>{{ entry.revision }}</td>
+            <td>{{ entry.saved_at }}</td>
+            <td>Private draft</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              No private experiments yet. Create your first entry.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
