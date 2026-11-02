@@ -618,6 +618,11 @@ urlpatterns = [
 
 ]
 
+# B3 Bench (ELN extensions, Lab Calendar, tools and workflows).
+urlpatterns += [
+    path("internal/bench/", include("bench.urls")),
+]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
