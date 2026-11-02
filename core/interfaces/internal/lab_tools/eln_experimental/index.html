@@ -1,0 +1,227 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet"
+      href="{% static 'internal/lab_tools/eln_experimental.css' %}">
+
+<div class="b3-eln-preview">
+
+  <div class="eln-header mb-4">
+    <div>
+      <div class="eln-muted small">Lab Tools</div>
+      <h1 class="h3 mb-1">
+        <i class="bi bi-journal-bookmark me-2"></i>
+        ELN Experimental
+      </h1>
+      <p class="eln-muted mb-0">
+        Electronic Laboratory Notebook
+      </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="eln-demo-label">VISUAL DEMO</span>
+      <button type="button" class="btn btn-outline-secondary"
+              disabled title="API integration pending">
+        Templates
+      </button>
+      <button type="button" class="btn btn-primary"
+              disabled title="Private draft storage pending">
+        <i class="bi bi-plus-lg me-1"></i>
+        New entry
+      </button>
+    </div>
+  </div>
+
+  <div class="alert alert-info mb-4" role="status">
+    <strong>Integration in progress.</strong>
+    This is a visual demonstration with synthetic records.
+    No experiments loaded from the eLabFTW database or
+    researchers' private home directories.
+  </div>
+
+  <nav class="eln-tabs mb-3" aria-label="Experiment views">
+    <a class="eln-tab {% if scope == 'all' %}active{% endif %}"
+       href="?scope=all">
+      All examples
+    </a>
+    <a class="eln-tab {% if scope == 'pinned' %}active{% endif %}"
+       href="?scope=pinned">
+      Pinned examples
+    </a>
+  </nav>
+
+  <form method="get"
+        action="{% url 'eln_experimental_index' %}"
+        class="eln-card p-3 mb-4"
+        aria-label="Filter demonstration records">
+
+    <input type="hidden" name="scope" value="{{ scope }}">
+
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-lg-5">
+        <label for="eln-demo-search"
+               class="form-label small fw-semibold">
+          Search
+        </label>
+        <input id="eln-demo-search"
+               type="search" name="q"
+               class="form-control"
+               value="{{ query }}"
+               placeholder="Search demo experiments">
+      </div>
+
+      <div class="col-6 col-lg-2">
+        <label for="eln-demo-category"
+               class="form-label small fw-semibold">
+          Category
+        </label>
+        <select id="eln-demo-category"
+                name="category"
+                class="form-select">
+          <option value="">All categories</option>
+          {% for category in categories %}
+          <option value="{{ category }}"
+                  {% if category == selected_category %}selected{% endif %}>
+            {{ category }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-lg-2">
+        <label for="eln-demo-status"
+               class="form-label small fw-semibold">
+          Status
+        </label>
+        <select id="eln-demo-status"
+                name="status"
+                class="form-select">
+          <option value="">All statuses</option>
+          {% for status in statuses %}
+          <option value="{{ status }}"
+                  {% if status == selected_status %}selected{% endif %}>
+            {{ status }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-lg-3 d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1"
+                type="submit">Apply filters</button>
+        <a class="btn btn-outline-secondary"
+           href="{% url 'eln_experimental_index' %}">
+          Reset
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <h2 class="h6 mb-0">Pinned</h2>
+    <span class="eln-demo-label">SYNTHETIC</span>
+  </div>
+
+  <div class="eln-pinned mb-4">
+    {% for entry in pinned %}
+    <article class="eln-card eln-pin">
+      <div class="eln-muted small font-monospace">
+        {{ entry.id }}
+      </div>
+      <div class="eln-pin-title">
+        {{ entry.title }}
+      </div>
+      <span class="eln-chip">{{ entry.category }}</span>
+      <span class="eln-chip">{{ entry.status }}</span>
+    </article>
+    {% endfor %}
+  </div>
+
+  <section class="eln-card overflow-hidden"
+           aria-label="Demonstration experiments">
+
+    <div class="d-flex justify-content-between
+                align-items-center flex-wrap gap-2 p-3">
+      <div>
+        <h2 class="h6 mb-1">Experiments</h2>
+        <span class="eln-muted small">
+          {{ eln_experiments|length }} displayed of
+          {{ demo_total }} synthetic records
+        </span>
+      </div>
+      <span class="eln-demo-label">READ-ONLY PREVIEW</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table mb-0 eln-table">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Title</th>
+            <th scope="col">Category</th>
+            <th scope="col">Status</th>
+            <th scope="col">Progress</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Storage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in eln_experiments %}
+          <tr>
+            <td class="font-monospace">
+              {{ entry.id }}
+            </td>
+            <td>
+              <span class="eln-title">{{ entry.title }}</span>
+            </td>
+            <td>
+              <span class="eln-chip">{{ entry.category }}</span>
+            </td>
+            <td>
+              <span class="eln-chip">{{ entry.status }}</span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <progress class="eln-progress"
+                          value="{{ entry.progress }}"
+                          max="100">
+                  {{ entry.progress }}%
+                </progress>
+                <span class="small">
+                  {{ entry.progress }}%
+                </span>
+              </div>
+            </td>
+            <td>{{ entry.owner }}</td>
+            <td class="eln-storage">{{ entry.storage }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4">
+              No demonstration experiments match these filters.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="d-flex justify-content-between
+              align-items-center flex-wrap gap-3 mt-4">
+    <div class="small eln-muted">
+      Private drafts will be saved under the researcher's
+      authorized project directory.
+      Published versions will use the central eLabFTW service.
+    </div>
+
+    <a href="{% url 'notebook_index' %}"
+       class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Existing ELN Notebook
+    </a>
+  </div>
+
+</div>
+{% endblock %}

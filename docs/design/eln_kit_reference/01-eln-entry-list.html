@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELN Notebook — entries</title>
+<!-- Biobank ELN mockup: ELN Notebook — entry list. Visual reference only; data is fictional. -->
+</head>
+<body>
+<div id="dc-root"></div>
+<script type="text/x-dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f8fa;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2a37}
+a{color:#0b66b2}a:hover{color:#084d87}
+.nv{display:block;padding:9px 10px;border-radius:6px;color:#d6e3ee;text-decoration:none;font-size:14px}
+.nv:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv.on{background:#0b66b2;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #dfe5ec;border-radius:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border:1px solid #c9d3de;border-radius:6px;background:#fff;color:#1f2a37;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0b66b2;border-color:#0b66b2;color:#fff}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.new{font-size:10.5px;font-weight:700;color:#7a3e00;background:#ffe8cc;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.muted{color:#5b6672}
+.tab{min-height:40px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:none;font:500 14px Inter,system-ui,sans-serif;color:#5b6672;cursor:pointer}
+.tab.on{color:#0b66b2;border-bottom-color:#0b66b2;font-weight:600}
+th{font-size:12px;font-weight:600;color:#5b6672;text-align:left;padding:10px 12px;border-bottom:1px solid #dfe5ec;white-space:nowrap}
+td{font-size:13px;padding:12px;border-bottom:1px solid #edf1f5;vertical-align:middle}
+.sel{min-height:40px;border:1px solid #c9d3de;border-radius:6px;background:#fff;font:13px Inter,system-ui,sans-serif;color:#1f2a37;padding:0 10px}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 220px; background: #002b45; color: #fff; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="padding: 4px 10px 18px"><div style="font-size: 20px; font-weight: 700">B3</div><div style="font-size: 11px; color: #b9cad8">LIMS</div></div>
+    <a class="nv" href="#">Workspace</a>
+    <a class="nv" href="#">Biobanks</a>
+    <a class="nv" href="#">Collections</a>
+    <a class="nv" href="#">Samples</a>
+    <a class="nv" href="#">Transport</a>
+    <a class="nv" href="05-tools-compounds.html">Chemicals &amp; Compounds</a>
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,.15); width: 100%; margin: 10px 0">
+    <a class="nv" href="04-lab-calendar.html">Lab Calendar</a>
+    <a class="nv on" href="01-eln-entry-list.html" aria-current="page">ELN Notebook</a>
+    <a class="nv" href="03-eln-templates.html" style="padding-left: 24px; font-size: 13px">Templates</a>
+    <a class="nv" href="#">Molecular Registry</a>
+    <a class="nv" href="#">Jupyter Notebooks</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div>
+        <div class="muted" style="font-size: 13px">Lab tools</div>
+        <h1 style="margin: 2px 0 0; font-size: 26px; font-weight: 700">ELN Notebook</h1>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <a class="btn" href="03-eln-templates.html">Templates</a>
+        <button class="btn" type="button">Export .eln</button>
+        <button class="btn pri" type="button" onClick="{{ toggleMenu }}" aria-expanded="{{ menuOpen }}">+ New entry ▾</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <section class="card" aria-label="Create from template" style="padding: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{ templates }}" as="t" hint-placeholder-count="4">
+          <a href="02-eln-entry-view.html" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #dfe5ec; border-radius: 8px; text-decoration: none; color: #1f2a37">
+            <span style="font-weight: 600; font-size: 14px">{{ t.name }}</span>
+            <span class="muted" style="font-size: 12px">{{ t.detail }}</span>
+          </a>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <div role="tablist" aria-label="Scope" style="display: flex; gap: 4px; border-bottom: 1px solid #dfe5ec">
+      <sc-for list="{{ scopes }}" as="s" hint-placeholder-count="3">
+        <button role="tab" type="button" class="{{ s.cls }}" aria-selected="{{ s.on }}" onClick="{{ s.pick }}">{{ s.label }}</button>
+      </sc-for>
+    </div>
+
+    <form class="card" aria-label="Filters" style="padding: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+      <label style="display: flex; flex-direction: column; gap: 4px; flex: 3 1 280px; font-size: 12px; font-weight: 600" class="muted">Search
+        <input type="search" class="sel" value="category:&quot;Phage assay&quot; status:running tag:BSL2" style="width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px">
+      </label>
+      <label class="muted" style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 12px; font-weight: 600">Category<select class="sel"><option>All categories</option><option>Phage assay</option><option>Culture</option><option>Molecular</option><option>Protocol</option></select></label>
+      <label class="muted" style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 12px; font-weight: 600">Status<select class="sel"><option>All statuses</option><option>Draft</option><option>Running</option><option>Needs review</option><option>Completed</option></select></label>
+      <label class="muted" style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 12px; font-weight: 600">Owner<select class="sel"><option>Anyone</option><option>Me</option></select></label>
+      <label class="muted" style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 120px; font-size: 12px; font-weight: 600">State<select class="sel"><option>Active</option><option>Archived</option><option>Trash</option></select></label>
+      <sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new" style="align-self: center">eLabFTW: advanced query, state filter</span></sc-if>
+    </form>
+
+    <section aria-label="Pinned entries" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 15px">Pinned</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: pins</span></sc-if></div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{ pinned }}" as="p" hint-placeholder-count="3">
+          <a href="02-eln-entry-view.html" class="card" style="padding: 14px; text-decoration: none; color: #1f2a37; display: flex; flex-direction: column; gap: 8px">
+            <span class="muted" style="font-size: 12px; font-family: ui-monospace, Menlo, monospace">{{ p.id }}</span>
+            <span style="font-weight: 600; font-size: 14px">{{ p.title }}</span>
+            <span style="display: flex; gap: 6px; flex-wrap: wrap"><span class="chip" style="{{ p.catStyle }}">{{ p.cat }}</span><span class="chip" style="{{ p.statusStyle }}">{{ p.status }}</span></span>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Entries" style="overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #dfe5ec; background: #fbfcfd">
+        <div style="font-size: 13px"><strong>2 selected</strong> <span class="muted">of 48 entries</span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button class="btn" type="button">Change status</button>
+          <button class="btn" type="button">Add tag</button>
+          <button class="btn" type="button">Lock</button>
+          <button class="btn" type="button">Archive</button>
+          <button class="btn" type="button">Export PDF / .eln</button>
+          <sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new" style="align-self: center">eLabFTW: batch actions</span></sc-if>
+        </div>
+      </div>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; border-collapse: collapse; min-width: 980px">
+          <thead><tr><th scope="col"><span style="position: absolute; left: -9999px">Select</span></th><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Steps</th><th scope="col">Rating</th><th scope="col">Owner</th><th scope="col">Modified</th><th scope="col">Integrity</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+              <tr style="{{ r.rowStyle }}">
+                <td><input type="checkbox" aria-label="Select {{ r.id }}" checked="{{ r.sel }}"></td>
+                <td style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap">{{ r.id }}</td>
+                <td><a href="02-eln-entry-view.html" style="font-weight: 600; text-decoration: none">{{ r.title }}</a><div class="muted" style="font-size: 12px; margin-top: 3px">{{ r.tags }}</div></td>
+                <td><span class="chip" style="{{ r.catStyle }}">{{ r.cat }}</span></td>
+                <td><span class="chip" style="{{ r.statusStyle }}">{{ r.status }}</span></td>
+                <td style="min-width: 110px"><div style="display: flex; align-items: center; gap: 8px"><div style="flex: 1; height: 6px; background: #e6ebf0; border-radius: 3px; overflow: hidden"><div style="{{ r.barStyle }}"></div></div><span class="muted" style="font-size: 12px">{{ r.steps }}</span></div></td>
+                <td style="color: #8a5a00; letter-spacing: 1px; white-space: nowrap" aria-label="{{ r.ratingLabel }}">{{ r.stars }}</td>
+                <td style="white-space: nowrap">{{ r.owner }}</td>
+                <td class="muted" style="white-space: nowrap">{{ r.modified }}</td>
+                <td style="white-space: nowrap; font-size: 12px">{{ r.integrity }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</script>
+<script type="text/x-dc" data-dc-script data-props='{"showNew":{"editor":"boolean","default":true,"section":"Annotations"},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { scope: 'group', menuOpen: false }; }
+  renderVals() {
+    const cats = {
+      'Phage assay': 'background:#d5f2ee;color:#0b5c52',
+      'Culture': 'background:#fde7d2;color:#8a4300',
+      'Molecular': 'background:#dbe9fb;color:#0b4f8a',
+      'Protocol': 'background:#ece3fb;color:#5a2d91'
+    };
+    const sts = {
+      'Draft': 'background:#eef1f4;color:#3d4752',
+      'Running': 'background:#dbe9fb;color:#0b4f8a',
+      'Needs review': 'background:#fff1c2;color:#6e4d00',
+      'Completed': 'background:#dcf3e3;color:#1d6b3a'
+    };
+    const data = [
+      ['EXP-2026-031', 'Plaque assay — phage ΦB3-07 on X. citri 306', 'Phage assay', 'Running', 3, 6, 4, 'A. Lima', 'today 14:12', 'Locked by A. Lima', 'BSL2 · host-range', true],
+      ['EXP-2026-030', 'One-step growth curve — ΦB3-07', 'Phage assay', 'Needs review', 8, 8, 3, 'M. Souza', 'today 10:40', 'Signed 1/2', 'BSL2', true],
+      ['EXP-2026-029', 'Growth curve — X. citri isolates BB-0140 to 0145', 'Culture', 'Completed', 5, 5, 5, 'A. Lima', 'yesterday', 'Signed · RFC 3161 ✓', 'growth · OD600', false],
+      ['MOL-2026-012', 'Plasmid miniprep pUC19-gfp (x6)', 'Molecular', 'Completed', 7, 7, 4, 'R. Costa', '30 Oct', 'Signed · RFC 3161 ✓', 'plasmid', false],
+      ['EXP-2026-028', 'Phage DNA extraction for sequencing', 'Molecular', 'Running', 2, 9, 0, 'M. Souza', '29 Oct', '—', 'sequencing', false],
+      ['PRT-2026-004', 'Double-layer agar plating, v3', 'Protocol', 'Completed', 0, 0, 5, 'A. Lima', '22 Oct', 'Locked', 'SOP', false],
+      ['EXP-2026-027', 'Host-range spot test — 24 isolates', 'Phage assay', 'Draft', 0, 4, 0, 'A. Lima', '21 Oct', '—', 'host-range', false],
+      ['EXP-2026-026', 'Antibiotic MIC — ampicillin vs BB-0142', 'Culture', 'Completed', 6, 6, 3, 'R. Costa', '18 Oct', 'Signed · RFC 3161 ✓', 'MIC', false]
+    ];
+    const rows = data.map(d => ({
+      id: d[0], title: d[1], cat: d[2], status: d[3],
+      catStyle: cats[d[2]], statusStyle: sts[d[3]],
+      steps: d[5] ? d[4] + '/' + d[5] : '—',
+      barStyle: 'height:100%;border-radius:3px;background:' + (d[4] === d[5] && d[5] ? '#2f8a4f' : '#0b66b2') + ';width:' + (d[5] ? Math.round(100 * d[4] / d[5]) : 0) + '%',
+      stars: '★★★★★'.slice(0, d[6]) + '☆☆☆☆☆'.slice(0, 5 - d[6]),
+      ratingLabel: d[6] + ' of 5 stars',
+      owner: d[7], modified: d[8], integrity: d[9], tags: d[10], sel: d[11],
+      rowStyle: d[11] ? 'background:#f2f7fd' : ''
+    }));
+    const scopeDefs = [['mine', 'My entries'], ['group', 'Phage Lab group'], ['all', 'All I can read']];
+    return {
+      showNew: this.props.showNew ?? true,
+      menuOpen: this.state.menuOpen,
+      toggleMenu: () => this.setState({ menuOpen: !this.state.menuOpen }),
+      scopes: scopeDefs.map(s => ({ label: s[1], on: this.state.scope === s[0], cls: this.state.scope === s[0] ? 'tab on' : 'tab', pick: () => this.setState({ scope: s[0] }) })),
+      templates: [
+        { name: 'Plaque assay v3', detail: 'Phage assay · 6 steps · 9 extra fields' },
+        { name: 'One-step growth curve', detail: 'Phage assay · 8 steps · 7 extra fields' },
+        { name: 'Bacterial growth curve', detail: 'Culture · 5 steps · 6 extra fields' },
+        { name: 'Blank entry', detail: 'No template' }
+      ],
+      pinned: rows.slice(0, 3).map(r => ({ id: r.id, title: r.title, cat: r.cat, status: r.status, catStyle: r.catStyle, statusStyle: r.statusStyle })),
+      rows
+    };
+  }
+}
+</script>
+<script>
+/* Minimal standalone renderer for the mockup screens (holes, sc-for, sc-if, events, state). */
+(function () {
+  var RENAME = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'select', 'option', 'colgroup', 'col'];
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (patch) {
+    var next = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = Object.assign({}, this.state, next);
+    if (this.__render) this.__render();
+  };
+  DCLogic.prototype.forceUpdate = function () { if (this.__render) this.__render(); };
+
+  function lookup(path, scope) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$/.test(path) || /^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    var v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+  var ANY = /\{\{\s*([^}]+?)\s*\}\}/g;
+  function interp(str, scope) {
+    return str.replace(ANY, function (_, p) { var v = lookup(p, scope); return v == null ? '' : String(v); });
+  }
+  var BOOL = { checked: 1, selected: 1, disabled: 1, readonly: 1, hidden: 1, required: 1 };
+
+  function renderChildren(node, scope, out) {
+    for (var c = node.firstChild; c; c = c.nextSibling) renderNode(c, scope, out);
+  }
+  function renderNode(node, scope, out) {
+    if (node.nodeType === 3) { out.push(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.localName;
+    if (tag === 'helmet') return;
+    if (tag === 'sc-for') {
+      var list = lookup((node.getAttribute('list') || '').replace(/^\s*\{\{|\}\}\s*$/g, ''), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var i = 0; i < list.length; i++) {
+        var s = Object.create(scope); s[as] = list[i]; s.$index = i;
+        renderChildren(node, s, out);
+      }
+      return;
+    }
+    if (tag === 'sc-if') {
+      var raw = node.getAttribute('value') || '';
+      var m = raw.match(WHOLE);
+      var val = m ? lookup(m[1], scope) : raw;
+      if (val) renderChildren(node, scope, out);
+      return;
+    }
+    var real = tag.indexOf('x-r-') === 0 ? tag.slice(4) : null;
+    var el;
+    if (real) el = document.createElement(real);
+    else if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') el = document.createElementNS(node.namespaceURI, node.tagName);
+    else el = document.createElement(tag);
+    for (var a = 0; a < node.attributes.length; a++) {
+      var at = node.attributes[a];
+      var name = at.name, value = at.value;
+      var whole = value.match(WHOLE);
+      if (/^on[a-z]+$/i.test(name) && whole) {
+        var fn = lookup(whole[1], scope);
+        if (typeof fn === 'function') el.addEventListener(name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      if (whole) {
+        var v = lookup(whole[1], scope);
+        if (BOOL[name.toLowerCase()]) {
+          if (v) el.setAttribute(name, '');
+          if (name === 'checked') el.defaultChecked = !!v;
+          if (name === 'selected') el.defaultSelected = !!v;
+          continue;
+        }
+        if (v == null || v === false && name.indexOf('aria-') !== 0) continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      if (name === 'class' && value === '') continue;
+      try { el.setAttribute(name, interp(value, scope)); } catch (e) {}
+    }
+    var kids = [];
+    renderChildren(node, scope, kids);
+    var host = el.localName === 'template' ? el.content : el;
+    kids.forEach(function (k) { host.appendChild(k); });
+    out.push(el);
+  }
+
+  function boot() {
+    var tplScript = document.querySelector('script[type="text/x-dc-template"]');
+    var logic = document.querySelector('script[data-dc-script]');
+    if (!tplScript || !logic) return;
+    var src = tplScript.textContent;
+    RENAME.forEach(function (t) {
+      src = src.replace(new RegExp('<' + t + '(?=[\\s>/])', 'gi'), '<x-r-' + t).replace(new RegExp('</' + t + '>', 'gi'), '</x-r-' + t + '>');
+    });
+    var holder = document.createElement('div');
+    holder.innerHTML = src;
+    var helmet = holder.querySelector('helmet');
+    if (helmet) Array.prototype.slice.call(helmet.children).forEach(function (n) {
+      var copy = document.createElement(n.localName);
+      for (var i = 0; i < n.attributes.length; i++) copy.setAttribute(n.attributes[i].name, n.attributes[i].value);
+      copy.textContent = n.textContent;
+      document.head.appendChild(copy);
+    });
+    var propsSpec = {};
+    try { propsSpec = JSON.parse(logic.getAttribute('data-props') || '{}'); } catch (e) {}
+    var props = {};
+    Object.keys(propsSpec).forEach(function (k) { if (k[0] !== '$' && 'default' in propsSpec[k]) props[k] = propsSpec[k].default; });
+    var Component = new Function('DCLogic', logic.textContent + '\n;return Component;')(DCLogic);
+    var inst = new Component(props);
+    if (!inst.props) inst.props = props;
+    if (!inst.state) inst.state = {};
+    var mount = document.getElementById('dc-root');
+    inst.__render = function () {
+      var vals = inst.renderVals();
+      var out = [];
+      renderChildren(holder, vals, out);
+      mount.textContent = '';
+      out.forEach(function (n) { mount.appendChild(n); });
+    };
+    inst.__render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>

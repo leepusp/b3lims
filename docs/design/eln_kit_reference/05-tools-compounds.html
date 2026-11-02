@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools — compounds and inventory</title>
+<!-- Biobank ELN mockup: Tools — compounds, structure editor and inventory. Visual reference only; data is fictional. -->
+</head>
+<body>
+<div id="dc-root"></div>
+<script type="text/x-dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f8fa;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2a37}
+a{color:#0b66b2}a:hover{color:#084d87}
+.nv{display:block;padding:9px 10px;border-radius:6px;color:#d6e3ee;text-decoration:none;font-size:14px}
+.nv:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv.on{background:#0b66b2;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #dfe5ec;border-radius:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid #c9d3de;border-radius:6px;background:#fff;color:#1f2a37;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0b66b2;border-color:#0b66b2;color:#fff}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.new{font-size:10.5px;font-weight:700;color:#7a3e00;background:#ffe8cc;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.muted{color:#5b6672}
+.h2{margin:0;font-size:15px;font-weight:700}
+.lbl{font-size:12px;font-weight:600;color:#5b6672}
+.inp{min-height:40px;border:1px solid #c9d3de;border-radius:6px;background:#fff;font:13px Inter,system-ui,sans-serif;color:#1f2a37;padding:0 10px;box-sizing:border-box;width:100%}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.tab{min-height:44px;padding:0 16px;border:0;border-bottom:2px solid transparent;background:none;font:500 14px Inter,system-ui,sans-serif;color:#5b6672;cursor:pointer}
+.tab.on{color:#0b66b2;border-bottom-color:#0b66b2;font-weight:600}
+th{font-size:12px;font-weight:600;color:#5b6672;text-align:left;padding:8px 10px;border-bottom:1px solid #dfe5ec;white-space:nowrap}
+td{font-size:13px;padding:9px 10px;border-bottom:1px solid #edf1f5;vertical-align:middle}
+.cl{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:8px;text-decoration:none;color:#1f2a37;border:1px solid transparent}
+.cl.on{background:#eaf2fb;border-color:#b9d3ee}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 220px; background: #002b45; color: #fff; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="padding: 4px 10px 18px"><div style="font-size: 20px; font-weight: 700">B3</div><div style="font-size: 11px; color: #b9cad8">LIMS</div></div>
+    <a class="nv" href="#">Workspace</a>
+    <a class="nv" href="#">Biobanks</a>
+    <a class="nv" href="#">Collections</a>
+    <a class="nv" href="#">Samples</a>
+    <a class="nv" href="#">Transport</a>
+    <a class="nv on" href="05-tools-compounds.html" aria-current="page">Chemicals &amp; Compounds</a>
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,.15); width: 100%; margin: 10px 0">
+    <a class="nv" href="04-lab-calendar.html">Lab Calendar</a>
+    <a class="nv" href="01-eln-entry-list.html">ELN Notebook</a>
+    <a class="nv" href="03-eln-templates.html" style="padding-left: 24px; font-size: 13px">Templates</a>
+    <a class="nv" href="#">Molecular Registry</a>
+    <a class="nv" href="#">Jupyter Notebooks</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+      <div>
+        <div class="muted" style="font-size: 13px">Tools</div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px"><h1 style="margin: 0; font-size: 26px">Chemicals &amp; Compounds</h1><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: Tools menu</span></sc-if></div>
+      </div>
+      <form aria-label="Import from PubChem" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end">
+        <label class="lbl" style="display: flex; flex-direction: column; gap: 4px; min-width: 260px">Import from PubChem<input class="inp" type="search" placeholder="CAS, CID or name — e.g. 67-66-3"></label>
+        <button class="btn pri" type="button">Search PubChem</button>
+      </form>
+    </header>
+
+    <div role="tablist" aria-label="Tools" style="display: flex; flex-wrap: wrap; border-bottom: 1px solid #dfe5ec">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><button role="tab" type="button" class="{{ t.cls }}" aria-selected="{{ t.on }}" onClick="{{ t.pick }}">{{ t.label }}</button></sc-for>
+    </div>
+
+    <sc-if value="{{ onCompounds }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+        <section class="card" aria-label="Compound list" style="flex: 1 1 240px; max-width: 260px; box-sizing: border-box; padding: 10px; display: flex; flex-direction: column; gap: 4px">
+          <label class="lbl" style="display: flex; flex-direction: column; gap: 4px; padding: 4px 4px 8px">Filter<input class="inp" type="search" placeholder="Name, formula, CAS, hazard"></label>
+          <sc-for list="{{ compounds }}" as="c" hint-placeholder-count="5">
+            <a href="#" class="{{ c.cls }}"><span style="font-weight: 600; font-size: 14px">{{ c.name }}</span><span class="muted mono" style="font-size: 12px">{{ c.meta }}</span><span style="font-size: 11.5px; color: #8f1d1d">{{ c.haz }}</span></a>
+          </sc-for>
+        </section>
+
+        <div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+          <section class="card" aria-labelledby="cmp" style="padding: 20px; display: flex; flex-wrap: wrap; gap: 20px">
+            <figure style="margin: 0; flex: 0 0 220px; height: 200px; border: 1px solid #dfe5ec; border-radius: 8px; background: #fbfcfd; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+              <svg width="150" height="70" viewBox="0 0 150 70" role="img" aria-label="Calcium ion with two chloride ions">
+                <text x="12" y="44" font-family="Inter, sans-serif" font-size="20" fill="#1f2a37">Cl</text><text x="34" y="32" font-family="Inter, sans-serif" font-size="12" fill="#1f2a37">−</text>
+                <text x="58" y="44" font-family="Inter, sans-serif" font-size="20" fill="#1f2a37">Ca</text><text x="84" y="32" font-family="Inter, sans-serif" font-size="12" fill="#1f2a37">2+</text>
+                <text x="104" y="44" font-family="Inter, sans-serif" font-size="20" fill="#1f2a37">Cl</text><text x="126" y="32" font-family="Inter, sans-serif" font-size="12" fill="#1f2a37">−</text>
+              </svg>
+              <figcaption><button class="btn" type="button" onClick="{{ openEditor }}">Open in structure editor</button></figcaption>
+            </figure>
+            <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center">
+                <h2 id="cmp" style="margin: 0; font-size: 20px">Calcium chloride</h2>
+                <div style="display: flex; gap: 8px"><button class="btn" type="button">Edit</button><button class="btn" type="button">Link to entry</button></div>
+              </div>
+              <dl style="margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px">
+                <div><dt class="lbl">Formula</dt><dd style="margin: 3px 0 0; font-size: 13px">CaCl₂</dd></div>
+                <div><dt class="lbl">Molar mass</dt><dd style="margin: 3px 0 0; font-size: 13px">110.98 g/mol</dd></div>
+                <div><dt class="lbl">CAS</dt><dd class="mono" style="margin: 3px 0 0; font-size: 13px">10043-52-4</dd></div>
+                <div><dt class="lbl">PubChem CID</dt><dd class="mono" style="margin: 3px 0 0; font-size: 13px"><a href="#">5284359</a></dd></div>
+                <div><dt class="lbl">IUPAC name</dt><dd style="margin: 3px 0 0; font-size: 13px">calcium dichloride</dd></div>
+                <div><dt class="lbl">Source</dt><dd style="margin: 3px 0 0; font-size: 13px">Imported from PubChem</dd></div>
+              </dl>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; gap: 8px; align-items: center"><span class="lbl">Hazard flags</span><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: 24 flags</span></sc-if></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                  <span class="chip" style="background: #fff1c2; color: #6e4d00">Hazardous to health · eye irritation</span>
+                  <span class="chip" style="background: #eef1f4; color: #5b6672">Not flammable</span>
+                  <span class="chip" style="background: #eef1f4; color: #5b6672">Not controlled</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="stk" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+              <div style="display: flex; gap: 8px; align-items: center"><h2 class="h2" id="stk">Stock</h2><span class="muted" style="font-size: 12px">existing Biobank Chemical records, now pointing to this compound</span></div>
+              <button class="btn" type="button">+ Add container</button>
+            </div>
+            <div style="overflow-x: auto"><table style="width: 100%; border-collapse: collapse; min-width: 640px">
+              <thead><tr><th scope="col">Container</th><th scope="col">Location</th><th scope="col">Quantity</th><th scope="col">Lot</th><th scope="col">Expires</th><th scope="col">Status</th></tr></thead>
+              <tbody>
+                <tr><td style="font-weight: 600">Bottle 500 g, anhydrous</td><td><a href="#">Bldg B › Room 104 › Cabinet C-3 › Shelf 2</a></td><td>320 g</td><td class="mono">L-88214</td><td>Mar 2028</td><td><span class="chip" style="background: #dcf3e3; color: #1d6b3a">Available</span></td></tr>
+                <tr><td style="font-weight: 600">1 M stock solution, 50 mL</td><td><a href="#">Bldg B › Room 104 › Fridge F-02 › Rack A</a></td><td>18 mL</td><td class="mono">sol-2026-09</td><td>Dec 2026</td><td><span class="chip" style="background: #fff1c2; color: #6e4d00">Below minimum</span></td></tr>
+              </tbody>
+            </table></div>
+          </section>
+
+          <section class="card" aria-labelledby="use" style="padding: 20px; display: flex; flex-direction: column; gap: 8px">
+            <h2 class="h2" id="use">Used in ELN entries</h2>
+            <a href="02-eln-entry-view.html" style="font-size: 13px">EXP-2026-031 · Plaque assay — phage ΦB3-07 on X. citri 306</a>
+            <a href="01-eln-entry-list.html" style="font-size: 13px">PRT-2026-004 · Double-layer agar plating, v3</a>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="inv" style="flex: 1 1 260px; max-width: 300px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; gap: 8px; align-items: center"><h2 class="h2" id="inv">Storage tree</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: capacity + history</span></sc-if></div>
+          <p class="muted" style="margin: 0; font-size: 12px">The same StorageLocation tree used by samples.</p>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+            <sc-for list="{{ tree }}" as="n" hint-placeholder-count="8">
+              <li style="{{ n.style }}">
+                <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px"><span style="{{ n.nameStyle }}">{{ n.name }}</span><span class="muted" style="font-size: 12px; white-space: nowrap">{{ n.count }}</span></div>
+                <sc-if value="{{ n.hasCap }}" hint-placeholder-val="{{ false }}"><div style="height: 5px; background: #e6ebf0; border-radius: 3px; overflow: hidden; margin-top: 5px"><div style="{{ n.bar }}"></div></div></sc-if>
+              </li>
+            </sc-for>
+          </ul>
+          <div style="border-top: 1px solid #edf1f5; padding-top: 10px; display: flex; flex-direction: column; gap: 6px">
+            <div class="lbl">Recent moves</div>
+            <div style="font-size: 12px; line-height: 1.45">Rack A moved from Fridge F-01 to F-02 · R. Costa · 28 Oct</div>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ onOther }}" hint-placeholder-val="{{ false }}">
+      <section class="card" style="padding: 28px; display: flex; flex-direction: column; gap: 14px">
+        <h2 class="h2">{{ otherTitle }}</h2>
+        <div style="height: 380px; border: 1px dashed #b8c4d0; border-radius: 8px; background: #fbfcfd; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box" class="muted"><span style="max-width: 520px; font-size: 14px; line-height: 1.6">{{ otherBody }}</span></div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</script>
+<script type="text/x-dc" data-dc-script data-props='{"showNew":{"editor":"boolean","default":true,"section":"Annotations"},"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'compounds' }; }
+  renderVals() {
+    const tab = this.state.tab;
+    const defs = [['compounds', 'Compounds'], ['editor', 'Structure editor'], ['inventory', 'Inventory'], ['cloning', 'OpenCloning'], ['stock', 'Stock movements']];
+    const others = {
+      editor: ['Chemical structure editor', 'Ketcher (Apache-2.0) loads here. Draw a structure, then save it as a new compound or search existing compounds by structure. The SMILES and MOL output are stored on the compound record.'],
+      inventory: ['Inventory', 'Full storage tree with capacity per unit, contents of each unit (samples, chemical containers, equipment) and the move history. Export to Excel.'],
+      cloning: ['OpenCloning', 'OpenCloning (MIT) runs in its own container behind Apache at /opencloning. Simulate Gibson, Golden Gate or restriction–ligation, then save the product to the Molecular Registry and link it to an ELN entry.'],
+      stock: ['Stock movements', 'Existing Biobank ChemicalStockMovement log: receipts, uses and disposals per container.']
+    };
+    const o = others[tab] || ['', ''];
+    const node = (depth, name, count, cap, used, bold) => ({
+      name, count,
+      style: 'padding:7px 0 7px ' + (depth * 14) + 'px;border-bottom:1px solid #f1f4f7',
+      nameStyle: bold ? 'font-weight:600' : '',
+      hasCap: !!cap,
+      bar: cap ? 'height:100%;border-radius:3px;width:' + Math.round(100 * used / cap) + '%;background:' + (used / cap > 0.85 ? '#c2410c' : '#0b66b2') : ''
+    });
+    return {
+      showNew: this.props.showNew ?? true,
+      tabs: defs.map(d => ({ label: d[1], on: tab === d[0], cls: tab === d[0] ? 'tab on' : 'tab', pick: () => this.setState({ tab: d[0] }) })),
+      onCompounds: tab === 'compounds',
+      onOther: tab !== 'compounds',
+      otherTitle: o[0], otherBody: o[1],
+      openEditor: () => this.setState({ tab: 'editor' }),
+      compounds: [
+        { name: 'Calcium chloride', meta: 'CaCl₂ · 10043-52-4', haz: 'Eye irritant', cls: 'cl on' },
+        { name: 'Chloroform', meta: 'CHCl₃ · 67-66-3', haz: 'Toxic · health hazard', cls: 'cl' },
+        { name: 'Ampicillin', meta: 'C₁₆H₁₉N₃O₄S · 69-53-4', haz: 'Antibiotic · sensitizer', cls: 'cl' },
+        { name: 'Agar', meta: '9002-18-0', haz: '', cls: 'cl' },
+        { name: 'Magnesium sulfate', meta: 'MgSO₄ · 7487-88-9', haz: '', cls: 'cl' }
+      ],
+      tree: [
+        node(0, 'Building B', '', 0, 0, true),
+        node(1, 'Room 104 · Phage Lab', '', 0, 0, true),
+        node(2, 'Cabinet C-3', '18 / 24', 24, 18),
+        node(3, 'Shelf 2', '7 / 8', 8, 7),
+        node(2, 'Fridge F-02', '31 / 40', 40, 31),
+        node(3, 'Rack A', '12 / 12', 12, 12),
+        node(2, 'Freezer F-80-02', '214 / 324', 324, 214),
+        node(1, 'Room 106 · Media prep', '', 0, 0, true)
+      ]
+    };
+  }
+}
+</script>
+<script>
+/* Minimal standalone renderer for the mockup screens (holes, sc-for, sc-if, events, state). */
+(function () {
+  var RENAME = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'select', 'option', 'colgroup', 'col'];
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (patch) {
+    var next = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = Object.assign({}, this.state, next);
+    if (this.__render) this.__render();
+  };
+  DCLogic.prototype.forceUpdate = function () { if (this.__render) this.__render(); };
+
+  function lookup(path, scope) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$/.test(path) || /^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    var v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+  var ANY = /\{\{\s*([^}]+?)\s*\}\}/g;
+  function interp(str, scope) {
+    return str.replace(ANY, function (_, p) { var v = lookup(p, scope); return v == null ? '' : String(v); });
+  }
+  var BOOL = { checked: 1, selected: 1, disabled: 1, readonly: 1, hidden: 1, required: 1 };
+
+  function renderChildren(node, scope, out) {
+    for (var c = node.firstChild; c; c = c.nextSibling) renderNode(c, scope, out);
+  }
+  function renderNode(node, scope, out) {
+    if (node.nodeType === 3) { out.push(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.localName;
+    if (tag === 'helmet') return;
+    if (tag === 'sc-for') {
+      var list = lookup((node.getAttribute('list') || '').replace(/^\s*\{\{|\}\}\s*$/g, ''), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var i = 0; i < list.length; i++) {
+        var s = Object.create(scope); s[as] = list[i]; s.$index = i;
+        renderChildren(node, s, out);
+      }
+      return;
+    }
+    if (tag === 'sc-if') {
+      var raw = node.getAttribute('value') || '';
+      var m = raw.match(WHOLE);
+      var val = m ? lookup(m[1], scope) : raw;
+      if (val) renderChildren(node, scope, out);
+      return;
+    }
+    var real = tag.indexOf('x-r-') === 0 ? tag.slice(4) : null;
+    var el;
+    if (real) el = document.createElement(real);
+    else if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') el = document.createElementNS(node.namespaceURI, node.tagName);
+    else el = document.createElement(tag);
+    for (var a = 0; a < node.attributes.length; a++) {
+      var at = node.attributes[a];
+      var name = at.name, value = at.value;
+      var whole = value.match(WHOLE);
+      if (/^on[a-z]+$/i.test(name) && whole) {
+        var fn = lookup(whole[1], scope);
+        if (typeof fn === 'function') el.addEventListener(name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      if (whole) {
+        var v = lookup(whole[1], scope);
+        if (BOOL[name.toLowerCase()]) {
+          if (v) el.setAttribute(name, '');
+          if (name === 'checked') el.defaultChecked = !!v;
+          if (name === 'selected') el.defaultSelected = !!v;
+          continue;
+        }
+        if (v == null || v === false && name.indexOf('aria-') !== 0) continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      if (name === 'class' && value === '') continue;
+      try { el.setAttribute(name, interp(value, scope)); } catch (e) {}
+    }
+    var kids = [];
+    renderChildren(node, scope, kids);
+    var host = el.localName === 'template' ? el.content : el;
+    kids.forEach(function (k) { host.appendChild(k); });
+    out.push(el);
+  }
+
+  function boot() {
+    var tplScript = document.querySelector('script[type="text/x-dc-template"]');
+    var logic = document.querySelector('script[data-dc-script]');
+    if (!tplScript || !logic) return;
+    var src = tplScript.textContent;
+    RENAME.forEach(function (t) {
+      src = src.replace(new RegExp('<' + t + '(?=[\\s>/])', 'gi'), '<x-r-' + t).replace(new RegExp('</' + t + '>', 'gi'), '</x-r-' + t + '>');
+    });
+    var holder = document.createElement('div');
+    holder.innerHTML = src;
+    var helmet = holder.querySelector('helmet');
+    if (helmet) Array.prototype.slice.call(helmet.children).forEach(function (n) {
+      var copy = document.createElement(n.localName);
+      for (var i = 0; i < n.attributes.length; i++) copy.setAttribute(n.attributes[i].name, n.attributes[i].value);
+      copy.textContent = n.textContent;
+      document.head.appendChild(copy);
+    });
+    var propsSpec = {};
+    try { propsSpec = JSON.parse(logic.getAttribute('data-props') || '{}'); } catch (e) {}
+    var props = {};
+    Object.keys(propsSpec).forEach(function (k) { if (k[0] !== '$' && 'default' in propsSpec[k]) props[k] = propsSpec[k].default; });
+    var Component = new Function('DCLogic', logic.textContent + '\n;return Component;')(DCLogic);
+    var inst = new Component(props);
+    if (!inst.props) inst.props = props;
+    if (!inst.state) inst.state = {};
+    var mount = document.getElementById('dc-root');
+    inst.__render = function () {
+      var vals = inst.renderVals();
+      var out = [];
+      renderChildren(holder, vals, out);
+      mount.textContent = '';
+      out.forEach(function (n) { mount.appendChild(n); });
+    };
+    inst.__render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>

@@ -157,6 +157,8 @@ from core.views.internal.samples.views import (
 
 from core.views.internal.samples.bulk_storage_v8148 import sample_bulk_storage_view
 
+from core.views.internal.lab_tools.eln_experimental import eln_experimental_index
+
 urlpatterns = [
     path("samples/bulk-storage/", sample_bulk_storage_view, name="sample_bulk_storage"),
     path(
@@ -429,6 +431,11 @@ urlpatterns = [
     path("ajax/add_tag/", create_tag_ajax_view, name="ajax_add_tag"),
 
     # ---------------- INTERNAL: LAB TOOLS ----------------
+    path(
+        "internal/lab-tools/eln-experimental/",
+        eln_experimental_index,
+        name="eln_experimental_index",
+    ),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),
     path('internal/lab-tools/notebook/api/save/<int:entry_id>/', notebook_views.notebook_save_api, name='notebook_save_api'),

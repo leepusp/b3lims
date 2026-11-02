@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Calendar — equipment booking</title>
+<!-- Biobank ELN mockup: Lab Calendar — equipment booking. Visual reference only; data is fictional. -->
+</head>
+<body>
+<div id="dc-root"></div>
+<script type="text/x-dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f8fa;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2a37}
+a{color:#0b66b2}a:hover{color:#084d87}
+.nv{display:block;padding:9px 10px;border-radius:6px;color:#d6e3ee;text-decoration:none;font-size:14px}
+.nv:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv.on{background:#0b66b2;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #dfe5ec;border-radius:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid #c9d3de;border-radius:6px;background:#fff;color:#1f2a37;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0b66b2;border-color:#0b66b2;color:#fff}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.new{font-size:10.5px;font-weight:700;color:#7a3e00;background:#ffe8cc;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.muted{color:#5b6672}
+.h2{margin:0;font-size:15px;font-weight:700}
+.lbl{font-size:12px;font-weight:600;color:#5b6672}
+.inp{min-height:40px;border:1px solid #c9d3de;border-radius:6px;background:#fff;font:13px Inter,system-ui,sans-serif;color:#1f2a37;padding:0 10px;box-sizing:border-box;width:100%}
+.ev{position:absolute;box-sizing:border-box;border-radius:6px;padding:4px 6px;font-size:11.5px;line-height:1.3;overflow:hidden}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 220px; background: #002b45; color: #fff; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="padding: 4px 10px 18px"><div style="font-size: 20px; font-weight: 700">B3</div><div style="font-size: 11px; color: #b9cad8">LIMS</div></div>
+    <a class="nv" href="#">Workspace</a>
+    <a class="nv" href="#">Biobanks</a>
+    <a class="nv" href="#">Collections</a>
+    <a class="nv" href="#">Samples</a>
+    <a class="nv" href="#">Transport</a>
+    <a class="nv" href="05-tools-compounds.html">Chemicals &amp; Compounds</a>
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,.15); width: 100%; margin: 10px 0">
+    <a class="nv on" href="04-lab-calendar.html" aria-current="page">Lab Calendar</a>
+    <a class="nv" href="01-eln-entry-list.html">ELN Notebook</a>
+    <a class="nv" href="03-eln-templates.html" style="padding-left: 24px; font-size: 13px">Templates</a>
+    <a class="nv" href="#">Molecular Registry</a>
+    <a class="nv" href="#">Jupyter Notebooks</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+      <div>
+        <div class="muted" style="font-size: 13px">Lab tools</div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px"><h1 style="margin: 0; font-size: 26px">Lab Calendar</h1><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: Scheduler</span></sc-if></div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <button class="btn" type="button" aria-label="Previous week">‹</button>
+        <span style="font-weight: 600; font-size: 14px; padding: 0 6px">2 – 6 Nov 2026</span>
+        <button class="btn" type="button" aria-label="Next week">›</button>
+        <div role="group" aria-label="View" style="display: inline-flex; border: 1px solid #c9d3de; border-radius: 6px; overflow: hidden">
+          <button type="button" class="btn" style="border: 0; border-radius: 0">Day</button>
+          <button type="button" class="btn" aria-pressed="true" style="border: 0; border-radius: 0; background: #eaf2fb; color: #0b4f8a; font-weight: 600">Week</button>
+          <button type="button" class="btn" style="border: 0; border-radius: 0">Month</button>
+          <button type="button" class="btn" style="border: 0; border-radius: 0">List</button>
+        </div>
+        <button class="btn" type="button">Export CSV</button>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+      <section class="card" aria-labelledby="res" style="flex: 1 1 220px; max-width: 240px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+        <h2 class="h2" id="res">Bookable equipment</h2>
+        <sc-for list="{{ resources }}" as="r" hint-placeholder-count="4">
+          <label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #edf1f5; cursor: pointer">
+            <input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 1px">
+            <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600"><span style="{{ r.dot }}" aria-hidden="true"></span>{{ r.name }}</span>
+              <span class="muted" style="font-size: 11.5px; line-height: 1.4">{{ r.rules }}</span>
+            </span>
+          </label>
+        </sc-for>
+        <a href="#" style="font-size: 13px">Manage booking rules</a>
+      </section>
+
+      <section class="card" aria-label="Week of 2 November" style="flex: 999 1 460px; min-width: 0; padding: 12px; overflow-x: auto; box-sizing: border-box">
+        <div style="min-width: 560px; display: grid; grid-template-columns: 52px repeat(5, minmax(0, 1fr)); column-gap: 0">
+          <div></div>
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+            <div style="padding: 6px 8px 10px; border-left: 1px solid #edf1f5; font-size: 12px; font-weight: 600; color: #3d4752">{{ d.label }}</div>
+          </sc-for>
+          <div style="position: relative; height: 480px">
+            <sc-for list="{{ hours }}" as="h" hint-placeholder-count="10"><div class="muted" style="{{ h.style }}">{{ h.label }}</div></sc-for>
+          </div>
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+            <div style="position: relative; height: 480px; border-left: 1px solid #edf1f5; background: repeating-linear-gradient(to bottom, #edf1f5 0, #edf1f5 1px, transparent 1px, transparent 48px)">
+              <sc-for list="{{ d.events }}" as="e" hint-placeholder-count="2">
+                <div class="ev" style="{{ e.style }}"><strong>{{ e.time }}</strong><br>{{ e.title }}<br><span>{{ e.who }}</span></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="nb" style="flex: 1 1 280px; max-width: 320px; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+        <h2 class="h2" id="nb">New booking</h2>
+        <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Equipment<select class="inp"><option>Biosafety cabinet BSC-02</option><option>qPCR cycler Q-01</option></select></label>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Date<input class="inp" type="text" value="Thu 5 Nov"></label>
+          <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Start<input class="inp" type="text" value="14:00"></label>
+          <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">End<input class="inp" type="text" value="{{ endLabel }}"></label>
+        </div>
+        <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Linked ELN entry<a href="02-eln-entry-view.html" class="inp" style="display: flex; align-items: center; text-decoration: none; font-weight: 500">EXP-2026-031 · Plaque assay ΦB3-07</a></label>
+        <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Repeat<select class="inp"><option>Weekly on Thursday, 2 times</option><option>Does not repeat</option><option>Daily</option></select></label>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 8px; background: #fbfcfd; border: 1px solid #edf1f5">
+          <div class="lbl" style="text-transform: uppercase; letter-spacing: .06em">Booking rules</div>
+          <sc-for list="{{ checks }}" as="c" hint-placeholder-count="6">
+            <div style="display: flex; gap: 8px; font-size: 12.5px; line-height: 1.4"><span style="{{ c.markStyle }}" aria-hidden="true">{{ c.mark }}</span><span style="{{ c.textStyle }}">{{ c.text }}</span></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ conflict }}" hint-placeholder-val="{{ true }}">
+          <button class="btn" type="button" onClick="{{ fix }}">Use 14:00–15:00 instead</button>
+        </sc-if>
+        <div style="display: flex; gap: 8px">
+          <button class="btn" type="button" style="flex: 1">Cancel</button>
+          <button class="btn pri" type="button" style="flex: 1" disabled="{{ conflict }}">Book 2 sessions</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</script>
+<script type="text/x-dc" data-dc-script data-props='{"showNew":{"editor":"boolean","default":true,"section":"Annotations"},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { end: 16 }; }
+  renderVals() {
+    const H = 48, startHour = 8;
+    const res = {
+      bsc: { name: 'Biosafety cabinet BSC-02', bg: '#d5f2ee', fg: '#0b5c52', bd: '#1a9c8c', rules: 'Max 3 h · 4 open bookings per user · cancel 2 h before · BSL2 training required' },
+      qpcr: { name: 'qPCR cycler Q-01', bg: '#dbe9fb', fg: '#0b4f8a', bd: '#2f7fd1', rules: 'Max 4 h · 14-day window · no overlap' },
+      reader: { name: 'Plate reader PR-01', bg: '#ece3fb', fg: '#5a2d91', bd: '#8457c7', rules: 'Max 2 h · overlap allowed (shared stacker)' },
+      auto: { name: 'Autoclave A-1', bg: '#fde7d2', fg: '#8a4300', bd: '#d9731f', rules: 'Daily 08:00 slot · recurring series' }
+    };
+    const fmt = h => (Math.floor(h) < 10 ? '0' : '') + Math.floor(h) + ':' + (h % 1 ? '30' : '00');
+    const ev = (r, s, e, title, who, lane, lanes, draft) => {
+      const x = res[r];
+      const left = lanes === 2 ? (lane === 0 ? '2px' : 'calc(50% + 1px)') : '2px';
+      const width = lanes === 2 ? 'calc(50% - 3px)' : 'calc(100% - 4px)';
+      const border = draft ? '2px dashed ' + x.bd : '1px solid ' + x.bd;
+      return { time: fmt(s) + '–' + fmt(e), title, who, style: 'top:' + ((s - startHour) * H + 1) + 'px;height:' + ((e - s) * H - 2) + 'px;left:' + left + ';width:' + width + ';background:' + (draft ? '#fff' : x.bg) + ';color:' + x.fg + ';border:' + border };
+    };
+    const end = this.state.end;
+    const conflict = end > 15;
+    const days = [
+      { label: 'Mon 2', events: [ev('auto', 8, 9, 'Autoclave cycle', 'Media prep', 0, 1), ev('qpcr', 9, 11, 'qPCR · phage load', 'R. Costa', 0, 1), ev('bsc', 14, 16, 'BSC-02 · EXP-2026-031', 'A. Lima', 0, 1)] },
+      { label: 'Tue 3', events: [ev('auto', 8, 9, 'Autoclave cycle', 'Media prep', 0, 1), ev('bsc', 9, 11, 'BSC-02 · plating', 'A. Lima', 0, 2), ev('reader', 10, 12, 'Plate reader · EXP-2026-030', 'M. Souza', 1, 2)] },
+      { label: 'Wed 4', events: [ev('auto', 8, 9, 'Autoclave cycle', 'Media prep', 0, 1), ev('bsc', 10, 12, 'BSC-02', 'M. Souza', 0, 1), ev('qpcr', 13, 17, 'qPCR · 96 isolates', 'R. Costa', 0, 1)] },
+      { label: 'Thu 5', events: [ev('auto', 8, 9, 'Autoclave cycle', 'Media prep', 0, 1), ev('reader', 9, 10.5, 'Plate reader', 'A. Lima', 0, 1), ev('bsc', 14, end, 'New booking · EXP-2026-031', 'A. Lima', 0, conflict ? 2 : 1, true)].concat(conflict ? [ev('bsc', 15, 16, 'BSC-02', 'R. Costa', 1, 2)] : [ev('bsc', 15, 16, 'BSC-02', 'R. Costa', 0, 1)]) },
+      { label: 'Fri 6', events: [ev('auto', 8, 9, 'Autoclave cycle', 'Media prep', 0, 1), ev('qpcr', 9, 12, 'qPCR · ΦB3-07 genes', 'M. Souza', 0, 1)] }
+    ];
+    const hours = Array.from({ length: 10 }, (_, i) => ({ label: fmt(startHour + i), style: 'position:absolute;right:8px;top:' + (i * H - 6) + 'px;font-size:11px' }));
+    const ok = { mark: '✓', markStyle: 'color:#1d6b3a;font-weight:700', textStyle: '' };
+    const bad = { mark: '✕', markStyle: 'color:#a11d1d;font-weight:700', textStyle: 'color:#8f1d1d;font-weight:600' };
+    const checks = [
+      Object.assign({ text: 'You can book this equipment (BSL2 training on file)' }, ok),
+      Object.assign({ text: 'Within the 14-day booking window' }, ok),
+      Object.assign({ text: 'Duration ' + (end - 14) + ' h ≤ 3 h maximum' }, ok),
+      Object.assign({ text: 'Open bookings: 2 + 2 new ≤ 4 per user' }, ok),
+      conflict ? Object.assign({ text: 'Overlaps R. Costa, 15:00–16:00 (overlap not allowed)' }, bad) : Object.assign({ text: 'No overlap with other bookings' }, ok),
+      Object.assign({ text: 'Cancellable until 12:00 on the day' }, ok)
+    ];
+    return {
+      showNew: this.props.showNew ?? true,
+      resources: ['bsc', 'qpcr', 'reader', 'auto'].map(k => ({ name: res[k].name, rules: res[k].rules, dot: 'width:10px;height:10px;border-radius:3px;flex:none;background:' + res[k].bd })),
+      days, hours, checks, conflict,
+      endLabel: fmt(end),
+      fix: () => this.setState({ end: 15 })
+    };
+  }
+}
+</script>
+<script>
+/* Minimal standalone renderer for the mockup screens (holes, sc-for, sc-if, events, state). */
+(function () {
+  var RENAME = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'select', 'option', 'colgroup', 'col'];
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (patch) {
+    var next = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = Object.assign({}, this.state, next);
+    if (this.__render) this.__render();
+  };
+  DCLogic.prototype.forceUpdate = function () { if (this.__render) this.__render(); };
+
+  function lookup(path, scope) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$/.test(path) || /^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    var v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+  var ANY = /\{\{\s*([^}]+?)\s*\}\}/g;
+  function interp(str, scope) {
+    return str.replace(ANY, function (_, p) { var v = lookup(p, scope); return v == null ? '' : String(v); });
+  }
+  var BOOL = { checked: 1, selected: 1, disabled: 1, readonly: 1, hidden: 1, required: 1 };
+
+  function renderChildren(node, scope, out) {
+    for (var c = node.firstChild; c; c = c.nextSibling) renderNode(c, scope, out);
+  }
+  function renderNode(node, scope, out) {
+    if (node.nodeType === 3) { out.push(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.localName;
+    if (tag === 'helmet') return;
+    if (tag === 'sc-for') {
+      var list = lookup((node.getAttribute('list') || '').replace(/^\s*\{\{|\}\}\s*$/g, ''), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var i = 0; i < list.length; i++) {
+        var s = Object.create(scope); s[as] = list[i]; s.$index = i;
+        renderChildren(node, s, out);
+      }
+      return;
+    }
+    if (tag === 'sc-if') {
+      var raw = node.getAttribute('value') || '';
+      var m = raw.match(WHOLE);
+      var val = m ? lookup(m[1], scope) : raw;
+      if (val) renderChildren(node, scope, out);
+      return;
+    }
+    var real = tag.indexOf('x-r-') === 0 ? tag.slice(4) : null;
+    var el;
+    if (real) el = document.createElement(real);
+    else if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') el = document.createElementNS(node.namespaceURI, node.tagName);
+    else el = document.createElement(tag);
+    for (var a = 0; a < node.attributes.length; a++) {
+      var at = node.attributes[a];
+      var name = at.name, value = at.value;
+      var whole = value.match(WHOLE);
+      if (/^on[a-z]+$/i.test(name) && whole) {
+        var fn = lookup(whole[1], scope);
+        if (typeof fn === 'function') el.addEventListener(name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      if (whole) {
+        var v = lookup(whole[1], scope);
+        if (BOOL[name.toLowerCase()]) {
+          if (v) el.setAttribute(name, '');
+          if (name === 'checked') el.defaultChecked = !!v;
+          if (name === 'selected') el.defaultSelected = !!v;
+          continue;
+        }
+        if (v == null || v === false && name.indexOf('aria-') !== 0) continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      if (name === 'class' && value === '') continue;
+      try { el.setAttribute(name, interp(value, scope)); } catch (e) {}
+    }
+    var kids = [];
+    renderChildren(node, scope, kids);
+    var host = el.localName === 'template' ? el.content : el;
+    kids.forEach(function (k) { host.appendChild(k); });
+    out.push(el);
+  }
+
+  function boot() {
+    var tplScript = document.querySelector('script[type="text/x-dc-template"]');
+    var logic = document.querySelector('script[data-dc-script]');
+    if (!tplScript || !logic) return;
+    var src = tplScript.textContent;
+    RENAME.forEach(function (t) {
+      src = src.replace(new RegExp('<' + t + '(?=[\\s>/])', 'gi'), '<x-r-' + t).replace(new RegExp('</' + t + '>', 'gi'), '</x-r-' + t + '>');
+    });
+    var holder = document.createElement('div');
+    holder.innerHTML = src;
+    var helmet = holder.querySelector('helmet');
+    if (helmet) Array.prototype.slice.call(helmet.children).forEach(function (n) {
+      var copy = document.createElement(n.localName);
+      for (var i = 0; i < n.attributes.length; i++) copy.setAttribute(n.attributes[i].name, n.attributes[i].value);
+      copy.textContent = n.textContent;
+      document.head.appendChild(copy);
+    });
+    var propsSpec = {};
+    try { propsSpec = JSON.parse(logic.getAttribute('data-props') || '{}'); } catch (e) {}
+    var props = {};
+    Object.keys(propsSpec).forEach(function (k) { if (k[0] !== '$' && 'default' in propsSpec[k]) props[k] = propsSpec[k].default; });
+    var Component = new Function('DCLogic', logic.textContent + '\n;return Component;')(DCLogic);
+    var inst = new Component(props);
+    if (!inst.props) inst.props = props;
+    if (!inst.state) inst.state = {};
+    var mount = document.getElementById('dc-root');
+    inst.__render = function () {
+      var vals = inst.renderVals();
+      var out = [];
+      renderChildren(holder, vals, out);
+      mount.textContent = '';
+      out.forEach(function (n) { mount.appendChild(n); });
+    };
+    inst.__render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>

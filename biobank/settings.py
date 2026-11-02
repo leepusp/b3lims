@@ -316,3 +316,14 @@ BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL = os.environ.get(
 
 FILE_UPLOAD_PERMISSIONS = 0o660
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o2770
+
+
+# B3 ELN Experimental — restricted pilot.
+# Disabled unless explicitly enabled in the Django WSGI environment.
+from os import environ as _b3_eln_environ
+
+B3_ELN_EXPERIMENTAL_ENABLED = (
+    _b3_eln_environ.get(
+        "B3_ELN_EXPERIMENTAL_ENABLED", ""
+    ).strip() == "1"
+)

@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELN entry EXP-2026-031</title>
+<!-- Biobank ELN mockup: ELN entry view (EXP-2026-031). Visual reference only; data is fictional. -->
+</head>
+<body>
+<div id="dc-root"></div>
+<script type="text/x-dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f8fa;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2a37}
+a{color:#0b66b2}a:hover{color:#084d87}
+.nv{display:block;padding:9px 10px;border-radius:6px;color:#d6e3ee;text-decoration:none;font-size:14px}
+.nv:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv.on{background:#0b66b2;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #dfe5ec;border-radius:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid #c9d3de;border-radius:6px;background:#fff;color:#1f2a37;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0b66b2;border-color:#0b66b2;color:#fff}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.new{font-size:10.5px;font-weight:700;color:#7a3e00;background:#ffe8cc;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.old{font-size:10.5px;font-weight:700;color:#24506e;background:#e4eef6;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.muted{color:#5b6672}
+.h2{margin:0;font-size:15px;font-weight:700}
+.lbl{font-size:12px;font-weight:600;color:#5b6672}
+.inp{min-height:40px;border:1px solid #c9d3de;border-radius:6px;background:#fff;font:13px Inter,system-ui,sans-serif;color:#1f2a37;padding:0 10px;box-sizing:border-box;width:100%}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.tab{min-height:40px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:500 13px Inter,system-ui,sans-serif;color:#5b6672;cursor:pointer}
+.tab.on{color:#0b66b2;border-bottom-color:#0b66b2;font-weight:600}
+th{font-size:12px;font-weight:600;color:#5b6672;text-align:left;padding:8px 10px;border-bottom:1px solid #dfe5ec}
+td{font-size:13px;padding:8px 10px;border-bottom:1px solid #edf1f5}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 220px; background: #002b45; color: #fff; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="padding: 4px 10px 18px"><div style="font-size: 20px; font-weight: 700">B3</div><div style="font-size: 11px; color: #b9cad8">LIMS</div></div>
+    <a class="nv" href="#">Workspace</a>
+    <a class="nv" href="#">Biobanks</a>
+    <a class="nv" href="#">Collections</a>
+    <a class="nv" href="#">Samples</a>
+    <a class="nv" href="#">Transport</a>
+    <a class="nv" href="05-tools-compounds.html">Chemicals &amp; Compounds</a>
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,.15); width: 100%; margin: 10px 0">
+    <a class="nv" href="04-lab-calendar.html">Lab Calendar</a>
+    <a class="nv on" href="01-eln-entry-list.html" aria-current="page">ELN Notebook</a>
+    <a class="nv" href="03-eln-templates.html" style="padding-left: 24px; font-size: 13px">Templates</a>
+    <a class="nv" href="#">Molecular Registry</a>
+    <a class="nv" href="#">Jupyter Notebooks</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <div style="font-size: 13px"><a href="01-eln-entry-list.html">ELN Notebook</a> <span class="muted">/ Phage assay / EXP-2026-031</span></div>
+
+    <section class="card" aria-label="Entry header" style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 420px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <span class="mono muted" style="font-size: 13px">EXP-2026-031</span>
+            <span class="chip" style="background: #d5f2ee; color: #0b5c52">Phage assay</span>
+            <label style="display: inline-flex; align-items: center; gap: 6px"><span style="position: absolute; left: -9999px">Status</span>
+              <select style="{{ statusStyle }}; border: 0; border-radius: 999px; padding: 4px 10px; font: 600 12px Inter, system-ui, sans-serif; min-height: 28px" onChange="{{ setStatus }}">
+                <option>Draft</option><option selected="{{ isRunning }}">Running</option><option>Needs review</option><option>Completed</option>
+              </select></label>
+            <span style="color: #8a5a00; letter-spacing: 1px" aria-label="Rating 4 of 5">★★★★☆</span>
+            <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}"><span class="chip" style="background: #fdecec; color: #8f1d1d">Locked by A. Lima</span></sc-if>
+            <sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: custom ID, category, status, rating, lock</span></sc-if>
+          </div>
+          <h1 style="margin: 0; font-size: 24px; line-height: 1.25">Plaque assay — phage ΦB3-07 on <i>X. citri</i> 306</h1>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <span class="chip" style="background: #eef1f4; color: #3d4752">#BSL2</span>
+            <span class="chip" style="background: #eef1f4; color: #3d4752">#host-range</span>
+            <span class="chip" style="background: #eef1f4; color: #3d4752">#titration</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; justify-content: flex-end; flex: 1 1 360px">
+          <button class="btn pri" type="button" disabled="{{ locked }}">Edit</button>
+          <button class="btn" type="button" onClick="{{ toggleLock }}">{{ lockLabel }}</button>
+          <button class="btn" type="button">Duplicate</button>
+          <button class="btn" type="button">Request signature</button>
+          <button class="btn" type="button">Timestamp</button>
+          <button class="btn" type="button">Permissions</button>
+          <button class="btn" type="button">Export ▾</button>
+          <button class="btn" type="button" aria-label="Unpin">★ Pinned</button>
+        </div>
+      </div>
+      <dl style="margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding-top: 14px; border-top: 1px solid #edf1f5">
+        <div><dt class="lbl">Owner</dt><dd style="margin: 4px 0 0; font-size: 13px">A. Lima</dd></div>
+        <div><dt class="lbl">From template</dt><dd style="margin: 4px 0 0; font-size: 13px"><a href="03-eln-templates.html">Plaque assay v3</a></dd></div>
+        <div><dt class="lbl">Experiment date</dt><dd style="margin: 4px 0 0; font-size: 13px">2 Nov 2026</dd></div>
+        <div><dt class="lbl">Last change</dt><dd style="margin: 4px 0 0; font-size: 13px">today 14:12 · A. Lima</dd></div>
+        <div><dt class="lbl">Can read</dt><dd style="margin: 4px 0 0; font-size: 13px">Phage Lab group + M. Souza</dd></div>
+        <div><dt class="lbl">Can write</dt><dd style="margin: 4px 0 0; font-size: 13px">Owner only</dd></div>
+      </dl>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+
+        <section class="card" aria-labelledby="xf" style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap">
+            <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="xf">Extra fields</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: metadata.extra_fields</span></sc-if></div>
+            <span class="muted" style="font-size: 12px">Schema inherited from “Plaque assay v3” · 2 required fields filled</span>
+          </div>
+          <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px">
+            <legend class="lbl" style="text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px">Culture conditions</legend>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Host strain (sample) *<a href="#" class="inp" style="display: flex; align-items: center; text-decoration: none; font-weight: 500">B3-S-000142 · X. citri 306</a></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Medium<select class="inp"><option>TSB</option><option>LB</option><option>NYG</option></select></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Temperature (°C)<input class="inp" type="number" value="28"></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Incubation (h)<input class="inp" type="number" value="18"></label>
+            </div>
+          </fieldset>
+          <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px">
+            <legend class="lbl" style="text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px">Assay</legend>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Phage lysate (entry) *<a href="#" class="inp" style="display: flex; align-items: center; text-decoration: none; font-weight: 500">EXP-2026-024 · lysate prep</a></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Dilution series<input class="inp" type="text" value="10⁻¹ to 10⁻⁸"></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Volume per plate (µL)<input class="inp" type="number" value="100"></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Soft agar (%)<input class="inp" type="number" value="0.5"></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Performed by (user)<select class="inp"><option>A. Lima</option><option>M. Souza</option></select></label>
+              <div class="lbl" role="radiogroup" aria-label="Biosafety level" style="display: flex; flex-direction: column; gap: 4px">Biosafety level<div style="display: flex; gap: 14px; min-height: 40px; align-items: center; font-weight: 500; color: #1f2a37"><label><input type="radio" name="bsl"> BSL1</label><label><input type="radio" name="bsl" checked> BSL2</label></div></div>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Additive (compound)<a href="05-tools-compounds.html" class="inp" style="display: flex; align-items: center; text-decoration: none; font-weight: 500">CaCl₂ (10 mM)</a></label>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Plate photo (upload)<a href="#att" class="inp" style="display: flex; align-items: center; text-decoration: none; font-weight: 500">plates_10-6.jpg</a></label>
+            </div>
+          </fieldset>
+        </section>
+
+        <section class="card" aria-labelledby="st" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap">
+            <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="st">Steps</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: steps + groups + deadlines</span></sc-if></div>
+            <div style="display: flex; align-items: center; gap: 10px; min-width: 220px"><div style="flex: 1; height: 8px; background: #e6ebf0; border-radius: 4px; overflow: hidden"><div style="{{ progressStyle }}"></div></div><span style="font-size: 13px; font-weight: 600">{{ doneCount }} of 6 done</span></div>
+          </div>
+          <sc-for list="{{ stepGroups }}" as="g" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <div class="lbl" style="text-transform: uppercase; letter-spacing: .06em; padding: 6px 0">{{ g.name }}</div>
+              <sc-for list="{{ g.steps }}" as="s" hint-placeholder-count="3">
+                <label style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 8px; border-radius: 6px; {{ s.rowStyle }}">
+                  <input type="checkbox" checked="{{ s.done }}" onChange="{{ s.toggle }}" style="width: 18px; height: 18px">
+                  <span style="flex: 1; font-size: 14px; {{ s.textStyle }}">{{ s.body }}</span>
+                  <span class="muted" style="font-size: 12px; white-space: nowrap">{{ s.meta }}</span>
+                </label>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="display: flex; gap: 8px"><input class="inp" type="text" placeholder="Add a step…" aria-label="New step" style="flex: 1"><button class="btn" type="button">Add</button></div>
+        </section>
+
+        <section class="card" aria-labelledby="ct" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="ct">Notebook content</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="old">already in Biobank: content + blocks</span></sc-if></div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6">Lysate EXP-2026-024 was serially diluted in SM buffer and 100 µL of each dilution mixed with 200 µL of an overnight <i>X. citri</i> 306 culture before plating in 0.5% top agar. Plates were read after 18 h at 28 °C.</p>
+          <div style="border: 1px solid #dfe5ec; border-radius: 8px; overflow: hidden">
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #fbfcfd; border-bottom: 1px solid #dfe5ec"><span style="font-size: 13px; font-weight: 600">Table block · Plaque counts</span><span class="muted" style="font-size: 12px">titer = mean count ÷ 0.1 mL × dilution factor</span></div>
+            <div style="overflow-x: auto"><table style="width: 100%; border-collapse: collapse">
+              <thead><tr><th scope="col">Dilution</th><th scope="col">Plate A</th><th scope="col">Plate B</th><th scope="col">Mean</th><th scope="col">Titer (PFU/mL)</th></tr></thead>
+              <tbody>
+                <tr><td>10⁻⁵</td><td>TNTC</td><td>TNTC</td><td>—</td><td>—</td></tr>
+                <tr style="background: #f2f7fd"><td>10⁻⁶</td><td>142</td><td>138</td><td>140</td><td style="font-weight: 600">1.4 × 10⁹</td></tr>
+                <tr><td>10⁻⁷</td><td>15</td><td>13</td><td>14</td><td>1.4 × 10⁹</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap">
+            <div style="flex: 1 1 220px; height: 120px; border-radius: 8px; border: 1px dashed #b8c4d0; background: repeating-linear-gradient(45deg, #f4f6f9, #f4f6f9 10px, #eef1f5 10px, #eef1f5 20px); display: flex; align-items: center; justify-content: center; font-size: 12px" class="muted">Image block · plates_10-6.jpg</div>
+            <div style="flex: 1 1 220px; height: 120px; border-radius: 8px; border: 1px dashed #b8c4d0; background: #fbfcfd; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px" class="muted"><strong style="color: #1f2a37">Jupyter notebook</strong>titer_analysis.ipynb</div>
+          </div>
+        </section>
+
+        <section class="card" id="att" aria-labelledby="at" style="padding: 20px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="at">Attachments</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: SHA-256 hash, immutable after signing</span></sc-if></div>
+          <div style="overflow-x: auto"><table style="width: 100%; border-collapse: collapse; min-width: 620px">
+            <thead><tr><th scope="col">File</th><th scope="col">Type</th><th scope="col">Size</th><th scope="col">SHA-256</th><th scope="col">Uploaded</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#">plates_10-6.jpg</a></td><td>Image</td><td>2.4 MB</td><td class="mono" style="font-size: 12px">9f2c…a71e</td><td class="muted">A. Lima · 14:05</td></tr>
+              <tr><td><a href="#">plate_reader_export.xlsx</a></td><td>Result</td><td>88 kB</td><td class="mono" style="font-size: 12px">41bd…03c9</td><td class="muted">A. Lima · 13:58</td></tr>
+            </tbody>
+          </table></div>
+        </section>
+      </div>
+
+      <aside aria-label="Links and history" style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+        <section class="card" aria-labelledby="lk" style="padding: 18px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: space-between; align-items: center"><h2 class="h2" id="lk">Linked</h2><button class="btn" type="button" style="min-height: 32px; padding: 0 10px">+ Link</button></div>
+          <sc-for list="{{ links }}" as="l" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid #edf1f5">
+              <div style="display: flex; align-items: center; gap: 6px"><span class="lbl" style="text-transform: uppercase; letter-spacing: .06em">{{ l.kind }}</span><sc-if value="{{ l.isNew }}" hint-placeholder-val="{{ false }}"><span class="new">eLabFTW</span></sc-if></div>
+              <a href="{{ l.href }}" style="font-size: 13px; font-weight: 600; text-decoration: none">{{ l.name }}</a>
+              <span class="muted" style="font-size: 12px">{{ l.note }}</span>
+            </div>
+          </sc-for>
+        </section>
+
+        <section class="card" aria-labelledby="ig" style="padding: 18px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="ig">Integrity</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW</span></sc-if></div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Lock</span><strong>{{ lockState }}</strong></div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Signatures</span><strong>0 of 1 · M. Souza (review)</strong></div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Trusted timestamp</span><strong class="muted">Not yet · RFC 3161</strong></div>
+          <p class="muted" style="margin: 0; font-size: 12px; line-height: 1.5">Signing locks the body, steps and attachments; later changes need a new revision.</p>
+        </section>
+
+        <section class="card" aria-label="Activity" style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 12px">
+          <div role="tablist" style="display: flex; border-bottom: 1px solid #dfe5ec">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button role="tab" type="button" class="{{ t.cls }}" aria-selected="{{ t.on }}" onClick="{{ t.pick }}">{{ t.label }}</button></sc-for>
+          </div>
+          <sc-if value="{{ tabComments }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <div style="font-size: 13px; line-height: 1.5"><strong>M. Souza</strong> <span class="muted">· 11:20</span><br>Can you repeat 10⁻⁷ in triplicate before I sign?</div>
+              <div style="font-size: 13px; line-height: 1.5"><strong>A. Lima</strong> <span class="muted">· 11:42</span><br>Yes, plates go in tonight; step added.</div>
+              <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Add a comment<textarea class="inp" rows="2" style="padding: 8px 10px; min-height: 64px"></textarea></label>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tabRevisions }}" hint-placeholder-val="{{ false }}">
+            <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{ revisions }}" as="r" hint-placeholder-count="4"><li style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px"><span><strong>{{ r.n }}</strong> · {{ r.who }}</span><span class="muted">{{ r.when }} · <a href="#">compare</a></span></li></sc-for>
+            </ol>
+          </sc-if>
+          <sc-if value="{{ tabChangelog }}" hint-placeholder-val="{{ false }}">
+            <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{ changelog }}" as="c" hint-placeholder-count="4"><li style="font-size: 13px; line-height: 1.45"><span class="muted">{{ c.when }} · {{ c.who }}</span><br>{{ c.what }}</li></sc-for>
+            </ol>
+          </sc-if>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</script>
+<script type="text/x-dc" data-dc-script data-props='{"showNew":{"editor":"boolean","default":true,"section":"Annotations"},"$preview":{"width":1440,"height":1880}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { done: [true, true, true, false, false, false], locked: true, tab: 'comments', status: 'Running' };
+  }
+  renderVals() {
+    const st = this.state;
+    const steps = [
+      ['Preparation', 'Grow overnight host culture (TSB, 28 °C)', 'done 1 Nov 18:10'],
+      ['Preparation', 'Prepare 10-fold dilutions of lysate in SM buffer', 'done 2 Nov 09:30'],
+      ['Preparation', 'Melt 0.5% top agar and hold at 48 °C', 'done 2 Nov 09:45'],
+      ['Plating and reading', 'Plate 10⁻⁵ to 10⁻⁸ in duplicate', 'due today 16:00'],
+      ['Plating and reading', 'Repeat 10⁻⁷ in triplicate (reviewer request)', 'due 3 Nov · notify'],
+      ['Plating and reading', 'Count plaques and record titer', 'due 3 Nov']
+    ];
+    const items = steps.map((s, i) => ({
+      group: s[0], body: s[1], meta: st.done[i] ? s[2].replace(/^due.*$/, 'done just now') : s[2], done: st.done[i],
+      rowStyle: st.done[i] ? 'background:#f6faf7' : '',
+      textStyle: st.done[i] ? 'color:#5b6672;text-decoration:line-through' : '',
+      toggle: () => { const d = st.done.slice(); d[i] = !d[i]; this.setState({ done: d }); }
+    }));
+    const groups = ['Preparation', 'Plating and reading'].map(g => ({ name: g, steps: items.filter(x => x.group === g) }));
+    const doneCount = st.done.filter(Boolean).length;
+    const sts = { 'Draft': 'background:#eef1f4;color:#3d4752', 'Running': 'background:#dbe9fb;color:#0b4f8a', 'Needs review': 'background:#fff1c2;color:#6e4d00', 'Completed': 'background:#dcf3e3;color:#1d6b3a' };
+    const tabDefs = [['comments', 'Comments (2)'], ['revisions', 'Revisions (7)'], ['changelog', 'Changelog']];
+    return {
+      showNew: this.props.showNew ?? true,
+      stepGroups: groups,
+      doneCount,
+      progressStyle: 'height:100%;border-radius:4px;background:' + (doneCount === 6 ? '#2f8a4f' : '#0b66b2') + ';width:' + Math.round(100 * doneCount / 6) + '%',
+      locked: st.locked,
+      lockLabel: st.locked ? 'Unlock' : 'Lock',
+      lockState: st.locked ? 'Locked by A. Lima, 14:12' : 'Unlocked',
+      toggleLock: () => this.setState({ locked: !st.locked }),
+      isRunning: st.status === 'Running',
+      statusStyle: sts[st.status],
+      setStatus: (e) => this.setState({ status: e.target.value }),
+      tabs: tabDefs.map(t => ({ label: t[1], on: st.tab === t[0], cls: st.tab === t[0] ? 'tab on' : 'tab', pick: () => this.setState({ tab: t[0] }) })),
+      tabComments: st.tab === 'comments',
+      tabRevisions: st.tab === 'revisions',
+      tabChangelog: st.tab === 'changelog',
+      links: [
+        { kind: 'Sample', name: 'B3-S-000142 · X. citri 306', note: 'Snapshot saved at link time · Freezer F-80-02 / Box 7 / C4', href: '#', isNew: false },
+        { kind: 'Molecular sequence', name: 'ΦB3-07 draft genome (42.8 kb)', note: 'Molecular Registry', href: '#', isNew: false },
+        { kind: 'Chemical (stock)', name: 'TSB broth · lot 2291', note: 'Chemicals · 340 g left', href: '05-tools-compounds.html', isNew: false },
+        { kind: 'Compound', name: 'Calcium chloride (CaCl₂)', note: 'Identity record · PubChem import', href: '05-tools-compounds.html', isNew: true },
+        { kind: 'Entries', name: 'PRT-2026-004 · Double-layer agar plating v3', note: 'and EXP-2026-024 · lysate prep', href: '01-eln-entry-list.html', isNew: true },
+        { kind: 'Booking', name: 'Biosafety cabinet BSC-02', note: 'Mon 2 Nov, 14:00–16:00', href: '04-lab-calendar.html', isNew: true }
+      ],
+      revisions: [
+        { n: 'v7', who: 'A. Lima', when: 'today 14:12' },
+        { n: 'v6', who: 'A. Lima', when: 'today 11:44' },
+        { n: 'v5', who: 'M. Souza', when: 'today 11:20' },
+        { n: 'v4', who: 'A. Lima', when: '1 Nov 18:12' }
+      ],
+      changelog: [
+        { when: '14:12', who: 'A. Lima', what: 'Locked the entry' },
+        { when: '11:44', who: 'A. Lima', what: 'Added step “Repeat 10⁻⁷ in triplicate”' },
+        { when: '11:30', who: 'A. Lima', what: 'Status: Draft → Running' },
+        { when: '09:02', who: 'A. Lima', what: 'Can read: added M. Souza' }
+      ]
+    };
+  }
+}
+</script>
+<script>
+/* Minimal standalone renderer for the mockup screens (holes, sc-for, sc-if, events, state). */
+(function () {
+  var RENAME = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'select', 'option', 'colgroup', 'col'];
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (patch) {
+    var next = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = Object.assign({}, this.state, next);
+    if (this.__render) this.__render();
+  };
+  DCLogic.prototype.forceUpdate = function () { if (this.__render) this.__render(); };
+
+  function lookup(path, scope) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$/.test(path) || /^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    var v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+  var ANY = /\{\{\s*([^}]+?)\s*\}\}/g;
+  function interp(str, scope) {
+    return str.replace(ANY, function (_, p) { var v = lookup(p, scope); return v == null ? '' : String(v); });
+  }
+  var BOOL = { checked: 1, selected: 1, disabled: 1, readonly: 1, hidden: 1, required: 1 };
+
+  function renderChildren(node, scope, out) {
+    for (var c = node.firstChild; c; c = c.nextSibling) renderNode(c, scope, out);
+  }
+  function renderNode(node, scope, out) {
+    if (node.nodeType === 3) { out.push(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.localName;
+    if (tag === 'helmet') return;
+    if (tag === 'sc-for') {
+      var list = lookup((node.getAttribute('list') || '').replace(/^\s*\{\{|\}\}\s*$/g, ''), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var i = 0; i < list.length; i++) {
+        var s = Object.create(scope); s[as] = list[i]; s.$index = i;
+        renderChildren(node, s, out);
+      }
+      return;
+    }
+    if (tag === 'sc-if') {
+      var raw = node.getAttribute('value') || '';
+      var m = raw.match(WHOLE);
+      var val = m ? lookup(m[1], scope) : raw;
+      if (val) renderChildren(node, scope, out);
+      return;
+    }
+    var real = tag.indexOf('x-r-') === 0 ? tag.slice(4) : null;
+    var el;
+    if (real) el = document.createElement(real);
+    else if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') el = document.createElementNS(node.namespaceURI, node.tagName);
+    else el = document.createElement(tag);
+    for (var a = 0; a < node.attributes.length; a++) {
+      var at = node.attributes[a];
+      var name = at.name, value = at.value;
+      var whole = value.match(WHOLE);
+      if (/^on[a-z]+$/i.test(name) && whole) {
+        var fn = lookup(whole[1], scope);
+        if (typeof fn === 'function') el.addEventListener(name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      if (whole) {
+        var v = lookup(whole[1], scope);
+        if (BOOL[name.toLowerCase()]) {
+          if (v) el.setAttribute(name, '');
+          if (name === 'checked') el.defaultChecked = !!v;
+          if (name === 'selected') el.defaultSelected = !!v;
+          continue;
+        }
+        if (v == null || v === false && name.indexOf('aria-') !== 0) continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      if (name === 'class' && value === '') continue;
+      try { el.setAttribute(name, interp(value, scope)); } catch (e) {}
+    }
+    var kids = [];
+    renderChildren(node, scope, kids);
+    var host = el.localName === 'template' ? el.content : el;
+    kids.forEach(function (k) { host.appendChild(k); });
+    out.push(el);
+  }
+
+  function boot() {
+    var tplScript = document.querySelector('script[type="text/x-dc-template"]');
+    var logic = document.querySelector('script[data-dc-script]');
+    if (!tplScript || !logic) return;
+    var src = tplScript.textContent;
+    RENAME.forEach(function (t) {
+      src = src.replace(new RegExp('<' + t + '(?=[\\s>/])', 'gi'), '<x-r-' + t).replace(new RegExp('</' + t + '>', 'gi'), '</x-r-' + t + '>');
+    });
+    var holder = document.createElement('div');
+    holder.innerHTML = src;
+    var helmet = holder.querySelector('helmet');
+    if (helmet) Array.prototype.slice.call(helmet.children).forEach(function (n) {
+      var copy = document.createElement(n.localName);
+      for (var i = 0; i < n.attributes.length; i++) copy.setAttribute(n.attributes[i].name, n.attributes[i].value);
+      copy.textContent = n.textContent;
+      document.head.appendChild(copy);
+    });
+    var propsSpec = {};
+    try { propsSpec = JSON.parse(logic.getAttribute('data-props') || '{}'); } catch (e) {}
+    var props = {};
+    Object.keys(propsSpec).forEach(function (k) { if (k[0] !== '$' && 'default' in propsSpec[k]) props[k] = propsSpec[k].default; });
+    var Component = new Function('DCLogic', logic.textContent + '\n;return Component;')(DCLogic);
+    var inst = new Component(props);
+    if (!inst.props) inst.props = props;
+    if (!inst.state) inst.state = {};
+    var mount = document.getElementById('dc-root');
+    inst.__render = function () {
+      var vals = inst.renderVals();
+      var out = [];
+      renderChildren(holder, vals, out);
+      mount.textContent = '';
+      out.forEach(function (n) { mount.appendChild(n); });
+    };
+    inst.__render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>

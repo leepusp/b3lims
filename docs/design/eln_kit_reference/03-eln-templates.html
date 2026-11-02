@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELN templates and settings</title>
+<!-- Biobank ELN mockup: Templates, extra fields, categories and statuses. Visual reference only; data is fictional. -->
+</head>
+<body>
+<div id="dc-root"></div>
+<script type="text/x-dc-template">
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f8fa;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2a37}
+a{color:#0b66b2}a:hover{color:#084d87}
+.nv{display:block;padding:9px 10px;border-radius:6px;color:#d6e3ee;text-decoration:none;font-size:14px}
+.nv:hover{background:rgba(255,255,255,.08);color:#fff}
+.nv.on{background:#0b66b2;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #dfe5ec;border-radius:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid #c9d3de;border-radius:6px;background:#fff;color:#1f2a37;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0b66b2;border-color:#0b66b2;color:#fff}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.new{font-size:10.5px;font-weight:700;color:#7a3e00;background:#ffe8cc;border-radius:4px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.muted{color:#5b6672}
+.h2{margin:0;font-size:15px;font-weight:700}
+.lbl{font-size:12px;font-weight:600;color:#5b6672}
+.inp{min-height:40px;border:1px solid #c9d3de;border-radius:6px;background:#fff;font:13px Inter,system-ui,sans-serif;color:#1f2a37;padding:0 10px;box-sizing:border-box;width:100%}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+th{font-size:12px;font-weight:600;color:#5b6672;text-align:left;padding:8px 10px;border-bottom:1px solid #dfe5ec;white-space:nowrap}
+td{font-size:13px;padding:8px 10px;border-bottom:1px solid #edf1f5;vertical-align:middle}
+.tl{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;text-decoration:none;color:#1f2a37;border:1px solid transparent}
+.tl.on{background:#eaf2fb;border-color:#b9d3ee}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 220px; background: #002b45; color: #fff; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="padding: 4px 10px 18px"><div style="font-size: 20px; font-weight: 700">B3</div><div style="font-size: 11px; color: #b9cad8">LIMS</div></div>
+    <a class="nv" href="#">Workspace</a>
+    <a class="nv" href="#">Biobanks</a>
+    <a class="nv" href="#">Collections</a>
+    <a class="nv" href="#">Samples</a>
+    <a class="nv" href="#">Transport</a>
+    <a class="nv" href="05-tools-compounds.html">Chemicals &amp; Compounds</a>
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,.15); width: 100%; margin: 10px 0">
+    <a class="nv" href="04-lab-calendar.html">Lab Calendar</a>
+    <a class="nv" href="01-eln-entry-list.html">ELN Notebook</a>
+    <a class="nv on" href="03-eln-templates.html" aria-current="page" style="padding-left: 24px; font-size: 13px">Templates</a>
+    <a class="nv" href="#">Molecular Registry</a>
+    <a class="nv" href="#">Jupyter Notebooks</a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+      <div>
+        <div style="font-size: 13px"><a href="01-eln-entry-list.html">ELN Notebook</a> <span class="muted">/ Templates</span></div>
+        <h1 style="margin: 4px 0 0; font-size: 26px">Templates</h1>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+        <sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: templates are records, not code</span></sc-if>
+        <button class="btn" type="button">Import .eln</button>
+        <button class="btn pri" type="button">+ New template</button>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+      <section class="card" aria-label="Template list" style="flex: 1 1 240px; max-width: 280px; padding: 10px; display: flex; flex-direction: column; gap: 4px">
+        <label class="lbl" style="display: flex; flex-direction: column; gap: 4px; padding: 4px 4px 8px">Filter<input class="inp" type="search" placeholder="Search templates"></label>
+        <sc-for list="{{ templates }}" as="t" hint-placeholder-count="6">
+          <a href="#" class="{{ t.cls }}"><span style="font-weight: 600; font-size: 14px">{{ t.name }}</span><span class="muted" style="font-size: 12px">{{ t.meta }}</span></a>
+        </sc-for>
+      </section>
+
+      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+        <section class="card" aria-labelledby="gen" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+          <h2 class="h2" id="gen">Plaque assay v3</h2>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Default category<select class="inp"><option>Phage assay</option><option>Culture</option></select></label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Default status<select class="inp"><option>Draft</option><option>Running</option></select></label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Entries can read<select class="inp"><option>Research group</option><option>Owner only</option><option>Institution</option></select></label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Entries can write<select class="inp"><option>Owner only</option><option>Research group</option></select></label>
+          </div>
+          <p class="muted" style="margin: 0; font-size: 12px">New entries copy the body, the 6 steps, the field schema and these permissions. Owned by Phage Lab group · used by 23 entries.</p>
+        </section>
+
+        <section class="card" aria-labelledby="ef" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2" id="ef">Extra fields</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW: field builder</span></sc-if></div>
+            <div style="display: flex; gap: 8px"><button class="btn" type="button">+ Group</button><button class="btn" type="button">Edit JSON</button></div>
+          </div>
+          <div style="overflow-x: auto"><table style="width: 100%; border-collapse: collapse; min-width: 720px">
+            <thead><tr><th scope="col"><span style="position: absolute; left: -9999px">Order</span></th><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Group</th><th scope="col">Options / target</th><th scope="col">Required</th><th scope="col">Blank on duplicate</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ fields }}" as="f" hint-placeholder-count="8">
+                <tr>
+                  <td class="muted" aria-hidden="true" style="cursor: grab; width: 20px">⋮⋮</td>
+                  <td style="font-weight: 600">{{ f.name }}</td>
+                  <td><span class="chip mono" style="background: #eef1f4; color: #3d4752; font-weight: 500">{{ f.type }}</span></td>
+                  <td>{{ f.group }}</td>
+                  <td class="muted">{{ f.opts }}</td>
+                  <td>{{ f.req }}</td>
+                  <td>{{ f.blank }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table></div>
+
+          <form aria-label="Add field" style="display: grid; grid-template-columns: 2fr 1.4fr 1.4fr 2fr auto; gap: 10px; align-items: end; padding: 14px; border: 1px dashed #b8c4d0; border-radius: 8px; background: #fbfcfd">
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Field name<input class="inp" type="text" value="{{ draftName }}" onChange="{{ setName }}"></label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Type
+              <select class="inp" onChange="{{ setType }}">
+                <sc-for list="{{ types }}" as="ty" hint-placeholder-count="6"><option value="{{ ty.value }}" selected="{{ ty.sel }}">{{ ty.value }}</option></sc-for>
+              </select>
+            </label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">Group<select class="inp"><option>Assay</option><option>Culture conditions</option></select></label>
+            <label class="lbl" style="display: flex; flex-direction: column; gap: 4px">{{ optLabel }}<input class="inp" type="text" value="{{ optValue }}"></label>
+            <button class="btn pri" type="button" onClick="{{ addField }}">Add field</button>
+          </form>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 18px">
+          <section class="card" aria-labelledby="cat" style="flex: 1 1 320px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; justify-content: space-between; align-items: center"><div style="display: flex; gap: 8px; align-items: center"><h2 class="h2" id="cat">Categories · Phage Lab</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW</span></sc-if></div><button class="btn" type="button" style="min-height: 32px">+ Add</button></div>
+            <sc-for list="{{ cats }}" as="c" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid #edf1f5">
+                <span class="muted" aria-hidden="true" style="cursor: grab">⋮⋮</span>
+                <span style="{{ c.dot }}" aria-hidden="true"></span>
+                <span style="flex: 1; font-size: 14px; font-weight: 500">{{ c.name }}</span>
+                <span class="muted mono" style="font-size: 12px">{{ c.prefix }}</span>
+                <span class="muted" style="font-size: 12px; min-width: 70px; text-align: right">{{ c.count }}</span>
+              </div>
+            </sc-for>
+          </section>
+          <section class="card" aria-labelledby="sts" style="flex: 1 1 320px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; justify-content: space-between; align-items: center"><div style="display: flex; gap: 8px; align-items: center"><h2 class="h2" id="sts">Statuses · Phage Lab</h2><sc-if value="{{ showNew }}" hint-placeholder-val="{{ true }}"><span class="new">eLabFTW</span></sc-if></div><button class="btn" type="button" style="min-height: 32px">+ Add</button></div>
+            <sc-for list="{{ statuses }}" as="s" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid #edf1f5">
+                <span class="muted" aria-hidden="true" style="cursor: grab">⋮⋮</span>
+                <span class="chip" style="{{ s.style }}">{{ s.name }}</span>
+                <span class="muted" style="flex: 1; font-size: 12px">{{ s.rule }}</span>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</script>
+<script type="text/x-dc" data-dc-script data-props='{"showNew":{"editor":"boolean","default":true,"section":"Annotations"},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { added: [], draftName: 'Plaques picked for purification', draftType: 'number' };
+  }
+  renderVals() {
+    const st = this.state;
+    const base = [
+      ['Host strain', 'items → Sample', 'Culture conditions', 'Biobank samples, Xanthomonas only', 'yes', 'no'],
+      ['Medium', 'select', 'Culture conditions', 'TSB, LB, NYG', 'no', 'no'],
+      ['Temperature (°C)', 'number', 'Culture conditions', 'unit °C', 'no', 'no'],
+      ['Incubation (h)', 'number', 'Culture conditions', 'unit h', 'no', 'no'],
+      ['Phage lysate', 'experiments', 'Assay', 'ELN entries, category Phage assay', 'yes', 'yes'],
+      ['Dilution series', 'text', 'Assay', '—', 'no', 'no'],
+      ['Performed by', 'users', 'Assay', 'Phage Lab members', 'no', 'yes'],
+      ['Biosafety level', 'radio', 'Assay', 'BSL1, BSL2', 'yes', 'no'],
+      ['Additive', 'compounds', 'Assay', 'Compound records', 'no', 'no']
+    ];
+    const opts = { select: ['Options', 'comma-separated'], radio: ['Options', 'comma-separated'], number: ['Unit', 'plaques'], text: ['Placeholder', '—'], date: ['Default', 'today'], items: ['Target', 'Sample'], experiments: ['Target', 'ELN entries'], compounds: ['Target', 'Compound records'], users: ['Target', 'Group members'], uploads: ['Accept', '.jpg, .png'], checkbox: ['Default', 'unchecked'], url: ['Placeholder', 'https://'] };
+    const typeList = ['text', 'number', 'select', 'radio', 'checkbox', 'date', 'url', 'users', 'items', 'experiments', 'compounds', 'uploads'];
+    const fields = base.concat(st.added).map(f => ({ name: f[0], type: f[1], group: f[2], opts: f[3], req: f[4], blank: f[5] }));
+    const o = opts[st.draftType] || ['Options', ''];
+    return {
+      showNew: this.props.showNew ?? true,
+      templates: [
+        { name: 'Plaque assay v3', meta: 'Phage assay · 9 fields · 23 entries', cls: 'tl on' },
+        { name: 'One-step growth curve', meta: 'Phage assay · 7 fields · 11 entries', cls: 'tl' },
+        { name: 'Bacterial growth curve', meta: 'Culture · 6 fields · 18 entries', cls: 'tl' },
+        { name: 'Antibiotic MIC', meta: 'Culture · 8 fields · 9 entries', cls: 'tl' },
+        { name: 'Plasmid miniprep', meta: 'Molecular · 5 fields · 14 entries', cls: 'tl' },
+        { name: 'Phage DNA extraction', meta: 'Molecular · 6 fields · 4 entries', cls: 'tl' }
+      ],
+      fields,
+      types: typeList.map(t => ({ value: t, sel: t === st.draftType })),
+      draftName: st.draftName,
+      setName: (e) => this.setState({ draftName: e.target.value }),
+      setType: (e) => this.setState({ draftType: e.target.value }),
+      optLabel: o[0], optValue: o[1],
+      addField: () => this.setState({ added: st.added.concat([[st.draftName || 'New field', st.draftType, 'Assay', o[1], 'no', 'no']]) }),
+      cats: [
+        { name: 'Phage assay', prefix: 'EXP-{yyyy}-{n}', count: '31 entries', dot: 'width:14px;height:14px;border-radius:4px;background:#1a9c8c' },
+        { name: 'Culture', prefix: 'EXP-{yyyy}-{n}', count: '12 entries', dot: 'width:14px;height:14px;border-radius:4px;background:#d9731f' },
+        { name: 'Molecular', prefix: 'MOL-{yyyy}-{n}', count: '12 entries', dot: 'width:14px;height:14px;border-radius:4px;background:#2f7fd1' },
+        { name: 'Protocol', prefix: 'PRT-{yyyy}-{n}', count: '4 entries', dot: 'width:14px;height:14px;border-radius:4px;background:#8457c7' }
+      ],
+      statuses: [
+        { name: 'Draft', style: 'background:#eef1f4;color:#3d4752', rule: 'Default for new entries' },
+        { name: 'Running', style: 'background:#dbe9fb;color:#0b4f8a', rule: 'Shown on the Workspace dashboard' },
+        { name: 'Needs review', style: 'background:#fff1c2;color:#6e4d00', rule: 'Notifies the group coordinator' },
+        { name: 'Completed', style: 'background:#dcf3e3;color:#1d6b3a', rule: 'Requires all steps done' },
+        { name: 'Failed', style: 'background:#fdecec;color:#8f1d1d', rule: 'Keeps the entry visible in reports' }
+      ]
+    };
+  }
+}
+</script>
+<script>
+/* Minimal standalone renderer for the mockup screens (holes, sc-for, sc-if, events, state). */
+(function () {
+  var RENAME = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'select', 'option', 'colgroup', 'col'];
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (patch) {
+    var next = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = Object.assign({}, this.state, next);
+    if (this.__render) this.__render();
+  };
+  DCLogic.prototype.forceUpdate = function () { if (this.__render) this.__render(); };
+
+  function lookup(path, scope) {
+    path = path.trim();
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    if (/^'.*'$/.test(path) || /^".*"$/.test(path)) return path.slice(1, -1);
+    var parts = path.split('.');
+    var v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+  var ANY = /\{\{\s*([^}]+?)\s*\}\}/g;
+  function interp(str, scope) {
+    return str.replace(ANY, function (_, p) { var v = lookup(p, scope); return v == null ? '' : String(v); });
+  }
+  var BOOL = { checked: 1, selected: 1, disabled: 1, readonly: 1, hidden: 1, required: 1 };
+
+  function renderChildren(node, scope, out) {
+    for (var c = node.firstChild; c; c = c.nextSibling) renderNode(c, scope, out);
+  }
+  function renderNode(node, scope, out) {
+    if (node.nodeType === 3) { out.push(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.localName;
+    if (tag === 'helmet') return;
+    if (tag === 'sc-for') {
+      var list = lookup((node.getAttribute('list') || '').replace(/^\s*\{\{|\}\}\s*$/g, ''), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var i = 0; i < list.length; i++) {
+        var s = Object.create(scope); s[as] = list[i]; s.$index = i;
+        renderChildren(node, s, out);
+      }
+      return;
+    }
+    if (tag === 'sc-if') {
+      var raw = node.getAttribute('value') || '';
+      var m = raw.match(WHOLE);
+      var val = m ? lookup(m[1], scope) : raw;
+      if (val) renderChildren(node, scope, out);
+      return;
+    }
+    var real = tag.indexOf('x-r-') === 0 ? tag.slice(4) : null;
+    var el;
+    if (real) el = document.createElement(real);
+    else if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') el = document.createElementNS(node.namespaceURI, node.tagName);
+    else el = document.createElement(tag);
+    for (var a = 0; a < node.attributes.length; a++) {
+      var at = node.attributes[a];
+      var name = at.name, value = at.value;
+      var whole = value.match(WHOLE);
+      if (/^on[a-z]+$/i.test(name) && whole) {
+        var fn = lookup(whole[1], scope);
+        if (typeof fn === 'function') el.addEventListener(name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      if (whole) {
+        var v = lookup(whole[1], scope);
+        if (BOOL[name.toLowerCase()]) {
+          if (v) el.setAttribute(name, '');
+          if (name === 'checked') el.defaultChecked = !!v;
+          if (name === 'selected') el.defaultSelected = !!v;
+          continue;
+        }
+        if (v == null || v === false && name.indexOf('aria-') !== 0) continue;
+        el.setAttribute(name, String(v));
+        continue;
+      }
+      if (name === 'class' && value === '') continue;
+      try { el.setAttribute(name, interp(value, scope)); } catch (e) {}
+    }
+    var kids = [];
+    renderChildren(node, scope, kids);
+    var host = el.localName === 'template' ? el.content : el;
+    kids.forEach(function (k) { host.appendChild(k); });
+    out.push(el);
+  }
+
+  function boot() {
+    var tplScript = document.querySelector('script[type="text/x-dc-template"]');
+    var logic = document.querySelector('script[data-dc-script]');
+    if (!tplScript || !logic) return;
+    var src = tplScript.textContent;
+    RENAME.forEach(function (t) {
+      src = src.replace(new RegExp('<' + t + '(?=[\\s>/])', 'gi'), '<x-r-' + t).replace(new RegExp('</' + t + '>', 'gi'), '</x-r-' + t + '>');
+    });
+    var holder = document.createElement('div');
+    holder.innerHTML = src;
+    var helmet = holder.querySelector('helmet');
+    if (helmet) Array.prototype.slice.call(helmet.children).forEach(function (n) {
+      var copy = document.createElement(n.localName);
+      for (var i = 0; i < n.attributes.length; i++) copy.setAttribute(n.attributes[i].name, n.attributes[i].value);
+      copy.textContent = n.textContent;
+      document.head.appendChild(copy);
+    });
+    var propsSpec = {};
+    try { propsSpec = JSON.parse(logic.getAttribute('data-props') || '{}'); } catch (e) {}
+    var props = {};
+    Object.keys(propsSpec).forEach(function (k) { if (k[0] !== '$' && 'default' in propsSpec[k]) props[k] = propsSpec[k].default; });
+    var Component = new Function('DCLogic', logic.textContent + '\n;return Component;')(DCLogic);
+    var inst = new Component(props);
+    if (!inst.props) inst.props = props;
+    if (!inst.state) inst.state = {};
+    var mount = document.getElementById('dc-root');
+    inst.__render = function () {
+      var vals = inst.renderVals();
+      var out = [];
+      renderChildren(holder, vals, out);
+      mount.textContent = '';
+      out.forEach(function (n) { mount.appendChild(n); });
+    };
+    inst.__render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>
