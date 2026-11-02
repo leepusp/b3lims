@@ -263,6 +263,21 @@ class PrivateDraftRepository:
                     "ELN revision integrity mismatch."
                 )
 
+        content_format = payload.get(
+            "content_format", "plain_text"
+        )
+
+        if content_format not in (
+            "plain_text",
+            "rich_html_v1",
+        ):
+            raise DraftValidationError(
+                "Invalid ELN revision content format."
+            )
+
+        # Compatibility only: do not rewrite historical files.
+        payload["content_format"] = content_format
+
         return payload
 
     def latest(self, user, project, entry_id):
@@ -300,6 +315,7 @@ class PrivateDraftRepository:
         sample_ids,
         chemical_ids,
         material_authorizer,
+        content_format="plain_text",
     ):
         username = _owner(user)
         project = _project(project)
@@ -310,6 +326,20 @@ class PrivateDraftRepository:
         ).strip()
 
         content = _text(content)
+
+        if content_format not in (
+            "plain_text",
+            "rich_html_v1",
+        ):
+            raise DraftValidationError(
+                "Unsupported ELN content format."
+            )
+
+        if content_format == "rich_html_v1":
+            from core.services.eln_rich_content import (
+                sanitize_rich_content,
+            )
+            content = sanitize_rich_content(content)
         protocol = _text(protocol)
         results = _text(results)
 
@@ -341,6 +371,7 @@ class PrivateDraftRepository:
             "status": "draft",
             "title": title,
             "content": content,
+            "content_format": content_format,
             "protocol": protocol,
             "results": results,
             "sample_ids": samples,
@@ -388,6 +419,7 @@ class PrivateDraftRepository:
         sample_ids=(),
         chemical_ids=(),
         material_authorizer=None,
+        content_format="plain_text",
     ):
         username = _owner(user)
         project = _project(project)
@@ -404,6 +436,7 @@ class PrivateDraftRepository:
             sample_ids=sample_ids,
             chemical_ids=chemical_ids,
             material_authorizer=material_authorizer,
+            content_format=content_format,
         )
 
     def revise(
@@ -420,6 +453,7 @@ class PrivateDraftRepository:
         sample_ids=(),
         chemical_ids=(),
         material_authorizer=None,
+        content_format=None,
     ):
         if (
             isinstance(expected_revision, bool)
@@ -432,6 +466,11 @@ class PrivateDraftRepository:
         latest = self.latest(
             user, project, entry_id
         )
+
+        if content_format is None:
+            content_format = latest.get(
+                "content_format", "plain_text"
+            )
 
         if latest["revision"] != expected_revision:
             raise DraftConflict(
@@ -455,6 +494,7 @@ class PrivateDraftRepository:
             sample_ids=sample_ids,
             chemical_ids=chemical_ids,
             material_authorizer=material_authorizer,
+            content_format=content_format,
         )
 
     def list_entries(self, user, project):

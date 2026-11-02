@@ -1,4 +1,5 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
 {% block content %}
 <div class="container-fluid py-3" style="max-width:1250px">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -32,6 +33,9 @@
       <form id="eln-editor-form" method="post" action="{{ action_url }}"
             class="card shadow-sm">
         {% csrf_token %}
+        <input type="hidden"
+               name="content_format"
+               value="{{ values.content_format|default:'plain_text' }}">
         <div class="card-body">
           {% if entry %}
           <input type="hidden" name="expected_revision"
@@ -65,7 +69,7 @@
                  required maxlength="300">
 
           <label class="form-label fw-semibold"
-                 for="eln-content">Objective and observations</label>
+                 for="eln-content">Main Text — scientific document</label>
           <textarea id="eln-content" name="content" rows="6"
                     class="form-control mb-3">{{ values.content }}</textarea>
 
@@ -185,4 +189,17 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{% static 'vendor/suneditor/3.4.1/suneditor.min.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script defer
+        src="{% static 'vendor/suneditor/3.4.1/suneditor.min.js' %}"></script>
+<script defer
+        src="{% static 'internal/lab_tools/eln_scientific_editor_v1.js' %}"></script>
 {% endblock %}

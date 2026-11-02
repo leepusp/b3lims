@@ -110,17 +110,30 @@ def _authorized_links(user, sample_ids, chemical_ids):
 
 
 def _values(request, project=None):
+    content_format = request.POST.get(
+        "content_format", "plain_text"
+    )
+
+    if content_format not in (
+        "plain_text",
+        "rich_html_v1",
+    ):
+        raise DraftValidationError(
+            "Unsupported ELN content format."
+        )
+
     return {
         "project": _project(
             project if project is not None
             else request.POST.get("project", "")
         ),
         "title": request.POST.get("title", ""),
+        "content_format": content_format,
         "content": (
             sanitize_rich_content(
                 request.POST.get("content", "")
             )
-            if request.POST.get("content_format") == "rich_html_v1"
+            if content_format == "rich_html_v1"
             else request.POST.get("content", "")
         ),
         "protocol": request.POST.get("protocol", ""),
@@ -157,6 +170,16 @@ def _editor(request, *, entry=None, values=None):
         "sample_ids": [],
         "chemical_ids": [],
     }
+
+    values = dict(values)
+    values.setdefault(
+        "content_format", "plain_text"
+    )
+
+    if values["content_format"] == "rich_html_v1":
+        values["content"] = sanitize_rich_content(
+            values.get("content", "")
+        )
 
     sample_q = request.GET.get(
         "sample_q", ""
@@ -360,6 +383,7 @@ def eln_private_detail(request, project, entry_id):
             material_authorizer=_authorized_links,
             title=values["title"],
             content=values["content"],
+            content_format=values["content_format"],
             protocol=values["protocol"],
             results=values["results"],
             sample_ids=values["sample_ids"],
