@@ -386,8 +386,10 @@ class UserHomeLabToolsStorage(Storage):
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
 
+        created_by_this_call = False
         try:
             descriptor = os.open(destination, flags, 0o600)
+            created_by_this_call = True
             with os.fdopen(descriptor, "wb") as target:
                 for chunk in content.chunks():
                     target.write(chunk)
@@ -397,10 +399,11 @@ class UserHomeLabToolsStorage(Storage):
                 relative_name,
             )
         except Exception:
-            try:
-                destination.unlink(missing_ok=True)
-            except OSError:
-                pass
+            if created_by_this_call:
+                try:
+                    destination.unlink(missing_ok=True)
+                except OSError:
+                    pass
             raise
 
         return str(name)

@@ -37,6 +37,7 @@ USERNAME_RE = re.compile(
 LAB_DIRECTORY_RE = re.compile(
     r"^(?:"
     r"eln/entries/[0-9]+/attachments"
+    r"|eln/projects/[A-Za-z0-9][A-Za-z0-9_.-]{0,79}/entries/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/revisions"
     r"|jupyter/notebooks/notebook_[0-9]+"
     r"|jupyter/jobs/notebook_[0-9]+"
     r"|jupyter/jobs/notebook_[0-9]+/[A-Za-z0-9_-]+"
@@ -51,6 +52,7 @@ LAB_DIRECTORY_RE = re.compile(
 LAB_FILE_RE = re.compile(
     r"^(?:"
     r"eln/entries/[0-9]+/attachments/[A-Za-z0-9_.-]+"
+    r"|eln/projects/[A-Za-z0-9][A-Za-z0-9_.-]{0,79}/entries/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/revisions/r[0-9]{6}\.json"
     r"|jupyter/notebooks/notebook_[0-9]+/notebook\.ipynb"
     r"|molecular/records/[0-9]+/[A-Za-z0-9_.-]+"
     r"|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+"
