@@ -228,11 +228,105 @@ def _get_queryset(request):
 
 
 
-def _export_import_template(file_format):
+
+def _template_preset_from_request(request):
+    """Resolve optional institutional defaults with authorization."""
+
+    from core.models import Biobank, Collection
+    from core.permissions.biobanks import (
+        editable_biobanks_for_user,
+    )
+    from core.permissions.samples import (
+        editable_sample_collections_for_user,
+    )
+
+    selected = {
+        "biobank": request.GET.get("biobank_id", "").strip(),
+        "collection": request.GET.get("collection_id", "").strip(),
+    }
+
+    if not any(selected.values()):
+        raise ValueError(
+            "Select a Biobank or Collection for this template."
+        )
+
+    presets = {}
+
+    options = (
+        (
+            "biobank",
+            Biobank,
+            editable_biobanks_for_user,
+        ),
+        (
+            "collection",
+            Collection,
+            editable_sample_collections_for_user,
+        ),
+    )
+
+    for field, model, permission_queryset in options:
+        value = selected[field]
+
+        if not value:
+            continue
+
+        if (
+            not value.isascii()
+            or not value.isdecimal()
+            or len(value) > 19
+            or int(value) < 1
+        ):
+            raise ValueError(
+                "Invalid institutional selection."
+            )
+
+        entity = (
+            permission_queryset(request.user)
+            .filter(pk=int(value))
+            .first()
+        )
+
+        if entity is None:
+            raise PermissionDenied(
+                "You cannot use the selected "
+                "institutional entity."
+            )
+
+        # Intake currently resolves entities by name.
+        # Refuse ambiguous names instead of selecting
+        # the wrong institutional record.
+        if model.objects.filter(
+            name__iexact=entity.name,
+            is_active=True,
+        ).count() != 1:
+            raise ValueError(
+                f"Ambiguous {field} name. "
+                "Use the generic template and resolve "
+                "the institution during review."
+            )
+
+        presets[field] = entity.name
+
+    return presets
+
+
+def _export_import_template(file_format, presets=None):
     """Generate the official B3 LIMS intake template."""
 
     columns = list(COLUMN_ALIASES)
     filename = "b3lims_sample_import_template_v8151"
+
+    if presets:
+        filename += "_preconfigured"
+
+    preset_rows = [
+        {
+            column: presets.get(column, "")
+            for column in columns
+        }
+        for _ in range(100)
+    ] if presets else []
 
     if file_format == "csv":
         response = HttpResponse(
@@ -245,6 +339,13 @@ def _export_import_template(file_format):
 
         writer = csv.writer(response)
         writer.writerow(columns)
+
+        for row in preset_rows:
+            writer.writerow([
+                row[column]
+                for column in columns
+            ])
+
         return response
 
     if file_format != "xlsx":
@@ -302,7 +403,10 @@ def _export_import_template(file_format):
     ]
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        pd.DataFrame(columns=columns).to_excel(
+        pd.DataFrame(
+            preset_rows,
+            columns=columns,
+        ).to_excel(
             writer,
             sheet_name="samples",
             index=False,
@@ -363,7 +467,12 @@ def _export_import_template(file_format):
                 34,
             )
 
-            for row in range(2, 202):
+            # Preset templates contain exactly 100 entry rows.
+            # Avoid creating additional formatted empty rows.
+            # Generic templates retain 200 optional entry rows.
+            last_row = 101 if presets else 201
+
+            for row in range(2, last_row + 1):
                 ws.cell(row, position).number_format = "@"
 
         type_column = ws.cell(
@@ -451,7 +560,22 @@ def export_samples_table(request):
         )
 
     if schema == "template":
-        return _export_import_template(file_format)
+        presets = None
+
+        if params.get("preset") == "1":
+            try:
+                presets = _template_preset_from_request(request)
+            except ValueError as exc:
+                return HttpResponse(
+                    str(exc),
+                    status=400,
+                    content_type="text/plain",
+                )
+
+        return _export_import_template(
+            file_format,
+            presets=presets,
+        )
 
     if schema not in ["standard", "full"]:
         schema = "standard"

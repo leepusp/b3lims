@@ -4238,15 +4238,20 @@ def samples_network_view(request):
 @login_required
 def sample_import_view(request):
     """
-    Upload a CSV/XLSX table and stage its rows as SampleIntakeRecord objects.
-    The records can later be used to pre-fill the normal sample registration form.
+    Stage uploaded Sample tables and persist validation failures.
+    No Sample is registered during upload.
     """
     if request.method == "POST":
         upload = request.FILES.get("sample_table")
 
         if not upload:
-            messages.error(request, "Please select a CSV or Excel file.")
+            messages.error(
+                request,
+                "Please select a CSV or Excel file.",
+            )
             return redirect("samples_import")
+
+        batch = None
 
         try:
             batch = SampleImportBatch.objects.create(
@@ -4260,22 +4265,90 @@ def sample_import_view(request):
 
             messages.success(
                 request,
-                f"Table imported: {batch.total_rows} row(s), "
-                f"{batch.valid_rows} ready, {batch.invalid_rows} with errors."
+                f"Table validated: {batch.total_rows} row(s), "
+                f"{batch.valid_rows} ready, "
+                f"{batch.invalid_rows} with errors.",
             )
-            return redirect("samples_import_batch", batch_id=batch.id)
 
-        except Exception as e:
-            messages.error(request, f"Error importing sample table: {e}")
-            return redirect("samples_import")
+        except ValueError as exc:
+            error_text = str(exc).strip()[:500]
+
+            if not error_text:
+                error_text = "Invalid Sample table."
+
+            if batch is not None:
+                batch.status = "failed"
+                batch.notes = error_text
+                batch.save(
+                    update_fields=[
+                        "status",
+                        "notes",
+                        "updated_at",
+                    ]
+                )
+
+            messages.error(
+                request,
+                f"Import validation failed: {error_text}",
+            )
+
+        except Exception:
+            logger.exception(
+                "Sample table import failed."
+            )
+
+            error_text = (
+                "The table could not be processed. "
+                "Verify its format and contact support "
+                "if the problem persists."
+            )
+
+            if batch is not None:
+                batch.status = "failed"
+                batch.notes = error_text
+                batch.save(
+                    update_fields=[
+                        "status",
+                        "notes",
+                        "updated_at",
+                    ]
+                )
+
+            messages.error(request, error_text)
+
+        if batch is not None:
+            return redirect(
+                "samples_import_batch",
+                batch_id=batch.pk,
+            )
+
+        return redirect("samples_import")
 
     ctx = base_context(request)
     ctx.update({
-        "recent_batches": SampleImportBatch.objects.filter(uploaded_by=request.user)[:10],
+        "recent_batches": (
+            SampleImportBatch.objects
+            .filter(uploaded_by=request.user)[:10]
+        ),
         "selected_batch": None,
         "records": [],
     })
-    return render(request, "internal/samples/import.html", ctx)
+
+    ctx["template_biobanks"] = (
+        editable_biobanks_for_user(request.user)
+        .order_by("name")
+    )
+    ctx["template_collections"] = (
+        editable_sample_collections_for_user(request.user)
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "internal/samples/import.html",
+        ctx,
+    )
+
 
 
 @login_required
@@ -4291,6 +4364,15 @@ def sample_import_batch_detail_view(request, batch_id):
         "selected_batch": batch,
         "records": batch.records.select_related("matched_biobank", "matched_collection", "sample").all(),
     })
+    ctx["template_biobanks"] = (
+        editable_biobanks_for_user(request.user)
+        .order_by("name")
+    )
+    ctx["template_collections"] = (
+        editable_sample_collections_for_user(request.user)
+        .order_by("name")
+    )
+
     return render(request, "internal/samples/import.html", ctx)
 
 

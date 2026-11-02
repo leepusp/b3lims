@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from django.db import transaction
 
 from core.models import Biobank, Collection, Sample
 from core.models.samples.intake import SampleIntakeRecord
@@ -148,6 +149,7 @@ def read_sample_table(file_path):
 
 
 
+@transaction.atomic
 def import_sample_table(batch):
     df = read_sample_table(batch.original_file.path)
     # Empty strings must not become false Sample rows.
@@ -185,12 +187,27 @@ def import_sample_table(batch):
     invalid = 0
 
     for idx, row in df.iterrows():
-        total += 1
-
         raw_data = {
             str(col): _clean_value(row[col])
             for col in df.columns
         }
+
+        preset_columns = {
+            original_col
+            for canonical, original_col in column_map.items()
+            if canonical in {"biobank", "collection"}
+        }
+
+        # Ignore untouched rows of a preconfigured template.
+        # Any other populated field must still be validated.
+        if preset_columns and not any(
+            value
+            for column, value in raw_data.items()
+            if column not in preset_columns
+        ):
+            continue
+
+        total += 1
 
         normalized = {}
         for canonical, original_col in column_map.items():
@@ -324,6 +341,12 @@ def import_sample_table(batch):
             invalid += 1
         else:
             valid += 1
+
+    if total == 0:
+        raise ValueError(
+            "No Sample rows found. Complete at least one row "
+            "before uploading the template."
+        )
 
     batch.total_rows = total
     batch.valid_rows = valid

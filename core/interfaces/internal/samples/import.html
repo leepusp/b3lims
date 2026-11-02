@@ -20,6 +20,13 @@
         </a>
     </div>
 
+    {% if selected_batch and selected_batch.status == "failed" %}
+        <div class="alert alert-danger" role="alert">
+            <strong>Import failed.</strong>
+            {{ selected_batch.notes|default:"The uploaded table could not be validated." }}
+        </div>
+    {% endif %}
+
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm mb-4">
@@ -40,6 +47,90 @@
                             information from external collaborators.
                         </div>
                     </div>
+
+                    <div class="border rounded p-3 mb-3">
+                        <div class="fw-semibold small mb-2">
+                            Preconfigured institutional template
+                        </div>
+
+                        <form
+                            method="get"
+                            action="{% url 'export_samples_csv' %}"
+                        >
+                            <input
+                                type="hidden"
+                                name="schema"
+                                value="template"
+                            >
+                            <input
+                                type="hidden"
+                                name="format"
+                                value="xlsx"
+                            >
+                            <input
+                                type="hidden"
+                                name="preset"
+                                value="1"
+                            >
+
+                            <div class="mb-2">
+                                <label class="form-label small">
+                                    Biobank
+                                </label>
+
+                                <select
+                                    name="biobank_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">
+                                        No predefined Biobank
+                                    </option>
+
+                                    {% for biobank in template_biobanks %}
+                                        <option value="{{ biobank.pk }}">
+                                            {{ biobank.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small">
+                                    Collection
+                                </label>
+
+                                <select
+                                    name="collection_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">
+                                        No predefined Collection
+                                    </option>
+
+                                    {% for collection in template_collections %}
+                                        <option value="{{ collection.pk }}">
+                                            {{ collection.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="btn btn-outline-secondary btn-sm w-100"
+                            >
+                                <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                                Download preconfigured template
+                            </button>
+                        </form>
+
+                        <div class="form-text mt-2">
+                            Only authorized Biobanks and Collections
+                            are offered. Unused prefilled rows are
+                            ignored when the table is uploaded.
+                        </div>
+                    </div>
+
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
