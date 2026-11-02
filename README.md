@@ -75,6 +75,7 @@ biobank/
 │   ├── services/             # Business and infrastructure services
 │   ├── templatetags/         # Custom Django template tags
 │   └── views/                # Internal and public request handlers
+├── bench/                    # B3 Bench: Lab Calendar, tools and workflows (imports core; core never imports bench)
 ├── docs/                     # Development and generic operations guidance
 ├── static/                   # Additional source static assets
 ├── manage.py

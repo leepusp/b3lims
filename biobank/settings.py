@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
     # 2. App Principal
     "core.apps.CoreConfig",
+    "bench.apps.BenchConfig",
 
     # 3. Utilitários Externos
     "import_export",  
