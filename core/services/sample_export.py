@@ -5,7 +5,9 @@ import pandas as pd
 from django.http import HttpResponse
 from django.utils import timezone
 
+from django.core.exceptions import PermissionDenied
 from core.models import Sample
+from core.services.sample_intake import COLUMN_ALIASES
 from core.permissions.samples import visible_samples_for_user
 
 
@@ -119,7 +121,11 @@ def _files_count(sample):
 
 
 def _subtype_data(sample):
-    data = {column: "" for column in STANDARD_COLUMNS}
+    data = {}
+
+    subtype_columns = STANDARD_COLUMNS[
+        STANDARD_COLUMNS.index("genus"):
+    ]
 
     subtype = _related(sample, [
         "bacteria",
@@ -131,7 +137,7 @@ def _subtype_data(sample):
     if subtype is None:
         return data
 
-    for column in STANDARD_COLUMNS:
+    for column in subtype_columns:
         if hasattr(subtype, column):
             data[column] = _field(subtype, column)
 
@@ -221,9 +227,231 @@ def _get_queryset(request):
     return qs.distinct().order_by("sample_type", "sample_id")
 
 
+
+def _export_import_template(file_format):
+    """Generate the official B3 LIMS intake template."""
+
+    columns = list(COLUMN_ALIASES)
+    filename = "b3lims_sample_import_template_v8151"
+
+    if file_format == "csv":
+        response = HttpResponse(
+            content_type="text/csv; charset=utf-8"
+        )
+
+        response["Content-Disposition"] = (
+            f'attachment; filename="{filename}.csv"'
+        )
+
+        writer = csv.writer(response)
+        writer.writerow(columns)
+        return response
+
+    if file_format != "xlsx":
+        return HttpResponse(
+            "Use csv or xlsx.",
+            status=400,
+            content_type="text/plain",
+        )
+
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    output = BytesIO()
+
+    dictionary = []
+
+    descriptions = {
+        "sample_id": "Required. Unique external Sample identifier.",
+        "sample_type": "Required. Select a supported Sample type.",
+        "organism_name": "Organism or biological material identification.",
+        "biobank": "Requested Biobank; validated by the receiving team.",
+        "collection": "Requested Collection; validated by the receiving team.",
+        "provider": "External provider or collaborator.",
+        "research_group": "Requested research group.",
+        "storage_location": "Optional. Requires internal storage validation.",
+        "is_public": "Use true or false. Blank means private.",
+        "scientific_notes": "Scientific observations.",
+    }
+
+    for column in columns:
+        dictionary.append({
+            "field": column,
+            "required": (
+                "Yes"
+                if column in {"sample_id", "sample_type"}
+                else "Conditional / optional"
+            ),
+            "description": descriptions.get(
+                column,
+                "Optional subtype-specific or intake metadata.",
+            ),
+        })
+
+    instructions = [
+        ("1", "Complete the samples worksheet."),
+        ("2", "Keep the column headers unchanged."),
+        ("3", "Enter one Sample per row."),
+        ("4", "Keep sample_id as text, preserving leading zeros."),
+        ("5", "Use allowed sample_type values."),
+        ("6", "Leave non-applicable fields blank."),
+        ("7", "Do not enter passwords or sensitive credentials."),
+        ("8", "The upload stages records; it does not create Samples."),
+        ("9", "The receiving team assigns internal ownership."),
+        ("10", "Public visibility and physical storage require review."),
+    ]
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        pd.DataFrame(columns=columns).to_excel(
+            writer,
+            sheet_name="samples",
+            index=False,
+        )
+
+        pd.DataFrame(dictionary).to_excel(
+            writer,
+            sheet_name="field_dictionary",
+            index=False,
+        )
+
+        pd.DataFrame({
+            "sample_type": [
+                "Bacterium (Host)",
+                "Phage (Virus)",
+                "Plasmid",
+                "Other",
+            ],
+            "is_public": [
+                "false",
+                "true",
+                "",
+                "",
+            ],
+        }).to_excel(
+            writer,
+            sheet_name="allowed_values",
+            index=False,
+        )
+
+        pd.DataFrame(
+            instructions,
+            columns=["step", "instruction"],
+        ).to_excel(
+            writer,
+            sheet_name="instructions",
+            index=False,
+        )
+
+        ws = writer.sheets["samples"]
+        ws.freeze_panes = "A2"
+
+        for cell in ws[1]:
+            cell.font = Font(
+                bold=True,
+                color="FFFFFF",
+            )
+            cell.fill = PatternFill(
+                fill_type="solid",
+                fgColor="17365D",
+            )
+
+        for position, name in enumerate(columns, start=1):
+            letter = ws.cell(1, position).column_letter
+
+            ws.column_dimensions[letter].width = min(
+                max(len(name) + 4, 18),
+                34,
+            )
+
+            for row in range(2, 202):
+                ws.cell(row, position).number_format = "@"
+
+        type_column = ws.cell(
+            1, columns.index("sample_type") + 1
+        ).column_letter
+
+        allowed_types = DataValidation(
+            type="list",
+            formula1=(
+                '"Bacterium (Host),Phage (Virus),'
+                'Plasmid,Other"'
+            ),
+            allow_blank=True,
+        )
+
+        allowed_types.showErrorMessage = True
+        allowed_types.error = (
+            "Select one of the supported Sample types."
+        )
+
+        ws.add_data_validation(allowed_types)
+        allowed_types.add(
+            f"{type_column}2:{type_column}201"
+        )
+
+        public_column = ws.cell(
+            1, columns.index("is_public") + 1
+        ).column_letter
+
+        public_values = DataValidation(
+            type="list",
+            formula1='"false,true"',
+            allow_blank=True,
+        )
+
+        ws.add_data_validation(public_values)
+        public_values.add(
+            f"{public_column}2:{public_column}201"
+        )
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="{filename}.xlsx"'
+    )
+
+    return response
+
+
 def export_samples_table(request):
-    schema = request.GET.get("schema", "standard")
-    file_format = request.GET.get("format", "csv")
+    if request.method not in {"GET", "POST"}:
+        return HttpResponse(
+            "Method not allowed.",
+            status=405,
+            content_type="text/plain",
+        )
+
+    params = (
+        request.POST
+        if request.method == "POST"
+        else request.GET
+    )
+
+    schema = params.get("schema", "standard")
+    file_format = params.get("format", "csv")
+
+    if file_format not in {"csv", "xlsx"}:
+        return HttpResponse(
+            "Unsupported export format.",
+            status=400,
+            content_type="text/plain",
+        )
+
+    if request.method == "POST" and schema == "template":
+        return HttpResponse(
+            "Template downloads require GET.",
+            status=400,
+            content_type="text/plain",
+        )
+
+    if schema == "template":
+        return _export_import_template(file_format)
 
     if schema not in ["standard", "full"]:
         schema = "standard"
@@ -232,7 +460,53 @@ def export_samples_table(request):
     if schema == "full":
         columns = FULL_EXTRA_COLUMNS + columns
 
-    rows = [_sample_to_row(sample, schema=schema) for sample in _get_queryset(request)]
+    queryset = _get_queryset(request)
+
+    if request.method == "POST":
+        raw_ids = request.POST.getlist("sample_ids")
+
+        if not raw_ids or len(raw_ids) > 500:
+            return HttpResponse(
+                "Select between 1 and 500 Samples.",
+                status=400,
+                content_type="text/plain",
+            )
+
+        if any(
+            not value.isascii()
+            or not value.isdecimal()
+            or len(value) > 19
+            or int(value) < 1
+            for value in raw_ids
+        ):
+            return HttpResponse(
+                "Invalid Sample selection.",
+                status=400,
+                content_type="text/plain",
+            )
+
+        selected_ids = [int(value) for value in raw_ids]
+
+        if len(selected_ids) != len(set(selected_ids)):
+            return HttpResponse(
+                "Duplicate Sample identifiers in selection.",
+                status=400,
+                content_type="text/plain",
+            )
+
+        # Authorization is rechecked against the current
+        # database state, not trusted from browser checkboxes.
+        queryset = queryset.filter(pk__in=selected_ids)
+
+        if queryset.count() != len(selected_ids):
+            raise PermissionDenied(
+                "One or more selected Samples are not visible."
+            )
+
+    rows = [
+        _sample_to_row(sample, schema=schema)
+        for sample in queryset
+    ]
 
     timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
     filename = f"samples_export_{schema}_{timestamp}"

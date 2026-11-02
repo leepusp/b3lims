@@ -10,7 +10,7 @@ COLUMN_ALIASES = {
     "sample_type": ["sample_type", "type", "biological_type", "tipo", "tipo_amostra"],
     "organism_name": ["organism_name", "organism", "identification", "nome", "organismo"],
     "biobank": ["biobank", "biobanco", "destination_biobank", "biobank_name"],
-    "collection": ["collection", "colecao", "coleção", "collection_name"],
+    "collection": ["collection", "collections", "colecao", "coleção", "collection_name"],
     "storage_location": ["storage_location", "location", "localizacao", "localização", "freezer_box"],
     "provider": ["provider", "collaborator", "sender", "fornecedor", "colaborador"],
     "research_group": ["research_group", "grupo", "laboratorio", "laboratório"],
@@ -111,23 +111,74 @@ def _build_column_map(columns):
     return result
 
 
+
 def read_sample_table(file_path):
-    ext = os.path.splitext(file_path)[1].lower()
+    ext = os.path.splitext(str(file_path))[1].lower()
 
-    if ext in [".xlsx", ".xls"]:
-        return pd.read_excel(file_path)
+    if ext in {".xlsx", ".xls"}:
+        return pd.read_excel(
+            file_path,
+            sheet_name=0,
+            dtype=str,
+            keep_default_na=False,
+        )
 
-    if ext in [".tsv", ".txt"]:
-        return pd.read_csv(file_path, sep="\t")
+    if ext == ".tsv":
+        return pd.read_csv(
+            file_path,
+            sep="\t",
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8-sig",
+        )
 
-    return pd.read_csv(file_path)
+    if ext in {".csv", ".txt"}:
+        return pd.read_csv(
+            file_path,
+            sep=None,
+            engine="python",
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8-sig",
+        )
+
+    raise ValueError(
+        "Unsupported file format. Use CSV, TSV, XLS or XLSX."
+    )
+
 
 
 def import_sample_table(batch):
     df = read_sample_table(batch.original_file.path)
-    df = df.dropna(how="all")
+    # Empty strings must not become false Sample rows.
+    df = (
+        df.replace(r"^\s*$", pd.NA, regex=True)
+        .dropna(how="all")
+        .fillna("")
+    )
+
+    normalized_headers = [
+        _normalize_header(name)
+        for name in df.columns
+    ]
+
+    if len(normalized_headers) != len(set(normalized_headers)):
+        raise ValueError(
+            "Duplicate column headers in the uploaded table."
+        )
 
     column_map = _build_column_map(df.columns)
+
+    required = {"sample_id", "sample_type"}
+    missing = sorted(required - set(column_map))
+
+    if missing:
+        raise ValueError(
+            "Missing required columns: "
+            + ", ".join(missing)
+        )
+
+    seen_sample_ids = set()
 
     total = 0
     valid = 0
@@ -156,13 +207,29 @@ def import_sample_table(batch):
 
         if not sample_id:
             errors.append("Missing sample_id.")
-        elif Sample.objects.filter(sample_id=sample_id).exists():
-            errors.append(f"Sample ID already exists: {sample_id}")
+        elif Sample.objects.filter(
+            sample_id__iexact=sample_id
+        ).exists():
+            errors.append(
+                f"Sample ID already exists: {sample_id}"
+            )
+
+        if sample_id:
+            key = sample_id.casefold()
+
+            if key in seen_sample_ids:
+                errors.append(
+                    f"Duplicate sample_id in this table: {sample_id}"
+                )
+
+            seen_sample_ids.add(key)
 
         if not sample_type:
             errors.append("Missing sample_type.")
         elif sample_type not in ["Bacterium (Host)", "Phage (Virus)", "Plasmid", "Other"]:
-            warnings.append(f"Unknown sample_type: {sample_type}")
+            errors.append(
+                f"Unsupported sample_type: {sample_type}"
+            )
 
         matched_biobank = None
         if biobank_name:
@@ -191,7 +258,39 @@ def import_sample_table(batch):
             elif sample_type == "Plasmid":
                 organism_name = normalized.get("construction_name", "") or normalized.get("backbone_name", "")
 
-        status = "ready_to_fill" if not errors else "waiting_review"
+        if not organism_name.strip():
+            errors.append(
+                "Missing organism_name or subtype identification."
+            )
+
+        visibility = normalized.get(
+            "is_public", ""
+        ).strip().casefold()
+
+        allowed_visibility = {
+            "", "0", "1",
+            "true", "false",
+            "yes", "no",
+            "sim", "não", "nao",
+            "public", "público", "publico",
+            "private", "privado",
+        }
+
+        if visibility not in allowed_visibility:
+            errors.append(
+                "Invalid is_public. Use true or false."
+            )
+
+        if ";" in collection_name:
+            errors.append(
+                "Multiple Collections require individual review."
+            )
+
+        status = (
+            "ready_to_fill"
+            if not errors
+            else "waiting_review"
+        )
 
         SampleIntakeRecord.objects.create(
             batch=batch,

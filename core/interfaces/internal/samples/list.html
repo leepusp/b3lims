@@ -168,6 +168,29 @@
         Import
     </a>
 
+    <button
+        type="button"
+        id="exportSelectedSamplesButton"
+        class="btn btn-sm btn-outline-secondary"
+        disabled
+    >
+        <i class="bi bi-download me-1"></i>
+        Export Selected
+        (<span id="exportSelectedSamplesCount">0</span>)
+    </button>
+
+    <form
+        id="exportSelectedSamplesForm"
+        method="post"
+        action="{% url 'export_samples_csv' %}"
+        class="d-none"
+    >
+        {% csrf_token %}
+        <input type="hidden" name="schema" value="standard">
+        <input type="hidden" name="format" value="xlsx">
+        <div id="exportSelectedSamplesInputs"></div>
+    </form>
+
     <a
         href="{% url 'export_samples_csv' %}"
         class="btn btn-sm btn-outline-secondary"
@@ -651,7 +674,7 @@
         type="checkbox"
         class="form-check-input"
         id="sampleShareSelectAll"
-        aria-label="Select all shareable Samples on this page"
+        aria-label="Select all visible Samples on this page"
     >
 </th>
 <th>Sample</th>
@@ -672,7 +695,7 @@
 <tr>
 
     <td class="align-middle text-center">
-        {% if sample.can_manage_sharing_current_user or sample|can_select_for_storage:request.user %}
+        {% if sample.pk %}
             <input
                 type="checkbox"
                 class="form-check-input sample-share-select"
@@ -1494,5 +1517,88 @@
 })();
 </script>
 
+
+
+<script>
+(function () {
+    "use strict";
+
+    function initializeSelectedExport() {
+        const button = document.getElementById(
+            "exportSelectedSamplesButton"
+        );
+        const count = document.getElementById(
+            "exportSelectedSamplesCount"
+        );
+        const form = document.getElementById(
+            "exportSelectedSamplesForm"
+        );
+        const container = document.getElementById(
+            "exportSelectedSamplesInputs"
+        );
+
+        if (!button || !count || !form || !container) {
+            return;
+        }
+
+        function selected() {
+            return Array.from(
+                document.querySelectorAll(
+                    ".sample-share-select:checked"
+                )
+            );
+        }
+
+        function update() {
+            const number = selected().length;
+
+            count.textContent = String(number);
+            button.disabled = (
+                number === 0 || number > 500
+            );
+        }
+
+        document.addEventListener("change", function (event) {
+            if (
+                event.target.matches(".sample-share-select") ||
+                event.target.id === "sampleShareSelectAll"
+            ) {
+                update();
+            }
+        });
+
+        button.addEventListener("click", function () {
+            const rows = selected();
+
+            if (!rows.length || rows.length > 500) {
+                return;
+            }
+
+            container.replaceChildren();
+
+            rows.forEach(function (checkbox) {
+                const hidden = document.createElement("input");
+                hidden.type = "hidden";
+                hidden.name = "sample_ids";
+                hidden.value = checkbox.value;
+                container.appendChild(hidden);
+            });
+
+            form.submit();
+        });
+
+        update();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializeSelectedExport
+        );
+    } else {
+        initializeSelectedExport();
+    }
+})();
+</script>
 
 {% endblock %}
