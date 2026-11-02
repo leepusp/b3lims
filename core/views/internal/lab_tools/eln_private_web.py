@@ -31,6 +31,7 @@ from core.services.eln_private_drafts import (
     PROJECT_RE,
 )
 from core.services.lab_tools_storage import LabToolsStorageError
+from core.services.eln_rich_content import sanitize_rich_content
 
 
 MAX_CHOICES = 75
@@ -115,7 +116,13 @@ def _values(request, project=None):
             else request.POST.get("project", "")
         ),
         "title": request.POST.get("title", ""),
-        "content": request.POST.get("content", ""),
+        "content": (
+            sanitize_rich_content(
+                request.POST.get("content", "")
+            )
+            if request.POST.get("content_format") == "rich_html_v1"
+            else request.POST.get("content", "")
+        ),
         "protocol": request.POST.get("protocol", ""),
         "results": request.POST.get("results", ""),
         "sample_ids": _ids(request, "sample_ids"),
