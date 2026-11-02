@@ -1,5 +1,6 @@
 {% extends 'internal/common/base.html' %}
 {% load static %}
+{% load eln_experimental_access %}
 
 {% block title %}ELN Notebook{% endblock %}
 
@@ -428,6 +429,16 @@
                         <div class="btn-group">
                             
 {% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-sm btn-outline-primary" button_label="New notebook" %}
+
+{% eln_experimental_allowed request.user as show_eln_experimental %}
+{% if show_eln_experimental %}
+<a href="{% url 'eln_private_drafts' %}"
+   class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-folder2-open me-1"></i>
+    Private drafts
+</a>
+{% endif %}
+
 
 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 More
@@ -1368,6 +1379,16 @@
                                 <div class="d-flex flex-wrap justify-content-center gap-2 mb-4"
                                      id="eln-start-shortcuts">
                                     {% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-primary" button_label="Create first notebook" %}
+
+{% eln_experimental_allowed request.user as show_eln_experimental %}
+{% if show_eln_experimental %}
+<a href="{% url 'eln_private_drafts' %}"
+   class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-folder2-open me-1"></i>
+    Private drafts
+</a>
+{% endif %}
+
 
                                     <a href="{% url 'samples_list' %}"
                                        class="btn btn-outline-secondary">

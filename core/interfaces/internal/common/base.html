@@ -86,14 +86,6 @@
             <span class="nav-label">Lab Calendar</span>
         </a>
 
-        {% eln_experimental_allowed request.user as show_eln_experimental %}
-        {% if show_eln_experimental %}
-        <a href="{% url 'eln_experimental_index' %}"
-           class="nav-link {% if '/lab-tools/eln-experimental/' in request.path %}active{% endif %}">
-            <i class="bi bi-journal-text"></i>
-            <span class="nav-label">ELN Experimental</span>
-        </a>
-        {% endif %}
 
         <a href="{% url 'notebook_index' %}"
            class="nav-link {% if '/lab-tools/notebook/' in request.path and '/molecular-sequence/' not in request.path %}active{% endif %}">
