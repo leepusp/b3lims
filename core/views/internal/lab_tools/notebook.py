@@ -536,7 +536,7 @@ def notebook_create_from_sample(request, sample_id):
 
     entry.mentions.add(sample)
 
-    return redirect(f"{reverse('notebook_index')}?entry_id={entry.id}")
+    return redirect("notebook_entry", entry_id=entry.id)
 
 
 def _sectioned_notebook_content(*sections):
@@ -740,7 +740,7 @@ def notebook_create(request):
         template_key if template_key in _notebook_entry_templates() else "experiment",
     )
 
-    return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")
+    return redirect("notebook_entry", entry_id=new_entry.id)
 
 
 @login_required

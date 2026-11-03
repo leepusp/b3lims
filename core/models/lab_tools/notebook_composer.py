@@ -111,3 +111,35 @@ class NotebookPin(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "entry"], name="core_nb_pin_unique"),
         ]
+
+
+class NotebookSpreadsheet(models.Model):
+    """A spreadsheet with formulas inside an entry (eLabFTW spreadsheet editor).
+
+    ``data`` keeps the raw cell values as typed, so formulas such as
+    ``=B3*B1`` are stored as text and evaluated in the browser.
+    """
+
+    entry = models.ForeignKey(
+        "core.NotebookEntry",
+        on_delete=models.CASCADE,
+        related_name="spreadsheets",
+    )
+    title = models.CharField(max_length=120, default="Table")
+    data = models.JSONField(default=list, blank=True)
+    column_widths = models.JSONField(default=list, blank=True)
+    position = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return f"{self.entry_id}: {self.title}"

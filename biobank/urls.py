@@ -133,6 +133,7 @@ from core.views.internal.keywords.views import (
 from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import notebook_composer as notebook_composer_views
 from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
+from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 
 # 9. QR CODE (PAGE)
@@ -455,6 +456,13 @@ urlpatterns = [
         name="eln_experimental_index",
     ),
     path('internal/lab-tools/notebook/entries/', notebook_dashboard_views.notebook_dashboard, name='notebook_dashboard'),
+    path('internal/lab-tools/notebook/entry/', notebook_entry_views.notebook_entry_open_latest, name='notebook_entry_open_latest'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/', notebook_entry_views.notebook_entry, name='notebook_entry'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/update/', notebook_entry_views.notebook_entry_update_api, name='notebook_entry_update_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/spreadsheets/', notebook_entry_views.notebook_spreadsheets_api, name='notebook_spreadsheets_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/duplicate/', notebook_entry_views.notebook_duplicate_api, name='notebook_duplicate_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/relevant/', notebook_entry_views.notebook_relevant_api, name='notebook_relevant_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/files/', notebook_entry_views.notebook_entry_files_api, name='notebook_entry_files_api'),
     path('internal/lab-tools/notebook/entries/batch/', notebook_dashboard_views.notebook_dashboard_batch_api, name='notebook_dashboard_batch_api'),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),

@@ -28,6 +28,8 @@ ALLOWED_TAGS = {
     "a", "hr", "img",
     "table", "thead", "tbody", "tfoot",
     "tr", "th", "td", "caption", "colgroup", "col",
+    "figure", "figcaption", "dl", "dt", "dd",
+    "abbr", "cite", "q", "del", "ins",
 }
 
 GLOBAL_ATTRIBUTES = {"class", "style", "title", "contenteditable", "tabindex"}

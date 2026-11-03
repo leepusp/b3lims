@@ -35,9 +35,9 @@ Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench releas
 | Feature | Status | Release |
 | --- | --- | --- |
 | Title, date, custom ID, rating, tags | ✅ (1.A) | — |
-| Rich text with full menu bar (File/Edit/View/Insert/Format/Tools/Table) | 🟡 Quill | 2.0 TinyMCE |
+| Rich text with full menu bar (File/Edit/View/Insert/Format/Tools/Table) | ✅ TinyMCE 6.8 + Biobank menu (2.0) | — |
 | Markdown body option | ⬜ | 2.0 |
-| Spreadsheet editor with formulas, import/export xlsx/csv | ⬜ | 2.0 |
+| Spreadsheet editor with formulas, import/export xlsx/csv | ✅ formulas + CSV export (2.0); xlsx import ⬜ | 2.6 |
 | Custom fields (15 types, groups, required, load fields) | ✅ (1.A) | — |
 | Field builder modal + JSON editor | 🟡 | 2.1 |
 | Steps (groups, deadlines, done by/at) | ✅ (step groups ⬜) | 2.1 |
@@ -52,7 +52,7 @@ Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench releas
 | Autosave + revisions (restore, compare) | 🟡 autosave only | 2.1 |
 | Changelog per entry | ⬜ | 2.1 |
 | Pin / favourite | ✅ (dashboard) | — |
-| Duplicate entry | ⬜ | 2.0 |
+| Duplicate entry | ✅ (2.0) | — |
 
 ## Integrity
 

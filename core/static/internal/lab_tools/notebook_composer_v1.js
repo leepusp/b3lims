@@ -546,7 +546,9 @@
     // --- linked entries ---------------------------------------------------------
 
     function linkItem(link, removable) {
-        const href = urls.notebookUrl + "?entry_id=" + encodeURIComponent(link.id);
+        const href = urls.entryUrl
+            ? urls.entryUrl.replace("/0/", "/" + encodeURIComponent(link.id) + "/")
+            : urls.notebookUrl + "?entry_id=" + encodeURIComponent(link.id);
         return `<li class="nb-link" data-target="${esc(link.id)}">
             <i class="bi bi-journal-text text-secondary"></i>
             <a href="${esc(href)}">${esc(link.label)}</a>
