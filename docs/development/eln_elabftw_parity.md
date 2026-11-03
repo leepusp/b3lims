@@ -87,8 +87,8 @@ visibility Private. Draft files already written to a user's home are left untouc
 | --- | --- | --- |
 | Entries list with filters, sort, pagination | ✅ (1.A dashboard) | — |
 | Batch actions | ✅ status/tag/archive/pin | 2.2 (lock, permissions, export) |
-| Advanced search query language (`title:x and status:y`) | ⬜ | 2.2 |
-| Extra-field search (`extrafield:Medium:TSB`) | ⬜ | 2.2 |
+| Advanced search query language (`title:x and status:y`) | ✅ | 2.2 |
+| Extra-field search (`extrafield:Medium:TSB`) | ✅ | 2.2 |
 | Dashboard (recent, steps, bookings, todo) | 🟡 recent, steps, todo ✅; bookings ⬜ | 2.3 |
 | Todolist | ✅ personal list on the dashboard (2.1) | — |
 | Favourite tags panel | ⬜ | 2.2 |

@@ -21,6 +21,7 @@ from core.permissions.notebook import (
     visible_notebook_entries_for_user,
 )
 from core.services.notebook_composer import TAG_RE
+from core.services.notebook_search import HELP_ROWS, SearchSyntaxError, build_query
 
 
 SORTS = {
@@ -58,18 +59,16 @@ def _filtered_entries(request):
             filters["state"] = "active"
             qs = qs.exclude(status="archived")
 
+    filters["q_error"] = ""
+    filters["q_structured"] = False
     if filters["q"]:
-        q = filters["q"]
-        condition = (
-            Q(title__icontains=q)
-            | Q(custom_id__icontains=q)
-            | Q(project__icontains=q)
-            | Q(content__icontains=q)
-            | Q(tags__name__icontains=q.lstrip("#"))
-        )
-        if q.lstrip("#").isdigit():
-            condition |= Q(pk=int(q.lstrip("#")))
-        qs = qs.filter(condition)
+        try:
+            condition, filters["q_structured"] = build_query(filters["q"], user)
+        except SearchSyntaxError as exc:
+            filters["q_error"] = str(exc)
+            qs = qs.none()
+        else:
+            qs = qs.filter(condition)
 
     if filters["type"] in dict(NotebookEntry.ENTRY_TYPE_CHOICES):
         qs = qs.filter(entry_type=filters["type"])
@@ -160,6 +159,7 @@ def notebook_dashboard(request):
                 "to_review": visible.filter(status="completed").count(),
                 "overdue": open_steps.filter(deadline__lt=now).count(),
             },
+            "search_help": HELP_ROWS,
             "trash_count": trashed_notebook_entries_for_user(user).count(),
             "due_steps": open_steps[:6],
             "now": now,
