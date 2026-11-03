@@ -1,0 +1,127 @@
+{% extends 'internal/common/base.html' %}
+
+{% block title %}ELN — Statuses and categories{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tx-row { display: flex; align-items: center; gap: .5rem; padding: .35rem 0; border-bottom: 1px solid #eef0f3; }
+    .tx-row input[type=color] { width: 2.2rem; height: 2rem; padding: 0; border: 1px solid #ced4da; border-radius: .25rem; }
+    .tx-row .form-control { max-width: 18rem; }
+    .tx-dot { width: .8rem; height: .8rem; border-radius: 50%; flex: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 980px">
+    <a href="{% url 'notebook_dashboard' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Entries</a>
+    <h4 class="mt-2">Statuses and categories</h4>
+    <p class="text-muted small">An entry uses the lists of the research group chosen on it; with no group it uses the lab default. The type of a status decides how it is counted on the dashboard.</p>
+
+    <div class="mb-3">
+        <label class="form-label small" for="tx-scope">List to edit</label>
+        <select id="tx-scope" class="form-select form-select-sm w-auto">
+            {% if can_edit_lab %}<option value="lab">Lab default</option>{% endif %}
+            {% for g in groups %}<option value="{{ g.pk }}">{{ g.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div id="tx-error" class="alert alert-danger py-1 small d-none" role="alert"></div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <h6>Statuses</h6>
+            <div id="tx-statuses"></div>
+            <div class="tx-row" id="tx-add-status">
+                <input type="color" value="#2563eb" aria-label="Colour">
+                <input type="text" class="form-control form-control-sm" placeholder="New status" maxlength="64">
+                <select class="form-select form-select-sm w-auto"></select>
+                <button class="btn btn-sm btn-primary" type="button">Add</button>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h6>Categories</h6>
+            <div id="tx-categories"></div>
+            <div class="tx-row" id="tx-add-category">
+                <input type="color" value="#7c3aed" aria-label="Colour">
+                <input type="text" class="form-control form-control-sm" placeholder="New category" maxlength="64">
+                <button class="btn btn-sm btn-primary" type="button">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const api = "{% url 'notebook_taxonomy_api' %}";
+    const csrf = "{{ csrf_token }}";
+    const scope = document.getElementById("tx-scope");
+    const err = document.getElementById("tx-error");
+    let state = null;
+
+    function show(msg) { err.textContent = msg || ""; err.classList.toggle("d-none", !msg); }
+    function call(payload) {
+        return fetch(api, {method: "POST", credentials: "same-origin",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+            body: JSON.stringify(Object.assign({group: scope.value}, payload))})
+            .then((r) => r.json()).then((d) => {
+                if (d.status !== "success") { show(d.message || "Not saved"); return null; }
+                show(""); state = d; draw(); return d;
+            });
+    }
+    function el(tag, attrs, children) {
+        const n = document.createElement(tag);
+        Object.entries(attrs || {}).forEach(([k, v]) => { if (k === "text") n.textContent = v; else n.setAttribute(k, v); });
+        (children || []).forEach((c) => n.appendChild(c));
+        return n;
+    }
+    function row(item, kind, withKind) {
+        const color = el("input", {type: "color", value: item.color, "aria-label": "Colour"});
+        const name = el("input", {type: "text", value: item.name, maxlength: 64, class: "form-control form-control-sm", "aria-label": "Name"});
+        const kids = [color, name];
+        let kindSel = null;
+        if (withKind) {
+            kindSel = el("select", {class: "form-select form-select-sm w-auto", "aria-label": "Type"});
+            state.kinds.forEach((k) => { const o = el("option", {value: k.value, text: k.label}); if (k.value === item.kind) o.selected = true; kindSel.appendChild(o); });
+            kids.push(kindSel);
+        }
+        const save = () => call(Object.assign({action: "edit_" + kind, id: item.id, name: name.value, color: color.value}, kindSel ? {kind: kindSel.value} : {}));
+        color.addEventListener("change", save);
+        name.addEventListener("change", save);
+        if (kindSel) kindSel.addEventListener("change", save);
+        const del = el("button", {type: "button", class: "btn btn-sm btn-outline-danger", title: "Remove", text: "×"});
+        if (item.protected) { del.disabled = true; del.title = "Built in"; }
+        del.addEventListener("click", () => { if (confirm("Remove “" + item.name + "”?")) call({action: "delete_" + kind, id: item.id}); });
+        kids.push(del);
+        return el("div", {class: "tx-row"}, kids);
+    }
+    function draw() {
+        const st = document.getElementById("tx-statuses"); st.replaceChildren();
+        state.statuses.forEach((s) => st.appendChild(row(s, "status", true)));
+        const ca = document.getElementById("tx-categories"); ca.replaceChildren();
+        if (!state.categories.length) ca.appendChild(el("div", {class: "text-muted small py-2", text: "No categories in this list yet."}));
+        state.categories.forEach((c) => ca.appendChild(row(c, "category", false)));
+        const kindSel = document.querySelector("#tx-add-status select");
+        if (!kindSel.options.length) state.kinds.forEach((k) => kindSel.appendChild(el("option", {value: k.value, text: k.label})));
+    }
+    function load() {
+        fetch(api + "?group=" + encodeURIComponent(scope.value), {credentials: "same-origin"})
+            .then((r) => r.json()).then((d) => { state = d; draw(); });
+    }
+    document.querySelector("#tx-add-status button").addEventListener("click", function () {
+        const box = document.getElementById("tx-add-status");
+        const name = box.querySelector("input[type=text]");
+        call({action: "add_status", name: name.value, color: box.querySelector("input[type=color]").value, kind: box.querySelector("select").value})
+            .then((d) => { if (d) name.value = ""; });
+    });
+    document.querySelector("#tx-add-category button").addEventListener("click", function () {
+        const box = document.getElementById("tx-add-category");
+        const name = box.querySelector("input[type=text]");
+        call({action: "add_category", name: name.value, color: box.querySelector("input[type=color]").value})
+            .then((d) => { if (d) name.value = ""; });
+    });
+    scope.addEventListener("change", load);
+    load();
+})();
+</script>
+{% endblock %}

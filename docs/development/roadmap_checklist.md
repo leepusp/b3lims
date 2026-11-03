@@ -10,7 +10,7 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [~] Sharing: read / edit / manage grants for users and research groups (no migration)
 - [~] "Shared with me" filter in the entries dashboard
 - [~] Ownership transfer (to a person who already has access; former author keeps edit; history stays)
-- [ ] Categories and statuses per research group, with colours (migration; replaces the fixed lists)
+- [x] Categories and statuses per research group, with colours (migration 0098; entry picks the group, coordinator and superusers edit the lists at /internal/lab-tools/notebook/lists/)
 - [ ] Editable entry templates (stored in the database, not in code)
 - [ ] Favourite tags panel and step groups
 - [ ] Field builder / JSON editor for extra fields

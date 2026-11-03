@@ -80,6 +80,11 @@
             <a class="btn btn-outline-secondary btn-sm" href="{% url 'notebook_entry_open_latest' %}">
                 <i class="bi bi-pencil-square me-1"></i>Open editor
             </a>
+            {% if can_manage_taxonomy %}
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'notebook_taxonomy' %}" title="Edit statuses and categories">
+                <i class="bi bi-tags me-1"></i>Statuses
+            </a>
+            {% endif %}
             {% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-primary btn-sm" button_label="New entry" %}
         </div>
     </div>
@@ -148,7 +153,7 @@
                         <a class="eln-pin" href="{% url 'notebook_entry' entry.id %}">
                             <div class="small text-muted"><i class="bi bi-pin-angle-fill text-danger"></i> {% if entry.custom_id %}{{ entry.custom_id }}{% else %}#{{ entry.id }}{% endif %}</div>
                             <div class="t">{{ entry.title }}</div>
-                            <div class="small text-muted">{{ entry.get_status_display }}{% if entry.step_total %} · {{ entry.step_done }}/{{ entry.step_total }} steps{% endif %}</div>
+                            <div class="small text-muted">{% for k, st in status_info.items %}{% if k == entry.status %}{{ st.name }}{% endif %}{% endfor %}{% if entry.step_total %} · {{ entry.step_done }}/{{ entry.step_total }} steps{% endif %}</div>
                         </a>
                     {% endfor %}
                 </div>
@@ -208,7 +213,7 @@
                                     </div>
                                 </td>
                                 <td class="small">{{ entry.get_entry_type_display }}</td>
-                                <td><span class="badge {% for k, v in status_badges.items %}{% if k == entry.status %}{{ v }}{% endif %}{% endfor %}">{{ entry.get_status_display }}</span></td>
+                                <td>{% for k, st in status_info.items %}{% if k == entry.status %}<span class="badge" style="background: {{ st.color }}; color: #fff">{{ st.name }}</span>{% endif %}{% endfor %}</td>
                                 <td class="small text-nowrap">
                                     {% if entry.step_total %}
                                         <span class="eln-steps"><span style="width: {% widthratio entry.step_done entry.step_total 100 %}%"></span></span>

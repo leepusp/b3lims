@@ -125,11 +125,7 @@
 }
 .bx-pill input, .bx-pill select { border: 0; background: transparent; font-size: .82rem; outline: 0; color: inherit; padding: 0; }
 .bx-pill:focus-within { border-color: #9ec0fb; box-shadow: 0 0 0 3px var(--bx-accent-soft); }
-.bx-status-draft { background: #f3f4f6; }
-.bx-status-in_progress { background: #e8f0fe; border-color: #b9cffb; color: #1d4ed8; }
-.bx-status-completed { background: #e7f6ec; border-color: #b4e2c2; color: #166534; }
-.bx-status-reviewed { background: #e6f6fa; border-color: #a9dfeb; color: #0e7490; }
-.bx-status-archived { background: #eceff3; color: #4b5563; }
+.bx-status, .bx-category { --st: #6b7280; background: color-mix(in srgb, var(--st) 14%, white); border-color: color-mix(in srgb, var(--st) 40%, white); color: color-mix(in srgb, var(--st) 80%, black); }
 .bx-rating { margin-left: .3rem; }
 .bx-tagline { margin-bottom: 1rem; }
 .bx-tag-box { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; min-height: 26px; }

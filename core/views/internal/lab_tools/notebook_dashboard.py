@@ -22,6 +22,8 @@ from core.permissions.notebook import (
     trashed_notebook_entries_for_user,
     visible_notebook_entries_for_user,
 )
+from core.models import NotebookStatus
+from core.services import notebook_taxonomy
 from core.services.notebook_composer import TAG_RE
 from core.services.notebook_search import HELP_ROWS, SearchSyntaxError, build_query
 
@@ -77,7 +79,7 @@ def _filtered_entries(request):
     else:
         filters["type"] = ""
 
-    if filters["status"] in dict(NotebookEntry.STATUS_CHOICES):
+    if NotebookStatus.objects.filter(slug=filters["status"]).exists():
         qs = qs.filter(status=filters["status"])
     else:
         filters["status"] = ""
@@ -154,14 +156,15 @@ def notebook_dashboard(request):
             "query_string": query.urlencode(),
             "sorts": [(key, label) for key, (_, label) in SORTS.items()],
             "entry_types": NotebookEntry.ENTRY_TYPE_CHOICES,
-            "statuses": NotebookEntry.STATUS_CHOICES,
+            "statuses": _status_options(),
+            "can_manage_taxonomy": bool(notebook_taxonomy.editable_groups(user)),
             "pinned": pinned,
             "tag_cloud": tag_cloud,
             "stats": {
                 "visible": visible.exclude(status="archived").count(),
                 "mine": mine.exclude(status="archived").count(),
-                "in_progress": mine.filter(status="in_progress").count(),
-                "to_review": visible.filter(status="completed").count(),
+                "in_progress": mine.filter(status__in=_slugs(NotebookStatus.Kind.ACTIVE)).count(),
+                "to_review": visible.filter(status__in=_slugs(NotebookStatus.Kind.DONE)).count(),
                 "overdue": open_steps.filter(deadline__lt=now).count(),
             },
             "search_help": HELP_ROWS,
@@ -171,15 +174,25 @@ def notebook_dashboard(request):
             "now": now,
             "recent": mine.order_by("-updated_at")[:5],
             "notebook_entry_templates": _notebook_entry_templates(),
-            "status_badges": {
-                "draft": "text-bg-light",
-                "in_progress": "text-bg-primary",
-                "completed": "text-bg-success",
-                "reviewed": "text-bg-info",
-                "archived": "text-bg-secondary",
-            },
+            "status_info": {st.slug: st for st in NotebookStatus.objects.all()},
         },
     )
+
+
+def _slugs(kind):
+    return list(NotebookStatus.objects.filter(kind=kind).values_list("slug", flat=True))
+
+
+def _status_options():
+    """Every status of the lab, with its group in the label when it is not a lab-wide one."""
+    rows = NotebookStatus.objects.select_related("research_group").order_by(
+        "research_group__name", "position", "id"
+    )
+    return [
+        (s.slug, s.name if s.research_group is None else f"{s.name} ({s.research_group.name})")
+        for s in rows
+        if s.kind != NotebookStatus.Kind.ARCHIVED
+    ]
 
 
 def delete_attachment_files(attachments):
@@ -255,8 +268,12 @@ def notebook_dashboard_batch_api(request):
     try:
         with transaction.atomic():
             if action == "status":
-                if value not in dict(NotebookEntry.STATUS_CHOICES):
+                if not NotebookStatus.objects.filter(slug=value).exists():
                     raise ValidationError("Unknown status.")
+                # Each entry only takes statuses from its own list.
+                editable = [
+                    e for e in editable if notebook_taxonomy.resolve_status_slug(e, value)
+                ]
                 for entry in editable:
                     entry.status = value
                     entry.save(update_fields=["status", "updated_at"])

@@ -104,11 +104,30 @@
                         <i class="bi bi-calendar3"></i>
                         <input type="date" id="bx-date" value="{{ entry.experiment_date|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
                     </label>
-                    <label class="bx-pill bx-status bx-status-{{ entry.status }}" id="bx-status-pill">
+                    <label class="bx-pill bx-status" id="bx-status-pill"
+                           {% if current_status %}style="--st: {{ current_status.color }}"{% endif %}>
                         <select id="bx-status" aria-label="Status" {% if not can_edit %}disabled{% endif %}>
-                            {% for value, label in statuses %}<option value="{{ value }}" {% if entry.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            {% for st in statuses %}<option value="{{ st.slug }}" data-color="{{ st.color }}" {% if entry.status == st.slug %}selected{% endif %}>{{ st.name }}</option>{% endfor %}
                         </select>
                     </label>
+                    {% if my_groups or entry.research_group_id %}
+                    <label class="bx-pill" title="Research group (decides which statuses and categories apply)">
+                        <i class="bi bi-people"></i>
+                        <select id="bx-group" aria-label="Research group" {% if not can_edit %}disabled{% endif %}>
+                            <option value="">Lab default</option>
+                            {% for g in my_groups %}<option value="{{ g.pk }}" {% if entry.research_group_id == g.pk %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    {% endif %}
+                    {% if categories %}
+                    <label class="bx-pill bx-category" id="bx-category-pill" title="Category"
+                           {% if entry.category %}style="--st: {{ entry.category.color }}"{% endif %}>
+                        <select id="bx-category" aria-label="Category" {% if not can_edit %}disabled{% endif %}>
+                            <option value="" data-color="">No category</option>
+                            {% for c in categories %}<option value="{{ c.pk }}" data-color="{{ c.color }}" {% if entry.category_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    {% endif %}
                     <label class="bx-pill" title="Entry type">
                         <select id="bx-type" aria-label="Entry type" {% if not can_edit %}disabled{% endif %}>
                             {% for value, label in entry_types %}<option value="{{ value }}" {% if entry.entry_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}

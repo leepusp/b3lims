@@ -20,6 +20,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.models import ResearchGroup
 from core.models.lab_tools.notebook import NotebookEntry
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
@@ -33,7 +34,7 @@ from core.permissions.notebook import (
     can_manage_notebook_entry_sharing,
     visible_notebook_entries_for_user,
 )
-from core.services import notebook_collab
+from core.services import notebook_collab, notebook_taxonomy
 from core.services.notebook_html import sanitize_notebook_html
 from core.views.internal.lab_tools.notebook import _get_entry_for_user, _notebook_entry_templates
 from core.views.internal.lab_tools.notebook_composer import composer_state
@@ -173,12 +174,21 @@ def notebook_entry(request, entry_id):
         .order_by("-updated_at")[:200]
     )
 
+    status_list = list(notebook_taxonomy.statuses_for(entry.research_group))
+    current_status = next((x for x in status_list if x.slug == entry.status), None) or (
+        notebook_taxonomy.status_lookup().get(entry.status)
+    )
+    if current_status is not None and current_status not in status_list:
+        status_list.append(current_status)  # an entry keeps showing its status after a list change
+
     page_state = {
         "entry": {
             "id": entry.pk,
             "title": entry.title,
             "custom_id": entry.custom_id,
             "status": entry.status,
+            "research_group": entry.research_group_id,
+            "category": entry.category_id,
             "updated_at": timezone.localtime(entry.updated_at).strftime("%Y-%m-%d %H:%M"),
         },
         "can_edit": can_edit,
@@ -222,7 +232,11 @@ def notebook_entry(request, entry_id):
             "content_html": sanitize_notebook_html(entry.content),
             "entry_list": entry_list,
             "entry_types": NotebookEntry.ENTRY_TYPE_CHOICES,
-            "statuses": NotebookEntry.STATUS_CHOICES,
+            "statuses": status_list,
+            "categories": notebook_taxonomy.categories_for(entry.research_group),
+            "my_groups": notebook_taxonomy.user_groups(request.user),
+            "current_status": current_status,
+            "can_manage_taxonomy": bool(notebook_taxonomy.editable_groups(request.user)),
             "visibilities": NotebookEntry.VISIBILITY_CHOICES,
             "composer_state": composer_state(entry, request.user),
             "page_state": page_state,
@@ -245,7 +259,10 @@ def notebook_entry_open_latest(request):
     return redirect("notebook_entry", entry_id=entry.pk)
 
 
-UPDATABLE = {"title", "content", "entry_type", "status", "visibility", "project", "experiment_date"}
+UPDATABLE = {
+    "title", "content", "entry_type", "status", "visibility", "project", "experiment_date",
+    "research_group", "category",
+}
 
 
 @login_required
@@ -272,13 +289,40 @@ def notebook_entry_update_api(request, entry_id):
         if "content" in data:
             entry.content = sanitize_notebook_html(data["content"])
             fields.append("content")
+        if "research_group" in data:
+            group = None
+            if data["research_group"] not in (None, ""):
+                group = ResearchGroup.objects.filter(pk=data["research_group"]).first()
+                if group is None or not notebook_taxonomy.can_use_group(request.user, group):
+                    raise ValidationError("Choose one of your research groups.")
+            if (group.pk if group else None) != entry.research_group_id:
+                entry.research_group = group
+                fields.append("research_group")
+                # The new group's lists apply: keep the status/category only if they exist there.
+                if not notebook_taxonomy.resolve_status_slug(entry, entry.status):
+                    entry.status = "draft"
+                    fields.append("status")
+                if entry.category_id and not notebook_taxonomy.categories_for(group).filter(pk=entry.category_id).exists():
+                    entry.category = None
+                    fields.append("category")
+        if "category" in data:
+            category = None
+            if data["category"] not in (None, ""):
+                category = notebook_taxonomy.categories_for(entry.research_group).filter(pk=data["category"]).first()
+                if category is None:
+                    raise ValidationError("Invalid category.")
+            entry.category = category
+            if "category" not in fields:
+                fields.append("category")
+        if "status" in data and not notebook_taxonomy.resolve_status_slug(entry, data["status"]):
+            raise ValidationError("Invalid status.")
         for name, choices in (
             ("entry_type", NotebookEntry.ENTRY_TYPE_CHOICES),
-            ("status", NotebookEntry.STATUS_CHOICES),
+            ("status", None),
             ("visibility", NotebookEntry.VISIBILITY_CHOICES),
         ):
             if name in data:
-                if data[name] not in dict(choices):
+                if choices is not None and data[name] not in dict(choices):
                     raise ValidationError(f"Invalid {name.replace('_', ' ')}.")
                 if (
                     name == "visibility"
@@ -291,7 +335,8 @@ def notebook_entry_update_api(request, entry_id):
                         status=403,
                     )
                 setattr(entry, name, data[name])
-                fields.append(name)
+                if name not in fields:
+                    fields.append(name)
         if "project" in data:
             entry.project = str(data["project"] or "").strip()[:255]
             fields.append("project")

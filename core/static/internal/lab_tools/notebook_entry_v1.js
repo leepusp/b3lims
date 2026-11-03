@@ -246,10 +246,29 @@
 
         const statusSelect = document.getElementById("bx-status");
         const statusPill = document.getElementById("bx-status-pill");
+        function paintPill(pill, select) {
+            const color = select.options[select.selectedIndex] && select.options[select.selectedIndex].dataset.color;
+            if (color) pill.style.setProperty("--st", color); else pill.style.removeProperty("--st");
+        }
         statusSelect.addEventListener("change", function () {
-            statusPill.className = "bx-pill bx-status bx-status-" + statusSelect.value;
+            paintPill(statusPill, statusSelect);
             updateEntry({status: statusSelect.value});
         });
+        const categorySelect = document.getElementById("bx-category");
+        if (categorySelect) {
+            categorySelect.addEventListener("change", function () {
+                paintPill(document.getElementById("bx-category-pill"), categorySelect);
+                updateEntry({category: categorySelect.value || null});
+            });
+        }
+        const groupSelect = document.getElementById("bx-group");
+        if (groupSelect) {
+            // A different group means different status and category lists: save, then reload.
+            groupSelect.addEventListener("change", function () {
+                Promise.resolve(updateEntry({research_group: groupSelect.value || null}))
+                    .then((data) => { if (data) window.location.reload(); else groupSelect.value = String(state.entry.research_group || ""); });
+            });
+        }
         document.getElementById("bx-type").addEventListener("change", (e) => updateEntry({entry_type: e.target.value}));
         document.getElementById("bx-visibility").addEventListener("change", (e) => updateEntry({visibility: e.target.value}));
         document.getElementById("bx-date").addEventListener("change", (e) => updateEntry({experiment_date: e.target.value || null}));

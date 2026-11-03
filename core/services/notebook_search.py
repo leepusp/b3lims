@@ -56,7 +56,7 @@ HELP_ROWS = [
     ("title:gel", "Title contains “gel”"),
     ("body:agarose", "Text of the entry contains “agarose”"),
     ("tag:pcr", "Has the tag #pcr"),
-    ("status:completed", "Status is draft, in_progress, completed, reviewed or archived"),
+    ("status:completed", "Status, by name or code (see the lists in Statuses and categories)"),
     ("type:protocol", "Entry type"),
     ("author:ana", "Written by a user whose name, username or e-mail contains “ana”"),
     ("rating>=3", "Rating (also <=, >, <, =)"),
@@ -191,13 +191,29 @@ def _term_q(field, op, value):
     if kind == "choice":
         from core.models.lab_tools.notebook import NotebookEntry
 
-        lookup, choices = {
-            "status": ("status", NotebookEntry.STATUS_CHOICES),
-            "type": ("entry_type", NotebookEntry.ENTRY_TYPE_CHOICES),
-            "category": ("entry_type", NotebookEntry.ENTRY_TYPE_CHOICES),
-            "visibility": ("visibility", NotebookEntry.VISIBILITY_CHOICES),
-        }[field]
+        from core.models import NotebookCategory, NotebookStatus
+
         wanted = value.strip().lower().replace(" ", "_").replace("-", "_")
+        if field == "category":
+            # Categories are user-defined, so they match by name (any research group's list).
+            names = list(NotebookCategory.objects.values_list("pk", "name"))
+            ids = [pk for pk, name in names if name.lower().replace(" ", "_").replace("-", "_") == wanted]
+            if not ids:
+                valid = ", ".join(sorted({n.lower().replace(" ", "_") for _, n in names})) or "none defined yet"
+                raise SearchSyntaxError(f"Unknown category “{value}”. Valid values: {valid}.")
+            return Q(category_id__in=ids)
+        lookup, choices = {
+            "type": ("entry_type", NotebookEntry.ENTRY_TYPE_CHOICES),
+            "visibility": ("visibility", NotebookEntry.VISIBILITY_CHOICES),
+        }.get(field, (None, None))
+        if field == "status":
+            # Statuses are user-defined too: match the slug or the name in any list.
+            lookup = "status"
+            choices = []
+            for st in NotebookStatus.objects.all():
+                if wanted in (st.slug.replace("-", "_"), st.name.lower().replace(" ", "_").replace("-", "_")):
+                    return Q(status=st.slug)
+                choices.append((st.slug, st.name))
         for key, label in choices:
             if wanted == key or wanted == label.lower().replace(" ", "_"):
                 return Q(**{lookup: key})

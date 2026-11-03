@@ -135,6 +135,7 @@ from core.views.internal.lab_tools import notebook_composer as notebook_composer
 from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
 from core.views.internal.lab_tools import notebook_collab as notebook_collab_views
 from core.views.internal.lab_tools import notebook_sharing as notebook_sharing_views
+from core.views.internal.lab_tools import notebook_taxonomy as notebook_taxonomy_views
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 
@@ -451,6 +452,8 @@ urlpatterns = [
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/', notebook_entry_views.notebook_entry_files_api, name='notebook_entry_files_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/revisions/', notebook_collab_views.notebook_revisions_api, name='notebook_revisions_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/comments/', notebook_collab_views.notebook_comments_api, name='notebook_comments_api'),
+    path('internal/lab-tools/notebook/lists/', notebook_taxonomy_views.notebook_taxonomy_page, name='notebook_taxonomy'),
+    path('internal/lab-tools/notebook/lists/api/', notebook_taxonomy_views.notebook_taxonomy_api, name='notebook_taxonomy_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/sharing/', notebook_sharing_views.notebook_sharing_api, name='notebook_sharing_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/lock/', notebook_collab_views.notebook_lock_api, name='notebook_lock_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/replace/', notebook_collab_views.notebook_file_replace_api, name='notebook_file_replace_api'),

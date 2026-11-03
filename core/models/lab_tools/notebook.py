@@ -148,6 +148,21 @@ class NotebookEntry(models.Model):
         choices=STATUS_CHOICES,
         default="draft",
     )
+    # Which research group's status/category lists apply (empty = lab-wide lists).
+    research_group = models.ForeignKey(
+        "core.ResearchGroup",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notebook_entries",
+    )
+    category = models.ForeignKey(
+        "core.NotebookCategory",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="entries",
+    )
     project = models.CharField(max_length=255, blank=True)
     experiment_date = models.DateField(null=True, blank=True)
     visibility = models.CharField(
