@@ -66,6 +66,27 @@ Other useful functions
 - [ ] Tools and workflow builders (Jupyter / Slurm, Galaxy)
 - [ ] Submissions: ENA, NCBI, Zenodo
 
+## Block F: Storage interface review (to be scheduled)
+
+Context: the storage view started as a 3D scene (`_viewer_3d.html`, `storage_spatial_v5.js`
+and the V8 scene files). It broke depending on the browser, so the lab moved to a 2D
+view that is still visual and interactive (isometric, hierarchy, graph and position grid:
+`storage_isometric_v813.js`, `storage_2d_hierarchy_v89b.js`, `storage_graph_v811.js`,
+`storage_position_grid_v8146c3.js`). Not started; needs a review before any work.
+
+- [ ] Review the whole storage UI and how it is built: about 20 script files with version
+      suffixes (`v4` to `v8146c3`), one 1,094-line template (`index_v814.html`) and two
+      generations of explorer; decide what is still used, merge or remove the rest
+- [ ] Decide whether the old 3D viewer and scene scripts stay, are hidden behind a flag,
+      or are removed (do not ship code that breaks on some browsers)
+- [ ] Improve the 2D view: clearer boxes, freezers, racks and positions, search and
+      highlight a sample, drag to move, colour by collection or status, zoom and pan
+- [ ] Optional 3D later, only if it works everywhere: probe WebGL support first and fall
+      back to 2D automatically, with the same data and the same controls
+- [ ] Phone and tablet layout for the storage views
+- [ ] Review the storage data model and screens together (workspaces, positions,
+      movements) before changing the interface, so the new view fits the data
+
 ## Housekeeping
 
 - [x] Test research groups removed and the LIMS user `ladmin` deleted (production, 2026-11-03)
