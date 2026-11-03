@@ -16,6 +16,7 @@ from core.models.lab_tools.notebook_collab import NotebookComment, NotebookRevis
 from core.services import notebook_collab
 from core.services.notebook_html import sanitize_notebook_html
 from core.views.internal.lab_tools.notebook import _get_entry_for_user
+from core.views.internal.lab_tools.notebook_dashboard import delete_attachment_files
 
 MAX_COMMENT = 5000
 MAX_TODOS = 200
@@ -217,6 +218,30 @@ def notebook_file_caption_api(request, entry_id):
     attachment.caption = str(data.get("caption") or "").strip()[:255]
     attachment.save(update_fields=["caption"])
     return JsonResponse({"status": "success", "caption": attachment.caption})
+
+
+@login_required
+@require_POST
+def notebook_file_delete_api(request, entry_id):
+    """Remove a file with all its versions."""
+    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
+    try:
+        notebook_collab.check_lock(entry, request.headers.get("X-Lock-Token"))
+        data = _body(request)
+    except notebook_collab.LockedError as exc:
+        return _locked(exc)
+    except ValidationError as exc:
+        return _err(exc)
+    current = get_object_or_404(NotebookAttachment, pk=data.get("attachment_id"), entry=entry, is_current=True)
+    chain, seen, cursor = [], set(), current
+    while cursor is not None and cursor.pk not in seen:
+        chain.append(cursor)
+        seen.add(cursor.pk)
+        cursor = cursor.previous
+    left = delete_attachment_files(chain)
+    NotebookAttachment.objects.filter(pk__in=[a.pk for a in chain]).delete()
+    entry.save(update_fields=["updated_at"])
+    return JsonResponse({"status": "success", "removed": len(chain), "files_left_on_disk": left})
 
 
 # ----------------------------------------------------------------- todolist

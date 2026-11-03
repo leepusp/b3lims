@@ -14,8 +14,9 @@ def visible_notebook_entries_for_user(user):
     - private: only the author
     - lab: any authenticated user
     - shared: only the author for now, until explicit sharing fields are added
+    Entries in the trash are never listed here; see trashed_notebook_entries_for_user.
     """
-    qs = NotebookEntry.objects.all()
+    qs = NotebookEntry.objects.filter(deleted_at__isnull=True)
 
     if not user or not user.is_authenticated:
         return qs.none()
@@ -29,8 +30,23 @@ def visible_notebook_entries_for_user(user):
     ).distinct()
 
 
+def trashed_notebook_entries_for_user(user):
+    """Entries in the trash that this user may restore or delete for good:
+    their own, or any for a superuser."""
+    qs = NotebookEntry.objects.filter(deleted_at__isnull=False)
+
+    if not user or not user.is_authenticated:
+        return qs.none()
+    if user.is_superuser:
+        return qs
+    return qs.filter(author=user)
+
+
 def can_view_notebook_entry(user, entry) -> bool:
     if not user or not user.is_authenticated or entry is None:
+        return False
+
+    if entry.deleted_at is not None:
         return False
 
     if user.is_superuser:

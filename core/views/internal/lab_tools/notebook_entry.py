@@ -198,6 +198,7 @@ def notebook_entry(request, entry_id):
             "lock": reverse("notebook_lock_api", args=[entry.pk]),
             "replace": reverse("notebook_file_replace_api", args=[entry.pk]),
             "file_caption": reverse("notebook_file_caption_api", args=[entry.pk]),
+            "file_delete": reverse("notebook_file_delete_api", args=[entry.pk]),
         },
         "comment_count": entry.comments.count(),
     }

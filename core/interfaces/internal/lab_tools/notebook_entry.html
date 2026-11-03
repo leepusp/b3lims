@@ -48,9 +48,6 @@
                 </a>
             {% endfor %}
         </nav>
-        <div class="bx-nav-foot">
-            <a href="{% url 'eln_private_drafts' %}"><i class="bi bi-folder2-open"></i> Private drafts</a>
-        </div>
     </aside>
 
     <section class="bx-main">
@@ -80,6 +77,8 @@
                         <li><button class="dropdown-item" type="button" id="bx-revisions"><i class="bi bi-clock-history me-2"></i>Revisions and compare</button></li>
                         <li><button class="dropdown-item" type="button" id="bx-print"><i class="bi bi-printer me-2"></i>Print entry</button></li>
                         <li><a class="dropdown-item" href="{% url 'notebook_dashboard' %}"><i class="bi bi-grid-3x3-gap me-2"></i>All entries</a></li>
+                        {% if can_edit %}<li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item text-danger" type="button" id="bx-trash"><i class="bi bi-trash3 me-2"></i>Remove entry</button></li>{% endif %}
                     </ul>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary bx-icon-btn" id="bx-info-toggle" title="Entry information"><i class="bi bi-info-circle"></i></button>

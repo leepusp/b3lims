@@ -1,3 +1,6 @@
+> **RETIRED (2.1.1).** The private-drafts store described below no longer exists in the application.
+> Private work is now an ELN entry with visibility Private. Kept for history.
+
 # B3 LIMS — Hybrid ELN Architecture v1
 
 ## Objective

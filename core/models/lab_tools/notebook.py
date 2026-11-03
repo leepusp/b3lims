@@ -180,6 +180,16 @@ class NotebookEntry(models.Model):
         related_name="core_notebook_entries",
     )
 
+    # Trash: a removed entry keeps its data until it is deleted for good.
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

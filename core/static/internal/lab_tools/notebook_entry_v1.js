@@ -703,7 +703,8 @@
                     <td>${formatSize(f.size)}</td>
                     <td><code title="SHA-256">${esc(f.checksum || "—")}${f.checksum ? "…" : ""}</code></td>
                     <td class="small text-muted">${esc(f.uploaded_by)}<br>${esc(f.uploaded_at)}</td>
-                    ${canEdit ? `<td class="bx-file-actions"><label class="btn btn-sm btn-outline-secondary mb-0" title="Upload a new version of this file"><i class="bi bi-arrow-repeat"></i> New version<input type="file" hidden data-replace="${f.id}"></label></td>` : ""}
+                    ${canEdit ? `<td class="bx-file-actions"><label class="btn btn-sm btn-outline-secondary mb-0" title="Upload a new version of this file"><i class="bi bi-arrow-repeat"></i> New version<input type="file" hidden data-replace="${f.id}"></label>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-delete-file="${f.id}" title="Remove this file and its versions"><i class="bi bi-trash3"></i></button></td>` : ""}
                 </tr>`).join("")}</tbody></table>`
             : '<p class="bx-hint mt-3">No files yet.</p>';
     }
@@ -724,6 +725,17 @@
                 });
         });
         root.addEventListener("click", function (event) {
+            const del = event.target.closest("[data-delete-file]");
+            if (del && canEdit) {
+                const file = state.attachments.find((f) => String(f.id) === del.dataset.deleteFile);
+                const extra = file && file.history && file.history.length ? " and its " + file.history.length + " earlier version(s)" : "";
+                if (!window.confirm("Remove " + (file ? file.name : "this file") + extra + "? Images from this file used in the notes will stop showing. This cannot be undone.")) return;
+                postJson(urls.file_delete, {attachment_id: Number(del.dataset.deleteFile)}).then(function (data) {
+                    status(data.status === "success" ? "File removed" : (data.message || "Could not remove the file"), data.status !== "success");
+                    refreshFiles();
+                });
+                return;
+            }
             const span = event.target.closest("[data-caption]");
             if (!span || !canEdit) return;
             const id = span.dataset.caption;
@@ -856,6 +868,26 @@
                     body: JSON.stringify({action: "release", token: lockToken}),
                 });
             } catch (e) { /* best effort */ }
+        });
+    }
+
+    // ---------------------------------------------------------------- remove (trash)
+
+    function initTrash() {
+        const button = document.getElementById("bx-trash");
+        if (!button) return;
+        button.addEventListener("click", function () {
+            if (!window.confirm("Remove this entry? It moves to the Trash, where you can restore it or delete it for good.")) return;
+            postJson(urls.batch, {action: "trash", ids: [entryId]}).then(function (data) {
+                if (data.status !== "success" || !data.changed) { status(data.message || "Could not remove the entry", true); return; }
+                try {
+                    const tabs = store.get("openTabs", []).filter((t) => t && t.id !== entryId);
+                    store.set("openTabs", tabs);
+                    window.sessionStorage.removeItem("b3eln.lock." + entryId);
+                } catch (e) { /* ignore */ }
+                pending = 0;
+                window.location.href = urls.dashboard;
+            });
         });
     }
 
@@ -1022,6 +1054,7 @@
     renderRelevant();
     initFiles();
     initLock();
+    initTrash();
     initRevisions();
     initComments();
     initEditor();

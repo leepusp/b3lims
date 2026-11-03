@@ -14,7 +14,12 @@ from django.views.decorators.http import require_POST
 
 from core.models.lab_tools.notebook import NotebookEntry
 from core.models.lab_tools.notebook_composer import NotebookPin, NotebookStep, NotebookTag
-from core.permissions.notebook import can_edit_notebook_entry, visible_notebook_entries_for_user
+from core.models.lab_tools.notebook_collab import NotebookEditLock
+from core.permissions.notebook import (
+    can_edit_notebook_entry,
+    trashed_notebook_entries_for_user,
+    visible_notebook_entries_for_user,
+)
 from core.services.notebook_composer import TAG_RE
 
 
@@ -33,8 +38,6 @@ BATCH_LIMIT = 200
 def _filtered_entries(request):
     user = request.user
     params = request.GET
-    qs = visible_notebook_entries_for_user(user)
-
     filters = {
         "q": (params.get("q") or "").strip(),
         "type": params.get("type") or "",
@@ -45,11 +48,15 @@ def _filtered_entries(request):
         "sort": params.get("sort") if params.get("sort") in SORTS else "modified",
     }
 
-    if filters["state"] == "archived":
-        qs = qs.filter(status="archived")
-    elif filters["state"] != "all":
-        filters["state"] = "active"
-        qs = qs.exclude(status="archived")
+    if filters["state"] == "trash":
+        qs = trashed_notebook_entries_for_user(user)
+    else:
+        qs = visible_notebook_entries_for_user(user)
+        if filters["state"] == "archived":
+            qs = qs.filter(status="archived")
+        elif filters["state"] != "all":
+            filters["state"] = "active"
+            qs = qs.exclude(status="archived")
 
     if filters["q"]:
         q = filters["q"]
@@ -153,6 +160,7 @@ def notebook_dashboard(request):
                 "to_review": visible.filter(status="completed").count(),
                 "overdue": open_steps.filter(deadline__lt=now).count(),
             },
+            "trash_count": trashed_notebook_entries_for_user(user).count(),
             "due_steps": open_steps[:6],
             "now": now,
             "recent": mine.order_by("-updated_at")[:5],
@@ -166,6 +174,30 @@ def notebook_dashboard(request):
             },
         },
     )
+
+
+def delete_attachment_files(attachments):
+    """Remove the stored files of attachments. Returns how many could not be removed.
+
+    The database rows are the record; a file that cannot be unlinked (for example
+    owned by another account) is reported, never fatal.
+    """
+    left = 0
+    for attachment in attachments:
+        if not attachment.file:
+            continue
+        try:
+            attachment.file.storage.delete(attachment.file.name)
+        except Exception:
+            left += 1
+    return left
+
+
+def purge_entry(entry):
+    """Delete an entry for good, with its attachments' files. Returns files left on disk."""
+    left = delete_attachment_files(list(entry.attachments.all()))
+    entry.delete()
+    return left
 
 
 @login_required
@@ -183,6 +215,24 @@ def notebook_dashboard_batch_api(request):
 
     action = data.get("action")
     value = data.get("value")
+
+    # Entries in the trash are not "visible"; restore and delete-for-good act on them.
+    if action in {"restore", "purge"}:
+        trashed = list(trashed_notebook_entries_for_user(request.user).filter(pk__in=ids))
+        leftover = 0
+        with transaction.atomic():
+            for entry in trashed:
+                if action == "restore":
+                    entry.deleted_at = None
+                    entry.deleted_by = None
+                    entry.save(update_fields=["deleted_at", "deleted_by"])
+                else:
+                    leftover += purge_entry(entry)
+        payload = {"status": "success", "changed": len(trashed), "skipped": len(ids) - len(trashed)}
+        if leftover:
+            payload["files_left_on_disk"] = leftover
+        return JsonResponse(payload)
+
     entries = list(visible_notebook_entries_for_user(request.user).filter(pk__in=ids))
 
     # Pins are personal: any visible entry can be pinned.
@@ -204,6 +254,13 @@ def notebook_dashboard_batch_api(request):
                 for entry in editable:
                     entry.status = value
                     entry.save(update_fields=["status", "updated_at"])
+            elif action == "trash":
+                for entry in editable:
+                    entry.deleted_at = timezone.now()
+                    entry.deleted_by = request.user
+                    entry.save(update_fields=["deleted_at", "deleted_by"])
+                    # The page can no longer reach the lock API once the entry is hidden.
+                    NotebookEditLock.objects.filter(entry=entry).delete()
             elif action == "archive":
                 for entry in editable:
                     entry.status = "archived"

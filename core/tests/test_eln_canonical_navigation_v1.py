@@ -7,9 +7,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 BASE = ROOT / "interfaces/internal/common/base.html"
 
-NOTEBOOK = (
-    ROOT / "interfaces/internal/lab_tools/notebook.html"
-)
 
 
 class CanonicalElnNavigationTests(SimpleTestCase):

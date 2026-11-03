@@ -127,7 +127,7 @@ def reference_queryset(kind, user, entry=None):
     if kind == "uploads":
         if entry is None:
             raise ValueError("uploads require an entry")
-        return entry.attachments.all()
+        return entry.attachments.filter(is_current=True)
     raise ValueError(f"unknown reference kind: {kind}")
 
 
@@ -144,7 +144,11 @@ def reference_label(kind, obj):
         full = obj.get_full_name() if hasattr(obj, "get_full_name") else ""
         return f"{full} ({obj.get_username()})" if full else obj.get_username()
     if kind == "uploads":
-        return obj.original_filename or obj.caption or f"File {obj.pk}"
+        import re
+        from pathlib import Path
+
+        stored = Path(obj.file.name).name if obj.file else ""
+        return re.sub(r"^[0-9a-f]{32}_", "", stored) or obj.caption or f"File {obj.pk}"
     return str(obj)
 
 
@@ -174,7 +178,7 @@ def search_references(kind, user, query, entry=None, limit=15):
                 | Q(last_name__icontains=query)
             )
         elif kind == "uploads":
-            qs = qs.filter(Q(original_filename__icontains=query) | Q(caption__icontains=query))
+            qs = qs.filter(Q(file__icontains=query) | Q(caption__icontains=query))
 
     if kind == "experiments" and entry is not None:
         qs = qs.exclude(pk=entry.pk)

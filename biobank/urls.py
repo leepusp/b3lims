@@ -8,7 +8,7 @@ from core.views.internal.shipments.views import shipment_document_file_download_
 from core.views.internal.shipments.views import shipments_list_view, shipments_dashboard_view, shipment_detail_view, shipment_scan_view, shipment_approve_documents_view, shipment_package_labels_view, shipment_documents_review_view, shipment_request_document_correction_view
 # core/urls.py
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from core.views.internal.storage.location_layout_v8146c3 import storage_location_create_with_layout_v8146c3
 from core.views.internal.storage.location_child_v8146 import storage_location_child_create_v8146, storage_path_register_v8146
 from core.views.internal.samples.storage_move_v8146 import sample_storage_move_v8146
@@ -161,8 +161,6 @@ from core.views.internal.samples.views import (
 
 from core.views.internal.samples.bulk_storage_v8148 import sample_bulk_storage_view
 
-from core.views.internal.lab_tools.eln_experimental import eln_experimental_index
-from core.views.internal.lab_tools import eln_private_web as private_eln_views
 
 urlpatterns = [
     path("samples/bulk-storage/", sample_bulk_storage_view, name="sample_bulk_storage"),
@@ -436,24 +434,10 @@ urlpatterns = [
     path("ajax/add_tag/", create_tag_ajax_view, name="ajax_add_tag"),
 
     # ---------------- INTERNAL: LAB TOOLS ----------------
-    path(
-        "internal/lab-tools/eln-experimental/private/",
-        private_eln_views.eln_private_drafts,
-        name="eln_private_drafts",
-    ),
-    path(
-        "internal/lab-tools/eln-experimental/private/new/",
-        private_eln_views.eln_private_new,
-        name="eln_private_new",
-    ),
-    path(
-        "internal/lab-tools/eln-experimental/private/<str:project>/<uuid:entry_id>/",
-        private_eln_views.eln_private_detail,
-        name="eln_private_detail",
-    ),
-    path(
-        "internal/lab-tools/eln-experimental/",
-        eln_experimental_index,
+    # Private drafts were retired; old bookmarks land on the entries dashboard.
+    re_path(
+        r"^internal/lab-tools/eln-experimental/.*$",
+        RedirectView.as_view(pattern_name="notebook_dashboard", permanent=False),
         name="eln_experimental_index",
     ),
     path('internal/lab-tools/notebook/entries/', notebook_dashboard_views.notebook_dashboard, name='notebook_dashboard'),
@@ -469,6 +453,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/entry/<int:entry_id>/lock/', notebook_collab_views.notebook_lock_api, name='notebook_lock_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/replace/', notebook_collab_views.notebook_file_replace_api, name='notebook_file_replace_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/caption/', notebook_collab_views.notebook_file_caption_api, name='notebook_file_caption_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/files/delete/', notebook_collab_views.notebook_file_delete_api, name='notebook_file_delete_api'),
     path('internal/lab-tools/notebook/todos/', notebook_collab_views.notebook_todos_api, name='notebook_todos_api'),
     path('internal/lab-tools/notebook/entries/batch/', notebook_dashboard_views.notebook_dashboard_batch_api, name='notebook_dashboard_batch_api'),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
@@ -479,7 +464,6 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/<int:entry_id>/entry-links/', notebook_composer_views.notebook_entry_links_api, name='notebook_entry_links_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/lookup/', notebook_composer_views.notebook_lookup_api, name='notebook_lookup_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/field-definitions/', notebook_composer_views.notebook_field_definitions_api, name='notebook_field_definitions_api'),
-    path('internal/lab-tools/notebook/api/delete/<int:entry_id>/', notebook_views.notebook_delete_entry_api, name='notebook_delete_entry_api'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/api/search-chemicals/', notebook_views.search_chemicals_api, name='search_chemicals_api'),
     path('internal/api/search-molecular-sequences/', notebook_views.search_molecular_sequences_api, name='search_molecular_sequences_api'),

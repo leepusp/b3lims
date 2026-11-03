@@ -21,6 +21,8 @@ workflows/Galaxy, ENA/NCBI/Zenodo submission.
 Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench release.
 
 The classic notebook page was retired in 2.1; old links redirect to the entry page.
+The separate "Private drafts" store was retired in 2.1.1: private work is an entry with
+visibility Private. Draft files already written to a user's home are left untouched.
 
 ## Entities
 
@@ -90,7 +92,7 @@ The classic notebook page was retired in 2.1; old links redirect to the entry pa
 | Dashboard (recent, steps, bookings, todo) | 🟡 recent, steps, todo ✅; bookings ⬜ | 2.3 |
 | Todolist | ✅ personal list on the dashboard (2.1) | — |
 | Favourite tags panel | ⬜ | 2.2 |
-| Trash / restore (state: deleted) | ⬜ | 2.2 |
+| Trash / restore (state: deleted) | ✅ remove → trash → restore or delete permanently (2.1.1) | — |
 
 ## Import / export
 

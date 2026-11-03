@@ -70,9 +70,6 @@
             <h4><i class="bi bi-journal-bookmark me-2"></i>Entries</h4>
         </div>
         <div class="ms-auto d-flex gap-2 flex-wrap">
-            <a class="btn btn-outline-secondary btn-sm" href="{% url 'eln_private_drafts' %}">
-                <i class="bi bi-folder2-open me-1"></i>Private drafts
-            </a>
             <a class="btn btn-outline-secondary btn-sm" href="{% url 'notebook_entry_open_latest' %}">
                 <i class="bi bi-pencil-square me-1"></i>Open editor
             </a>
@@ -110,6 +107,7 @@
                     <option value="active" {% if filters.state == "active" %}selected{% endif %}>Active</option>
                     <option value="archived" {% if filters.state == "archived" %}selected{% endif %}>Archived</option>
                     <option value="all" {% if filters.state == "all" %}selected{% endif %}>All</option>
+                    <option value="trash" {% if filters.state == "trash" %}selected{% endif %}>Trash{% if trash_count %} ({{ trash_count }}){% endif %}</option>
                 </select>
                 <select class="form-select form-select-sm" name="sort" aria-label="Sort">
                     {% for key, label in sorts %}<option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
@@ -140,6 +138,10 @@
 
             <div class="eln-batch" id="eln-batch">
                 <strong><span id="eln-sel-count">0</span> selected</strong>
+                {% if filters.state == "trash" %}
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-action="restore"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" data-action="purge"><i class="bi bi-x-octagon"></i> Delete permanently</button>
+                {% else %}
                 <select class="form-select form-select-sm w-auto" id="eln-batch-status" aria-label="Change status">
                     <option value="">Change status…</option>
                     {% for value, label in statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
@@ -150,10 +152,15 @@
                 </div>
                 <button class="btn btn-sm btn-outline-secondary" type="button" data-action="pin"><i class="bi bi-pin-angle"></i> Pin</button>
                 <button class="btn btn-sm btn-outline-secondary" type="button" data-action="unpin">Unpin</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" data-action="archive"><i class="bi bi-archive"></i> Archive</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="archive"><i class="bi bi-archive"></i> Archive</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" data-action="trash"><i class="bi bi-trash3"></i> Remove</button>
+                {% endif %}
                 <span class="small text-muted ms-auto" id="eln-batch-msg"></span>
             </div>
 
+            {% if filters.state == "trash" %}
+                <div class="px-3 py-2 small bg-light border-bottom"><i class="bi bi-trash3"></i> Removed entries stay here until you restore them or delete them permanently. Permanent deletion cannot be undone.</div>
+            {% endif %}
             <div class="table-responsive">
                 <table class="table table-hover eln-table">
                     <thead>
@@ -167,7 +174,7 @@
                             <th>Rating</th>
                             <th>Owner</th>
                             <th>Modified</th>
-                            <th></th>
+                            <th class="text-nowrap">{% if filters.state == "trash" %}Removed{% endif %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -176,7 +183,7 @@
                                 <td><input type="checkbox" class="form-check-input eln-row" value="{{ entry.id }}" aria-label="Select {{ entry.title }}"></td>
                                 <td class="id">{% if entry.custom_id %}{{ entry.custom_id }}{% else %}#{{ entry.id }}{% endif %}</td>
                                 <td>
-                                    <a class="ttl" href="{% url 'notebook_entry' entry.id %}">{{ entry.title }}</a>
+                                    {% if filters.state == "trash" %}<span class="ttl">{{ entry.title }}</span>{% else %}<a class="ttl" href="{% url 'notebook_entry' entry.id %}">{{ entry.title }}</a>{% endif %}
                                     <div>
                                         {% for tag in entry.tags.all %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}
                                         {% if entry.project %}<span class="small text-muted">{{ entry.project }}</span>{% endif %}
@@ -193,11 +200,11 @@
                                 <td class="eln-stars" title="{{ entry.rating }} of 5">{% for n in "12345" %}{% if forloop.counter <= entry.rating %}★{% else %}<span class="off">★</span>{% endif %}{% endfor %}</td>
                                 <td class="small">{{ entry.author.get_full_name|default:entry.author.get_username }}</td>
                                 <td class="small text-nowrap text-muted">{{ entry.updated_at|date:"Y-m-d H:i" }}</td>
-                                <td><button type="button" class="eln-pin-btn {% if entry.is_pinned %}on{% endif %}" data-pin="{{ entry.id }}" title="{% if entry.is_pinned %}Unpin{% else %}Pin to the top{% endif %}"><i class="bi bi-pin-angle{% if entry.is_pinned %}-fill{% endif %}"></i></button></td>
+                                {% if filters.state == "trash" %}<td class="small text-muted text-nowrap">{{ entry.deleted_at|date:"Y-m-d H:i" }}</td>{% else %}<td><button type="button" class="eln-pin-btn {% if entry.is_pinned %}on{% endif %}" data-pin="{{ entry.id }}" title="{% if entry.is_pinned %}Unpin{% else %}Pin to the top{% endif %}"><i class="bi bi-pin-angle{% if entry.is_pinned %}-fill{% endif %}"></i></button></td>{% endif %}
                             </tr>
                         {% empty %}
                             <tr><td colspan="10" class="text-center text-muted py-5">
-                                No entries match these filters.
+                                {% if filters.state == "trash" %}The trash is empty.{% else %}No entries match these filters.{% endif %}
                                 <div class="mt-2">{% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-outline-primary btn-sm" button_label="Create an entry" %}</div>
                             </td></tr>
                         {% endfor %}
@@ -296,7 +303,10 @@
     function run(action, value, ids) {
         ids = ids || selected();
         if (!ids.length) return;
-        if (action === "archive" && !window.confirm("Archive " + ids.length + " entr" + (ids.length > 1 ? "ies" : "y") + "?")) return;
+        const many = ids.length + " entr" + (ids.length > 1 ? "ies" : "y");
+        if (action === "archive" && !window.confirm("Archive " + many + "?")) return;
+        if (action === "trash" && !window.confirm("Remove " + many + "? They move to the Trash and can be restored.")) return;
+        if (action === "purge" && !window.confirm("Delete " + many + " permanently, with files and comments? This cannot be undone.")) return;
         msg.textContent = "Working…";
         fetch(batchUrl, {
             method: "POST",
@@ -305,7 +315,7 @@
             body: JSON.stringify({action: action, value: value, ids: ids}),
         }).then((r) => r.json()).then(function (data) {
             if (data.status !== "success") { msg.textContent = data.message || "Not applied"; return; }
-            msg.textContent = data.changed + " updated" + (data.skipped ? ", " + data.skipped + " skipped (not yours)" : "");
+            msg.textContent = data.changed + " updated" + (data.skipped ? ", " + data.skipped + " skipped (not yours)" : "") + (data.files_left_on_disk ? ". " + data.files_left_on_disk + " file(s) could not be removed from disk; ask an administrator." : "");
             window.setTimeout(() => window.location.reload(), 500);
         });
     }
@@ -313,10 +323,12 @@
     rows.forEach((r) => r.addEventListener("change", refresh));
     if (all) all.addEventListener("change", () => { rows.forEach((r) => { r.checked = all.checked; }); refresh(); });
 
-    document.getElementById("eln-batch-status").addEventListener("change", function () {
+    const statusSelect = document.getElementById("eln-batch-status");
+    if (statusSelect) statusSelect.addEventListener("change", function () {
         if (this.value) run("status", this.value);
     });
-    document.getElementById("eln-batch-tag-btn").addEventListener("click", function () {
+    const tagButton = document.getElementById("eln-batch-tag-btn");
+    if (tagButton) tagButton.addEventListener("click", function () {
         const tag = document.getElementById("eln-batch-tag").value.trim();
         if (tag) run("add_tag", tag);
     });
