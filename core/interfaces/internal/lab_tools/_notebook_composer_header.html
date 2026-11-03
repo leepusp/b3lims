@@ -1,0 +1,23 @@
+{# B3 Bench 1.A — identification strip: custom ID, tags and rating (eLabFTW header). #}
+<div class="nb-composer-header row g-2 mt-1" id="nb-composer-header">
+    <div class="col-md-3">
+        <label class="form-label small text-muted mb-1" for="nb-custom-id">Custom ID</label>
+        <input type="text" id="nb-custom-id" class="form-control form-control-sm"
+               maxlength="64" placeholder="e.g. EXP-2026-031"
+               {% if not can_edit %}readonly{% endif %}>
+    </div>
+    <div class="col-md-7">
+        <label class="form-label small text-muted mb-1" for="nb-tag-input">Tags</label>
+        <div class="nb-tag-box form-control form-control-sm" id="nb-tag-box">
+            <span id="nb-tag-list"></span>
+            {% if can_edit %}
+                <input type="text" id="nb-tag-input" class="nb-tag-input"
+                       maxlength="64" placeholder="Add a tag and press Enter">
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-2">
+        <span class="form-label small text-muted mb-1 d-block">Rating</span>
+        <div class="nb-rating" id="nb-rating" role="radiogroup" aria-label="Rating"></div>
+    </div>
+</div>

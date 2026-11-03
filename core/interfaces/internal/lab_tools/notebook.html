@@ -7,6 +7,7 @@
 
 {% block extra_css %}
 <link href="{% static 'vendor/quill/1.3.6/quill.snow.css' %}" rel="stylesheet">
+<link href="{% static 'internal/lab_tools/notebook_composer_v1.css' %}" rel="stylesheet">
 <style>
     .notebook-shell {
         display: grid;
@@ -501,6 +502,7 @@
                                    placeholder="Project, campaign, grant, workflow or analysis context">
                         </div>
                     </div>
+                    {% include "internal/lab_tools/_notebook_composer_header.html" %}
                 </div>
 
                 <div class="notebook-panel-body">
@@ -725,6 +727,7 @@
 
                         {% endfor %}
                     </div>
+                    {% include "internal/lab_tools/_notebook_composer_sections.html" %}
                         </div>
 
                         
@@ -3774,5 +3777,8 @@ window.insertChemicalSnapshot = insertChemicalSnapshot;
 /* BIOBANK_LINKED_CHEMICALS_END */
 
 </script>
+{% endif %}
+{% if active_entry %}
+<script src="{% static 'internal/lab_tools/notebook_composer_v1.js' %}"></script>
 {% endif %}
 {% endblock %}

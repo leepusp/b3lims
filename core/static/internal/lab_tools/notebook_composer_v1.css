@@ -1,0 +1,76 @@
+/* B3 Bench 1.A — Notebook entry composer. */
+
+.nb-section > .card-header { padding: .55rem .9rem; }
+
+.nb-section-toggle {
+    display: inline-flex; align-items: center; gap: .45rem;
+    background: none; border: 0; padding: 0; color: inherit;
+}
+.nb-section-toggle .bi-chevron-down { transition: transform .15s ease; font-size: .8rem; }
+.nb-section-toggle[aria-expanded="false"] .bi-chevron-down { transform: rotate(-90deg); }
+
+/* identification strip */
+.nb-tag-box { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; min-height: 31px; height: auto; }
+.nb-tag {
+    display: inline-flex; align-items: center; gap: .25rem;
+    background: #e7f1ff; color: #0a58ca; border-radius: 999px;
+    padding: .05rem .55rem; font-size: .8rem; margin-right: .2rem;
+}
+.nb-tag-remove { border: 0; background: none; color: inherit; padding: 0; line-height: 1; }
+.nb-tag-input { border: 0; outline: 0; flex: 1 1 140px; min-width: 120px; font-size: .85rem; background: transparent; }
+.nb-rating { display: flex; gap: .1rem; }
+.nb-star { border: 0; background: none; font-size: 1.15rem; line-height: 1; color: #ced4da; padding: 0 .05rem; }
+.nb-star.on { color: #f0ad00; }
+.nb-star:disabled { cursor: default; }
+
+/* custom fields */
+.nb-field-editor, .nb-load-panel {
+    border: 1px solid #b6d4fe; background: #f5f9ff; border-radius: .5rem;
+    padding: .75rem; margin-bottom: .9rem;
+}
+.nb-field-group + .nb-field-group { margin-top: .9rem; }
+.nb-field-group-title {
+    font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: #6c757d; border-bottom: 1px solid #e9ecef; padding-bottom: .25rem; margin-bottom: .35rem;
+}
+.nb-field {
+    display: grid; grid-template-columns: minmax(160px, 34%) 1fr auto;
+    gap: .75rem; align-items: center; padding: .4rem .25rem; border-bottom: 1px dashed #edf0f2;
+}
+.nb-field:last-child { border-bottom: 0; }
+.nb-field-missing .nb-field-label .fw-semibold { color: #b02a37; }
+.nb-field-type {
+    display: inline-block; margin-left: .4rem; font-size: .68rem; color: #6c757d;
+    background: #f1f3f5; border-radius: 4px; padding: 0 .35rem; vertical-align: middle;
+}
+.nb-field-actions { white-space: nowrap; }
+.nb-field-actions .btn { padding: 0 .25rem; }
+.nb-ref-value { font-size: .875rem; margin-bottom: .2rem; }
+
+.nb-picker { position: relative; }
+.nb-picker-results {
+    position: absolute; z-index: 30; left: 0; right: 0; top: 100%;
+    max-height: 260px; overflow-y: auto; box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+}
+
+/* steps */
+.nb-steps-progress { width: 120px; height: 6px; }
+.nb-step {
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    padding: .4rem .25rem; border-bottom: 1px dashed #edf0f2;
+}
+.nb-step:last-child { border-bottom: 0; }
+.nb-step .form-check-input { margin: 0; flex-shrink: 0; }
+.nb-step-n { color: #6c757d; font-variant-numeric: tabular-nums; }
+.nb-step.done .nb-step-body { text-decoration: line-through; color: #6c757d; }
+.nb-step-actions .btn { padding: 0 .25rem; }
+.nb-step-deadline { max-width: 210px; }
+
+/* links */
+.nb-link { display: flex; align-items: center; gap: .5rem; padding: .3rem .25rem; }
+
+@media (max-width: 768px) {
+    .nb-field { grid-template-columns: 1fr; gap: .3rem; }
+    .nb-step-form { flex-wrap: wrap; }
+    .nb-step-deadline { max-width: none; }
+}

@@ -380,6 +380,12 @@ def _get_entry_for_user(entry_id, user, *, require_edit=False):
     return entry
 
 
+def _composer_state(entry, user):
+    from core.views.internal.lab_tools.notebook_composer import composer_state
+
+    return composer_state(entry, user)
+
+
 @login_required
 def notebook_index(request):
     entries = (
@@ -481,6 +487,11 @@ def notebook_index(request):
             "linked_chemical_links": linked_chemical_links,
             "linked_molecular_links": linked_molecular_links,
             "linked_samples_json": linked_samples_json,
+            "composer_state": (
+                _composer_state(active_entry, request.user)
+                if active_entry
+                else None
+            ),
             "blocks": blocks,
             "attachments": attachments,
             "protocol_chemicals": protocol_chemicals,
@@ -720,6 +731,13 @@ def notebook_create(request):
         visibility="private",
         content=template["content"],
         protocol_content=template["protocol_content"],
+    )
+
+    from core.services.notebook_composer import apply_template_structure
+
+    apply_template_structure(
+        new_entry,
+        template_key if template_key in _notebook_entry_templates() else "experiment",
     )
 
     return redirect(f"{reverse('notebook_index')}?entry_id={new_entry.id}")

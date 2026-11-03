@@ -41,6 +41,11 @@ from core.models.lab_tools.notebook import (
     NotebookEntry,
     NotebookSampleLink,
 )
+from core.models.lab_tools.notebook_composer import (
+    NotebookEntryLink,
+    NotebookStep,
+    NotebookTag,
+)
 
 from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole

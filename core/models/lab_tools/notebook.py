@@ -162,6 +162,18 @@ class NotebookEntry(models.Model):
         blank=True,
     )
 
+    # B3 Bench 1.A: eLabFTW-style composition (see notebook_composer.py).
+    # db_default keeps inserts from older releases valid during cutover
+    # and after a rollback.
+    custom_id = models.CharField(max_length=64, blank=True, default="", db_default="")
+    rating = models.PositiveSmallIntegerField(default=0, db_default=0)
+    metadata = models.JSONField(default=dict, blank=True, db_default={})
+    tags = models.ManyToManyField(
+        "core.NotebookTag",
+        related_name="entries",
+        blank=True,
+    )
+
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
