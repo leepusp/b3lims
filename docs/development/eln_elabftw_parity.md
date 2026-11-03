@@ -73,7 +73,7 @@ visibility Private. Draft files already written to a user's home are left untouc
 
 | Feature | Status | Release |
 | --- | --- | --- |
-| canread / canwrite JSON (base, teams, team groups, users) | 🟡 visibility only | 2.2 |
+| canread / canwrite (users, research groups; read, edit, manage; expiry; revoke) | ✅ via ResourceAccessGrant | 2.2 |
 | Teams, team groups | ResearchGroup | 🟡 | 2.2 |
 | Ownership transfer | ⬜ | 2.2 |
 | Admin panel (team settings, categories, status, templates) | ⬜ | 2.2 |

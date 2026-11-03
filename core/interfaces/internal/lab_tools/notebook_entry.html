@@ -70,6 +70,7 @@
             <div class="bx-actions">
                 <span class="bx-save" id="save-status">{% if can_edit %}Saved{% else %}<i class="bi bi-eye"></i> Read only{% endif %}</span>
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="bx-pin" title="Pin to your dashboard"><i class="bi bi-pin-angle"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="bx-share" title="Who can see and edit this entry"><i class="bi bi-people"></i> Share</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="bx-duplicate" title="Duplicate this entry"><i class="bi bi-copy"></i> Duplicate</button>
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">More</button>
@@ -77,7 +78,7 @@
                         <li><button class="dropdown-item" type="button" id="bx-revisions"><i class="bi bi-clock-history me-2"></i>Revisions and compare</button></li>
                         <li><button class="dropdown-item" type="button" id="bx-print"><i class="bi bi-printer me-2"></i>Print entry</button></li>
                         <li><a class="dropdown-item" href="{% url 'notebook_dashboard' %}"><i class="bi bi-grid-3x3-gap me-2"></i>All entries</a></li>
-                        {% if can_edit %}<li><hr class="dropdown-divider"></li>
+                        {% if can_delete %}<li><hr class="dropdown-divider"></li>
                         <li><button class="dropdown-item text-danger" type="button" id="bx-trash"><i class="bi bi-trash3 me-2"></i>Remove entry</button></li>{% endif %}
                     </ul>
                 </div>
@@ -115,7 +116,7 @@
                     </label>
                     <label class="bx-pill" title="Who can see this entry">
                         <i class="bi bi-shield-lock"></i>
-                        <select id="bx-visibility" aria-label="Visibility" {% if not can_edit %}disabled{% endif %}>
+                        <select id="bx-visibility" aria-label="Visibility" {% if not can_delete %}disabled{% endif %}>
                             {% for value, label in visibilities %}<option value="{{ value }}" {% if entry.visibility == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
                         </select>
                     </label>
@@ -250,7 +251,7 @@
                     <dt>Owner</dt><dd>{{ entry.author.get_full_name|default:entry.author.get_username }}</dd>
                     <dt>Created</dt><dd>{{ entry.created_at|date:"Y-m-d H:i" }}</dd>
                     <dt>Last change</dt><dd id="bx-updated">{{ entry.updated_at|date:"Y-m-d H:i" }}</dd>
-                    <dt>Visibility</dt><dd>{{ entry.get_visibility_display }}</dd>
+                    <dt>Visibility</dt><dd id="bx-info-visibility">{{ entry.get_visibility_display }}</dd>
                 </dl>
                 <h6>Progress</h6>
                 <div class="bx-info-progress"><div class="progress"><div class="progress-bar bg-success" id="bx-info-steps-bar" style="width:0%"></div></div><span id="bx-info-steps"></span></div>
@@ -275,6 +276,38 @@
      data-definitions-url="{% url 'notebook_field_definitions_api' 0 %}"></div>
 {{ composer_state|json_script:"nb-composer-state" }}
 {{ page_state|json_script:"bx-state" }}
+
+{# sharing: visibility plus users and research groups with read, edit or manage access #}
+<div class="modal fade" id="bx-share-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-people me-1"></i> Share this entry</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="small text-muted mb-2" id="bx-share-you"></p>
+                <label class="form-label small mb-1" for="bx-share-visibility">Who can open it</label>
+                <select class="form-select form-select-sm mb-1" id="bx-share-visibility"></select>
+                <p class="bx-hint small mb-3" id="bx-share-hint"></p>
+                <div id="bx-share-manage">
+                    <label class="form-label small mb-1" for="bx-share-q">Add a person or research group</label>
+                    <div class="position-relative mb-2">
+                        <input type="search" class="form-control form-control-sm" id="bx-share-q" placeholder="Type at least 2 letters" autocomplete="off">
+                        <div class="list-group position-absolute w-100 shadow-sm d-none" id="bx-share-results" style="z-index:5"></div>
+                    </div>
+                    <div class="d-flex gap-2 mb-1 align-items-end d-none" id="bx-share-add">
+                        <div class="flex-grow-1 small"><strong id="bx-share-picked"></strong></div>
+                        <select class="form-select form-select-sm w-auto" id="bx-share-level" aria-label="Access level"></select>
+                        <input type="date" class="form-control form-control-sm w-auto" id="bx-share-expires" aria-label="Expires on" title="Optional expiry date">
+                        <button type="button" class="btn btn-sm btn-primary" id="bx-share-grant">Add</button>
+                    </div>
+                    <div class="small text-danger mb-2" id="bx-share-error" role="alert"></div>
+                    <h6 class="small text-uppercase text-muted mt-3">Has access</h6>
+                    <ul class="list-group list-group-flush" id="bx-share-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# revisions: list, compare and restore #}
 <div class="modal fade" id="bx-rev-modal" tabindex="-1" aria-hidden="true">

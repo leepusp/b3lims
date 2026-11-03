@@ -891,6 +891,133 @@
         });
     }
 
+    // ---------------------------------------------------------------- sharing
+
+    function initSharing() {
+        const button = document.getElementById("bx-share");
+        const modalEl = document.getElementById("bx-share-modal");
+        if (!button || !modalEl || !urls.sharing) return;
+        const el = (id) => document.getElementById(id);
+        const visSel = el("bx-share-visibility"), level = el("bx-share-level");
+        const results = el("bx-share-results"), q = el("bx-share-q"), list = el("bx-share-list");
+        const hints = {
+            private: "Only the author sees this entry. People added below keep their access but cannot open it until you share it again.",
+            shared: "The author and the people or groups listed below.",
+            lab: "Everyone in the lab can read it. People listed below can also edit it.",
+        };
+        let state = null, picked = null, timer = null;
+
+        function text(node, value) { node.textContent = value; return node; }
+        function error(message) { text(el("bx-share-error"), message || ""); }
+
+        function render() {
+            const isAuthor = state.your_access === "author" || state.your_access === "admin";
+            text(el("bx-share-you"), "Author: " + state.author + (isAuthor ? "" : ". Your access: " + state.your_access));
+            visSel.innerHTML = "";
+            state.visibilities.forEach(function (v) {
+                const o = document.createElement("option");
+                o.value = v.value; o.textContent = v.label; o.selected = v.value === state.visibility;
+                visSel.appendChild(o);
+            });
+            visSel.disabled = !isAuthor;
+            text(el("bx-share-hint"), hints[state.visibility] || "");
+            el("bx-share-manage").hidden = !state.can_manage;
+            if (!state.can_manage) return;
+            level.innerHTML = "";
+            state.levels.forEach(function (l) {
+                const o = document.createElement("option");
+                o.value = l.value; o.textContent = l.label; level.appendChild(o);
+            });
+            list.innerHTML = "";
+            if (!state.grants.length) {
+                const empty = document.createElement("li");
+                empty.className = "list-group-item small text-muted px-0";
+                empty.textContent = "Nobody yet.";
+                list.appendChild(empty);
+            }
+            state.grants.forEach(function (g) {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex align-items-center gap-2 px-0";
+                const icon = document.createElement("i");
+                icon.className = "bi " + (g.kind === "group" ? "bi-diagram-3" : "bi-person");
+                const who = document.createElement("div");
+                who.className = "flex-grow-1 small";
+                who.appendChild(text(document.createElement("div"), g.name));
+                const sub = g.detail + (g.expires_at ? " · until " + g.expires_at : "");
+                who.appendChild(text(Object.assign(document.createElement("div"), {className: "text-muted"}), sub));
+                const sel = document.createElement("select");
+                sel.className = "form-select form-select-sm w-auto";
+                sel.setAttribute("aria-label", "Access level for " + g.name);
+                state.levels.forEach(function (l) {
+                    const o = document.createElement("option");
+                    o.value = l.value; o.textContent = l.label; o.selected = l.value === g.level; sel.appendChild(o);
+                });
+                sel.addEventListener("change", () => act({action: "grant", kind: g.kind, principal_id: g.principal_id, level: sel.value, expires: g.expires_at}));
+                const rm = document.createElement("button");
+                rm.type = "button"; rm.className = "btn btn-sm btn-outline-danger";
+                rm.setAttribute("aria-label", "Remove access for " + g.name);
+                rm.innerHTML = '<i class="bi bi-x-lg"></i>';
+                rm.addEventListener("click", () => act({action: "revoke", grant_id: g.id}));
+                li.append(icon, who, sel, rm);
+                list.appendChild(li);
+            });
+        }
+
+        function load() {
+            return getJson(urls.sharing).then(function (data) {
+                if (data.status !== "success") { error(data.message || "Could not load sharing"); return; }
+                state = data; render();
+            });
+        }
+        function act(body) {
+            error("");
+            return postJson(urls.sharing, body).then(function (data) {
+                if (data.status !== "success") { error(data.message || "Could not save"); return; }
+                state = data; render();
+                const select = document.getElementById("bx-visibility");
+                if (select) select.value = data.visibility;
+                const info = document.getElementById("bx-info-visibility");
+                if (info && select && select.selectedOptions[0]) info.textContent = select.selectedOptions[0].textContent;
+                picked = null; el("bx-share-add").classList.add("d-none"); q.value = "";
+            });
+        }
+
+        button.addEventListener("click", function () {
+            picked = null; el("bx-share-add").classList.add("d-none"); results.classList.add("d-none"); error("");
+            load().then(() => bootstrap.Modal.getOrCreateInstance(modalEl).show());
+        });
+        visSel.addEventListener("change", () => act({action: "visibility", value: visSel.value}));
+        q.addEventListener("input", function () {
+            window.clearTimeout(timer);
+            const term = q.value.trim();
+            if (term.length < 2) { results.classList.add("d-none"); return; }
+            timer = window.setTimeout(function () {
+                getJson(urls.sharing + "?q=" + encodeURIComponent(term)).then(function (data) {
+                    results.innerHTML = "";
+                    const found = (data && data.results) || [];
+                    if (!found.length) {
+                        results.appendChild(text(Object.assign(document.createElement("div"), {className: "list-group-item small text-muted"}), "No match"));
+                    }
+                    found.forEach(function (r) {
+                        const item = document.createElement("button");
+                        item.type = "button"; item.className = "list-group-item list-group-item-action small";
+                        item.textContent = (r.kind === "group" ? "Group · " : "") + r.name + (r.kind === "user" ? " (" + r.detail + ")" : "");
+                        item.addEventListener("click", function () {
+                            picked = r; results.classList.add("d-none"); q.value = "";
+                            text(el("bx-share-picked"), r.name); el("bx-share-add").classList.remove("d-none");
+                        });
+                        results.appendChild(item);
+                    });
+                    results.classList.remove("d-none");
+                });
+            }, 250);
+        });
+        el("bx-share-grant").addEventListener("click", function () {
+            if (!picked) return;
+            act({action: "grant", kind: picked.kind, principal_id: picked.principal_id, level: level.value, expires: el("bx-share-expires").value});
+        });
+    }
+
     // ---------------------------------------------------------------- revisions
 
     function initRevisions() {
@@ -1055,6 +1182,7 @@
     initFiles();
     initLock();
     initTrash();
+    initSharing();
     initRevisions();
     initComments();
     initEditor();

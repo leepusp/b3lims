@@ -27,7 +27,12 @@ from core.models.lab_tools.notebook_composer import (
     NotebookSpreadsheet,
     NotebookStep,
 )
-from core.permissions.notebook import visible_notebook_entries_for_user
+from core.permissions.notebook import (
+    can_delete_notebook_entry,
+    can_edit_notebook_entry,
+    can_manage_notebook_entry_sharing,
+    visible_notebook_entries_for_user,
+)
 from core.services import notebook_collab
 from core.services.notebook_html import sanitize_notebook_html
 from core.views.internal.lab_tools.notebook import _get_entry_for_user, _notebook_entry_templates
@@ -159,7 +164,7 @@ def _attachments(entry):
 @login_required
 def notebook_entry(request, entry_id):
     entry = _get_entry_for_user(entry_id, request.user)
-    can_edit = request.user.is_superuser or entry.author_id == request.user.id
+    can_edit = can_edit_notebook_entry(request.user, entry)
 
     entry_list = (
         visible_notebook_entries_for_user(request.user)
@@ -177,6 +182,8 @@ def notebook_entry(request, entry_id):
             "updated_at": timezone.localtime(entry.updated_at).strftime("%Y-%m-%d %H:%M"),
         },
         "can_edit": can_edit,
+        "can_share": can_manage_notebook_entry_sharing(request.user, entry),
+        "can_delete": can_delete_notebook_entry(request.user, entry),
         "spreadsheets": [_sheet_payload(s) for s in entry.spreadsheets.all()],
         "relevant": _relevant_items(entry),
         "attachments": _attachments(entry),
@@ -195,6 +202,7 @@ def notebook_entry(request, entry_id):
             "lookup": reverse("notebook_lookup_api", args=[entry.pk]),
             "revisions": reverse("notebook_revisions_api", args=[entry.pk]),
             "comments": reverse("notebook_comments_api", args=[entry.pk]),
+            "sharing": reverse("notebook_sharing_api", args=[entry.pk]),
             "lock": reverse("notebook_lock_api", args=[entry.pk]),
             "replace": reverse("notebook_file_replace_api", args=[entry.pk]),
             "file_caption": reverse("notebook_file_caption_api", args=[entry.pk]),
@@ -209,6 +217,8 @@ def notebook_entry(request, entry_id):
         {
             "entry": entry,
             "can_edit": can_edit,
+            "can_share": can_manage_notebook_entry_sharing(request.user, entry),
+            "can_delete": can_delete_notebook_entry(request.user, entry),
             "content_html": sanitize_notebook_html(entry.content),
             "entry_list": entry_list,
             "entry_types": NotebookEntry.ENTRY_TYPE_CHOICES,
@@ -270,6 +280,16 @@ def notebook_entry_update_api(request, entry_id):
             if name in data:
                 if data[name] not in dict(choices):
                     raise ValidationError(f"Invalid {name.replace('_', ' ')}.")
+                if (
+                    name == "visibility"
+                    and data[name] != entry.visibility
+                    and not can_delete_notebook_entry(request.user, entry)
+                ):
+                    # Editors invited through sharing cannot open or close the entry.
+                    return JsonResponse(
+                        {"status": "error", "message": "Only the author can change the visibility."},
+                        status=403,
+                    )
                 setattr(entry, name, data[name])
                 fields.append(name)
         if "project" in data:

@@ -16,6 +16,7 @@ from core.models.lab_tools.notebook import NotebookEntry
 from core.models.lab_tools.notebook_composer import NotebookPin, NotebookStep, NotebookTag
 from core.models.lab_tools.notebook_collab import NotebookEditLock
 from core.permissions.notebook import (
+    can_delete_notebook_entry,
     can_edit_notebook_entry,
     trashed_notebook_entries_for_user,
     visible_notebook_entries_for_user,
@@ -255,6 +256,8 @@ def notebook_dashboard_batch_api(request):
                     entry.status = value
                     entry.save(update_fields=["status", "updated_at"])
             elif action == "trash":
+                # Sharing never gives the right to remove somebody else's entry.
+                editable = [e for e in editable if can_delete_notebook_entry(request.user, e)]
                 for entry in editable:
                     entry.deleted_at = timezone.now()
                     entry.deleted_by = request.user
