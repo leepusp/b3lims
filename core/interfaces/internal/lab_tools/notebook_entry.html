@@ -77,7 +77,6 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">More</button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li><button class="dropdown-item" type="button" id="bx-print"><i class="bi bi-printer me-2"></i>Print entry</button></li>
-                        <li><a class="dropdown-item" href="{% url 'notebook_index' %}?entry_id={{ entry.id }}"><i class="bi bi-window-sidebar me-2"></i>Classic editor (blocks, Jupyter tools)</a></li>
                         <li><a class="dropdown-item" href="{% url 'notebook_dashboard' %}"><i class="bi bi-grid-3x3-gap me-2"></i>All entries</a></li>
                     </ul>
                 </div>

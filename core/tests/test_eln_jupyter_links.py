@@ -129,57 +129,6 @@ class ELNJupyterLinkTests(TestCase):
             ).exists()
         )
 
-    def test_eln_displays_attachment_interface(self):
-        response = self.client.get(
-            request_path("notebook_index"),
-            {
-                "entry_id": self.entry.id,
-                "tab": "items",
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "Attach notebook",
-        )
-
-        NotebookJupyterLink.objects.create(
-            entry=self.entry,
-            notebook=self.notebook,
-            linked_by=self.user,
-        )
-
-        response = self.client.get(
-            request_path("notebook_index"),
-            {
-                "entry_id": self.entry.id,
-                "tab": "items",
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            self.notebook.title,
-        )
-        self.assertContains(
-            response,
-            "The notebook will not be deleted",
-        )
-        self.assertContains(
-            response,
-            "Attach notebook",
-        )
-        self.assertNotContains(
-            response,
-            "Create analysis",
-        )
-        self.assertNotContains(
-            response,
-            "Continue analysis",
-        )
-
     def test_attached_notebook_is_excluded_from_options(self):
         NotebookJupyterLink.objects.create(
             entry=self.entry,

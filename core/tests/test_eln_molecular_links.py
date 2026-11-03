@@ -168,18 +168,10 @@ class ELNMolecularLinkTests(TestCase):
         )
 
         response = self.client.get(
-            request_path("notebook_index"),
-            {"entry_id": self.entry.id},
+            request_path("notebook_entry", args=[self.entry.id]),
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            self.molecule.name,
-        )
-        self.assertEqual(
-            response.context[
-                "experiment_context_counts"
-            ]["molecules"],
-            1,
-        )
+        molecules = response.context["page_state"]["relevant"]["molecules"]
+        self.assertEqual(len(molecules), 1)
+        self.assertIn(self.molecule.name, molecules[0]["label"])

@@ -115,7 +115,7 @@ class NotebookHtmlEndpointTests(TestCase):
 
     def test_save_api_stores_sanitized_content(self):
         response = self.client.post(
-            reverse("notebook_save_api", args=[self.entry.id]),
+            reverse("notebook_entry_update_api", args=[self.entry.id]),
             data=json.dumps(
                 {"content": '<p>keep</p><img src="x" onerror="alert(1)"><script>x()</script>'}
             ),
@@ -133,13 +133,12 @@ class NotebookHtmlEndpointTests(TestCase):
             content='<p>legacy</p><img src="x" onerror="alert(\'stored\')">'
         )
 
-        response = self.client.get(
-            reverse("notebook_index") + f"?entry_id={self.entry.id}"
-        )
+        response = self.client.get(reverse("notebook_entry", args=[self.entry.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<p>legacy</p>")
-        self.assertNotContains(response, "alert('stored')")
+        self.assertIn("<p>legacy</p>", response.context["content_html"])
+        self.assertNotIn("onerror", response.context["content_html"])
+        self.assertNotIn("alert('stored')", response.content.decode())
 
     def test_create_from_sample_escapes_sample_fields(self):
         sample = Sample.objects.create(

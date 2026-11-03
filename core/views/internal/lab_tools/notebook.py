@@ -380,128 +380,21 @@ def _get_entry_for_user(entry_id, user, *, require_edit=False):
     return entry
 
 
-def _composer_state(entry, user):
-    from core.views.internal.lab_tools.notebook_composer import composer_state
-
-    return composer_state(entry, user)
-
-
 @login_required
 def notebook_index(request):
-    entries = (
-        visible_notebook_entries_for_user(request.user)
-    )
-    active_entry_id = request.GET.get("entry_id")
+    """The classic ELN page was retired: send old links to the entry page.
 
-    active_entry = None
-    linked_sample_links = []
-    linked_chemical_links = []
-    linked_molecular_links = []
-    blocks = []
-    attachments = []
-    protocol_chemicals = []
-    molecular_sequences = []
-    experiment_context_counts = {
-        "samples": 0,
-        "chemicals": 0,
-        "molecules": 0,
-        "attachments": 0,
-        "jupyter": 0,
-    }
-
-    if active_entry_id:
-        active_entry = _get_entry_for_user(active_entry_id, request.user)
-    elif entries.exists():
-        active_entry = entries.first()
-
-    if active_entry:
-        linked_sample_links = (
-            active_entry.sample_links
-            .select_related("sample")
-            .prefetch_related("sample__files")
-            .order_by("-linked_at")
-        )
-        linked_chemical_links = (
-            active_entry.chemical_links
-            .select_related("chemical")
-            .order_by("-linked_at")
-        )
-        blocks = active_entry.blocks.all()
-        attachments = active_entry.attachments.all()
-
-        protocol_chemicals = (
-            visible_chemicals_for_user(
-                request.user
-            )
-            .order_by("name", "id")[:200]
-        )
-        linked_molecular_links = (
-            active_entry.molecular_links
-            .select_related(
-                "molecule",
-                "molecule__owner",
-                "molecule__source_entry",
-                "molecule__linked_sample",
-            )
-            .order_by("-linked_at", "-id")
-        )
-        molecular_sequences = [
-            link.molecule
-            for link in linked_molecular_links
-        ]
-
-        experiment_context_counts = {
-            "samples": linked_sample_links.count(),
-            "chemicals": linked_chemical_links.count(),
-            "molecules": linked_molecular_links.count(),
-            "attachments": attachments.count(),
-            "jupyter": active_entry.jupyter_links.count(),
-        }
-
-    # Embedded in a <script type="application/json"> block: escape the
-    # characters that could close the tag (same escapes as json_script).
-    linked_samples_json = (
-        json.dumps(
-            [link.snapshot_json for link in linked_sample_links],
-            ensure_ascii=False,
-        )
-        .replace("&", "\\u0026")
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-    )
-
-    return render(
-        request,
-        "internal/lab_tools/notebook.html",
-        {
-            "entries": entries,
-            "active_entry": active_entry,
-            "can_edit": bool(
-                active_entry
-                and (
-                    request.user.is_superuser
-                    or active_entry.author_id == request.user.id
-                )
-            ),
-            "linked_sample_links": linked_sample_links,
-            "linked_chemical_links": linked_chemical_links,
-            "linked_molecular_links": linked_molecular_links,
-            "linked_samples_json": linked_samples_json,
-            "composer_state": (
-                _composer_state(active_entry, request.user)
-                if active_entry
-                else None
-            ),
-            "blocks": blocks,
-            "attachments": attachments,
-            "protocol_chemicals": protocol_chemicals,
-            "molecular_sequences": molecular_sequences,
-            "experiment_context_counts": experiment_context_counts,
-            "notebook_entry_templates": _notebook_entry_templates(),
-            "molecular_sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
-            "molecular_topologies": MolecularSequence.TOPOLOGY_CHOICES,
-        },
-    )
+    Old links look like ``?entry_id=12&tab=items``; they now open the same
+    entry in the document view. Without an id, go to the dashboard.
+    """
+    entry_id = request.GET.get("entry_id")
+    if entry_id and str(entry_id).isdigit():
+        url = reverse("notebook_entry", args=[int(entry_id)])
+        tab = {"items": "relevant"}.get(request.GET.get("tab"), request.GET.get("tab"))
+        if tab in {"relevant", "files", "metadata", "steps"}:
+            url += f"?tab={tab}"
+        return redirect(url)
+    return redirect("notebook_dashboard")
 
 
 @login_required
@@ -741,41 +634,6 @@ def notebook_create(request):
     )
 
     return redirect("notebook_entry", entry_id=new_entry.id)
-
-
-@login_required
-def notebook_save_api(request, entry_id):
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
-
-    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
-
-    try:
-        data = json.loads(request.body)
-        entry.title = data.get("title", entry.title)
-        entry.content = sanitize_notebook_html(data.get("content", ""))
-        entry.protocol_content = data.get("protocol_content", entry.protocol_content) or ""
-
-        entry_type = data.get("entry_type")
-        status = data.get("status")
-        visibility = data.get("visibility")
-
-        if entry_type in {choice[0] for choice in NotebookEntry.ENTRY_TYPE_CHOICES}:
-            entry.entry_type = entry_type
-
-        if status in {choice[0] for choice in NotebookEntry.STATUS_CHOICES}:
-            entry.status = status
-
-        if visibility in {choice[0] for choice in NotebookEntry.VISIBILITY_CHOICES}:
-            entry.visibility = visibility
-
-        entry.project = data.get("project", entry.project) or ""
-        entry.experiment_date = data.get("experiment_date") or None
-
-        entry.save()
-        return JsonResponse({"status": "success"})
-    except Exception as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
 
 
 @login_required
@@ -4462,79 +4320,6 @@ def notebook_create_molecular_sequence_api(request, entry_id):
             },
             status=400,
         )
-
-@login_required
-def notebook_create_block_api(request, entry_id):
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
-
-    entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
-
-    try:
-        data = json.loads(request.body)
-        block_type = data.get("block_type", "text")
-
-        valid_types = {choice[0] for choice in NotebookBlock.BLOCK_TYPE_CHOICES}
-        if block_type not in valid_types:
-            return JsonResponse({"status": "error", "message": "Invalid block type"}, status=400)
-
-        default_content = {
-            "text": {"html": ""},
-            "image": {"url": "", "caption": ""},
-            "table": {"raw": "", "content": []},
-            "sequence": {"name": "", "sequence_type": "dna", "topology": "linear", "sequence": ""},
-            "plasmid": {"name": "", "topology": "circular", "sequence": "", "features": []},
-            "attachment": {},
-        }
-
-        next_order = (entry.blocks.aggregate(models.Max("order")).get("order__max") or 0) + 10
-
-        block = NotebookBlock.objects.create(
-            entry=entry,
-            block_type=block_type,
-            title=data.get("title", block_type.replace("_", " ").title()),
-            order=next_order,
-            content_data=data.get("content_data") or default_content.get(block_type, {}),
-            created_by=request.user,
-        )
-
-        return JsonResponse({"status": "success", "block_id": block.id})
-    except Exception as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
-
-
-@login_required
-def notebook_update_block_api(request, block_id):
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
-
-    block = get_object_or_404(NotebookBlock, id=block_id, entry__in=visible_notebook_entries_for_user(request.user))
-    if not can_edit_notebook_entry(request.user, block.entry):
-        raise PermissionDenied
-
-    try:
-        data = json.loads(request.body)
-        block.title = data.get("title", block.title)
-        block.content_data = data.get("content_data", block.content_data)
-        block.order = data.get("order", block.order)
-        block.save()
-        return JsonResponse({"status": "success"})
-    except Exception as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
-
-
-@login_required
-def notebook_delete_block_api(request, block_id):
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
-
-    block = get_object_or_404(NotebookBlock, id=block_id, entry__in=visible_notebook_entries_for_user(request.user))
-    if not can_edit_notebook_entry(request.user, block.entry):
-        raise PermissionDenied
-    block.delete()
-
-    return JsonResponse({"status": "success"})
-
 
 @login_required
 def notebook_attachment_download(request, attachment_id):

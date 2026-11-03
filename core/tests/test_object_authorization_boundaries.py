@@ -149,22 +149,18 @@ class ObjectAuthorizationBoundaryTests(
             BiobankUserRole.EDITOR,
         )
 
-    def test_notebook_context_excludes_hidden_chemical(
-        self,
-    ):
+    def test_entry_relevant_search_excludes_hidden_chemical(self):
         entry = NotebookEntry.objects.create(
             title="Authorization ELN",
             author=self.actor,
             visibility="private",
         )
-
         hidden = Chemical.objects.create(
             name="Hidden authorization reagent",
             quantity="1 g",
             created_by=self.owner,
             is_public=False,
         )
-
         visible = Chemical.objects.create(
             name="Visible authorization reagent",
             quantity="1 g",
@@ -173,33 +169,14 @@ class ObjectAuthorizationBoundaryTests(
         )
 
         response = self.client.get(
-            reverse(
-                "notebook_index"
-            ),
-            {
-                "entry_id": entry.pk,
-            },
+            reverse("notebook_relevant_api", args=[entry.pk]),
+            {"kind": "chemicals", "q": "authorization reagent"},
         )
 
-        self.assertEqual(
-            response.status_code,
-            200,
-        )
-
-        protocol_chemicals = list(
-            response.context[
-                "protocol_chemicals"
-            ]
-        )
-
-        self.assertNotIn(
-            hidden,
-            protocol_chemicals,
-        )
-        self.assertIn(
-            visible,
-            protocol_chemicals,
-        )
+        self.assertEqual(response.status_code, 200)
+        ids = {row["id"] for row in response.json()["results"]}
+        self.assertNotIn(hidden.pk, ids)
+        self.assertIn(visible.pk, ids)
 
     def test_notebook_search_excludes_hidden_chemical(
         self,

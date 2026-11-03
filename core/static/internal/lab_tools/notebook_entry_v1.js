@@ -190,7 +190,9 @@
             if (name === "notes") sheets.forEach((s) => s.refresh && s.refresh());
         }
         buttons.forEach((b) => b.addEventListener("click", () => show(b.dataset.pane)));
-        const remembered = store.get("pane", "notes");
+        let requested = null;
+        try { requested = new URLSearchParams(window.location.search).get("tab"); } catch (e) { /* ignore */ }
+        const remembered = requested || store.get("pane", "notes");
         if (buttons.some((b) => b.dataset.pane === remembered)) show(remembered);
 
         // Mirror the composer counters into the section bar.

@@ -481,22 +481,6 @@ class MolecularWorkspaceFrontendTests(TestCase):
             adapter,
         )
 
-    def test_notebook_exposes_one_linked_molecular_workspace_flow(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.get(
-            request_path("notebook_index")
-            + f"?entry_id={self.entry.id}&tab=items"
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Molecular Workspace")
-        self.assertContains(response, 'id="molecular-workspace-creator"')
-        self.assertContains(response, "New record")
-        self.assertContains(response, "insertRelevantItemIntoMainNote(data, false)")
-        self.assertContains(response, "window.location.href = data.detail_url")
-        self.assertContains(response, "ql-biobank-molecular")
-
     def test_lab_viewer_receives_read_only_workspace(self):
         self.client.force_login(self.viewer)
 

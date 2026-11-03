@@ -153,3 +153,53 @@ class EntryPageTests(TestCase):
     def test_files_api_lists_attachments(self):
         response = self.client.get(reverse("notebook_entry_files_api", args=[self.entry.pk]))
         self.assertEqual(response.json(), {"status": "success", "attachments": []})
+
+
+@override_settings(FORCE_SCRIPT_NAME=None)
+class ClassicRedirectTests(TestCase):
+    """The classic page was retired; its old links must keep working."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user("retire", password="x")
+        cls.entry = NotebookEntry.objects.create(title="Old link", author=cls.user)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_old_entry_link_opens_the_entry_page(self):
+        response = self.client.get(reverse("notebook_index"), {"entry_id": self.entry.pk})
+        self.assertRedirects(
+            response, reverse("notebook_entry", args=[self.entry.pk]), fetch_redirect_response=False
+        )
+
+    def test_old_items_tab_maps_to_relevant_items(self):
+        response = self.client.get(reverse("notebook_index"), {"entry_id": self.entry.pk, "tab": "items"})
+        self.assertEqual(
+            response["Location"], reverse("notebook_entry", args=[self.entry.pk]) + "?tab=relevant"
+        )
+
+    def test_without_entry_goes_to_dashboard(self):
+        response = self.client.get(reverse("notebook_index"))
+        self.assertRedirects(response, reverse("notebook_dashboard"), fetch_redirect_response=False)
+
+    def test_junk_entry_id_does_not_error(self):
+        response = self.client.get(reverse("notebook_index"), {"entry_id": "abc"})
+        self.assertRedirects(response, reverse("notebook_dashboard"), fetch_redirect_response=False)
+
+    def test_protocol_text_is_folded_into_the_note(self):
+        import importlib
+
+        migration = importlib.import_module("core.migrations.0095_notebook_protocol_into_content")
+        from django.apps import apps
+
+        entry = NotebookEntry.objects.create(
+            title="Has protocol", author=self.user, content="<p>body</p>", protocol_content="Step <1>\nStep 2"
+        )
+        migration.fold_protocol_into_content(apps, None)
+        migration.fold_protocol_into_content(apps, None)  # idempotent
+        entry.refresh_from_db()
+        self.assertEqual(entry.content.count("<h2>Protocol</h2>"), 1)
+        self.assertIn("<p>Step &lt;1&gt;</p>", entry.content)
+        self.assertTrue(entry.content.startswith("<p>body</p>"))

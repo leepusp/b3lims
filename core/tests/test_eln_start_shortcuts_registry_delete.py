@@ -51,45 +51,6 @@ class ELNStartShortcutsAndRegistryDeleteTests(TestCase):
             owner=self.other,
         )
 
-    def test_empty_eln_exposes_all_primary_shortcuts(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.get(
-            request_path("notebook_index")
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            'id="eln-start-shortcuts"',
-        )
-
-        expected_destinations = [
-            reverse("samples_list"),
-            reverse("chemicals_list"),
-            reverse("molecular_registry_index"),
-            reverse("jupyter_index"),
-        ]
-
-        for destination in expected_destinations:
-            with self.subTest(destination=destination):
-                self.assertContains(
-                    response,
-                    destination,
-                )
-
-        for label in [
-            "Browse samples",
-            "Browse reagents",
-            "Molecular Registry",
-            "Jupyter notebooks",
-        ]:
-            with self.subTest(label=label):
-                self.assertContains(
-                    response,
-                    label,
-                )
-
     def test_owner_sees_delete_for_owned_registry_record(self):
         self.client.force_login(self.owner)
 

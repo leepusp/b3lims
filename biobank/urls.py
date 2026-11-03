@@ -466,7 +466,6 @@ urlpatterns = [
     path('internal/lab-tools/notebook/entries/batch/', notebook_dashboard_views.notebook_dashboard_batch_api, name='notebook_dashboard_batch_api'),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),
-    path('internal/lab-tools/notebook/api/save/<int:entry_id>/', notebook_views.notebook_save_api, name='notebook_save_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/fields/', notebook_composer_views.notebook_fields_api, name='notebook_fields_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/header/', notebook_composer_views.notebook_header_api, name='notebook_header_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/steps/', notebook_composer_views.notebook_steps_api, name='notebook_steps_api'),
@@ -550,9 +549,6 @@ urlpatterns = [
         name='legacy_molecular_sequence_delete_api',
     ),
     path('internal/lab-tools/notebook/api/molecular-sequence/create/<int:entry_id>/', notebook_views.notebook_create_molecular_sequence_api, name='notebook_create_molecular_sequence_api'),
-    path('internal/lab-tools/notebook/api/block/create/<int:entry_id>/', notebook_views.notebook_create_block_api, name='notebook_create_block_api'),
-    path('internal/lab-tools/notebook/api/block/update/<int:block_id>/', notebook_views.notebook_update_block_api, name='notebook_update_block_api'),
-    path('internal/lab-tools/notebook/api/block/delete/<int:block_id>/', notebook_views.notebook_delete_block_api, name='notebook_delete_block_api'),
     path('internal/lab-tools/notebook/api/upload/<int:entry_id>/', notebook_views.notebook_upload_attachment_api, name='notebook_upload_attachment_api'),
     path('internal/lab-tools/notebook/attachments/<int:attachment_id>/download/', notebook_views.notebook_attachment_download, name='notebook_attachment_download'),
     path(

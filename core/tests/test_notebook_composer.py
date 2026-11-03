@@ -243,7 +243,7 @@ class ComposerPageTests(TestCase):
     def test_page_renders_composer(self):
         self.client.get(reverse("notebook_create") + "?template=experiment")
         entry = NotebookEntry.objects.get(author=self.user)
-        response = self.client.get(reverse("notebook_index") + f"?entry_id={entry.pk}")
+        response = self.client.get(reverse("notebook_entry", args=[entry.pk]))
         self.assertContains(response, 'id="nb-composer"')
         self.assertContains(response, 'id="nb-composer-state"')
         self.assertContains(response, "notebook_composer_v1.js")
