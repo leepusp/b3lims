@@ -76,19 +76,14 @@ class PrivateElnWebTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test experiment")
 
-    def test_preview_primary_action_opens_editor(self):
+    def test_retired_preview_redirects_to_notebook(self):
         response = self.client.get(
             reverse("eln_experimental_index")
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            'href="' + reverse("eln_private_new") + '"',
-        )
-        self.assertNotContains(
-            response,
-            'disabled title="Private draft storage pending"',
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], reverse("notebook_index")
         )
 
     def test_new_entry_editor(self):
