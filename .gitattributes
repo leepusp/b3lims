@@ -1,0 +1,2 @@
+# Third-party files must stay byte-identical to upstream (checksums in SHA256SUMS).
+core/static/vendor/** -text -whitespace
