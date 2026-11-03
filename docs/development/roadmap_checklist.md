@@ -68,5 +68,7 @@ Other useful functions
 
 ## Housekeeping
 
+- [~] Remove the three test research groups (`TEST - ...`); decide on the LIMS user `ladmin` (deactivate or delete)
+- [ ] Look for other test leftovers (collections, biobanks, users, samples)
 - [ ] Remove old `static-releases` (keep live, rollback and the two latest)
 - [ ] `notebook.py` still holds the Molecular Registry views; split it during Block D
