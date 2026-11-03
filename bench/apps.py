@@ -12,7 +12,7 @@ class BenchConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "bench"
     label = "bench"
-    verbose_name = "B3 Bench"
+    verbose_name = "Laboratory"
 
     def ready(self):
         from bench import panels

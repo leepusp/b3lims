@@ -28,7 +28,7 @@ class BenchHomeTests(TestCase):
         response = self.client.get(request_path("bench:home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "B3 Bench")
+        self.assertContains(response, "Laboratory")
         self.assertContains(response, "ELN Notebook")
         self.assertContains(response, "Workflows")
         self.assertContains(response, reverse("notebook_index"))
