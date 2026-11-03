@@ -132,6 +132,7 @@ from core.views.internal.keywords.views import (
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import notebook_composer as notebook_composer_views
+from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 
 # 9. QR CODE (PAGE)
@@ -453,6 +454,8 @@ urlpatterns = [
         eln_experimental_index,
         name="eln_experimental_index",
     ),
+    path('internal/lab-tools/notebook/entries/', notebook_dashboard_views.notebook_dashboard, name='notebook_dashboard'),
+    path('internal/lab-tools/notebook/entries/batch/', notebook_dashboard_views.notebook_dashboard_batch_api, name='notebook_dashboard_batch_api'),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),
     path('internal/lab-tools/notebook/api/save/<int:entry_id>/', notebook_views.notebook_save_api, name='notebook_save_api'),

@@ -89,3 +89,25 @@ class NotebookEntryLink(models.Model):
 
     def __str__(self):
         return f"{self.entry_id} -> {self.target_id}"
+
+
+class NotebookPin(models.Model):
+    """An entry pinned by one user at the top of their ELN dashboard."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notebook_pins",
+    )
+    entry = models.ForeignKey(
+        "core.NotebookEntry",
+        on_delete=models.CASCADE,
+        related_name="pins",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "entry"], name="core_nb_pin_unique"),
+        ]

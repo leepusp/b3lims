@@ -43,6 +43,7 @@ from core.models.lab_tools.notebook import (
 )
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
+    NotebookPin,
     NotebookStep,
     NotebookTag,
 )

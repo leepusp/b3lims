@@ -248,3 +248,76 @@ class ComposerPageTests(TestCase):
         self.assertContains(response, 'id="nb-composer-state"')
         self.assertContains(response, "notebook_composer_v1.js")
         self.assertContains(response, "Custom fields")
+
+
+@override_settings(FORCE_SCRIPT_NAME=None)
+class NotebookDashboardTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.me = User.objects.create_user(username="dash-me", password="x")
+        cls.other = User.objects.create_user(username="dash-other", password="x")
+        cls.mine = NotebookEntry.objects.create(title="Plaque assay", author=cls.me, status="in_progress", custom_id="EXP-031")
+        cls.mine_archived = NotebookEntry.objects.create(title="Old run", author=cls.me, status="archived")
+        cls.lab = NotebookEntry.objects.create(title="Lab lysate prep", author=cls.other, visibility="lab")
+        cls.hidden = NotebookEntry.objects.create(title="Private of other", author=cls.other, visibility="private")
+        composer.update_header(cls.mine, tags=["bsl2"])
+        NotebookStep.objects.create(entry=cls.mine, body="Plate", finished=True)
+        NotebookStep.objects.create(entry=cls.mine, body="Count")
+
+    def setUp(self):
+        self.client.force_login(self.me)
+
+    def get(self, **params):
+        return self.client.get(reverse("notebook_dashboard"), params)
+
+    def titles(self, response):
+        return [e.title for e in response.context["page"]]
+
+    def test_lists_visible_active_entries(self):
+        response = self.get()
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(self.titles(response), ["Plaque assay", "Lab lysate prep"])
+        self.assertContains(response, "1/2")
+        self.assertContains(response, "#bsl2")
+
+    def test_filters(self):
+        self.assertEqual(self.titles(self.get(owner="me")), ["Plaque assay"])
+        self.assertEqual(self.titles(self.get(state="archived")), ["Old run"])
+        self.assertEqual(self.titles(self.get(tag="bsl2")), ["Plaque assay"])
+        self.assertEqual(self.titles(self.get(q="EXP-031")), ["Plaque assay"])
+        self.assertEqual(self.titles(self.get(q=f"#{self.lab.pk}")), ["Lab lysate prep"])
+        self.assertEqual(self.titles(self.get(status="in_progress")), ["Plaque assay"])
+        self.assertNotIn("Private of other", self.titles(self.get(state="all")))
+
+    def batch(self, action, ids, value=None):
+        return self.client.post(
+            reverse("notebook_dashboard_batch_api"),
+            data=json.dumps({"action": action, "ids": ids, "value": value}),
+            content_type="application/json",
+        ).json()
+
+    def test_batch_only_changes_editable_entries(self):
+        result = self.batch("status", [self.mine.pk, self.lab.pk, self.hidden.pk], "completed")
+        self.assertEqual((result["changed"], result["skipped"]), (1, 2))
+        self.mine.refresh_from_db(); self.lab.refresh_from_db()
+        self.assertEqual(self.mine.status, "completed")
+        self.assertEqual(self.lab.status, "draft")
+
+        self.batch("add_tag", [self.mine.pk], "#Phage")
+        self.assertIn("phage", [t.name for t in self.mine.tags.all()])
+
+        self.batch("archive", [self.mine.pk])
+        self.mine.refresh_from_db()
+        self.assertEqual(self.mine.status, "archived")
+
+    def test_pins_are_personal_and_shown(self):
+        self.batch("pin", [self.lab.pk, self.hidden.pk])
+        response = self.get()
+        self.assertEqual([e.title for e in response.context["pinned"]], ["Lab lysate prep"])
+        self.client.force_login(self.other)
+        self.assertEqual(list(self.get().context["pinned"]), [])
+
+    def test_sidebar_points_to_dashboard(self):
+        response = self.get()
+        self.assertContains(response, f'href="{reverse("notebook_dashboard")}"')

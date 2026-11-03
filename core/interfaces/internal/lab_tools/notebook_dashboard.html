@@ -1,0 +1,323 @@
+{% extends 'internal/common/base.html' %}
+{% load static %}
+
+{% block title %}ELN — Entries{% endblock %}
+
+{% block extra_css %}
+<style>
+    .eln-dash { --eln-border: #e3e7ec; --eln-muted: #6c757d; }
+    .eln-dash .eln-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1.1rem; }
+    .eln-dash .eln-head h4 { margin: 0; }
+    .eln-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .eln-stat {
+        display: block; border: 1px solid var(--eln-border); border-radius: .6rem; background: #fff;
+        padding: .7rem .9rem; text-decoration: none; color: inherit;
+    }
+    .eln-stat:hover { border-color: #9ec5fe; }
+    .eln-stat .n { font-size: 1.55rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .eln-stat .l { font-size: .78rem; color: var(--eln-muted); }
+    .eln-stat.warn .n { color: #b02a37; }
+
+    .eln-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
+    .eln-card { border: 1px solid var(--eln-border); border-radius: .6rem; background: #fff; }
+    .eln-card > .hd { padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); font-weight: 700; display: flex; align-items: center; gap: .5rem; }
+    .eln-card > .bd { padding: .75rem .9rem; }
+
+    .eln-filters { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(110px, 1fr)) auto; gap: .5rem; padding: .75rem .9rem; border-bottom: 1px solid var(--eln-border); }
+    .eln-pins { display: flex; gap: .5rem; overflow-x: auto; padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); background: #fbfcfd; }
+    .eln-pin {
+        flex: 0 0 220px; border: 1px solid var(--eln-border); border-radius: .5rem; background: #fff;
+        padding: .45rem .6rem; text-decoration: none; color: inherit; font-size: .85rem;
+    }
+    .eln-pin:hover { border-color: #9ec5fe; }
+    .eln-pin .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .eln-batch { display: none; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .5rem .9rem; background: #e7f1ff; border-bottom: 1px solid #b6d4fe; }
+    .eln-batch.on { display: flex; }
+
+    .eln-table { margin: 0; font-size: .875rem; }
+    .eln-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--eln-muted); font-weight: 600; white-space: nowrap; background: #fbfcfd; }
+    .eln-table td { vertical-align: middle; }
+    .eln-table tr.sel td { background: #f3f8ff; }
+    .eln-table .id { color: var(--eln-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .eln-table .ttl { font-weight: 600; color: #1d2b3a; text-decoration: none; }
+    .eln-table .ttl:hover { text-decoration: underline; }
+    .eln-tag { display: inline-block; background: #eef4ff; color: #0a58ca; border-radius: 999px; padding: 0 .45rem; font-size: .72rem; margin: .15rem .15rem 0 0; text-decoration: none; }
+    .eln-steps { width: 70px; height: 5px; display: inline-block; vertical-align: middle; background: #e9ecef; border-radius: 3px; overflow: hidden; }
+    .eln-steps > span { display: block; height: 100%; background: #198754; }
+    .eln-stars { color: #f0ad00; letter-spacing: -1px; white-space: nowrap; }
+    .eln-stars .off { color: #dee2e6; }
+    .eln-pin-btn { border: 0; background: none; color: #adb5bd; padding: 0 .2rem; }
+    .eln-pin-btn.on { color: #d63384; }
+    .eln-side-step { display: flex; gap: .5rem; padding: .35rem 0; border-bottom: 1px dashed var(--eln-border); font-size: .85rem; }
+    .eln-side-step:last-child { border-bottom: 0; }
+
+    @media (max-width: 1200px) {
+        .eln-layout { grid-template-columns: 1fr; }
+        .eln-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .eln-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+        .eln-filters, .eln-stats { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid eln-dash py-3">
+    <div class="eln-head">
+        <div>
+            <div class="small text-muted">B3 Bench / ELN Notebook</div>
+            <h4><i class="bi bi-journal-bookmark me-2"></i>Entries</h4>
+        </div>
+        <div class="ms-auto d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'eln_private_drafts' %}">
+                <i class="bi bi-folder2-open me-1"></i>Private drafts
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'notebook_index' %}">
+                <i class="bi bi-pencil-square me-1"></i>Open editor
+            </a>
+            {% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-primary btn-sm" button_label="New entry" %}
+        </div>
+    </div>
+
+    <div class="eln-stats">
+        <a class="eln-stat" href="?state=active"><div class="n">{{ stats.visible }}</div><div class="l">Active entries you can see</div></a>
+        <a class="eln-stat" href="?owner=me"><div class="n">{{ stats.mine }}</div><div class="l">Your active entries</div></a>
+        <a class="eln-stat" href="?owner=me&status=in_progress"><div class="n">{{ stats.in_progress }}</div><div class="l">Yours in progress</div></a>
+        <a class="eln-stat" href="?status=completed"><div class="n">{{ stats.to_review }}</div><div class="l">Completed, awaiting review</div></a>
+        <a class="eln-stat {% if stats.overdue %}warn{% endif %}" href="#eln-due"><div class="n">{{ stats.overdue }}</div><div class="l">Overdue steps (yours)</div></a>
+    </div>
+
+    <div class="eln-layout">
+        <section class="eln-card">
+            <form class="eln-filters" method="get" id="eln-filter-form">
+                <input type="search" class="form-control form-control-sm" name="q" value="{{ filters.q }}"
+                       placeholder="Search title, custom ID, #number, text or tag">
+                <select class="form-select form-select-sm" name="type" aria-label="Entry type">
+                    <option value="">All types</option>
+                    {% for value, label in entry_types %}<option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                <select class="form-select form-select-sm" name="status" aria-label="Status">
+                    <option value="">All statuses</option>
+                    {% for value, label in statuses %}{% if value != "archived" %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
+                </select>
+                <select class="form-select form-select-sm" name="owner" aria-label="Owner">
+                    <option value="">Anyone</option>
+                    <option value="me" {% if filters.owner == "me" %}selected{% endif %}>Me</option>
+                    <option value="others" {% if filters.owner == "others" %}selected{% endif %}>Others</option>
+                </select>
+                <select class="form-select form-select-sm" name="state" aria-label="State">
+                    <option value="active" {% if filters.state == "active" %}selected{% endif %}>Active</option>
+                    <option value="archived" {% if filters.state == "archived" %}selected{% endif %}>Archived</option>
+                    <option value="all" {% if filters.state == "all" %}selected{% endif %}>All</option>
+                </select>
+                <select class="form-select form-select-sm" name="sort" aria-label="Sort">
+                    {% for key, label in sorts %}<option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% if filters.tag %}<input type="hidden" name="tag" value="{{ filters.tag }}">{% endif %}
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i></button>
+                    <a class="btn btn-sm btn-outline-secondary" href="?" title="Clear filters"><i class="bi bi-x-lg"></i></a>
+                </div>
+            </form>
+
+            {% if filters.tag %}
+                <div class="px-3 pt-2 small">Tag: <span class="eln-tag">#{{ filters.tag }}</span>
+                    <a href="?{% for k, v in filters.items %}{% if k != 'tag' and v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}" class="ms-1">remove</a></div>
+            {% endif %}
+
+            {% if pinned %}
+                <div class="eln-pins">
+                    {% for entry in pinned %}
+                        <a class="eln-pin" href="{% url 'notebook_index' %}?entry_id={{ entry.id }}">
+                            <div class="small text-muted"><i class="bi bi-pin-angle-fill text-danger"></i> {% if entry.custom_id %}{{ entry.custom_id }}{% else %}#{{ entry.id }}{% endif %}</div>
+                            <div class="t">{{ entry.title }}</div>
+                            <div class="small text-muted">{{ entry.get_status_display }}{% if entry.step_total %} · {{ entry.step_done }}/{{ entry.step_total }} steps{% endif %}</div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="eln-batch" id="eln-batch">
+                <strong><span id="eln-sel-count">0</span> selected</strong>
+                <select class="form-select form-select-sm w-auto" id="eln-batch-status" aria-label="Change status">
+                    <option value="">Change status…</option>
+                    {% for value, label in statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+                <div class="input-group input-group-sm w-auto">
+                    <input type="text" class="form-control" id="eln-batch-tag" placeholder="Add tag" maxlength="64">
+                    <button class="btn btn-outline-primary" type="button" id="eln-batch-tag-btn">Add</button>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="pin"><i class="bi bi-pin-angle"></i> Pin</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="unpin">Unpin</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" data-action="archive"><i class="bi bi-archive"></i> Archive</button>
+                <span class="small text-muted ms-auto" id="eln-batch-msg"></span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover eln-table">
+                    <thead>
+                        <tr>
+                            <th style="width:32px"><input type="checkbox" class="form-check-input" id="eln-all" aria-label="Select all"></th>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Steps</th>
+                            <th>Rating</th>
+                            <th>Owner</th>
+                            <th>Modified</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in page %}
+                            <tr data-id="{{ entry.id }}">
+                                <td><input type="checkbox" class="form-check-input eln-row" value="{{ entry.id }}" aria-label="Select {{ entry.title }}"></td>
+                                <td class="id">{% if entry.custom_id %}{{ entry.custom_id }}{% else %}#{{ entry.id }}{% endif %}</td>
+                                <td>
+                                    <a class="ttl" href="{% url 'notebook_index' %}?entry_id={{ entry.id }}">{{ entry.title }}</a>
+                                    <div>
+                                        {% for tag in entry.tags.all %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}
+                                        {% if entry.project %}<span class="small text-muted">{{ entry.project }}</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td class="small">{{ entry.get_entry_type_display }}</td>
+                                <td><span class="badge {% for k, v in status_badges.items %}{% if k == entry.status %}{{ v }}{% endif %}{% endfor %}">{{ entry.get_status_display }}</span></td>
+                                <td class="small text-nowrap">
+                                    {% if entry.step_total %}
+                                        <span class="eln-steps"><span style="width: {% widthratio entry.step_done entry.step_total 100 %}%"></span></span>
+                                        {{ entry.step_done }}/{{ entry.step_total }}
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="eln-stars" title="{{ entry.rating }} of 5">{% for n in "12345" %}{% if forloop.counter <= entry.rating %}★{% else %}<span class="off">★</span>{% endif %}{% endfor %}</td>
+                                <td class="small">{{ entry.author.get_full_name|default:entry.author.get_username }}</td>
+                                <td class="small text-nowrap text-muted">{{ entry.updated_at|date:"Y-m-d H:i" }}</td>
+                                <td><button type="button" class="eln-pin-btn {% if entry.is_pinned %}on{% endif %}" data-pin="{{ entry.id }}" title="{% if entry.is_pinned %}Unpin{% else %}Pin to the top{% endif %}"><i class="bi bi-pin-angle{% if entry.is_pinned %}-fill{% endif %}"></i></button></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="10" class="text-center text-muted py-5">
+                                No entries match these filters.
+                                <div class="mt-2">{% include "internal/lab_tools/_notebook_template_menu.html" with button_class="btn btn-outline-primary btn-sm" button_label="Create an entry" %}</div>
+                            </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex align-items-center px-3 py-2 small text-muted border-top">
+                <span>{{ page.paginator.count }} entr{{ page.paginator.count|pluralize:"y,ies" }}</span>
+                {% if page.paginator.num_pages > 1 %}
+                    <nav class="ms-auto">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?{{ query_string }}&page={{ page.previous_page_number }}">‹</a></li>{% endif %}
+                            <li class="page-item disabled"><span class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+                            {% if page.has_next %}<li class="page-item"><a class="page-link" href="?{{ query_string }}&page={{ page.next_page_number }}">›</a></li>{% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </section>
+
+        <aside class="d-flex flex-column gap-3">
+            <section class="eln-card" id="eln-due">
+                <div class="hd"><i class="bi bi-alarm"></i> Steps with deadlines</div>
+                <div class="bd">
+                    {% for step in due_steps %}
+                        <a class="eln-side-step text-decoration-none text-reset" href="{% url 'notebook_index' %}?entry_id={{ step.entry_id }}">
+                            <span class="badge {% if step.deadline < now %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ step.deadline|date:"d M H:i" }}</span>
+                            <span><span class="fw-semibold">{{ step.body }}</span><br><span class="text-muted small">{{ step.entry.title }}</span></span>
+                        </a>
+                    {% empty %}
+                        <div class="small text-muted">No open steps with a deadline in your entries.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="eln-card">
+                <div class="hd"><i class="bi bi-tags"></i> Tags</div>
+                <div class="bd">
+                    {% for tag in tag_cloud %}
+                        <a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }} <span class="text-muted">{{ tag.n }}</span></a>
+                    {% empty %}
+                        <div class="small text-muted">Tags added to entries appear here.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="eln-card">
+                <div class="hd"><i class="bi bi-clock-history"></i> Your recent entries</div>
+                <div class="bd">
+                    {% for entry in recent %}
+                        <div class="small py-1"><a href="{% url 'notebook_index' %}?entry_id={{ entry.id }}">{{ entry.title }}</a>
+                            <span class="text-muted">· {{ entry.updated_at|timesince }} ago</span></div>
+                    {% empty %}
+                        <div class="small text-muted">Nothing yet.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    "use strict";
+    const batchUrl = "{% url 'notebook_dashboard_batch_api' %}";
+    const csrf = "{{ csrf_token }}";
+    const rows = Array.from(document.querySelectorAll(".eln-row"));
+    const all = document.getElementById("eln-all");
+    const bar = document.getElementById("eln-batch");
+    const msg = document.getElementById("eln-batch-msg");
+
+    function selected() { return rows.filter((r) => r.checked).map((r) => Number(r.value)); }
+
+    function refresh() {
+        const ids = selected();
+        document.getElementById("eln-sel-count").textContent = ids.length;
+        bar.classList.toggle("on", ids.length > 0);
+        rows.forEach((r) => r.closest("tr").classList.toggle("sel", r.checked));
+        if (all) all.checked = ids.length > 0 && ids.length === rows.length;
+    }
+
+    function run(action, value, ids) {
+        ids = ids || selected();
+        if (!ids.length) return;
+        if (action === "archive" && !window.confirm("Archive " + ids.length + " entr" + (ids.length > 1 ? "ies" : "y") + "?")) return;
+        msg.textContent = "Working…";
+        fetch(batchUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+            body: JSON.stringify({action: action, value: value, ids: ids}),
+        }).then((r) => r.json()).then(function (data) {
+            if (data.status !== "success") { msg.textContent = data.message || "Not applied"; return; }
+            msg.textContent = data.changed + " updated" + (data.skipped ? ", " + data.skipped + " skipped (not yours)" : "");
+            window.setTimeout(() => window.location.reload(), 500);
+        });
+    }
+
+    rows.forEach((r) => r.addEventListener("change", refresh));
+    if (all) all.addEventListener("change", () => { rows.forEach((r) => { r.checked = all.checked; }); refresh(); });
+
+    document.getElementById("eln-batch-status").addEventListener("change", function () {
+        if (this.value) run("status", this.value);
+    });
+    document.getElementById("eln-batch-tag-btn").addEventListener("click", function () {
+        const tag = document.getElementById("eln-batch-tag").value.trim();
+        if (tag) run("add_tag", tag);
+    });
+    bar.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => run(b.dataset.action)));
+
+    document.querySelectorAll("[data-pin]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            run(button.classList.contains("on") ? "unpin" : "pin", null, [Number(button.dataset.pin)]);
+        });
+    });
+
+    document.querySelectorAll("#eln-filter-form select").forEach((s) => s.addEventListener("change", () => s.form.submit()));
+})();
+</script>
+{% endblock %}
