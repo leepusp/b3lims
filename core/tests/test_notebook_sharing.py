@@ -351,3 +351,26 @@ class EntryPagePermissionTests(SharingBase):
         self.client.force_login(self.eve)
         r = self.client.get(reverse("notebook_dashboard"))
         self.assertNotIn(self.entry.pk, [e.pk for e in r.context["page"].object_list])
+
+
+class SharedWithMeFilterTests(SharingBase):
+    def test_owner_shared_lists_only_entries_granted_to_me(self):
+        granted = self.make("shared")
+        self.share(granted, user=self.ana)
+        lab = self.make("lab")                       # visible, but not shared with her
+        mine = NotebookEntry.objects.create(title="Mine", author=self.ana, visibility="private")
+        self.client.force_login(self.ana)
+        ctx = self.client.get(reverse("notebook_dashboard"), {"owner": "shared"}).context
+        listed = [e.pk for e in ctx["page"].object_list]
+        self.assertEqual(listed, [granted.pk])       # positive control + exclusions
+        self.assertNotIn(lab.pk, listed)
+        self.assertNotIn(mine.pk, listed)
+        self.assertEqual(ctx["shared_count"], 1)
+        self.assertContains(self.client.get(reverse("notebook_dashboard")), "Shared with me (1)")
+
+    def test_group_grant_counts_for_members(self):
+        entry = self.make("shared")
+        self.share(entry, group=self.group)
+        self.client.force_login(self.bob)
+        ctx = self.client.get(reverse("notebook_dashboard"), {"owner": "shared"}).context
+        self.assertEqual([e.pk for e in ctx["page"].object_list], [entry.pk])

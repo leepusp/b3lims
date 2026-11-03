@@ -18,6 +18,7 @@ from core.models.lab_tools.notebook_collab import NotebookEditLock
 from core.permissions.notebook import (
     can_delete_notebook_entry,
     can_edit_notebook_entry,
+    shared_with_user,
     trashed_notebook_entries_for_user,
     visible_notebook_entries_for_user,
 )
@@ -85,6 +86,9 @@ def _filtered_entries(request):
         qs = qs.filter(author=user)
     elif filters["owner"] == "others":
         qs = qs.exclude(author=user)
+    elif filters["owner"] == "shared":
+        # Entries other people shared with me (or my groups) through an explicit grant.
+        qs = qs.filter(pk__in=shared_with_user(user).values("pk"))
     else:
         filters["owner"] = ""
 
@@ -161,6 +165,7 @@ def notebook_dashboard(request):
                 "overdue": open_steps.filter(deadline__lt=now).count(),
             },
             "search_help": HELP_ROWS,
+            "shared_count": shared_with_user(user).exclude(status="archived").count(),
             "trash_count": trashed_notebook_entries_for_user(user).count(),
             "due_steps": open_steps[:6],
             "now": now,

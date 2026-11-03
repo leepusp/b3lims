@@ -113,6 +113,7 @@
                     <option value="">Anyone</option>
                     <option value="me" {% if filters.owner == "me" %}selected{% endif %}>Me</option>
                     <option value="others" {% if filters.owner == "others" %}selected{% endif %}>Others</option>
+                    <option value="shared" {% if filters.owner == "shared" %}selected{% endif %}>Shared with me{% if shared_count %} ({{ shared_count }}){% endif %}</option>
                 </select>
                 <select class="form-select form-select-sm" name="state" aria-label="State">
                     <option value="active" {% if filters.state == "active" %}selected{% endif %}>Active</option>
