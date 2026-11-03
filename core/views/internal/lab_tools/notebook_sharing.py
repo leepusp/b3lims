@@ -40,6 +40,7 @@ def _state(entry, user):
             else grant_level(user, entry) or ("lab" if entry.visibility == "lab" else None)
         ),
         "author": entry.author.get_full_name() or entry.author.get_username(),
+        "can_transfer": user.is_superuser or entry.author_id == user.pk,
         # Only people who can manage see the full list; others see a count.
         "grants": [notebook_sharing.grant_payload(g) for g in notebook_sharing.entry_grants(entry)]
         if can_manage
@@ -104,6 +105,8 @@ def notebook_sharing_api(request, entry_id):
             )
         elif action == "revoke":
             notebook_sharing.unshare_entry(entry=entry, grant_id=data.get("grant_id"), revoked_by=request.user)
+        elif action == "transfer":
+            notebook_sharing.transfer_ownership(entry=entry, grant_id=data.get("grant_id"), by=request.user)
         elif action == "visibility":
             notebook_sharing.set_visibility(entry=entry, value=data.get("value"), changed_by=request.user)
         else:

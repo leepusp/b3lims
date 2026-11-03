@@ -9,7 +9,7 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [x] Advanced search (`title:gel and status:completed`, `extrafield:Medium:TSB`)
 - [~] Sharing: read / edit / manage grants for users and research groups (no migration)
 - [~] "Shared with me" filter in the entries dashboard
-- [ ] Ownership transfer (author to another user; grants and revisions stay)
+- [~] Ownership transfer (to a person who already has access; former author keeps edit; history stays)
 - [ ] Categories and statuses per research group, with colours (migration; replaces the fixed lists)
 - [ ] Editable entry templates (stored in the database, not in code)
 - [ ] Favourite tags panel and step groups
@@ -68,7 +68,7 @@ Other useful functions
 
 ## Housekeeping
 
-- [~] Remove the three test research groups (`TEST - ...`); decide on the LIMS user `ladmin` (deactivate or delete)
+- [x] Test research groups removed and the LIMS user `ladmin` deleted (production, 2026-11-03)
 - [ ] Look for other test leftovers (collections, biobanks, users, samples)
 - [ ] Remove old `static-releases` (keep live, rollback and the two latest)
 - [ ] `notebook.py` still holds the Molecular Registry views; split it during Block D

@@ -374,3 +374,76 @@ class SharedWithMeFilterTests(SharingBase):
         self.client.force_login(self.bob)
         ctx = self.client.get(reverse("notebook_dashboard"), {"owner": "shared"}).context
         self.assertEqual([e.pk for e in ctx["page"].object_list], [entry.pk])
+
+
+class OwnershipTransferTests(SharingBase):
+    def setUp(self):
+        self.entry = self.make("shared", content="<p>x</p>")
+        self.g_ana = self.share(self.entry, user=self.ana, level="view")
+        self.client.force_login(self.author)
+        self.url = reverse("notebook_sharing_api", args=[self.entry.pk])
+
+    def transfer(self, grant, user=None):
+        if user:
+            self.client.force_login(user)
+        return self.client.post(self.url, json.dumps({"action": "transfer", "grant_id": grant.pk}),
+                                content_type="application/json")
+
+    def test_transfer_changes_author_and_keeps_old_author_as_editor(self):
+        r = self.transfer(self.g_ana)
+        self.assertEqual(r.status_code, 200)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.author_id, self.ana.pk)
+        self.assertTrue(can_delete_notebook_entry(self.ana, self.entry))
+        self.assertTrue(can_edit_notebook_entry(self.author, self.entry))      # still edits
+        self.assertFalse(can_delete_notebook_entry(self.author, self.entry))   # no longer owns
+        self.assertFalse(can_manage_notebook_entry_sharing(self.author, self.entry))
+        names = [(g["detail"], g["level"]) for g in map(svc.grant_payload, svc.entry_grants(self.entry))]
+        self.assertEqual(names, [("author", "edit")])                          # new owner has no grant
+
+    def test_private_entry_stays_reachable_for_the_former_author(self):
+        entry = self.make("private")
+        grant = self.share(entry, user=self.ana)          # turns it "shared"
+        svc.set_visibility(entry=entry, value="private", changed_by=self.author)
+        grant = svc.entry_grants(entry).first()
+        svc.transfer_ownership(entry=entry, grant_id=grant.pk, by=self.author)
+        entry.refresh_from_db()
+        self.assertEqual(entry.visibility, "shared")
+        self.assertTrue(can_view_notebook_entry(self.author, entry))
+
+    def test_only_author_or_superuser_may_transfer(self):
+        self.share(self.entry, user=self.bob, level="manage")
+        bob_grant = svc.entry_grants(self.entry).get(user=self.bob)
+        r = self.transfer(self.g_ana, user=self.bob)                 # a manager is not the author
+        self.assertEqual(r.status_code, 403)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.author_id, self.author.pk)
+        self.assertEqual(self.transfer(bob_grant, user=self.admin).status_code, 200)
+
+    def test_rules(self):
+        group_grant = self.share(self.entry, group=self.group)
+        for grant in (group_grant,):
+            self.assertEqual(self.transfer(grant, user=self.author).status_code, 400)  # not a person
+        self.assertEqual(self.client.post(self.url, json.dumps({"action": "transfer", "grant_id": 99999}),
+                                          content_type="application/json").status_code, 400)
+        self.ana.is_active = False
+        self.ana.save()
+        self.assertEqual(self.transfer(self.g_ana).status_code, 400)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.author_id, self.author.pk)
+
+    def test_edit_lock_is_released_and_history_stays(self):
+        from core.models.lab_tools.notebook_collab import NotebookComment, NotebookEditLock
+
+        NotebookComment.objects.create(entry=self.entry, author=self.author, body="note")
+        NotebookEditLock.objects.create(entry=self.entry, user=self.author, token="t",
+                                        heartbeat_at=timezone.now())
+        self.transfer(self.g_ana)
+        self.assertFalse(NotebookEditLock.objects.filter(entry=self.entry).exists())
+        self.assertEqual(self.entry.comments.count(), 1)
+
+    def test_page_offers_make_owner_only_to_the_author(self):
+        state = self.client.get(self.url).json()
+        self.assertTrue(state["can_transfer"])
+        self.client.force_login(self.ana)
+        self.assertFalse(self.client.get(self.url).json()["can_transfer"])

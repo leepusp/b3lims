@@ -953,12 +953,28 @@
                     o.value = l.value; o.textContent = l.label; o.selected = l.value === g.level; sel.appendChild(o);
                 });
                 sel.addEventListener("change", () => act({action: "grant", kind: g.kind, principal_id: g.principal_id, level: sel.value, expires: g.expires_at}));
+                const owner = document.createElement("button");
+                if (g.kind === "user" && state.can_transfer) {
+                    owner.type = "button"; owner.className = "btn btn-sm btn-outline-secondary";
+                    owner.textContent = "Make owner";
+                    owner.setAttribute("aria-label", "Make " + g.name + " the owner");
+                    owner.addEventListener("click", function () {
+                        if (!window.confirm("Transfer this entry to " + g.name + "? You keep edit access, but only the new owner can remove or re-share it freely.")) return;
+                        postJson(urls.sharing, {action: "transfer", grant_id: g.id}).then(function (data) {
+                            if (data.status !== "success") { error(data.message || "Could not transfer"); return; }
+                            pending = 0;
+                            window.location.reload();
+                        });
+                    });
+                }
                 const rm = document.createElement("button");
                 rm.type = "button"; rm.className = "btn btn-sm btn-outline-danger";
                 rm.setAttribute("aria-label", "Remove access for " + g.name);
                 rm.innerHTML = '<i class="bi bi-x-lg"></i>';
                 rm.addEventListener("click", () => act({action: "revoke", grant_id: g.id}));
-                li.append(icon, who, sel, rm);
+                li.append(icon, who, sel);
+                if (g.kind === "user" && state.can_transfer) li.append(owner);
+                li.append(rm);
                 list.appendChild(li);
             });
         }

@@ -12,6 +12,7 @@ from django.utils import timezone
 from core.models import ResearchGroup
 from core.models.lab_tools.notebook import NotebookEntry
 from core.permissions.notebook import can_manage_notebook_entry_sharing
+from core.models.lab_tools.notebook_collab import NotebookEditLock
 from core.services.resource_access import (
     active_resource_grants,
     grant_resource_access,
@@ -155,3 +156,38 @@ def search_principals(*, query, entry, limit=8):
         for u in users
     ]
     return found
+
+
+def transfer_ownership(*, entry, grant_id, by):
+    """Make a person who already has access the author; the former author keeps edit access.
+
+    Only the current author or a superuser may do this. The entry keeps its history
+    (revisions, comments, files); only ``author`` changes.
+    """
+    from django.db import transaction
+
+    _check_entry(entry)
+    if not (by.is_superuser or by.pk == entry.author_id):
+        raise PermissionDenied("Only the author can transfer ownership.")
+    grant = active_resource_grants(entry).filter(pk=grant_id, user__isnull=False).select_related("user").first()
+    if grant is None:
+        raise ValidationError("Choose a person who already has access to this entry.")
+    new_author = grant.user
+    if not new_author.is_active:
+        raise ValidationError("Ownership cannot go to an inactive user.")
+    if new_author.pk == entry.author_id:
+        raise ValidationError("That person is already the author.")
+
+    with transaction.atomic():
+        former = entry.author
+        entry.author = new_author
+        # The former author must not lose the entry: it becomes shared, with edit access.
+        if entry.visibility == "private":
+            entry.visibility = "shared"
+        entry.save(update_fields=["author", "visibility"])
+        revoke_resource_access(grant=grant, revoked_by=by)  # the new author needs no grant
+        grant_resource_access(
+            resource=entry, access_level="edit", granted_by=by, user=former,
+        )
+        NotebookEditLock.objects.filter(entry=entry).delete()
+    return entry

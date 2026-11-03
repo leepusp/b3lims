@@ -75,7 +75,7 @@ visibility Private. Draft files already written to a user's home are left untouc
 | --- | --- | --- |
 | canread / canwrite (users, research groups; read, edit, manage; expiry; revoke) | ✅ via ResourceAccessGrant | 2.2 |
 | Teams, team groups | ResearchGroup | 🟡 | 2.2 |
-| Ownership transfer | ⬜ | 2.2 |
+| Ownership transfer | ✅ | 2.2 |
 | Admin panel (team settings, categories, status, templates) | ⬜ | 2.2 |
 | API keys + REST API v2 | ⬜ | 2.6 |
 | Webhooks | ⬜ | later |
