@@ -13,6 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 
 from core.models.lab_tools.notebook import (
     MolecularSecondaryStructure,
@@ -68,6 +69,7 @@ from core.services.molecular_file_import import (
 )
 
 from core.services.jupyter_documents import normalize_notebook
+from core.services.notebook_html import sanitize_notebook_html
 
 
 def _sample_display_name(sample):
@@ -450,9 +452,16 @@ def notebook_index(request):
             "jupyter": active_entry.jupyter_links.count(),
         }
 
-    linked_samples_json = json.dumps(
-        [link.snapshot_json for link in linked_sample_links],
-        ensure_ascii=False,
+    # Embedded in a <script type="application/json"> block: escape the
+    # characters that could close the tag (same escapes as json_script).
+    linked_samples_json = (
+        json.dumps(
+            [link.snapshot_json for link in linked_sample_links],
+            ensure_ascii=False,
+        )
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
     )
 
     return render(
@@ -500,10 +509,10 @@ def notebook_create_from_sample(request, sample_id):
         status="draft",
         visibility="private",
         content=(
-            f"<h2>{sample.sample_id}</h2>"
-            f"<p><strong>Sample type:</strong> {sample.sample_type or ''}</p>"
-            f"<p><strong>Organism:</strong> {sample.organism_name or ''}</p>"
-            f"<p><strong>Status:</strong> {sample.status or ''}</p>"
+            f"<h2>{escape(sample.sample_id)}</h2>"
+            f"<p><strong>Sample type:</strong> {escape(sample.sample_type or '')}</p>"
+            f"<p><strong>Organism:</strong> {escape(sample.organism_name or '')}</p>"
+            f"<p><strong>Status:</strong> {escape(sample.status or '')}</p>"
         ),
     )
 
@@ -726,7 +735,7 @@ def notebook_save_api(request, entry_id):
     try:
         data = json.loads(request.body)
         entry.title = data.get("title", entry.title)
-        entry.content = data.get("content", "")
+        entry.content = sanitize_notebook_html(data.get("content", ""))
         entry.protocol_content = data.get("protocol_content", entry.protocol_content) or ""
 
         entry_type = data.get("entry_type")

@@ -1,6 +1,7 @@
 {% extends 'internal/common/base.html' %}
 {% load static %}
 {% load eln_experimental_access %}
+{% load notebook_html %}
 
 {% block title %}ELN Notebook{% endblock %}
 
@@ -637,7 +638,7 @@
                                 </div>
 
                         <div id="editor-container" class="notebook-editor">
-                            {{ active_entry.content|safe }}
+                            {{ active_entry.content|notebook_html }}
                         </div>
                     </div>
                                 
