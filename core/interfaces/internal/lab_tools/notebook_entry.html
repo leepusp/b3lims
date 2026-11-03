@@ -68,6 +68,7 @@
                 <button type="button" class="bx-section" data-pane="steps" role="tab">Steps <span class="bx-count" id="bx-count-steps"></span></button>
                 <button type="button" class="bx-section" data-pane="relevant" role="tab">Relevant items <span class="bx-count" id="bx-count-relevant"></span></button>
                 <button type="button" class="bx-section" data-pane="files" role="tab">Files <span class="bx-count" id="bx-count-files"></span></button>
+                <button type="button" class="bx-section" data-pane="comments" role="tab">Comments <span class="bx-count" id="bx-count-comments"></span></button>
             </nav>
             <div class="bx-actions">
                 <span class="bx-save" id="save-status">{% if can_edit %}Saved{% else %}<i class="bi bi-eye"></i> Read only{% endif %}</span>
@@ -76,6 +77,7 @@
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">More</button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><button class="dropdown-item" type="button" id="bx-revisions"><i class="bi bi-clock-history me-2"></i>Revisions and compare</button></li>
                         <li><button class="dropdown-item" type="button" id="bx-print"><i class="bi bi-printer me-2"></i>Print entry</button></li>
                         <li><a class="dropdown-item" href="{% url 'notebook_dashboard' %}"><i class="bi bi-grid-3x3-gap me-2"></i>All entries</a></li>
                     </ul>
@@ -83,6 +85,7 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary bx-icon-btn" id="bx-info-toggle" title="Entry information"><i class="bi bi-info-circle"></i></button>
             </div>
         </div>
+        <div class="bx-lock-banner d-none" id="bx-lock-banner" role="status"></div>
 
         <div class="bx-body">
             <article class="bx-doc" id="bx-doc">
@@ -230,6 +233,15 @@
                     {% endif %}
                     <div id="bx-files"></div>
                 </section>
+
+                {# ================= COMMENTS ================= #}
+                <section class="bx-pane" data-pane="comments">
+                    <div id="bx-comments"></div>
+                    <div class="bx-comment-form">
+                        <textarea class="form-control" id="bx-comment-input" rows="3" maxlength="5000" placeholder="Write a comment for colleagues who can see this entry"></textarea>
+                        <button type="button" class="btn btn-sm btn-primary mt-2" id="bx-comment-post">Post comment</button>
+                    </div>
+                </section>
             </article>
 
             {# ---------------- information rail ---------------- #}
@@ -264,6 +276,31 @@
      data-definitions-url="{% url 'notebook_field_definitions_api' 0 %}"></div>
 {{ composer_state|json_script:"nb-composer-state" }}
 {{ page_state|json_script:"bx-state" }}
+
+{# revisions: list, compare and restore #}
+<div class="modal fade" id="bx-rev-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-clock-history me-1"></i> Revisions</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body bx-rev">
+                <div class="bx-rev-list list-group" id="bx-rev-list"></div>
+                <div class="bx-rev-main">
+                    <div class="bx-rev-bar">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Compare mode">
+                            <button type="button" class="btn btn-outline-secondary active" data-mode="prev">What this revision changed</button>
+                            <button type="button" class="btn btn-outline-secondary" data-mode="current">Compared with now</button>
+                            <button type="button" class="btn btn-outline-secondary" data-mode="preview">Preview</button>
+                        </div>
+                        {% if can_edit %}<button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="bx-rev-restore" disabled><i class="bi bi-arrow-counterclockwise"></i> Restore this version</button>{% endif %}
+                    </div>
+                    <div class="bx-rev-legend" id="bx-rev-legend"></div>
+                    <div class="bx-diff" id="bx-rev-view"><p class="bx-hint">Select a revision on the left.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# reference picker used by the editor's "Biobank" menu #}
 <div class="modal fade" id="bx-ref-modal" tabindex="-1" aria-hidden="true">

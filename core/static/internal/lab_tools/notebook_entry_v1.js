@@ -1,9 +1,11 @@
-/* B3 ELN entry page (release 2.0).
+/* B3 ELN entry page (releases 2.0 and 2.1).
  *
  * Document-centred editor after Benchling and eLabFTW: entry navigator,
  * open-entry tabs, TinyMCE 6 with a Biobank menu, Jspreadsheet tables with
  * formulas, Relevant items and Files. Custom fields, steps, entry links,
  * tags, custom ID and rating are handled by notebook_composer_v1.js.
+ * 2.1 adds exclusive edit, revisions with compare/restore, comments and
+ * file versions.
  */
 (function () {
     "use strict";
@@ -16,6 +18,8 @@
     const entryId = state.entry.id;
     const shell = document.getElementById("bx-shell");
     const saveStatus = document.getElementById("save-status");
+    let lockToken = "";
+    let editorRef = null;
 
     // ---------------------------------------------------------------- helpers
 
@@ -40,7 +44,7 @@
         return fetch(url, {
             method: "POST",
             credentials: "same-origin",
-            headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()},
+            headers: Object.assign({"Content-Type": "application/json", "X-CSRFToken": csrf()}, lockToken ? {"X-Lock-Token": lockToken} : {}),
             body: JSON.stringify(payload),
         }).then((r) => r.json().catch(() => ({status: "error", message: "HTTP " + r.status})));
     }
@@ -82,6 +86,7 @@
         status("Saving…");
         return postJson(urls.update, fields).then(function (data) {
             pending -= 1;
+            if (data.status === "locked") { lockLost({holder: data.holder}, true); status("Not saved: edited elsewhere", true); return null; }
             if (data.status !== "success") { status(data.message || "Not saved", true); return null; }
             status("Saved " + data.updated_at.slice(11));
             const updated = document.getElementById("bx-updated");
@@ -417,6 +422,7 @@
             content_style: "",
             extended_valid_elements: "span[class|data-kind|data-id|contenteditable|style],a[class|data-kind|data-id|href|target|rel|title]",
             setup: function (editor) {
+                editorRef = editor;
                 editor.ui.registry.addMenuItem("b3sample", {text: "Sample…", icon: "user", onAction: () => openReferenceModal("samples", editor)});
                 editor.ui.registry.addMenuItem("b3reagent", {text: "Reagent / compound…", icon: "color-swatch", onAction: () => openReferenceModal("chemicals", editor)});
                 editor.ui.registry.addMenuItem("b3molecule", {text: "Molecular record…", icon: "code-sample", onAction: () => openReferenceModal("molecules", editor)});
@@ -458,6 +464,7 @@
                 editor.on("init", function () {
                     const loading = document.getElementById("bx-editor-loading");
                     if (loading) loading.remove();
+                    if (readOnly) editor.mode.set("readonly");
                     renderToc(editor.getBody());
                 });
                 let ready = false;
@@ -683,16 +690,62 @@
         const counter = document.getElementById("bx-count-files");
         if (counter) counter.textContent = files.length ? files.length : "";
         document.getElementById("bx-files").innerHTML = files.length
-            ? `<table class="bx-files-table"><thead><tr><th></th><th>File</th><th>Type</th><th>Size</th><th>SHA-256</th><th>Uploaded</th></tr></thead><tbody>
-                ${files.map((f) => `<tr>
+            ? `<table class="bx-files-table"><thead><tr><th></th><th>File</th><th>Type</th><th>Size</th><th>SHA-256</th><th>Uploaded</th>${canEdit ? "<th></th>" : ""}</tr></thead><tbody>
+                ${files.map((f) => `<tr data-file="${f.id}">
                     <td>${f.type === "image" ? `<img class="bx-thumb" src="${esc(f.url)}" alt="">` : '<i class="bi bi-file-earmark fs-4 text-secondary"></i>'}</td>
-                    <td><a href="${esc(f.url)}">${esc(f.name)}</a>${f.caption && f.caption !== f.name ? `<div class="bx-hint">${esc(f.caption)}</div>` : ""}</td>
+                    <td><a href="${esc(f.url)}">${esc(f.name)}</a> ${f.version > 1 ? `<span class="badge text-bg-light bx-version">v${f.version}</span>` : ""}
+                        <div class="bx-hint">${canEdit
+                            ? `<span class="bx-caption-edit" data-caption="${f.id}" title="Click to edit the description">${esc(f.caption || "Add a description")}</span>`
+                            : esc(f.caption && f.caption !== f.name ? f.caption : "")}</div>
+                        ${f.history && f.history.length ? `<details class="bx-versions"><summary>${f.history.length} earlier version${f.history.length > 1 ? "s" : ""}</summary><ul>
+                            ${f.history.map((h) => `<li><a href="${esc(h.url)}">v${h.version}</a> · ${esc(h.uploaded_at)} · ${esc(h.uploaded_by)} · ${formatSize(h.size)}</li>`).join("")}</ul></details>` : ""}</td>
                     <td class="text-capitalize">${esc(f.type)}</td>
                     <td>${formatSize(f.size)}</td>
                     <td><code title="SHA-256">${esc(f.checksum || "—")}${f.checksum ? "…" : ""}</code></td>
                     <td class="small text-muted">${esc(f.uploaded_by)}<br>${esc(f.uploaded_at)}</td>
+                    ${canEdit ? `<td class="bx-file-actions"><label class="btn btn-sm btn-outline-secondary mb-0" title="Upload a new version of this file"><i class="bi bi-arrow-repeat"></i> New version<input type="file" hidden data-replace="${f.id}"></label></td>` : ""}
                 </tr>`).join("")}</tbody></table>`
             : '<p class="bx-hint mt-3">No files yet.</p>';
+    }
+
+    function wireFileActions() {
+        const root = document.getElementById("bx-files");
+        root.addEventListener("change", function (event) {
+            const input = event.target.closest("[data-replace]");
+            if (!input || !input.files.length) return;
+            const form = new FormData();
+            form.append("file", input.files[0]);
+            form.append("attachment_id", input.dataset.replace);
+            status("Uploading new version…");
+            fetch(urls.replace, {method: "POST", credentials: "same-origin", headers: {"X-CSRFToken": csrf()}, body: form})
+                .then((r) => r.json()).then(function (data) {
+                    status(data.status === "success" ? "New version uploaded" : (data.message || "Upload failed"), data.status !== "success");
+                    refreshFiles();
+                });
+        });
+        root.addEventListener("click", function (event) {
+            const span = event.target.closest("[data-caption]");
+            if (!span || !canEdit) return;
+            const id = span.dataset.caption;
+            const file = state.attachments.find((f) => String(f.id) === id);
+            const field = document.createElement("input");
+            field.type = "text"; field.className = "form-control form-control-sm"; field.maxLength = 255;
+            field.value = file ? file.caption : "";
+            span.replaceWith(field);
+            field.focus();
+            let done = false;
+            function finish(save) {
+                if (done) return;
+                done = true;
+                if (!save) { renderFiles(); return; }
+                postJson(urls.file_caption, {attachment_id: Number(id), caption: field.value}).then(function (data) {
+                    if (data.status === "success" && file) file.caption = data.caption;
+                    renderFiles();
+                });
+            }
+            field.addEventListener("keydown", (e) => { if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
+            field.addEventListener("blur", () => finish(true));
+        });
     }
 
     function refreshFiles() {
@@ -720,6 +773,7 @@
 
     function initFiles() {
         renderFiles();
+        wireFileActions();
         const drop = document.getElementById("bx-drop");
         if (!drop) return;
         const input = document.getElementById("bx-file-input");
@@ -727,6 +781,235 @@
         ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
         ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
         drop.addEventListener("drop", (e) => uploadFiles(e.dataTransfer.files));
+    }
+
+
+    // ---------------------------------------------------------------- exclusive edit
+
+    const lockBanner = document.getElementById("bx-lock-banner");
+    let heartbeatTimer = null;
+    let readOnly = false;
+
+    function tabToken() {
+        const key = "b3eln.lock." + entryId;
+        try {
+            let token = window.sessionStorage.getItem(key);
+            if (!token) {
+                const bytes = new Uint8Array(16);
+                window.crypto.getRandomValues(bytes);
+                token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+                window.sessionStorage.setItem(key, token);
+            }
+            return token;
+        } catch (e) {
+            return String(Date.now()) + Math.random().toString(16).slice(2);
+        }
+    }
+
+    function applyReadOnly(on) {
+        readOnly = on;
+        if (editorRef && editorRef.mode) editorRef.mode.set(on ? "readonly" : "design");
+        document.querySelectorAll(".bx-sheet-add, #bx-add-sheet").forEach((b) => { b.disabled = on; });
+    }
+
+    function lockLost(info, wasMine) {
+        applyReadOnly(true);
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        const same = info && info.holder && info.holder === state.user;
+        const who = same ? "Another window or tab of yours" : ((info && info.holder) || "Another window");
+        lockBanner.innerHTML = `<i class="bi bi-lock-fill"></i><span><strong>${esc(who)}</strong> ${wasMine ? "took over editing of this entry." : "is editing this entry" + (info && info.since ? " since " + esc(info.since) : "") + "."} You are viewing it read-only.</span>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="bx-lock-take">Take over editing</button>`;
+        lockBanner.classList.remove("d-none");
+        document.getElementById("bx-lock-take").addEventListener("click", function () {
+            if (!window.confirm("Taking over will stop the other window from saving. Unsaved text there will be lost. Continue?")) return;
+            postJson(urls.lock, {action: "acquire", token: lockToken, force: true}).then(function (r) {
+                if (r.status === "success" && r.granted) window.location.reload();
+            });
+        });
+    }
+
+    function lockHeld() {
+        lockBanner.classList.add("d-none");
+        lockBanner.innerHTML = "";
+        applyReadOnly(false);
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(function () {
+            postJson(urls.lock, {action: "heartbeat", token: lockToken}).then(function (r) {
+                if (r.status === "success" && !r.granted) lockLost(r, true);
+            });
+        }, 30000);
+    }
+
+    function initLock() {
+        if (!canEdit) return;
+        lockToken = tabToken();
+        postJson(urls.lock, {action: "acquire", token: lockToken}).then(function (r) {
+            if (r.status !== "success") return;
+            if (r.granted) lockHeld(); else lockLost(r, false);
+        });
+        window.addEventListener("pagehide", function () {
+            if (readOnly) return;
+            try {
+                fetch(urls.lock, {
+                    method: "POST", keepalive: true, credentials: "same-origin",
+                    headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()},
+                    body: JSON.stringify({action: "release", token: lockToken}),
+                });
+            } catch (e) { /* best effort */ }
+        });
+    }
+
+    // ---------------------------------------------------------------- revisions
+
+    function initRevisions() {
+        const button = document.getElementById("bx-revisions");
+        const modalEl = document.getElementById("bx-rev-modal");
+        if (!button || !modalEl) return;
+        const list = document.getElementById("bx-rev-list");
+        const view = document.getElementById("bx-rev-view");
+        const legend = document.getElementById("bx-rev-legend");
+        const restore = document.getElementById("bx-rev-restore");
+        let revisions = [];
+        let selected = null;
+        let mode = "prev";
+
+        function renderList() {
+            list.innerHTML = revisions.length
+                ? revisions.map((r, i) => `<button type="button" class="list-group-item list-group-item-action ${selected && selected.id === r.id ? "active" : ""}" data-index="${i}">
+                        <div class="fw-semibold">${esc(r.at)}</div><div>${esc(r.author)}${i === 0 ? " · latest" : ""}${i === revisions.length - 1 ? " · first" : ""}</div></button>`).join("")
+                : '<div class="list-group-item small text-muted">No revisions yet. They appear after the first edit of the text.</div>';
+        }
+
+        function renderDiff(rows) {
+            view.innerHTML = rows.length
+                ? rows.map((row) => `<div class="bx-diff-row ${esc(row.type)}">${esc(row.text)}</div>`).join("")
+                : '<p class="bx-hint p-2 mb-0">No differences.</p>';
+        }
+
+        function load() {
+            if (!selected) return;
+            const index = revisions.findIndex((r) => r.id === selected.id);
+            const older = revisions[index + 1];
+            if (restore) restore.disabled = false;
+            if (mode === "preview") {
+                legend.textContent = "";
+                getJson(urls.revisions + "?id=" + selected.id).then(function (data) {
+                    view.innerHTML = `<div class="bx-rev-preview">${data.preview || ""}</div>`;
+                });
+                return;
+            }
+            let query;
+            if (mode === "prev") {
+                legend.innerHTML = "Green: added in this revision. Red: removed in this revision.";
+                query = older ? "?id=" + older.id + "&against=" + selected.id : "?id=" + selected.id + "&against=" + selected.id;
+            } else {
+                legend.innerHTML = "Green: in the current text only. Red: in this revision only.";
+                query = "?id=" + selected.id;
+            }
+            getJson(urls.revisions + query).then(function (data) {
+                if (data.status === "success") renderDiff(data.diff);
+            });
+        }
+
+        function refresh() {
+            return getJson(urls.revisions).then(function (data) {
+                revisions = (data && data.revisions) || [];
+                renderList();
+            });
+        }
+
+        button.addEventListener("click", function () {
+            selected = null;
+            if (restore) restore.disabled = true;
+            view.innerHTML = '<p class="bx-hint p-2 mb-0">Select a revision on the left.</p>';
+            legend.textContent = "";
+            refresh().then(() => bootstrap.Modal.getOrCreateInstance(modalEl).show());
+        });
+        list.addEventListener("click", function (event) {
+            const item = event.target.closest("[data-index]");
+            if (!item) return;
+            selected = revisions[Number(item.dataset.index)];
+            renderList();
+            const active = list.querySelector(".active");
+            if (active) active.focus();  // keep focus inside the modal so Esc still closes it
+            load();
+        });
+        modalEl.querySelectorAll("[data-mode]").forEach(function (b) {
+            b.addEventListener("click", function () {
+                modalEl.querySelectorAll("[data-mode]").forEach((x) => x.classList.toggle("active", x === b));
+                mode = b.dataset.mode;
+                load();
+            });
+        });
+        if (restore) {
+            restore.addEventListener("click", function () {
+                if (!selected || !window.confirm("Replace the current text with the version from " + selected.at + "? The current text is kept as a revision.")) return;
+                postJson(urls.revisions, {revision_id: selected.id}).then(function (r) {
+                    if (r.status !== "success") { status(r.message || "Could not restore", true); return; }
+                    if (editorRef) { editorRef.setContent(r.content); editorRef.setDirty(false); }
+                    status("Restored " + r.updated_at.slice(11));
+                    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                });
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------- comments
+
+    function initComments() {
+        const box = document.getElementById("bx-comments");
+        const input = document.getElementById("bx-comment-input");
+        const post = document.getElementById("bx-comment-post");
+        if (!box) return;
+        let rows = [];
+        let editing = null;
+
+        function draw() {
+            const counter = document.getElementById("bx-count-comments");
+            if (counter) counter.textContent = rows.length ? rows.length : "";
+            box.innerHTML = rows.length ? rows.map((c) => `<div class="bx-comment" data-id="${c.id}">
+                <div class="bx-comment-head"><strong>${esc(c.author)}</strong><span>${esc(c.at)}${c.edited ? " · edited" : ""}</span>
+                    <span class="bx-comment-actions">
+                        ${c.can_edit ? `<a href="#" data-act="edit">Edit</a>` : ""}
+                        ${c.can_delete ? `<a href="#" class="text-danger" data-act="delete">Delete</a>` : ""}
+                    </span></div>
+                ${editing === c.id
+                    ? `<textarea class="form-control mt-2" rows="3" maxlength="5000" data-edit-box>${esc(c.body)}</textarea>
+                       <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" data-act="save">Save</button> <button type="button" class="btn btn-sm btn-link" data-act="cancel">Cancel</button></div>`
+                    : `<div class="bx-comment-body">${esc(c.body)}</div>`}
+            </div>`).join("") : '<p class="bx-hint">No comments yet.</p>';
+        }
+
+        function apply(data) {
+            if (data.status === "success") { rows = data.comments; editing = null; draw(); }
+            else status(data.message || "Could not save the comment", true);
+        }
+
+        getJson(urls.comments).then((data) => { if (data.status === "success") { rows = data.comments; draw(); } });
+        post.addEventListener("click", function () {
+            const body = input.value.trim();
+            if (!body) return;
+            post.disabled = true;
+            postJson(urls.comments, {action: "add", body: body}).then(function (data) {
+                post.disabled = false;
+                if (data.status === "success") input.value = "";
+                apply(data);
+            });
+        });
+        box.addEventListener("click", function (event) {
+            const link = event.target.closest("[data-act]");
+            if (!link) return;
+            event.preventDefault();
+            const id = Number(link.closest("[data-id]").dataset.id);
+            const act = link.dataset.act;
+            if (act === "edit") { editing = id; draw(); }
+            else if (act === "cancel") { editing = null; draw(); }
+            else if (act === "save") {
+                postJson(urls.comments, {action: "edit", id: id, body: box.querySelector("[data-edit-box]").value}).then(apply);
+            } else if (act === "delete" && window.confirm("Delete this comment?")) {
+                postJson(urls.comments, {action: "delete", id: id}).then(apply);
+            }
+        });
     }
 
     // ---------------------------------------------------------------- boot
@@ -738,5 +1021,8 @@
     initSections();
     renderRelevant();
     initFiles();
+    initLock();
+    initRevisions();
+    initComments();
     initEditor();
 })();

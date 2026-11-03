@@ -471,6 +471,12 @@ class NotebookAttachment(models.Model):
         blank=True,
         related_name="notebook_attachments_uploaded",
     )
+    # Versions: replacing a file keeps the old one, linked through ``previous``.
+    version = models.PositiveIntegerField(default=1, db_default=1)
+    previous = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="newer_versions"
+    )
+    is_current = models.BooleanField(default=True, db_default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -20,6 +20,8 @@ workflows/Galaxy, ENA/NCBI/Zenodo submission.
 
 Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench release.
 
+The classic notebook page was retired in 2.1; old links redirect to the entry page.
+
 ## Entities
 
 | eLabFTW | B3 | Status | Release |
@@ -39,18 +41,18 @@ Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench releas
 | Markdown body option | ⬜ | 2.0 |
 | Spreadsheet editor with formulas, import/export xlsx/csv | ✅ formulas + CSV export (2.0); xlsx import ⬜ | 2.6 |
 | Custom fields (15 types, groups, required, load fields) | ✅ (1.A) | — |
-| Field builder modal + JSON editor | 🟡 | 2.1 |
-| Steps (groups, deadlines, done by/at) | ✅ (step groups ⬜) | 2.1 |
+| Field builder modal + JSON editor | 🟡 | 2.2 |
+| Steps (groups, deadlines, done by/at) | ✅ (step groups ⬜) | 2.2 |
 | Links to experiments | ✅ | — |
 | Links to resources (categories) | 🟡 samples/reagents/molecules | 2.3 |
 | Compounds (PubChem import, hazards) | 🟡 Chemicals | 2.4 |
 | Storage containers on entry | ⬜ | 2.3 |
-| Uploads: drag & drop, versions (replace), comments, grid/table view, image annotation, QR | 🟡 basic attachments | 2.1 |
-| Comments (+ immutable comments) | ⬜ | 2.1 |
+| Uploads: drag & drop, versions (replace), description, grid/table view, image annotation, QR | 🟡 drag & drop, versions (replace) and description ✅ (2.1); grid view, annotation, QR ⬜ | 2.6 |
+| Comments (+ immutable comments) | ✅ comments (2.1); immutable comments ⬜ | 2.5 |
 | Draw something / chem editor | ⬜ | 2.4 |
-| Exclusive edit mode (lock while editing) | ⬜ | 2.1 |
-| Autosave + revisions (restore, compare) | 🟡 autosave only | 2.1 |
-| Changelog per entry | ⬜ | 2.1 |
+| Exclusive edit mode (lock while editing) | ✅ (2.1) | — |
+| Autosave + revisions (restore, compare) | ✅ (2.1) | — |
+| Changelog per entry | ⬜ (field-level history; text history is in revisions) | 2.5 |
 | Pin / favourite | ✅ (dashboard) | — |
 | Duplicate entry | ✅ (2.0) | — |
 
@@ -85,8 +87,8 @@ Status: ✅ done · 🟡 partial · ⬜ to do. Release = planned B3 Bench releas
 | Batch actions | ✅ status/tag/archive/pin | 2.2 (lock, permissions, export) |
 | Advanced search query language (`title:x and status:y`) | ⬜ | 2.2 |
 | Extra-field search (`extrafield:Medium:TSB`) | ⬜ | 2.2 |
-| Dashboard (recent, steps, bookings, todo) | 🟡 | 2.1 |
-| Todolist | ⬜ | 2.1 |
+| Dashboard (recent, steps, bookings, todo) | 🟡 recent, steps, todo ✅; bookings ⬜ | 2.3 |
+| Todolist | ✅ personal list on the dashboard (2.1) | — |
 | Favourite tags panel | ⬜ | 2.2 |
 | Trash / restore (state: deleted) | ⬜ | 2.2 |
 

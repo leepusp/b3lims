@@ -133,6 +133,7 @@ from core.views.internal.keywords.views import (
 from core.views.internal.lab_tools import notebook as notebook_views
 from core.views.internal.lab_tools import notebook_composer as notebook_composer_views
 from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
+from core.views.internal.lab_tools import notebook_collab as notebook_collab_views
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 
@@ -463,6 +464,12 @@ urlpatterns = [
     path('internal/lab-tools/notebook/entry/<int:entry_id>/duplicate/', notebook_entry_views.notebook_duplicate_api, name='notebook_duplicate_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/relevant/', notebook_entry_views.notebook_relevant_api, name='notebook_relevant_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/', notebook_entry_views.notebook_entry_files_api, name='notebook_entry_files_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/revisions/', notebook_collab_views.notebook_revisions_api, name='notebook_revisions_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/comments/', notebook_collab_views.notebook_comments_api, name='notebook_comments_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/lock/', notebook_collab_views.notebook_lock_api, name='notebook_lock_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/files/replace/', notebook_collab_views.notebook_file_replace_api, name='notebook_file_replace_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/files/caption/', notebook_collab_views.notebook_file_caption_api, name='notebook_file_caption_api'),
+    path('internal/lab-tools/notebook/todos/', notebook_collab_views.notebook_todos_api, name='notebook_todos_api'),
     path('internal/lab-tools/notebook/entries/batch/', notebook_dashboard_views.notebook_dashboard_batch_api, name='notebook_dashboard_batch_api'),
     path('internal/lab-tools/notebook/', notebook_views.notebook_index, name='notebook_index'),
     path('internal/lab-tools/notebook/create/', notebook_views.notebook_create, name='notebook_create'),

@@ -41,6 +41,12 @@ from core.models.lab_tools.notebook import (
     NotebookEntry,
     NotebookSampleLink,
 )
+from core.models.lab_tools.notebook_collab import (
+    NotebookComment,
+    NotebookEditLock,
+    NotebookRevision,
+    NotebookTodo,
+)
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
     NotebookPin,

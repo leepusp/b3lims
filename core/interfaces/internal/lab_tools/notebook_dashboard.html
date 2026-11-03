@@ -220,6 +220,17 @@
         </section>
 
         <aside class="d-flex flex-column gap-3">
+            <section class="eln-card" id="eln-todo" data-url="{% url 'notebook_todos_api' %}">
+                <div class="hd"><i class="bi bi-check2-square"></i> To-do <span class="ms-auto small fw-normal"><a href="#" id="eln-todo-clear" class="text-muted">Clear done</a></span></div>
+                <div class="bd">
+                    <form id="eln-todo-form" class="d-flex gap-1 mb-2">
+                        <input type="text" class="form-control form-control-sm" id="eln-todo-input" maxlength="255" placeholder="Add a task, e.g. order primers">
+                        <button class="btn btn-sm btn-primary" type="submit" aria-label="Add task"><i class="bi bi-plus-lg"></i></button>
+                    </form>
+                    <div id="eln-todo-list"><div class="small text-muted">Loading…</div></div>
+                </div>
+            </section>
+
             <section class="eln-card" id="eln-due">
                 <div class="hd"><i class="bi bi-alarm"></i> Steps with deadlines</div>
                 <div class="bd">
@@ -318,6 +329,40 @@
     });
 
     document.querySelectorAll("#eln-filter-form select").forEach((s) => s.addEventListener("change", () => s.form.submit()));
+
+    // ---- to-do list (personal)
+    (function () {
+        const box = document.getElementById("eln-todo");
+        if (!box) return;
+        const listEl = document.getElementById("eln-todo-list");
+        const input = document.getElementById("eln-todo-input");
+        const url = box.dataset.url;
+        const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        function draw(todos) {
+            listEl.innerHTML = todos.length ? todos.map((t) => `<div class="d-flex align-items-start gap-2 py-1 border-bottom small" data-id="${t.id}">
+                <input class="form-check-input mt-1" type="checkbox" data-toggle ${t.done ? "checked" : ""} aria-label="Done">
+                <span class="flex-grow-1 ${t.done ? "text-decoration-line-through text-muted" : ""}">${esc(t.text)}${t.entry_url ? ` <a href="${esc(t.entry_url)}" title="Open entry"><i class="bi bi-box-arrow-up-right"></i></a>` : ""}</span>
+                <button type="button" class="btn btn-sm p-0 text-muted" data-del aria-label="Delete task"><i class="bi bi-x-lg"></i></button></div>`).join("")
+                : '<div class="small text-muted">Nothing to do. Add a task above.</div>';
+        }
+        function send(payload) {
+            return fetch(url, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json", "X-CSRFToken": csrf}, body: JSON.stringify(payload)})
+                .then((r) => r.json()).then((d) => { if (d.status === "success") draw(d.todos); return d; });
+        }
+        fetch(url, {credentials: "same-origin"}).then((r) => r.json()).then((d) => draw(d.todos || []));
+        document.getElementById("eln-todo-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (text) send({action: "add", text: text}).then((d) => { if (d.status === "success") input.value = ""; });
+        });
+        listEl.addEventListener("click", function (e) {
+            const row = e.target.closest("[data-id]");
+            if (!row) return;
+            if (e.target.closest("[data-toggle]")) send({action: "toggle", id: Number(row.dataset.id)});
+            else if (e.target.closest("[data-del]")) send({action: "delete", id: Number(row.dataset.id)});
+        });
+        document.getElementById("eln-todo-clear").addEventListener("click", function (e) { e.preventDefault(); send({action: "clear_done"}); });
+    })();
 })();
 </script>
 {% endblock %}

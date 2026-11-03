@@ -209,6 +209,39 @@
 .bx-toc a:hover { color: var(--bx-accent); }
 .bx-toc .h3 { padding-left: .8rem; font-size: .8rem; }
 
+/* exclusive edit banner */
+.bx-lock-banner { margin: 0; padding: .55rem 1rem; background: #fff7e6; border-bottom: 1px solid #f3d38a; color: #7a5300; font-size: .85rem; display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.bx-lock-banner .btn { margin-left: auto; }
+
+/* revisions modal */
+.bx-rev { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; min-height: 55vh; }
+.bx-rev-list { max-height: 65vh; overflow-y: auto; align-self: start; }
+.bx-rev-list .list-group-item { font-size: .82rem; cursor: pointer; }
+.bx-rev-bar { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.bx-rev-legend { font-size: .75rem; color: var(--bx-muted); margin-bottom: .4rem; }
+.bx-diff { font-size: .85rem; border: 1px solid var(--bx-border, #e5e7eb); border-radius: 6px; max-height: 58vh; overflow: auto; }
+.bx-diff-row { padding: .15rem .6rem; white-space: pre-wrap; word-break: break-word; border-left: 3px solid transparent; }
+.bx-diff-row.add { background: #e6f6ea; border-left-color: #2e9d4f; }
+.bx-diff-row.del { background: #fdeaea; border-left-color: #d64545; text-decoration: line-through; text-decoration-color: rgba(214,69,69,.5); }
+.bx-diff-row.skip { color: var(--bx-muted); font-style: italic; background: #f6f7f9; text-align: center; }
+.bx-rev-preview { padding: .75rem 1rem; }
+@media (max-width: 900px) { .bx-rev { grid-template-columns: 1fr; } }
+
+/* comments */
+.bx-comment { padding: .7rem .9rem; border: 1px solid var(--bx-border, #e5e7eb); border-radius: 8px; margin-bottom: .6rem; background: #fff; }
+.bx-comment-head { display: flex; gap: .5rem; align-items: baseline; font-size: .8rem; color: var(--bx-muted); }
+.bx-comment-head strong { color: #1f2937; }
+.bx-comment-head .bx-comment-actions { margin-left: auto; display: flex; gap: .5rem; }
+.bx-comment-body { white-space: pre-wrap; word-break: break-word; margin-top: .25rem; }
+.bx-comment-form { margin-top: 1rem; max-width: 720px; }
+
+/* file versions */
+.bx-version { font-size: .72rem; }
+.bx-file-actions { white-space: nowrap; }
+.bx-caption-edit { cursor: text; border-bottom: 1px dashed #c4c9d2; }
+.bx-versions summary { cursor: pointer; font-size: .75rem; color: var(--bx-muted); }
+.bx-versions ul { margin: .25rem 0 0; padding-left: 1rem; font-size: .78rem; }
+
 /* reference chips inserted by the Biobank menu */
 .bx-ref-results { max-height: 300px; overflow-y: auto; }
 

@@ -3,11 +3,13 @@
 A document-centred page modelled on Benchling and eLabFTW: entry list on
 the left, open-entry tabs, a full TinyMCE editor, spreadsheets with
 formulas, and Notes / Metadata / Steps / Relevant items / Files tabs.
-The classic Notebook page stays available for the older block tools.
+Release 2.1 adds revisions, comments, exclusive edit and file versions.
 """
 
 import json
+import re
 from datetime import date
+from pathlib import Path
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -26,6 +28,7 @@ from core.models.lab_tools.notebook_composer import (
     NotebookStep,
 )
 from core.permissions.notebook import visible_notebook_entries_for_user
+from core.services import notebook_collab
 from core.services.notebook_html import sanitize_notebook_html
 from core.views.internal.lab_tools.notebook import _get_entry_for_user, _notebook_entry_templates
 from core.views.internal.lab_tools.notebook_composer import composer_state
@@ -107,21 +110,50 @@ def _relevant_items(entry):
     }
 
 
+_UUID_PREFIX = re.compile(r"^[0-9a-f]{32}_")
+
+
+def _attachment_name(a):
+    """The name the user uploaded (storage prepends a random id)."""
+    if a.file:
+        return _UUID_PREFIX.sub("", Path(a.file.name).name)
+    return a.caption or f"File {a.pk}"
+
+
+def _attachment_payload(a, history=None):
+    exists = bool(a.file) and a.file.storage.exists(a.file.name)
+    payload = {
+        "id": a.pk,
+        "name": _attachment_name(a),
+        "caption": a.caption,
+        "type": a.attachment_type,
+        "size": a.file.size if exists else None,
+        "checksum": (a.checksum_sha256 or "")[:12],
+        "uploaded_by": a.uploaded_by.get_username() if a.uploaded_by else "",
+        "uploaded_at": timezone.localtime(a.created_at).strftime("%Y-%m-%d %H:%M"),
+        "url": reverse("notebook_attachment_download", args=[a.pk]),
+        "version": a.version,
+    }
+    if history is not None:
+        payload["history"] = history
+    return payload
+
+
 def _attachments(entry):
-    return [
-        {
-            "id": a.pk,
-            "name": a.original_filename or a.caption or f"File {a.pk}",
-            "caption": a.caption,
-            "type": a.attachment_type,
-            "size": a.file.size if a.file and a.file.storage.exists(a.file.name) else None,
-            "checksum": (a.checksum_sha256 or "")[:12],
-            "uploaded_by": a.uploaded_by.get_username() if a.uploaded_by else "",
-            "uploaded_at": timezone.localtime(a.created_at).strftime("%Y-%m-%d %H:%M") if getattr(a, "created_at", None) else "",
-            "url": reverse("notebook_attachment_download", args=[a.pk]),
-        }
-        for a in entry.attachments.select_related("uploaded_by").order_by("-id")
-    ]
+    """Current files of an entry, each with the list of its older versions."""
+    rows = list(entry.attachments.select_related("uploaded_by").order_by("-id"))
+    by_id = {a.pk: a for a in rows}
+    result = []
+    for a in rows:
+        if not a.is_current:
+            continue
+        history, seen, cursor = [], {a.pk}, by_id.get(a.previous_id)
+        while cursor is not None and cursor.pk not in seen:
+            history.append(_attachment_payload(cursor))
+            seen.add(cursor.pk)
+            cursor = by_id.get(cursor.previous_id)
+        result.append(_attachment_payload(a, history))
+    return result
 
 
 @login_required
@@ -161,7 +193,13 @@ def notebook_entry(request, entry_id):
             "files": reverse("notebook_entry_files_api", args=[entry.pk]),
             "upload": reverse("notebook_upload_attachment_api", args=[entry.pk]),
             "lookup": reverse("notebook_lookup_api", args=[entry.pk]),
+            "revisions": reverse("notebook_revisions_api", args=[entry.pk]),
+            "comments": reverse("notebook_comments_api", args=[entry.pk]),
+            "lock": reverse("notebook_lock_api", args=[entry.pk]),
+            "replace": reverse("notebook_file_replace_api", args=[entry.pk]),
+            "file_caption": reverse("notebook_file_caption_api", args=[entry.pk]),
         },
+        "comment_count": entry.comments.count(),
     }
 
     return render(
@@ -205,7 +243,12 @@ def notebook_entry_update_api(request, entry_id):
     """Partial update: only the fields present in the body change."""
     entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
     try:
+        notebook_collab.check_lock(entry, request.headers.get("X-Lock-Token"))
+    except notebook_collab.LockedError as exc:
+        return JsonResponse({"status": "locked", "message": str(exc), "holder": exc.holder}, status=423)
+    try:
         data = _json(request)
+        previous_content = entry.content
         unknown = set(data) - UPDATABLE
         if unknown:
             raise ValidationError(f"Unknown fields: {', '.join(sorted(unknown))}.")
@@ -241,6 +284,8 @@ def notebook_entry_update_api(request, entry_id):
 
         if fields:
             entry.save(update_fields=fields + ["updated_at"])
+            if "content" in fields:
+                notebook_collab.record_revision(entry, previous_content, request.user)
     except ValidationError as exc:
         return _error(exc)
 
@@ -289,6 +334,10 @@ def _clean_widths(widths):
 @require_POST
 def notebook_spreadsheets_api(request, entry_id):
     entry = _get_entry_for_user(entry_id, request.user, require_edit=True)
+    try:
+        notebook_collab.check_lock(entry, request.headers.get("X-Lock-Token"))
+    except notebook_collab.LockedError as exc:
+        return JsonResponse({"status": "locked", "message": str(exc), "holder": exc.holder}, status=423)
     try:
         data = _json(request)
         action = data.get("action")
