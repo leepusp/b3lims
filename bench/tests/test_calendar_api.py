@@ -215,3 +215,42 @@ class SampleHistoryGroupingTests(CalendarApiTests):
         self.assertEqual(len(big["extendedProps"]["sample_ids"]), 40)
         self.assertEqual(big["extendedProps"]["more"], 20)
         self.assertEqual(exported.status_code, 200)
+
+
+class RealSampleHistoryTests(CalendarApiTests):
+    """The grouping runs against real Event rows (no stand-in queryset)."""
+
+    def test_real_events_are_grouped_per_day_and_type(self):
+        from core.models import Sample
+        from core.models.events.model import Event
+
+        a = Sample.objects.create(sample_id="RS-1", sample_type="Other", owner=self.ana, is_active=True)
+        b = Sample.objects.create(sample_id="RS-2", sample_type="Other", owner=self.ana, is_active=True)
+        stamp = self.start
+        for sample in (a, b):
+            Event.objects.create(sample=sample, event_type="entry", timestamp=stamp, performed_by=self.ana)
+        Event.objects.create(sample=a, event_type="transfer", timestamp=stamp, performed_by=self.ana)
+        events = self.client.get(
+            reverse("bench:calendar_events"),
+            {"start": (stamp - timedelta(days=2)).isoformat(), "end": (stamp + timedelta(days=2)).isoformat(), "layers": "samples"},
+        )
+        self.assertEqual(events.status_code, 200, events.content[:300])
+        data = events.json()
+        self.assertEqual(sorted(e["extendedProps"]["count"] for e in data), [1, 2])
+        self.assertEqual(sorted(i for e in data for i in e["extendedProps"]["sample_ids"]), ["RS-1", "RS-1", "RS-2"])
+
+
+class RecurrenceFormPayloadTests(CalendarApiTests):
+    def test_weekly_every_other_week_until_date(self):
+        local = timezone.localtime(self.start)
+        until = (local + timedelta(days=30)).date().isoformat()
+        response = self.book(recurrence={"frequency": "weekly", "interval": 2, "weekdays": [local.weekday()], "until": until})
+        self.assertEqual(response.status_code, 200, response.content)
+        starts = sorted(Booking.objects.values_list("start", flat=True))
+        self.assertEqual(len(starts), 3)  # day 0, 14, 28
+        self.assertEqual((starts[1] - starts[0]).days, 14)
+
+    def test_until_selected_without_a_date_is_a_clear_error(self):
+        response = self.book(recurrence={"frequency": "daily", "interval": 1, "until": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("count or an end date", response.json()["message"])

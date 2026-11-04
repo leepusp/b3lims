@@ -36,28 +36,30 @@ Today `/calendar/` only lists the last 100 sample events. It becomes a real cale
 
 Foundation
 - [x] Month, week, day and agenda views (FullCalendar 6, MIT, vendored with checksums)
-- [~] Layers with colours and filters: bookings, ELN step deadlines and sample events are done,
-      with a filter per equipment; still open: to-dos, shipments, sample reminders, lab meetings
+- [x] Manage layers: each layer has a name, a colour and a description of what it stands for.
+      Built-in layers (step deadlines, sample events grouped per day and type) are styled per person;
+      custom layers (an instrument, a room, lab meetings) are shared, with booking rules kept optional
+- [ ] More built-in layers: to-dos, shipments, sample reminders
 - [x] Create, move and resize bookings in the calendar, with conflict detection
       and the existing resource rules (rule messages shown in the form, drag reverts on refusal)
-- [~] Recurring bookings (daily, weekly, with a count; cancel one or the rest of the series) are done;
-      still open: custom rules, an end date in the form, per-event reminders
+- [~] Recurring bookings: every N days or weeks, chosen weekdays, ending after N times or on a date;
+      cancel one or the rest of the series. Still open: monthly rules, per-event reminders
 - [ ] Attendees with accept / decline, and a link from an event to an ELN entry
-- [ ] Dashboard card "Today and this week" (closes the "bookings" gap in the ELN dashboard)
+- [x] Dashboard card "Today and this week" (own bookings and step deadlines, shown through an extension panel)
 
 Google Calendar
 - [ ] Step 1, no credentials needed: per-user private `.ics` feed, with a token that can be
       renewed or revoked, to subscribe from Google Calendar ("From URL").
       Needs the LIMS address to be reachable from Google's servers, and Google
       refreshes subscribed feeds only every several hours.
-- [ ] Step 1: "Add to Google Calendar" button and `.ics` download on every event
+- [x] Step 1: "Add to Google Calendar" button and `.ics` download on every booking
 - [ ] Step 2, needs a Google Cloud OAuth client created by the lab: push LIMS events
       to the user's Google Calendar and keep them updated or removed; optional read of
       busy times to avoid booking conflicts. Tokens stored encrypted, one-click disconnect.
-- [ ] Export of any calendar view (`.ics`, CSV)
+- [~] Export of the view on screen as `.ics` is done (CSV still open)
 
 Other useful functions
-- [ ] Equipment calendar per resource, with usage report (hours per user and per group)
+- [ ] Usage report per layer (hours per user and per group)
 - [ ] Booking approval for restricted equipment, and e-mail notification
 - [ ] "Find a free slot" for a resource and for a group of people
 - [ ] Booking templates for common runs (sequencing, qPCR, culture passages)

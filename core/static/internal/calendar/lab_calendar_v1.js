@@ -79,7 +79,7 @@
     function openForm(start, end) {
         $("lc-errors").innerHTML = "";
         $("lc-start").value = localValue(start); $("lc-end").value = localValue(end);
-        $("lc-title").value = ""; $("lc-note").value = ""; $("lc-repeat").value = ""; $("lc-count").disabled = true;
+        $("lc-title").value = ""; $("lc-note").value = ""; $("lc-repeat").value = ""; $("lc-repeat-box").hidden = true; resetRepeat(start);
         updateNoteHint(); modal.show();
     }
     function bookable() { return state.resources.filter((r) => r.can_book); }
@@ -88,7 +88,35 @@
         $("lc-note-hint").textContent = r && r.requires_note ? "(required for this layer)" : "";
     }
     $("lc-resource").addEventListener("change", updateNoteHint);
-    $("lc-repeat").addEventListener("change", () => { $("lc-count").disabled = !$("lc-repeat").value; });
+    let weekdaysTouched = false;
+    function followStartWeekday(start) {
+        if (weekdaysTouched || isNaN(start)) return;
+        const weekday = (start.getDay() + 6) % 7;  // Monday = 0
+        document.querySelectorAll(".lc-wd").forEach((c) => { c.checked = Number(c.value) === weekday; c.parentElement.classList.toggle("active", c.checked); });
+    }
+    $("lc-start").addEventListener("change", () => followStartWeekday(new Date($("lc-start").value)));
+    function resetRepeat(start) {
+        weekdaysTouched = false;
+        $("lc-interval").value = 1; $("lc-count").value = 4; $("lc-until").value = ""; $("lc-ends-count").checked = true;
+        followStartWeekday(start);
+    }
+    document.querySelectorAll(".lc-wd").forEach((c) => c.addEventListener("change", () => { weekdaysTouched = true; c.parentElement.classList.toggle("active", c.checked); }));
+    $("lc-repeat").addEventListener("change", () => {
+        const kind = $("lc-repeat").value;
+        $("lc-repeat-box").hidden = !kind;
+        $("lc-weekdays").hidden = kind !== "weekly";
+        $("lc-interval-unit").textContent = kind === "weekly" ? "week(s)" : "day(s)";
+    });
+    $("lc-until").addEventListener("focus", () => { $("lc-ends-until").checked = true; });
+    $("lc-count").addEventListener("focus", () => { $("lc-ends-count").checked = true; });
+    function recurrence() {
+        const kind = $("lc-repeat").value;
+        if (!kind) return null;
+        const rule = {frequency: kind, interval: Number($("lc-interval").value) || 1};
+        if (kind === "weekly") rule.weekdays = Array.from(document.querySelectorAll(".lc-wd:checked")).map((c) => Number(c.value));
+        if ($("lc-ends-until").checked) rule.until = $("lc-until").value; else rule.count = Number($("lc-count").value);
+        return rule;
+    }
     $("lc-new").addEventListener("click", () => {
         if (!bookable().length) return toast("There is no layer you can book yet. Use Manage to create one.", "warning");
         const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1);
@@ -101,7 +129,8 @@
             resource: Number($("lc-resource").value), title: $("lc-title").value, note: $("lc-note").value,
             start: new Date($("lc-start").value).toISOString(), end: new Date($("lc-end").value).toISOString(), entry: $("lc-entry").value || null,
         };
-        if ($("lc-repeat").value) payload.recurrence = {frequency: $("lc-repeat").value, count: Number($("lc-count").value)};
+        const rule = recurrence();
+        if (rule) payload.recurrence = rule;
         post(urls.create, payload).then((d) => {
             if (d.ok) { modal.hide(); calendar.refetchEvents(); toast(d.created > 1 ? d.created + " bookings created." : "Booking created.", "success"); return; }
             const list = (d.violations || []).map((v) => v.message);
