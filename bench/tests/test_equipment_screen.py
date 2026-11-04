@@ -41,7 +41,7 @@ class EquipmentScreenTests(TestCase):
         self.client.force_login(self.member)
         page = self.client.get(reverse("bench:equipment_list"))
         self.assertContains(page, "Confocal")
-        self.assertNotContains(page, "New equipment")
+        self.assertNotContains(page, "New layer")
         self.assertEqual(self.client.get(reverse("bench:equipment_new")).status_code, 403)
         self.assertEqual(self.client.get(reverse("bench:equipment_edit", args=[self.res.pk])).status_code, 403)
         self.assertEqual(self.client.post(reverse("bench:equipment_toggle", args=[self.res.pk])).status_code, 403)
@@ -63,3 +63,54 @@ class EquipmentScreenTests(TestCase):
         self.client.force_login(self.coord)
         r = self.client.post(reverse("bench:equipment_new"), self.data(color="red"))
         self.assertEqual(r.status_code, 200)
+
+
+class LayerStyleTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.ana = get_user_model().objects.create_user("ls-ana", password="x")
+        cls.bob = get_user_model().objects.create_user("ls-bob", password="x")
+
+    def test_defaults_and_custom_style_per_person(self):
+        from bench.services.layers import styles_for
+
+        self.assertEqual(styles_for(self.ana)["steps"]["color"], "#7c3aed")
+        self.client.force_login(self.ana)
+        self.client.post(reverse("bench:layer_style", args=["steps"]),
+                         {"label": "My deadlines", "color": "#ff0000", "description": "Things I owe"})
+        mine = styles_for(self.ana)["steps"]
+        self.assertEqual((mine["label"], mine["color"], mine["description"], mine["custom"]),
+                         ("My deadlines", "#ff0000", "Things I owe", True))
+        self.assertEqual(styles_for(self.bob)["steps"]["color"], "#7c3aed")
+
+    def test_style_reaches_the_feed_and_reset_restores_it(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from bench.services import calendar_feed
+        from core.models import NotebookEntry, NotebookStep
+
+        entry = NotebookEntry.objects.create(title="E", author=self.ana)
+        when = timezone.now() + timedelta(days=1)
+        NotebookStep.objects.create(entry=entry, body="x", deadline=when)
+        self.client.force_login(self.ana)
+        self.client.post(reverse("bench:layer_style", args=["steps"]), {"label": "L", "color": "#112233", "description": "d"})
+        feed = calendar_feed.feed(self.ana, when - timedelta(hours=1), when + timedelta(hours=1), ["steps"])
+        self.assertEqual(feed[0]["color"], "#112233")
+        self.client.post(reverse("bench:layer_style", args=["steps"]), {"reset": "1"})
+        feed = calendar_feed.feed(self.ana, when - timedelta(hours=1), when + timedelta(hours=1), ["steps"])
+        self.assertEqual(feed[0]["color"], "#7c3aed")
+
+    def test_bad_colour_and_unknown_key(self):
+        from bench.services.layers import styles_for
+
+        self.client.force_login(self.ana)
+        self.client.post(reverse("bench:layer_style", args=["steps"]), {"color": "red"})
+        self.assertFalse(styles_for(self.ana)["steps"]["custom"])
+        self.assertEqual(self.client.post(reverse("bench:layer_style", args=["nope"]), {}).status_code, 404)
+
+    def test_calendar_lists_builtin_layers(self):
+        self.client.force_login(self.ana)
+        data = self.client.get(reverse("bench:calendar_resources")).json()
+        self.assertEqual([b["key"] for b in data["builtin"]], ["steps", "samples"])

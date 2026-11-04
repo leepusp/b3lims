@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from bench.models import Booking
 from bench.services.ics import google_link
+from bench.services.layers import styles_for
 from bench.permissions.scheduling import can_manage_booking
 from core.models import NotebookStep
 from core.models.events.model import Event
@@ -22,14 +23,6 @@ LAYERS = ("bookings", "steps", "samples")
 MAX_RANGE = timedelta(days=100)
 SAMPLE_ROW_LIMIT = 5000
 SAMPLE_LIST_LIMIT = 40
-STEP_COLOR = "#7c3aed"
-SAMPLE_COLORS = {
-    "entry": "#198754",
-    "qc_check": "#b8860b",
-    "freeze": "#0aa2c0",
-    "thaw": "#0aa2c0",
-    "transfer": "#6c757d",
-}
 
 
 def _name(user):
@@ -73,6 +66,7 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
         end = start + MAX_RANGE
     layers = [layer for layer in layers if layer in LAYERS]
     events = []
+    style = styles_for(user)
 
     if "bookings" in layers:
         qs = (
@@ -104,7 +98,7 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
                     "id": f"step:{step.pk}",
                     "title": f"Step: {step.body}",
                     "start": step.deadline.isoformat(),
-                    "color": STEP_COLOR,
+                    "color": style["steps"]["color"],
                     "url": reverse("notebook_entry", args=[step.entry_id]),
                     "editable": False,
                     "extendedProps": {"kind": "step", "entry": step.entry.title},
@@ -134,7 +128,7 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
                     "title": f"{label} · {count} sample{'s' if count != 1 else ''}",
                     "start": day.isoformat(),
                     "allDay": True,
-                    "color": SAMPLE_COLORS.get(kind, "#6c757d"),
+                    "color": style["samples"]["color"],
                     "editable": False,
                     "extendedProps": {
                         "kind": "sample_group",

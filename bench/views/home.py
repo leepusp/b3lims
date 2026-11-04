@@ -25,7 +25,7 @@ MODULES = (
     {
         "title": "Lab Calendar",
         "icon": "bi-calendar-week",
-        "description": "Equipment booking with per-equipment rules and recurring bookings.",
+        "description": "Shared calendar with colour-coded layers, bookings with optional rules and recurring bookings.",
         "url_name": "lab_calendar",
         "step": "Booking rules: step 2.1 · new calendar screen: step 2.2",
     },

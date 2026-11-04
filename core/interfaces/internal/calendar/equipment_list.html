@@ -1,21 +1,44 @@
 {% extends "internal/common/base.html" %}
-{% block title %}Equipment · B3 LIMS{% endblock %}
+{% block title %}Layers · B3 LIMS{% endblock %}
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex align-items-center mb-3 gap-2">
-        <h4 class="mb-0 me-auto">Equipment</h4>
+    <div class="d-flex align-items-center mb-1 gap-2">
+        <h4 class="mb-0 me-auto">Manage layers</h4>
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'lab_calendar' %}"><i class="bi bi-calendar-week me-1"></i> Calendar</a>
-        {% if can_create %}<a class="btn btn-sm btn-primary" href="{% url 'bench:equipment_new' %}"><i class="bi bi-plus-lg me-1"></i> New equipment</a>{% endif %}
+        {% if can_create %}<a class="btn btn-sm btn-primary" href="{% url 'bench:equipment_new' %}"><i class="bi bi-plus-lg me-1"></i> New layer</a>{% endif %}
     </div>
-    {% for m in messages %}<div class="alert alert-success py-2">{{ m }}</div>{% endfor %}
+    <p class="text-muted small mb-3">A layer is a colour and a meaning on the calendar: an instrument, a room, a lab meeting, a shared deadline. People book time on a layer; you choose its colour and write what it stands for.</p>
+    {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}success{% endif %} py-2">{{ m }}</div>{% endfor %}
+
+    <h6 class="text-uppercase text-muted small fw-bold mt-4">Built in · only changes how you see them</h6>
+    <div class="row g-3 mb-4">
+        {% for b in builtin %}
+        <div class="col-md-6">
+            <form method="post" action="{% url 'bench:layer_style' b.key %}" class="bg-white border rounded-3 p-3 h-100">{% csrf_token %}
+                <div class="d-flex gap-2 mb-2">
+                    <input type="color" name="color" value="{{ b.color }}" class="form-control form-control-color flex-none" title="Colour">
+                    <input type="text" name="label" value="{{ b.label }}" maxlength="80" class="form-control" aria-label="Name">
+                </div>
+                <input type="text" name="description" value="{{ b.description }}" maxlength="300" class="form-control form-control-sm mb-2" aria-label="What it represents">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary">Save</button>
+                    {% if b.custom %}<button class="btn btn-sm btn-outline-secondary" name="reset" value="1">Reset</button>{% endif %}
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h6 class="text-uppercase text-muted small fw-bold">Layers you can book</h6>
     {% if rows %}
     <div class="table-responsive bg-white border rounded-3">
         <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Name</th><th>Group</th><th>Rules</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Layer</th><th>What it represents</th><th>Group</th><th>Rules</th><th>Status</th><th></th></tr></thead>
             <tbody>
             {% for row in rows %}{% with r=row.resource %}
                 <tr class="{% if not r.is_active %}text-muted{% endif %}">
-                    <td><span class="d-inline-block rounded-circle me-2" style="width:11px;height:11px;background:{{ r.color }}"></span>{{ r.name }}</td>
+                    <td class="text-nowrap"><span class="d-inline-block rounded-circle me-2" style="width:11px;height:11px;background:{{ r.color }}"></span>{{ r.name }}</td>
+                    <td class="small">{{ r.description|default:"—" }}</td>
                     <td>{{ r.research_group|default:"—" }}</td>
                     <td class="small">
                         {% if r.max_minutes %}max {{ r.max_minutes }} min · {% endif %}
@@ -24,7 +47,7 @@
                         {% if r.can_overlap %}overlaps allowed{% else %}no overlaps{% endif %}
                     </td>
                     <td>{% if not r.is_active %}Archived{% elif not r.is_bookable %}Not bookable{% else %}Active{% endif %}</td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
                         {% if row.can_manage %}
                         <a class="btn btn-sm btn-outline-primary" href="{% url 'bench:equipment_edit' r.pk %}">Edit</a>
                         <form class="d-inline" method="post" action="{% url 'bench:equipment_toggle' r.pk %}">{% csrf_token %}
@@ -38,7 +61,7 @@
         </table>
     </div>
     {% else %}
-    <div class="text-muted">No equipment you can see yet.{% if can_create %} Use “New equipment” to add the first one.{% endif %}</div>
+    <div class="text-muted">No layers to book yet.{% if can_create %} Use “New layer” to add the first one.{% endif %}</div>
     {% endif %}
 </div>
 {% endblock %}

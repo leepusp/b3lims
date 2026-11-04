@@ -35,7 +35,8 @@
         const p = (n) => String(n).padStart(2, "0");
         return date.getFullYear() + "-" + p(date.getMonth() + 1) + "-" + p(date.getDate()) + "T" + p(date.getHours()) + ":" + p(date.getMinutes());
     }
-    function layers() { return Array.from(document.querySelectorAll(".lc-layer:checked")).map((c) => c.value).join(","); }
+    // Bookings are always requested; each custom layer's own checkbox filters them.
+    function layers() { return ["bookings"].concat(Array.from(document.querySelectorAll(".lc-layer:checked")).map((c) => c.value)).join(","); }
     function resourceIds() {
         // An empty filter means "all"; once any box is unticked we send the ones left.
         if (!state.hidden.size) return "";
@@ -84,12 +85,12 @@
     function bookable() { return state.resources.filter((r) => r.can_book); }
     function updateNoteHint() {
         const r = state.resources.find((x) => String(x.id) === $("lc-resource").value);
-        $("lc-note-hint").textContent = r && r.requires_note ? "(required for this equipment)" : "";
+        $("lc-note-hint").textContent = r && r.requires_note ? "(required for this layer)" : "";
     }
     $("lc-resource").addEventListener("change", updateNoteHint);
     $("lc-repeat").addEventListener("change", () => { $("lc-count").disabled = !$("lc-repeat").value; });
     $("lc-new").addEventListener("click", () => {
-        if (!bookable().length) return toast("You do not have equipment you can book yet.", "warning");
+        if (!bookable().length) return toast("There is no layer you can book yet. Use Manage to create one.", "warning");
         const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1);
         openForm(s, new Date(s.getTime() + 3600e3));
     });
@@ -161,14 +162,20 @@
         e.currentTarget.href = urls.exportView + "?" + q;
     });
 
-    document.querySelectorAll(".lc-layer").forEach((c) => c.addEventListener("change", () => calendar.refetchEvents()));
-
     fetch(urls.resources, {credentials: "same-origin"}).then((r) => r.json()).then((d) => {
         state.resources = d.resources;
         const list = $("lc-resources");
-        list.innerHTML = d.resources.length ? "" : "No equipment registered yet.";
+        list.innerHTML = d.resources.length ? "" : "No layers to book yet.";
+        const builtin = $("lc-builtin");
+        d.builtin.forEach((b) => {
+            const label = document.createElement("label"); label.className = "lc-check"; label.title = b.description;
+            label.innerHTML = "<input type='checkbox' class='lc-layer' value='" + esc(b.key) + "' checked><span class='lc-dot' style='background:" + esc(b.color) + "'></span><span>" + esc(b.label) + "</span>";
+            label.querySelector("input").addEventListener("change", () => calendar.refetchEvents());
+            builtin.appendChild(label);
+        });
         d.resources.forEach((r) => {
             const label = document.createElement("label"); label.className = "lc-check";
+            label.title = r.description || "";
             label.innerHTML = "<input type='checkbox' checked><span class='lc-dot' style='background:" + esc(r.color) + "'></span><span>" + esc(r.name) + "</span>";
             label.querySelector("input").addEventListener("change", (e) => {
                 if (e.target.checked) state.hidden.delete(r.id); else state.hidden.add(r.id);
@@ -177,6 +184,7 @@
             list.appendChild(label);
         });
         $("lc-resource").innerHTML = bookable().map((r) => "<option value='" + r.id + "'>" + esc(r.name) + "</option>").join("");
+        calendar.refetchEvents();
         $("lc-entry").innerHTML = "<option value=''>None</option>" + d.entries.map((e) => "<option value='" + e.id + "'>" + esc(e.title) + "</option>").join("");
     });
 })();

@@ -32,10 +32,9 @@
                 <button class="btn btn-primary w-100 py-2 fw-semibold" id="lc-new"><i class="bi bi-plus-lg me-1"></i> New booking</button>
 
                 <div class="lc-side">
-                    <h6>Layers</h6>
-                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="bookings" checked><span class="lc-dot" style="background:#0b66b2"></span>Equipment bookings</label>
-                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="steps" checked><span class="lc-dot" style="background:#7c3aed"></span>My ELN step deadlines</label>
-                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="samples" checked><span class="lc-dot" style="background:#198754"></span>Sample events</label>
+                    <h6 class="d-flex justify-content-between">Layers <a href="{% url 'bench:equipment_list' %}" class="text-decoration-none text-primary" style="text-transform:none;letter-spacing:0">Manage</a></h6>
+                    <div id="lc-builtin"></div>
+                    <div id="lc-resources" class="small text-muted">Loading…</div>
                 </div>
 
                 <div class="lc-side">
@@ -44,10 +43,6 @@
                     <div class="small text-muted mt-2">Opens in Google Calendar, Outlook and Apple Calendar. Each booking also has its own button.</div>
                 </div>
 
-                <div class="lc-side">
-                    <h6 class="d-flex justify-content-between">Equipment <a href="{% url 'bench:equipment_list' %}" class="text-decoration-none text-primary" style="text-transform:none;letter-spacing:0">Manage</a></h6>
-                    <div id="lc-resources" class="small text-muted">Loading…</div>
-                </div>
             </div>
         </div>
 
@@ -69,7 +64,7 @@
             </div>
             <div class="modal-body">
                 <div class="mb-2">
-                    <label class="form-label small fw-semibold" for="lc-resource">Equipment</label>
+                    <label class="form-label small fw-semibold" for="lc-resource">Layer</label>
                     <select class="form-select" id="lc-resource" required></select>
                 </div>
                 <div class="mb-2">

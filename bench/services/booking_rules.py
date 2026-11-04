@@ -198,10 +198,10 @@ def validate_booking(
         return violations
 
     if start < now and not resource.users_can_book_in_past:
-        fail("in_past", "This equipment cannot be booked in the past.")
+        fail("in_past", "This layer cannot be booked in the past.")
 
     if resource.requires_note and not (note or "").strip():
-        fail("note_required", "This equipment requires a note describing the use.")
+        fail("note_required", "This layer requires a note describing the use.")
 
     minutes = (end - start).total_seconds() / 60
     if resource.max_minutes and minutes > resource.max_minutes:
@@ -226,7 +226,7 @@ def validate_booking(
         if open_bookings + new_bookings > resource.max_slots:
             fail(
                 "too_many_bookings",
-                f"You can hold {resource.max_slots} open bookings on this equipment; "
+                f"You can hold {resource.max_slots} open bookings on this layer; "
                 f"you have {open_bookings} and are adding {new_bookings}.",
             )
 
@@ -370,7 +370,7 @@ def cancel_booking(booking: Booking, user, *, now=None, whole_series=False) -> l
 
     resource = booking.resource
     if not resource.is_cancellable:
-        raise BookingRuleError([RuleViolation("not_cancellable", "Bookings on this equipment cannot be cancelled.")])
+        raise BookingRuleError([RuleViolation("not_cancellable", "Bookings on this layer cannot be cancelled.")])
 
     if whole_series and booking.recurrence_id:
         targets = list(

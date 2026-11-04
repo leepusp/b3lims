@@ -160,3 +160,24 @@ class Booking(models.Model):
     @property
     def is_cancelled(self):
         return self.cancelled_at is not None
+
+
+class LayerStyle(models.Model):
+    """How one person sees a built-in Lab Calendar layer: name, colour, meaning.
+
+    Custom layers are ``BookableResource`` rows and carry these fields themselves.
+    """
+
+    KEYS = ("steps", "samples")
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bench_layer_styles")
+    key = models.CharField(max_length=20)
+    label = models.CharField(max_length=80, blank=True)
+    color = models.CharField(max_length=7, blank=True)
+    description = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("user", "key"), name="bench_layerstyle_user_key_uniq")]
+
+    def __str__(self):
+        return f"{self.user_id}:{self.key}"

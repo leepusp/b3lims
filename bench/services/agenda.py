@@ -8,10 +8,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from bench.models import Booking
+from bench.services.layers import styles_for
 from core.models import NotebookStep
 from core.permissions.notebook import visible_notebook_entries_for_user
 
-STEP_COLOR = "#7c3aed"
 LIMIT = 12
 
 
@@ -28,6 +28,7 @@ def agenda(user, now=None):
     end = _week_end(now)
     tomorrow = timezone.localtime(now).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
     items = []
+    step_color = styles_for(user)["steps"]["color"]
 
     bookings = (
         Booking.objects.active()
@@ -65,7 +66,7 @@ def agenda(user, now=None):
                 "until": None,
                 "title": s.body,
                 "url": reverse("notebook_entry", args=[s.entry_id]),
-                "color": STEP_COLOR,
+                "color": step_color,
                 "icon": "bi-check2-square",
                 "overdue": s.deadline < now,
             }

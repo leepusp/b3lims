@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from bench.models import BookableResource, Booking
 from bench.permissions.scheduling import can_book_resource
 from bench.services import calendar_feed, ics
+from bench.services.layers import styles_for
 from bench.services.booking_rules import (
     BookingRuleError,
     cancel_booking,
@@ -69,6 +70,7 @@ def resources(request):
             {
                 "id": resource.pk,
                 "name": resource.name,
+                "description": resource.description,
                 "color": resource.color,
                 "can_book": can_book_resource(request.user, resource),
                 "requires_note": resource.requires_note,
@@ -81,7 +83,7 @@ def resources(request):
         .filter(author=request.user)
         .order_by("-updated_at")[:30]
     ]
-    return JsonResponse({"resources": rows, "entries": entries})
+    return JsonResponse({"resources": rows, "entries": entries, "builtin": list(styles_for(request.user).values())})
 
 
 @login_required
