@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.urls import reverse
+from django.utils import timezone
 
 from bench.models import Booking
 from bench.services.ics import google_link
@@ -19,6 +20,8 @@ from core.permissions.workspace import visible_workspace_events_for_user
 
 LAYERS = ("bookings", "steps", "samples")
 MAX_RANGE = timedelta(days=100)
+SAMPLE_ROW_LIMIT = 5000
+SAMPLE_LIST_LIMIT = 40
 STEP_COLOR = "#7c3aed"
 SAMPLE_COLORS = {
     "entry": "#198754",
@@ -109,20 +112,36 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
             )
 
     if "samples" in layers:
-        sample_events = (
+        # One chip per day and event type ("Entrada · 38 samples"): the history
+        # of a busy day would otherwise bury everything else.
+        rows = (
             visible_workspace_events_for_user(user)
             .filter(timestamp__gte=start, timestamp__lt=end)
-            .select_related("sample", "performed_by")[:300]
+            .order_by("timestamp")
+            .values_list("timestamp", "event_type", "sample__sample_id")[:SAMPLE_ROW_LIMIT]
         )
-        for ev in sample_events:
+        labels = dict(Event._meta.get_field("event_type").choices)
+        groups = {}
+        for stamp, kind, sample_id in rows:
+            day = timezone.localtime(stamp).date()
+            groups.setdefault((day, kind), []).append(sample_id)
+        for (day, kind), ids in sorted(groups.items()):
+            label = str(labels.get(kind, kind))
+            count = len(ids)
             events.append(
                 {
-                    "id": f"sample:{ev.pk}",
-                    "title": f"{ev.get_event_type_display()} · {ev.sample.sample_id}",
-                    "start": ev.timestamp.isoformat(),
-                    "color": SAMPLE_COLORS.get(ev.event_type, "#6c757d"),
+                    "id": f"samples:{day.isoformat()}:{kind}",
+                    "title": f"{label} · {count} sample{'s' if count != 1 else ''}",
+                    "start": day.isoformat(),
+                    "allDay": True,
+                    "color": SAMPLE_COLORS.get(kind, "#6c757d"),
                     "editable": False,
-                    "extendedProps": {"kind": "sample", "who": _name(ev.performed_by)},
+                    "extendedProps": {
+                        "kind": "sample_group",
+                        "count": count,
+                        "sample_ids": ids[:SAMPLE_LIST_LIMIT],
+                        "more": max(0, count - SAMPLE_LIST_LIMIT),
+                    },
                 }
             )
     return events

@@ -166,5 +166,8 @@ def view_ics(request):
         return _error(exc.messages[0])
     layers = [x for x in (request.GET.get("layers") or ",".join(calendar_feed.LAYERS)).split(",") if x]
     resources = [int(x) for x in (request.GET.get("resources") or "").split(",") if x.isdigit()]
-    events = calendar_feed.feed(request.user, start, end, layers, resources)
+    events = [
+        e for e in calendar_feed.feed(request.user, start, end, layers, resources)
+        if e["extendedProps"].get("kind") != "sample_group"  # day summaries are not appointments
+    ]
     return _ics_response(events, "b3-lims-calendar.ics", "B3 LIMS Lab Calendar")

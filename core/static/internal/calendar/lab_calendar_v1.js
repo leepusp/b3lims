@@ -47,7 +47,7 @@
     const detail = new bootstrap.Modal($("lc-detail"));
 
     const calendar = new FullCalendar.Calendar($("calendar"), {
-        initialView: "dayGridMonth", firstDay: 1, slotMinTime: "06:00:00", slotMaxTime: "22:00:00", scrollTime: "08:00:00", allDaySlot: false, nowIndicator: true, height: "auto",
+        initialView: "dayGridMonth", firstDay: 1, slotMinTime: "06:00:00", slotMaxTime: "22:00:00", scrollTime: "08:00:00", allDaySlot: true, allDayText: "Lab", dayMaxEvents: 4, moreLinkText: (n) => "+" + n + " more", nowIndicator: true, height: "auto",
         headerToolbar: {left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek"},
         buttonText: {today: "Today", month: "Month", week: "Week", day: "Day", list: "Agenda"},
         editable: true, eventStartEditable: true, eventDurationEditable: true, selectable: true, selectMirror: true,
@@ -119,6 +119,10 @@
             if (p.note) html += "<p class='mb-1 text-muted'>" + esc(p.note) + "</p>";
             if (p.series) html += "<p class='mb-1 small text-muted'><i class='bi bi-arrow-repeat'></i> Part of a recurring series</p>";
             if (p.entry) html += "<p class='mb-0'><i class='bi bi-journal-bookmark'></i> <a href='" + esc(p.entry.url) + "'>" + esc(p.entry.title) + "</a></p>";
+        } else if (p.kind === "sample_group") {
+            html += "<p class='mb-2 text-muted'>" + esc(new Intl.DateTimeFormat(undefined, {dateStyle: "full"}).format(ev.start)) + "</p>";
+            html += "<div class='d-flex flex-wrap gap-1' style='max-height:260px;overflow:auto'>" + p.sample_ids.map((x) => "<span class='badge text-bg-light border'>" + esc(x) + "</span>").join("") + "</div>";
+            if (p.more) html += "<p class='small text-muted mt-2 mb-0'>and " + p.more + " more.</p>";
         } else {
             html += "<p class='mb-1'>" + esc(when.format(ev.start)) + "</p>" + (p.who ? "<p class='mb-0 text-muted'>" + esc(p.who) + "</p>" : "");
         }

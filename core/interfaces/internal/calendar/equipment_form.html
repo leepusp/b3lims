@@ -1,0 +1,30 @@
+{% extends "internal/common/base.html" %}
+{% block title %}{% if resource %}{{ resource.name }}{% else %}New equipment{% endif %} · B3 LIMS{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 760px">
+    <h4 class="mb-3">{% if resource %}Edit equipment{% else %}New equipment{% endif %}</h4>
+    <form method="post" class="bg-white border rounded-3 p-3">{% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row g-3">
+            <div class="col-md-8">{{ form.name.label_tag }}{{ form.name }}{{ form.name.errors }}</div>
+            <div class="col-md-4">{{ form.color.label_tag }}{{ form.color }}{{ form.color.errors }}</div>
+            <div class="col-12">{{ form.description.label_tag }}{{ form.description }}</div>
+            <div class="col-md-6">{{ form.research_group.label_tag }}{{ form.research_group }}{{ form.research_group.errors }}
+                <div class="form-text">Members and the coordinator of this group can book it.</div></div>
+            <div class="col-md-6 d-flex align-items-end"><div class="form-check">{{ form.is_bookable }} {{ form.is_bookable.label_tag }}</div></div>
+            <div class="col-md-4">{{ form.max_minutes.label_tag }}{{ form.max_minutes }}<div class="form-text">Longest booking, minutes (0 = no limit).</div>{{ form.max_minutes.errors }}</div>
+            <div class="col-md-4">{{ form.max_slots.label_tag }}{{ form.max_slots }}<div class="form-text">Open future bookings per person (0 = no limit).</div>{{ form.max_slots.errors }}</div>
+            <div class="col-md-4">{{ form.booking_window_days.label_tag }}{{ form.booking_window_days }}<div class="form-text">Days ahead (0 = no limit).</div>{{ form.booking_window_days.errors }}</div>
+            <div class="col-md-4"><div class="form-check">{{ form.can_overlap }} {{ form.can_overlap.label_tag }}</div></div>
+            <div class="col-md-4"><div class="form-check">{{ form.users_can_book_in_past }} {{ form.users_can_book_in_past.label_tag }}</div></div>
+            <div class="col-md-4"><div class="form-check">{{ form.requires_note }} {{ form.requires_note.label_tag }}</div></div>
+            <div class="col-md-4"><div class="form-check">{{ form.is_cancellable }} {{ form.is_cancellable.label_tag }}</div></div>
+            <div class="col-md-8">{{ form.cancel_minutes.label_tag }}{{ form.cancel_minutes }}<div class="form-text">Minimum notice to cancel, minutes before the start (0 = any time).</div></div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary">Save</button>
+            <a class="btn btn-outline-secondary" href="{% url 'bench:equipment_list' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

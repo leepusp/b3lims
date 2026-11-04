@@ -1,0 +1,44 @@
+{% extends "internal/common/base.html" %}
+{% block title %}Equipment · B3 LIMS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-3 gap-2">
+        <h4 class="mb-0 me-auto">Equipment</h4>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'lab_calendar' %}"><i class="bi bi-calendar-week me-1"></i> Calendar</a>
+        {% if can_create %}<a class="btn btn-sm btn-primary" href="{% url 'bench:equipment_new' %}"><i class="bi bi-plus-lg me-1"></i> New equipment</a>{% endif %}
+    </div>
+    {% for m in messages %}<div class="alert alert-success py-2">{{ m }}</div>{% endfor %}
+    {% if rows %}
+    <div class="table-responsive bg-white border rounded-3">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Name</th><th>Group</th><th>Rules</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            {% for row in rows %}{% with r=row.resource %}
+                <tr class="{% if not r.is_active %}text-muted{% endif %}">
+                    <td><span class="d-inline-block rounded-circle me-2" style="width:11px;height:11px;background:{{ r.color }}"></span>{{ r.name }}</td>
+                    <td>{{ r.research_group|default:"—" }}</td>
+                    <td class="small">
+                        {% if r.max_minutes %}max {{ r.max_minutes }} min · {% endif %}
+                        {% if r.booking_window_days %}{{ r.booking_window_days }} days ahead · {% endif %}
+                        {% if r.requires_note %}note required · {% endif %}
+                        {% if r.can_overlap %}overlaps allowed{% else %}no overlaps{% endif %}
+                    </td>
+                    <td>{% if not r.is_active %}Archived{% elif not r.is_bookable %}Not bookable{% else %}Active{% endif %}</td>
+                    <td class="text-end">
+                        {% if row.can_manage %}
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'bench:equipment_edit' r.pk %}">Edit</a>
+                        <form class="d-inline" method="post" action="{% url 'bench:equipment_toggle' r.pk %}">{% csrf_token %}
+                            <button class="btn btn-sm btn-outline-secondary">{% if r.is_active %}Archive{% else %}Restore{% endif %}</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endwith %}{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-muted">No equipment you can see yet.{% if can_create %} Use “New equipment” to add the first one.{% endif %}</div>
+    {% endif %}
+</div>
+{% endblock %}

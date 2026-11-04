@@ -179,3 +179,39 @@ class CalendarIcsTests(CalendarApiTests):
         self.assertEqual(escape_text("a,b;c\nd"), "a\\,b\\;c\\nd")
         for line in fold("X" * 200 + "ç" * 50).split("\r\n"):
             self.assertLessEqual(len(line.encode()), 75)
+
+
+class SampleHistoryGroupingTests(CalendarApiTests):
+    class FakeRows:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def filter(self, **kw):
+            return self
+
+        def order_by(self, *a):
+            return self
+
+        def values_list(self, *a):
+            return self.rows
+
+    def test_busy_day_becomes_one_chip_per_type(self):
+        from unittest import mock
+
+        stamp = self.start
+        rows = [(stamp, "entry", f"S-{i}") for i in range(60)] + [(stamp, "transfer", "S-1")]
+        with mock.patch("bench.services.calendar_feed.visible_workspace_events_for_user", return_value=self.FakeRows(rows)):
+            events = self.client.get(
+                reverse("bench:calendar_events"),
+                {"start": (stamp - timedelta(days=2)).isoformat(), "end": (stamp + timedelta(days=2)).isoformat(), "layers": "samples"},
+            ).json()
+            exported = self.client.get(
+                reverse("bench:calendar_ics"),
+                {"start": (stamp - timedelta(days=2)).isoformat(), "end": (stamp + timedelta(days=2)).isoformat()},
+            )
+        self.assertEqual(len(events), 2)
+        big = next(e for e in events if e["extendedProps"]["count"] == 60)
+        self.assertTrue(big["allDay"])
+        self.assertEqual(len(big["extendedProps"]["sample_ids"]), 40)
+        self.assertEqual(big["extendedProps"]["more"], 20)
+        self.assertEqual(exported.status_code, 200)
