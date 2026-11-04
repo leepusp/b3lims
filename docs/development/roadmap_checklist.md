@@ -13,12 +13,21 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [x] Categories and statuses per research group, with colours (migration 0098; entry picks the group, coordinator and superusers edit the lists at /internal/lab-tools/notebook/lists/)
 - [x] Editable entry templates (stored in the database: "Save as template" from any entry, shared with nobody, a research group or the lab; manage at /internal/lab-tools/notebook/templates/; built-in templates stay in code)
 - [x] Favourite tags panel and step groups (ELN tags and keywords now use the biobank-wide Tag and Keyword vocabulary; legacy NotebookTag and NotebookEntry.tags are kept for rollback and are to be dropped in a later release)
-- [x] Field builder / JSON editor for extra fields (the builder was already there; the JSON button edits, formats, copies and downloads the eLabFTW layout, with server errors shown inline)
+- [x] Field builder for extra fields (the visual builder and "Load fields"). A JSON editor was built and then removed on Nov 4: no use for it now; revisit only for import/export between systems.
 - [x] ELN as a hub of the LIMS, part 1: sample, reagent, molecular record and Jupyter
       notebook pages show a panel "Used in experiments" (links, @-mentions, creation entry),
       listing only entries the viewer may see (`core/services/notebook_backlinks.py`).
 - [ ] ELN as a hub, part 2: shipments, collections, storage positions, constructions (with
       Block D), and the same panel for extra-field references (items, compounds).
+- [x] Review (Nov 4): dashboard filters now include category, group, tag and keyword with
+      removable chips; the cloud became a "Tags and keywords" panel with favourites on top;
+      the to-do and "Steps with deadlines" became one "My tasks" card (tasks can point to an entry);
+      the JSON editor was removed.
+- [ ] Rename the stored keys (`extra_fields`, `elabftw.extra_fields_groups`) to our own names with
+      expand/contract: write both for one release, read either, drop the old in the next.
+- [ ] Gaps found against the reference screens, none built yet: "Draw something" canvas saved as
+      an attachment (2.4), spreadsheet editor polish, compounds search, storage containers on the
+      entry (2.3), exclusive "More" menu actions. Decide each one on use, not on parity.
 - [ ] Browser check of all of the above on production
 
 ## Block B: Lab Calendar (new, runs on the existing `bench` Booking models)

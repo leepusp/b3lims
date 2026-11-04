@@ -390,67 +390,6 @@
             saveMetadata(meta);
         });
         document.getElementById("nb-load-fields").addEventListener("click", openLoadPanel);
-        document.getElementById("nb-json-fields")?.addEventListener("click", openJsonPanel);
-    }
-
-    // eLabFTW layout: {"extra_fields": {...}, "elabftw": {"extra_fields_groups": [...]}}
-    function openJsonPanel() {
-        const panel = document.getElementById("nb-json-panel");
-        const current = {extra_fields: metadata().extra_fields, elabftw: metadata().elabftw};
-        panel.innerHTML = `<div class="small mb-1">Edit the custom fields as JSON (eLabFTW layout). Values are included; the server checks every field before saving.</div>
-            <textarea class="form-control form-control-sm nb-json-text" id="nbj-text" rows="16" spellcheck="false"></textarea>
-            <div class="small text-danger mt-1 d-none" id="nbj-error"></div>
-            <div class="d-flex flex-wrap gap-2 mt-2">
-                <button type="button" class="btn btn-sm btn-primary" id="nbj-apply">Apply</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="nbj-format">Format</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="nbj-copy">Copy</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="nbj-download">Download</button>
-                <button type="button" class="btn btn-sm btn-link" id="nbj-close">Close</button>
-            </div>`;
-        panel.classList.remove("d-none");
-        const text = panel.querySelector("#nbj-text");
-        const error = panel.querySelector("#nbj-error");
-        text.value = JSON.stringify(current, null, 2);
-
-        function showError(message) {
-            error.textContent = message;
-            error.classList.toggle("d-none", !message);
-        }
-        function parsed() {
-            try {
-                const value = JSON.parse(text.value);
-                if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("The top level must be an object.");
-                return value;
-            } catch (err) {
-                showError("Invalid JSON: " + err.message);
-                return null;
-            }
-        }
-
-        panel.querySelector("#nbj-format").addEventListener("click", function () {
-            const value = parsed();
-            if (value) { text.value = JSON.stringify(value, null, 2); showError(""); }
-        });
-        panel.querySelector("#nbj-copy").addEventListener("click", function () {
-            if (navigator.clipboard) navigator.clipboard.writeText(text.value).then(() => toast("Copied"));
-            else { text.select(); document.execCommand("copy"); toast("Copied"); }
-        });
-        panel.querySelector("#nbj-download").addEventListener("click", function () {
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([text.value], {type: "application/json"}));
-            link.download = "custom-fields-entry-" + state.entry_id + ".json";
-            document.body.appendChild(link); link.click(); link.remove();
-            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-        });
-        panel.querySelector("#nbj-close").addEventListener("click", () => panel.classList.add("d-none"));
-        panel.querySelector("#nbj-apply").addEventListener("click", function () {
-            const value = parsed();
-            if (!value) return;
-            showError("");
-            const meta = {extra_fields: value.extra_fields || {}, elabftw: value.elabftw || {extra_fields_groups: []}};
-            post(urls.fieldsUrl, {metadata: meta}, showError).then((ok) => { if (ok) panel.classList.add("d-none"); });
-        });
-        text.focus();
     }
 
     function orderedMetadata(entries) {

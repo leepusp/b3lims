@@ -157,7 +157,7 @@ class ComposerApiTests(ComposerTestBase):
         self.assertEqual(sorted(t.name for t in self.entry.shared_tags.all()), ["BSL2", "host-range"])
 
     def test_fields_json_round_trip_through_the_api(self):
-        """The JSON editor posts back what the page shows; nothing may change."""
+        """Posting back the fields exactly as the page shows them changes nothing."""
         payload = {
             "extra_fields": {
                 "Medium": {"type": "select", "options": ["TSB", "LB"], "value": "LB", "required": True, "group_id": 1},

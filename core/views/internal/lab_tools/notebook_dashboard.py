@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.models.lab_tools.notebook import NotebookEntry
-from core.models import Tag
+from core.models import KeywordValue, NotebookCategory, Tag
 from core.models.lab_tools.notebook_composer import NotebookPin, NotebookStep
 from core.services.metadata_vocabularies import get_or_create_active_tag
 from core.models.lab_tools.notebook_collab import NotebookEditLock
@@ -26,7 +26,7 @@ from core.permissions.notebook import (
 )
 from core.models import NotebookStatus
 from core.services import notebook_taxonomy, notebook_templates
-from core.services.notebook_composer import TAG_RE
+from core.services.notebook_composer import TAG_RE, favorite_tag_names
 from core.services.notebook_search import HELP_ROWS, SearchSyntaxError, build_query
 
 
@@ -51,6 +51,9 @@ def _filtered_entries(request):
         "status": params.get("status") or "",
         "owner": params.get("owner") or "",
         "tag": (params.get("tag") or "").strip().lower(),
+        "keyword": (params.get("keyword") or "").strip(),
+        "category": (params.get("category") or "").strip(),
+        "group": (params.get("group") or "").strip(),
         "state": params.get("state") or "active",
         "sort": params.get("sort") if params.get("sort") in SORTS else "modified",
     }
@@ -99,10 +102,24 @@ def _filtered_entries(request):
     if filters["tag"]:
         qs = qs.filter(shared_tags__name__iexact=filters["tag"])
 
+    # keyword=<KeywordValue id>; category / group = ids. Bad values are ignored, not errors.
+    if filters["keyword"].isdigit():
+        qs = qs.filter(keywords__pk=int(filters["keyword"]))
+    else:
+        filters["keyword"] = ""
+    if filters["category"].isdigit():
+        qs = qs.filter(category_id=int(filters["category"]))
+    else:
+        filters["category"] = ""
+    if filters["group"].isdigit():
+        qs = qs.filter(research_group_id=int(filters["group"]))
+    else:
+        filters["group"] = ""
+
     qs = (
         qs.distinct()
         .select_related("author")
-        .prefetch_related("shared_tags")
+        .prefetch_related("shared_tags", "keywords__keyword")
         .annotate(
             step_total=Count("steps", distinct=True),
             step_done=Count("steps", filter=Q(steps__finished=True), distinct=True),
@@ -111,6 +128,40 @@ def _filtered_entries(request):
         .order_by(SORTS[filters["sort"]][0], "-id")
     )
     return qs, filters
+
+
+def _category_options(user):
+    """Categories the user can filter by: the lab list plus those of their groups."""
+    groups = notebook_taxonomy.user_groups(user)
+    return NotebookCategory.objects.filter(
+        Q(research_group__isnull=True) | Q(research_group__in=groups)
+    ).order_by("name")
+
+
+def _active_chips(request, filters):
+    """One removable chip per active filter, each with the URL that drops it."""
+    labels = {}
+    if filters["tag"]:
+        labels["tag"] = f"#{filters['tag']}"
+    if filters["keyword"]:
+        kv = KeywordValue.objects.select_related("keyword").filter(pk=filters["keyword"]).first()
+        if kv:
+            labels["keyword"] = f"{kv.keyword.name}: {kv.value}"
+    if filters["category"]:
+        cat = _category_options(request.user).filter(pk=filters["category"]).first()
+        if cat:
+            labels["category"] = f"Category: {cat.name}"
+    if filters["group"]:
+        grp = notebook_taxonomy.user_groups(request.user).filter(pk=filters["group"]).first()
+        if grp:
+            labels["group"] = f"Group: {grp.name}"
+    chips = []
+    for key, label in labels.items():
+        query = request.GET.copy()
+        query.pop("page", None)
+        query.pop(key, None)
+        chips.append({"label": label, "remove_url": "?" + query.urlencode()})
+    return chips
 
 
 @login_required
@@ -144,6 +195,23 @@ def notebook_dashboard(request):
         .order_by("-n", "name")[:24]
     )
 
+    keyword_cloud = (
+        KeywordValue.objects.filter(notebook_entries__in=visible)
+        .select_related("keyword")
+        .annotate(n=Count("notebook_entries", distinct=True))
+        .order_by("-n", "keyword__name", "value")[:24]
+    )
+    favorite_names = {n.lower() for n in favorite_tag_names(user)}
+    favorite_cloud = [t for t in tag_cloud if t.name.lower() in favorite_names]
+    other_cloud = [t for t in tag_cloud if t.name.lower() not in favorite_names]
+    # Favourites show even when no visible entry uses them yet, so they stay one click away.
+    seen = {t.name.lower() for t in favorite_cloud}
+    for name in favorite_names - seen:
+        favorite_cloud.append(Tag.objects.filter(name__iexact=name).first())
+    favorite_cloud = [t for t in favorite_cloud if t is not None]
+
+    active_chips = _active_chips(request, filters)
+
     query = request.GET.copy()
     query.pop("page", None)
 
@@ -162,6 +230,12 @@ def notebook_dashboard(request):
             "can_manage_taxonomy": bool(notebook_taxonomy.editable_groups(user)),
             "pinned": pinned,
             "tag_cloud": tag_cloud,
+            "favorite_cloud": favorite_cloud,
+            "other_cloud": other_cloud,
+            "keyword_cloud": keyword_cloud,
+            "active_chips": active_chips,
+            "categories": _category_options(user),
+            "groups": notebook_taxonomy.user_groups(user),
             "stats": {
                 "visible": visible.exclude(status="archived").count(),
                 "mine": mine.exclude(status="archived").count(),
@@ -175,6 +249,7 @@ def notebook_dashboard(request):
             "due_steps": open_steps[:6],
             "now": now,
             "recent": mine.order_by("-updated_at")[:5],
+            "task_entries": mine.exclude(status="archived").order_by("-updated_at")[:20],
             "notebook_entry_templates": {**_notebook_entry_templates(), **notebook_templates.menu_entries(user)},
             "status_info": {st.slug: st for st in NotebookStatus.objects.all()},
         },

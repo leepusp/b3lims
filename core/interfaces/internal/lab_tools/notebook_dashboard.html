@@ -23,7 +23,7 @@
     .eln-card > .hd { padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); font-weight: 700; display: flex; align-items: center; gap: .5rem; }
     .eln-card > .bd { padding: .75rem .9rem; }
 
-    .eln-filters { display: grid; grid-template-columns: minmax(260px, 3fr) repeat(5, minmax(110px, 1fr)) auto; gap: .5rem; padding: .75rem .9rem; border-bottom: 1px solid var(--eln-border); }
+    .eln-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .5rem; padding: .75rem .9rem; border-bottom: 1px solid var(--eln-border); }
     .eln-pins { display: flex; gap: .5rem; overflow-x: auto; padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); background: #fbfcfd; }
     .eln-pin {
         flex: 0 0 220px; border: 1px solid var(--eln-border); border-radius: .5rem; background: #fff;
@@ -60,7 +60,7 @@
         .eln-filters, .eln-stats { grid-template-columns: 1fr 1fr; }
         .eln-q { grid-column: 1 / -1; }
     }
-    .eln-q { position: relative; }
+    .eln-q { position: relative; grid-column: 1 / -1; }
     .eln-q input { padding-right: 2rem; }
     .eln-q-help { position: absolute; right: 0; top: 0; padding: .1rem .5rem; color: var(--eln-muted, #6c757d); }
     .eln-help-table { background: #f8f9fa; border-bottom: 1px solid var(--eln-border); }
@@ -114,6 +114,14 @@
                     <option value="">All statuses</option>
                     {% for value, label in statuses %}{% if value != "archived" %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
                 </select>
+                <select class="form-select form-select-sm" name="category" aria-label="Category">
+                    <option value="">All categories</option>
+                    {% for cat in categories %}<option value="{{ cat.id }}" {% if filters.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}
+                </select>
+                <select class="form-select form-select-sm" name="group" aria-label="Research group">
+                    <option value="">All groups</option>
+                    {% for grp in groups %}<option value="{{ grp.id }}" {% if filters.group == grp.id|stringformat:"s" %}selected{% endif %}>{{ grp.name }}</option>{% endfor %}
+                </select>
                 <select class="form-select form-select-sm" name="owner" aria-label="Owner">
                     <option value="">Anyone</option>
                     <option value="me" {% if filters.owner == "me" %}selected{% endif %}>Me</option>
@@ -130,6 +138,7 @@
                     {% for key, label in sorts %}<option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
                 </select>
                 {% if filters.tag %}<input type="hidden" name="tag" value="{{ filters.tag }}">{% endif %}
+                {% if filters.keyword %}<input type="hidden" name="keyword" value="{{ filters.keyword }}">{% endif %}
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i></button>
                     <a class="btn btn-sm btn-outline-secondary" href="?" title="Clear filters"><i class="bi bi-x-lg"></i></a>
@@ -142,9 +151,11 @@
                     <tbody>{% for example, meaning in search_help %}<tr><td><code class="eln-example" role="button" data-example="{{ example }}">{{ example }}</code></td><td>{{ meaning }}</td></tr>{% endfor %}</tbody>
                 </table>
             </div>
-            {% if filters.tag %}
-                <div class="px-3 pt-2 small">Tag: <span class="eln-tag">#{{ filters.tag }}</span>
-                    <a href="?{% for k, v in filters.items %}{% if k != 'tag' and v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}" class="ms-1">remove</a></div>
+            {% if active_chips %}
+                <div class="px-3 pt-2 small d-flex flex-wrap gap-2 align-items-center" id="eln-active-filters">
+                    <span class="text-muted">Filtering by</span>
+                    {% for chip in active_chips %}<a class="eln-tag" href="{{ chip.remove_url }}" title="Remove this filter">{{ chip.label }} <i class="bi bi-x"></i></a>{% endfor %}
+                </div>
             {% endif %}
 
             {% if pinned %}
@@ -209,6 +220,7 @@
                                     {% if filters.state == "trash" %}<span class="ttl">{{ entry.title }}</span>{% else %}<a class="ttl" href="{% url 'notebook_entry' entry.id %}">{{ entry.title }}</a>{% endif %}
                                     <div>
                                         {% for tag in entry.shared_tags.all %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}
+                                        {% for kv in entry.keywords.all %}<a class="eln-tag" href="?keyword={{ kv.pk }}">{{ kv.keyword.name }}: {{ kv.value }}</a>{% endfor %}
                                         {% if entry.project %}<span class="small text-muted">{{ entry.project }}</span>{% endif %}
                                     </div>
                                 </td>
@@ -251,38 +263,49 @@
 
         <aside class="d-flex flex-column gap-3">
             <section class="eln-card" id="eln-todo" data-url="{% url 'notebook_todos_api' %}">
-                <div class="hd"><i class="bi bi-check2-square"></i> To-do <span class="ms-auto small fw-normal"><a href="#" id="eln-todo-clear" class="text-muted">Clear done</a></span></div>
+                <div class="hd"><i class="bi bi-check2-square"></i> My tasks <span class="ms-auto small fw-normal"><a href="#" id="eln-todo-clear" class="text-muted">Clear done</a></span></div>
                 <div class="bd">
-                    <form id="eln-todo-form" class="d-flex gap-1 mb-2">
-                        <input type="text" class="form-control form-control-sm" id="eln-todo-input" maxlength="255" placeholder="Add a task, e.g. order primers">
-                        <button class="btn btn-sm btn-primary" type="submit" aria-label="Add task"><i class="bi bi-plus-lg"></i></button>
+                    <div id="eln-due">
+                        {% for step in due_steps %}
+                            <a class="eln-side-step text-decoration-none text-reset" href="{% url 'notebook_entry' step.entry_id %}" title="Step of an entry. Complete it inside the entry.">
+                                <span class="badge {% if step.deadline < now %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ step.deadline|date:"d M H:i" }}</span>
+                                <span><span class="fw-semibold">{{ step.body }}</span><br><span class="text-muted small">{{ step.entry.title }}</span></span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                    <form id="eln-todo-form" class="mb-2 mt-2">
+                        <div class="d-flex gap-1">
+                            <input type="text" class="form-control form-control-sm" id="eln-todo-input" maxlength="255" placeholder="Add a task, e.g. order primers">
+                            <button class="btn btn-sm btn-primary" type="submit" aria-label="Add task"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                        <select class="form-select form-select-sm mt-1" id="eln-todo-entry" aria-label="Link the task to an entry">
+                            <option value="">Not linked to an entry</option>
+                            {% for entry in task_entries %}<option value="{{ entry.id }}">{{ entry.title }}</option>{% endfor %}
+                        </select>
                     </form>
                     <div id="eln-todo-list"><div class="small text-muted">Loading…</div></div>
-                </div>
-            </section>
-
-            <section class="eln-card" id="eln-due">
-                <div class="hd"><i class="bi bi-alarm"></i> Steps with deadlines</div>
-                <div class="bd">
-                    {% for step in due_steps %}
-                        <a class="eln-side-step text-decoration-none text-reset" href="{% url 'notebook_entry' step.entry_id %}">
-                            <span class="badge {% if step.deadline < now %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ step.deadline|date:"d M H:i" }}</span>
-                            <span><span class="fw-semibold">{{ step.body }}</span><br><span class="text-muted small">{{ step.entry.title }}</span></span>
-                        </a>
-                    {% empty %}
-                        <div class="small text-muted">No open steps with a deadline in your entries.</div>
-                    {% endfor %}
+                    {% if not due_steps %}<div class="small text-muted mt-1">Steps with a deadline in your entries show up here too.</div>{% endif %}
                 </div>
             </section>
 
             <section class="eln-card">
-                <div class="hd"><i class="bi bi-tags"></i> Tags</div>
+                <div class="hd"><i class="bi bi-tags"></i> Tags and keywords</div>
                 <div class="bd">
-                    {% for tag in tag_cloud %}
-                        <a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }} <span class="text-muted">{{ tag.n }}</span></a>
-                    {% empty %}
-                        <div class="small text-muted">Tags added to entries appear here.</div>
-                    {% endfor %}
+                    {% if favorite_cloud %}
+                        <div class="small text-muted mb-1"><i class="bi bi-star-fill text-warning"></i> Favourites</div>
+                        <div class="mb-2">{% for tag in favorite_cloud %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}</div>
+                    {% endif %}
+                    {% if other_cloud %}
+                        <div class="small text-muted mb-1">Tags</div>
+                        <div class="mb-2">{% for tag in other_cloud %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }} <span class="text-muted">{{ tag.n }}</span></a>{% endfor %}</div>
+                    {% endif %}
+                    {% if keyword_cloud %}
+                        <div class="small text-muted mb-1">Keywords</div>
+                        <div>{% for kv in keyword_cloud %}<a class="eln-tag" href="?keyword={{ kv.pk }}">{{ kv.keyword.name }}: {{ kv.value }} <span class="text-muted">{{ kv.n }}</span></a>{% endfor %}</div>
+                    {% endif %}
+                    {% if not favorite_cloud and not other_cloud and not keyword_cloud %}
+                        <div class="small text-muted">Tags and keywords added to entries appear here. Click one to filter the list.</div>
+                    {% endif %}
                 </div>
             </section>
 
@@ -386,7 +409,7 @@
                 <input class="form-check-input mt-1" type="checkbox" data-toggle ${t.done ? "checked" : ""} aria-label="Done">
                 <span class="flex-grow-1 ${t.done ? "text-decoration-line-through text-muted" : ""}">${esc(t.text)}${t.entry_url ? ` <a href="${esc(t.entry_url)}" title="Open entry"><i class="bi bi-box-arrow-up-right"></i></a>` : ""}</span>
                 <button type="button" class="btn btn-sm p-0 text-muted" data-del aria-label="Delete task"><i class="bi bi-x-lg"></i></button></div>`).join("")
-                : '<div class="small text-muted">Nothing to do. Add a task above.</div>';
+                : '<div class="small text-muted">No tasks of your own yet.</div>';
         }
         function send(payload) {
             return fetch(url, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json", "X-CSRFToken": csrf}, body: JSON.stringify(payload)})
@@ -396,7 +419,8 @@
         document.getElementById("eln-todo-form").addEventListener("submit", function (e) {
             e.preventDefault();
             const text = input.value.trim();
-            if (text) send({action: "add", text: text}).then((d) => { if (d.status === "success") input.value = ""; });
+            const entryId = document.getElementById("eln-todo-entry").value;
+            if (text) send({action: "add", text: text, entry_id: entryId ? Number(entryId) : null}).then((d) => { if (d.status === "success") input.value = ""; });
         });
         listEl.addEventListener("click", function (e) {
             const row = e.target.closest("[data-id]");
