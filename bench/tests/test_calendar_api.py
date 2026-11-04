@@ -139,3 +139,43 @@ class CalendarPageTests(TestCase):
             self.assertIn(reverse(f"bench:{name}"), html)
         self.assertIn("lab_calendar_v1.js", html)
         self.assertIn("csrfmiddlewaretoken", html)
+
+
+class CalendarIcsTests(CalendarApiTests):
+    def test_booking_ics_and_google_link(self):
+        booking = self.book().json()
+        pk = booking["id"] if "id" in booking else Booking.objects.get().pk
+        response = self.client.get(reverse("bench:booking_ics", args=[pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/calendar", response["Content-Type"])
+        body = response.content.decode()
+        self.assertIn("BEGIN:VEVENT", body)
+        self.assertIn("SUMMARY:", body)
+        self.assertTrue(body.endswith("\r\n"))
+        events = self.client.get(
+            reverse("bench:calendar_events"),
+            {"start": (self.start - timedelta(days=1)).isoformat(), "end": (self.end + timedelta(days=1)).isoformat()},
+        ).json()
+        props = events[0]["extendedProps"]
+        self.assertTrue(props["google_url"].startswith("https://calendar.google.com/calendar/render?"))
+        self.assertIn(f"/bookings/{pk}/event.ics", props["ics_url"])
+
+    def test_view_export(self):
+        self.book()
+        response = self.client.get(
+            reverse("bench:calendar_ics"),
+            {"start": (self.start - timedelta(days=1)).isoformat(), "end": (self.end + timedelta(days=1)).isoformat()},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode().count("BEGIN:VEVENT"), 1)
+
+    def test_export_requires_login(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("bench:calendar_ics")).status_code, 302)
+
+    def test_line_folding_and_escaping(self):
+        from bench.services.ics import escape_text, fold
+
+        self.assertEqual(escape_text("a,b;c\nd"), "a\\,b\\;c\\nd")
+        for line in fold("X" * 200 + "ç" * 50).split("\r\n"):
+            self.assertLessEqual(len(line.encode()), 75)

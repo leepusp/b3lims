@@ -6,6 +6,7 @@
         events: root.dataset.eventsUrl, resources: root.dataset.resourcesUrl, create: root.dataset.createUrl,
         move: (id) => root.dataset.moveUrl.replace(/0\/move\/$/, id + "/move/"),
         cancel: (id) => root.dataset.cancelUrl.replace(/0\/cancel\/$/, id + "/cancel/"),
+        exportView: root.dataset.exportUrl,
     };
     const state = {resources: [], hidden: new Set()};
     const $ = (id) => document.getElementById(id);
@@ -123,6 +124,15 @@
         }
         $("lc-detail-body").innerHTML = html;
         const actions = $("lc-detail-actions"); actions.innerHTML = "";
+        if (p.kind === "booking") {
+            const google = document.createElement("a");
+            google.className = "btn btn-sm btn-outline-primary"; google.target = "_blank"; google.rel = "noopener";
+            google.href = p.google_url; google.innerHTML = "<i class='bi bi-google'></i> Add to Google Calendar";
+            const file = document.createElement("a");
+            file.className = "btn btn-sm btn-outline-secondary"; file.href = p.ics_url;
+            file.innerHTML = "<i class='bi bi-download'></i> .ics";
+            actions.appendChild(google); actions.appendChild(file);
+        }
         if (p.kind === "booking" && p.can_edit) {
             const one = button("Cancel booking", "btn-outline-danger", () => cancel(p.booking_id, false));
             actions.appendChild(one);
@@ -140,6 +150,12 @@
             if (d.ok) { detail.hide(); calendar.refetchEvents(); toast("Cancelled.", "success"); } else toast(d.message || "Could not cancel.");
         });
     }
+
+    $("lc-export").addEventListener("click", (e) => {
+        const view = calendar.view;
+        const q = new URLSearchParams({start: view.activeStart.toISOString(), end: view.activeEnd.toISOString(), layers: layers(), resources: resourceIds()});
+        e.currentTarget.href = urls.exportView + "?" + q;
+    });
 
     document.querySelectorAll(".lc-layer").forEach((c) => c.addEventListener("change", () => calendar.refetchEvents()));
 

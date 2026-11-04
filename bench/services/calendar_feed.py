@@ -11,6 +11,7 @@ from datetime import timedelta
 from django.urls import reverse
 
 from bench.models import Booking
+from bench.services.ics import google_link
 from bench.permissions.scheduling import can_manage_booking
 from core.models import NotebookStep
 from core.models.events.model import Event
@@ -35,7 +36,7 @@ def _name(user):
 def booking_event(booking, user):
     can_edit = can_manage_booking(user, booking)
     entry = booking.notebook_entry
-    return {
+    event = {
         "id": f"booking:{booking.pk}",
         "title": f"{booking.resource.name} · {booking.title or _name(booking.user)}",
         "start": booking.start.isoformat(),
@@ -58,6 +59,9 @@ def booking_event(booking, user):
             ),
         },
     }
+    event["extendedProps"]["google_url"] = google_link(event)
+    event["extendedProps"]["ics_url"] = reverse("bench:booking_ics", args=[booking.pk])
+    return event
 
 
 def feed(user, start, end, layers=LAYERS, resource_ids=None):

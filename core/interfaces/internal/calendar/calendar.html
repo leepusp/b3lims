@@ -24,7 +24,8 @@
      data-resources-url="{% url 'bench:calendar_resources' %}"
      data-create-url="{% url 'bench:booking_create' %}"
      data-move-url="{% url 'bench:booking_move' 0 %}"
-     data-cancel-url="{% url 'bench:booking_cancel' 0 %}">
+     data-cancel-url="{% url 'bench:booking_cancel' 0 %}"
+     data-export-url="{% url 'bench:calendar_ics' %}">
     <div class="row g-4">
         <div class="col-lg-3">
             <div class="d-flex flex-column gap-3">
@@ -35,6 +36,12 @@
                     <label class="lc-check"><input type="checkbox" class="lc-layer" value="bookings" checked><span class="lc-dot" style="background:#0b66b2"></span>Equipment bookings</label>
                     <label class="lc-check"><input type="checkbox" class="lc-layer" value="steps" checked><span class="lc-dot" style="background:#7c3aed"></span>My ELN step deadlines</label>
                     <label class="lc-check"><input type="checkbox" class="lc-layer" value="samples" checked><span class="lc-dot" style="background:#198754"></span>Sample events</label>
+                </div>
+
+                <div class="lc-side">
+                    <h6>Use in other calendars</h6>
+                    <a class="btn btn-sm btn-outline-secondary w-100" id="lc-export" href="#"><i class="bi bi-download me-1"></i> Export this view (.ics)</a>
+                    <div class="small text-muted mt-2">Opens in Google Calendar, Outlook and Apple Calendar. Each booking also has its own button.</div>
                 </div>
 
                 <div class="lc-side">

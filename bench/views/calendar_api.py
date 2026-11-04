@@ -4,7 +4,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
@@ -12,7 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from bench.models import BookableResource, Booking
 from bench.permissions.scheduling import can_book_resource
-from bench.services import calendar_feed
+from bench.services import calendar_feed, ics
 from bench.services.booking_rules import (
     BookingRuleError,
     cancel_booking,
@@ -138,3 +138,33 @@ def booking_cancel(request, booking_id):
     except ValidationError as exc:
         return _error(" ".join(exc.messages))
     return JsonResponse({"status": "success", "cancelled": len(cancelled)})
+
+
+def _ics_response(events, filename, name):
+    response = HttpResponse(ics.calendar_text(events, name=name), content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+@require_GET
+def booking_ics(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.active().select_related("resource", "user", "notebook_entry"), pk=booking_id
+    )
+    event = calendar_feed.booking_event(booking, request.user)
+    return _ics_response([event], f"booking-{booking.pk}.ics", booking.resource.name)
+
+
+@login_required
+@require_GET
+def view_ics(request):
+    """The events of the range on screen, as one .ics file."""
+    try:
+        start, end = _aware(request.GET.get("start")), _aware(request.GET.get("end"))
+    except ValidationError as exc:
+        return _error(exc.messages[0])
+    layers = [x for x in (request.GET.get("layers") or ",".join(calendar_feed.LAYERS)).split(",") if x]
+    resources = [int(x) for x in (request.GET.get("resources") or "").split(",") if x.isdigit()]
+    events = calendar_feed.feed(request.user, start, end, layers, resources)
+    return _ics_response(events, "b3-lims-calendar.ics", "B3 LIMS Lab Calendar")
