@@ -35,12 +35,13 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 Today `/calendar/` only lists the last 100 sample events. It becomes a real calendar.
 
 Foundation
-- [ ] Month, week and agenda views (FullCalendar 6, MIT, vendored with checksums)
-- [ ] Layers with colours and filters: bookings, ELN step deadlines and to-dos,
-      shipments, sample reminders, lab meetings
-- [ ] Create, move and resize bookings in the calendar, with conflict detection
-      and the existing resource rules
-- [ ] Recurring events (daily, weekly, custom) and per-event reminders
+- [x] Month, week, day and agenda views (FullCalendar 6, MIT, vendored with checksums)
+- [~] Layers with colours and filters: bookings, ELN step deadlines and sample events are done,
+      with a filter per equipment; still open: to-dos, shipments, sample reminders, lab meetings
+- [x] Create, move and resize bookings in the calendar, with conflict detection
+      and the existing resource rules (rule messages shown in the form, drag reverts on refusal)
+- [~] Recurring bookings (daily, weekly, with a count; cancel one or the rest of the series) are done;
+      still open: custom rules, an end date in the form, per-event reminders
 - [ ] Attendees with accept / decline, and a link from an event to an ELN entry
 - [ ] Dashboard card "Today and this week" (closes the "bookings" gap in the ELN dashboard)
 

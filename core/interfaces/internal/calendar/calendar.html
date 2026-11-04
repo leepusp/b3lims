@@ -4,243 +4,121 @@
 {% block title %}Lab Calendar · B3 LIMS{% endblock %}
 
 {% block extra_css %}
-
 <style>
-    /* Layout do Calendário */
-    .fc-header-toolbar {
-        font-size: 0.9rem;
-    }
-    .fc-button-primary {
-        background-color: #0d6efd !important;
-        border-color: #0d6efd !important;
-    }
-    .fc-button-active {
-        background-color: #0b5ed7 !important;
-    }
-    .fc-event {
-        cursor: pointer;
-        border: none;
-        padding: 2px 4px;
-        font-size: 0.75rem;
-        border-radius: 4px;
-    }
-    
-    /* Cores dos Eventos por Tipo */
-    .evt-entry { background-color: #d1e7dd; color: #0f5132; border-left: 3px solid #198754; }
-    .evt-qc { background-color: #fff3cd; color: #664d03; border-left: 3px solid #ffc107; }
-    .evt-freeze { background-color: #cff4fc; color: #055160; border-left: 3px solid #0dcaf0; }
-    .evt-maintenance { background-color: #f8d7da; color: #842029; border-left: 3px solid #dc3545; }
-    .evt-booking { background-color: #e2e3e5; color: #41464b; border-left: 3px solid #6c757d; }
-
-    /* Estilo do Sidebar de Legenda */
-    .filter-section {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        height: 100%;
-        border: 1px solid #e9ecef;
-    }
-    .legend-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-        font-size: 0.85rem;
-        color: #6c757d;
-        cursor: pointer;
-    }
-    .legend-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 10px;
-    }
+    .lc-side { background: #fff; border: 1px solid #e9ecef; border-radius: 12px; padding: 1rem 1.1rem; }
+    .lc-side h6 { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: #6c757d; font-weight: 700; margin-bottom: .6rem; }
+    .lc-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; margin-right: .45rem; flex: none; }
+    .lc-check { display: flex; align-items: center; font-size: .86rem; margin-bottom: .35rem; cursor: pointer; }
+    .lc-check input { margin-right: .5rem; }
+    .fc .fc-button-primary { background: #0b66b2; border-color: #0b66b2; }
+    .fc .fc-button-primary:not(:disabled).fc-button-active { background: #084f8c; border-color: #084f8c; }
+    .fc-event { cursor: pointer; font-size: .78rem; border: none; padding: 1px 4px; }
+    #lc-errors:empty { display: none; }
+    #lc-toast { position: fixed; right: 1rem; bottom: 1rem; z-index: 2000; max-width: 380px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 h-100">
-    
-    <div class="row h-100 g-4">
+<div class="container-fluid py-4" id="lab-calendar"
+     data-events-url="{% url 'bench:calendar_events' %}"
+     data-resources-url="{% url 'bench:calendar_resources' %}"
+     data-create-url="{% url 'bench:booking_create' %}"
+     data-move-url="{% url 'bench:booking_move' 0 %}"
+     data-cancel-url="{% url 'bench:booking_cancel' 0 %}">
+    <div class="row g-4">
         <div class="col-lg-3">
-            <div class="d-flex flex-column gap-4">
-                
-                <button class="btn btn-primary w-100 py-3 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createEventModal">
-                    <i class="bi bi-plus-lg me-2"></i> Schedule Activity
-                </button>
+            <div class="d-flex flex-column gap-3">
+                <button class="btn btn-primary w-100 py-2 fw-semibold" id="lc-new"><i class="bi bi-plus-lg me-1"></i> New booking</button>
 
-                <div class="filter-section shadow-sm">
-                    <h6 class="fw-bold text-dark text-uppercase small mb-3 ls-1">Calendars & Filters</h6>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" value="" id="filterSamples" checked>
-                        <label class="form-check-label small" for="filterSamples">Sample Entry & QC</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" value="" id="filterEquipment" checked>
-                        <label class="form-check-label small" for="filterEquipment">Equipment Booking</label>
-                    </div>
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" value="" id="filterMaintenance" checked>
-                        <label class="form-check-label small" for="filterMaintenance">Maintenance Tasks</label>
-                    </div>
-
-                    <hr class="text-muted opacity-25">
-
-                    <h6 class="fw-bold text-dark text-uppercase small mb-3 ls-1">Legend</h6>
-                    <div class="legend-item"><div class="legend-dot bg-success"></div>Sample Entry</div>
-                    <div class="legend-item"><div class="legend-dot bg-warning"></div>Quality Control</div>
-                    <div class="legend-item"><div class="legend-dot bg-info"></div>Freeze / Storage</div>
-                    <div class="legend-item"><div class="legend-dot bg-secondary"></div>Equipment Booking</div>
-                    <div class="legend-item"><div class="legend-dot bg-danger"></div>Maintenance</div>
+                <div class="lc-side">
+                    <h6>Layers</h6>
+                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="bookings" checked><span class="lc-dot" style="background:#0b66b2"></span>Equipment bookings</label>
+                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="steps" checked><span class="lc-dot" style="background:#7c3aed"></span>My ELN step deadlines</label>
+                    <label class="lc-check"><input type="checkbox" class="lc-layer" value="samples" checked><span class="lc-dot" style="background:#198754"></span>Sample events</label>
                 </div>
 
-                <div class="card bg-light border-0">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-info-circle-fill text-primary me-2"></i>
-                            <strong class="small text-dark">Did you know?</strong>
-                        </div>
-                        <p class="small text-muted mb-0" style="font-size: 0.8rem;">
-                            Click on any date slot to quickly schedule a machine reservation or log a maintenance task.
-                        </p>
-                    </div>
+                <div class="lc-side">
+                    <h6>Equipment</h6>
+                    <div id="lc-resources" class="small text-muted">Loading…</div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-9">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-4">
-                    <div id="calendar" style="min-height: 700px;"></div>
-                </div>
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-3 p-lg-4"><div id="calendar"></div></div>
             </div>
         </div>
     </div>
-
 </div>
 
-<div class="modal fade" id="createEventModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="lc-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
+        <form class="modal-content border-0 shadow-lg" id="lc-form" autocomplete="off">
+            {% csrf_token %}
             <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Schedule Activity</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>New booking</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <form id="scheduleForm">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Title / Task Name</label>
-                        <input type="text" class="form-control" placeholder="Ex: Flow Cytometer Booking" required>
-                    </div>
-                    
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Start Date</label>
-                            <input type="datetime-local" class="form-control" id="modalStartDate" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-uppercase text-muted">End Date</label>
-                            <input type="datetime-local" class="form-control" id="modalEndDate">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Category</label>
-                        <select class="form-select">
-                            <option value="booking">Equipment Booking</option>
-                            <option value="maintenance">Maintenance / Cleaning</option>
-                            <option value="meeting">Lab Meeting</option>
-                            <option value="deadline">Project Deadline</option>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold" for="lc-resource">Equipment</label>
+                    <select class="form-select" id="lc-resource" required></select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold" for="lc-title">Title</label>
+                    <input class="form-control" id="lc-title" maxlength="255" placeholder="e.g. Imaging of gel 12">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label small fw-semibold" for="lc-start">Start</label><input type="datetime-local" class="form-control" id="lc-start" required></div>
+                    <div class="col-6"><label class="form-label small fw-semibold" for="lc-end">End</label><input type="datetime-local" class="form-control" id="lc-end" required></div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-7">
+                        <label class="form-label small fw-semibold" for="lc-repeat">Repeat</label>
+                        <select class="form-select" id="lc-repeat">
+                            <option value="">Does not repeat</option>
+                            <option value="daily">Every day</option>
+                            <option value="weekly">Every week (same weekday)</option>
                         </select>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Description</label>
-                        <textarea class="form-control" rows="2" placeholder="Add details..."></textarea>
+                    <div class="col-5">
+                        <label class="form-label small fw-semibold" for="lc-count">Times</label>
+                        <input type="number" class="form-control" id="lc-count" min="2" max="104" value="4" disabled>
                     </div>
-                </form>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold" for="lc-note">Note <span class="text-muted fw-normal" id="lc-note-hint"></span></label>
+                    <textarea class="form-control" id="lc-note" rows="2"></textarea>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label small fw-semibold" for="lc-entry">Linked ELN entry</label>
+                    <select class="form-select" id="lc-entry"><option value="">None</option></select>
+                </div>
+                <ul class="text-danger small mt-3 mb-0 ps-3" id="lc-errors"></ul>
             </div>
-            <div class="modal-footer bg-light border-top-0">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary px-4" onclick="alert('Funcionalidade de agendamento será implementada no backend na próxima etapa!')">Save Schedule</button>
+                <button type="submit" class="btn btn-primary px-4">Book</button>
             </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="lc-detail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light"><h5 class="modal-title fw-bold" id="lc-detail-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body" id="lc-detail-body"></div>
+            <div class="modal-footer bg-light" id="lc-detail-actions"></div>
         </div>
     </div>
 </div>
 
+<div id="lc-toast"></div>
 {% endblock %}
 
 {% block extra_js %}
-<script src='{% static 'vendor/fullcalendar/6.1.10/index.global.min.js' %}'></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
-
-    // 1. Preparar dados do Django para JS
-    // Convertemos os eventos do backend para o formato que o FullCalendar entende
-    var dbEvents = [
-        {% for e in events %}
-        {
-            title: "{{ e.get_event_type_display }} - {{ e.sample.sample_id }}",
-            start: "{{ e.timestamp|date:'Y-m-d\TH:i:s' }}", // Formato ISO
-            
-            // Definição de Classes CSS baseada no tipo
-            classNames: [
-                {% if e.event_type == 'entry' %}'evt-entry'
-                {% elif e.event_type == 'qc_check' %}'evt-qc'
-                {% elif e.event_type == 'freeze' %}'evt-freeze'
-                {% else %}'evt-booking'{% endif %}
-            ],
-            
-            extendedProps: {
-                user: "{{ e.performed_by.username }}",
-                location: "{{ e.location_snapshot|default:'' }}"
-            }
-        },
-        {% endfor %}
-    ];
-
-    // 2. Inicializar FullCalendar
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        themeSystem: 'bootstrap5',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-        },
-        events: dbEvents,
-        
-        // Interações
-        editable: false, // Por enquanto read-only para eventos passados
-        selectable: true, // Permite selecionar dias
-        nowIndicator: true,
-        height: 'auto',
-
-        // Click no dia vazio -> Abrir Modal de Criação
-        dateClick: function(info) {
-            // Preenche a data no modal automaticamente
-            var dateStr = info.dateStr + 'T09:00'; // Define hora padrão
-            document.getElementById('modalStartDate').value = dateStr;
-            
-            // Abre o modal
-            var myModal = new bootstrap.Modal(document.getElementById('createEventModal'));
-            myModal.show();
-        },
-
-        // Renderização customizada (Tooltip simples)
-        eventDidMount: function(info) {
-            var tooltip = new bootstrap.Tooltip(info.el, {
-                title: info.event.title + " by " + info.event.extendedProps.user,
-                placement: 'top',
-                trigger: 'hover',
-                container: 'body'
-            });
-        }
-    });
-
-    calendar.render();
-});
-</script>
+<script src="{% static 'vendor/fullcalendar/6.1.10/index.global.min.js' %}"></script>
+<script src="{% static 'internal/calendar/lab_calendar_v1.js' %}"></script>
 {% endblock %}
