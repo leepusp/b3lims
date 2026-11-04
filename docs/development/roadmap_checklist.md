@@ -11,7 +11,7 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [~] "Shared with me" filter in the entries dashboard
 - [~] Ownership transfer (to a person who already has access; former author keeps edit; history stays)
 - [x] Categories and statuses per research group, with colours (migration 0098; entry picks the group, coordinator and superusers edit the lists at /internal/lab-tools/notebook/lists/)
-- [ ] Editable entry templates (stored in the database, not in code)
+- [x] Editable entry templates (stored in the database: "Save as template" from any entry, shared with nobody, a research group or the lab; manage at /internal/lab-tools/notebook/templates/; built-in templates stay in code)
 - [ ] Favourite tags panel and step groups
 - [ ] Field builder / JSON editor for extra fields
 - [ ] Browser check of all of the above on production

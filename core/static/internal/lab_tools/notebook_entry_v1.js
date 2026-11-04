@@ -912,6 +912,69 @@
 
     // ---------------------------------------------------------------- sharing
 
+    function initSaveTemplate() {
+        const button = document.getElementById("bx-save-template");
+        const modalEl = document.getElementById("bx-tpl-modal");
+        if (!button || !modalEl || !urls.save_template) return;
+        const el = (id) => document.getElementById(id);
+        const vis = el("bx-tpl-vis"), grp = el("bx-tpl-group"), replace = el("bx-tpl-replace");
+        let state = null;
+        const NEW = "";
+
+        function option(select, value, label, selected) {
+            const o = document.createElement("option");
+            o.value = value; o.textContent = label; o.selected = !!selected;
+            select.appendChild(o);
+        }
+        function syncGroup() { grp.classList.toggle("d-none", vis.value !== "group"); }
+        function fill() {
+            replace.innerHTML = "";
+            option(replace, NEW, "A new template", true);
+            state.templates.forEach((t) => option(replace, String(t.id), "Replace: " + t.name));
+            el("bx-tpl-replace-row").hidden = !state.templates.length;
+            vis.innerHTML = "";
+            state.visibilities.forEach(function (v) {
+                if (v.value === "lab" && !state.can_share_lab) return;
+                if (v.value === "group" && !state.groups.length) return;
+                option(vis, v.value, v.label, v.value === "private");
+            });
+            grp.innerHTML = "";
+            state.groups.forEach((g) => option(grp, String(g.id), g.name));
+            syncGroup();
+        }
+        function applyTemplate() {
+            const t = state.templates.find((x) => String(x.id) === replace.value);
+            if (!t) return;
+            el("bx-tpl-name").value = t.name; el("bx-tpl-desc").value = t.description;
+            vis.value = t.visibility; if (t.research_group) grp.value = String(t.research_group);
+            syncGroup();
+        }
+
+        button.addEventListener("click", function () {
+            el("bx-tpl-error").textContent = "";
+            el("bx-tpl-name").value = (document.getElementById("bx-title") || {}).value || "";
+            el("bx-tpl-desc").value = "";
+            getJson(urls.template_options).then(function (data) {
+                state = data; fill();
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+        });
+        replace.addEventListener("change", applyTemplate);
+        vis.addEventListener("change", syncGroup);
+        el("bx-tpl-save").addEventListener("click", function () {
+            const payload = {
+                name: el("bx-tpl-name").value, description: el("bx-tpl-desc").value,
+                visibility: vis.value, research_group: vis.value === "group" ? grp.value : null,
+            };
+            if (replace.value) payload.template_id = Number(replace.value);
+            postJson(urls.save_template, payload).then(function (data) {
+                if (data.status !== "success") { el("bx-tpl-error").textContent = data.message || "Not saved"; return; }
+                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                status("Template “" + data.template.name + "” saved");
+            });
+        });
+    }
+
     function initSharing() {
         const button = document.getElementById("bx-share");
         const modalEl = document.getElementById("bx-share-modal");
@@ -1218,6 +1281,7 @@
     initLock();
     initTrash();
     initSharing();
+    initSaveTemplate();
     initRevisions();
     initComments();
     initEditor();

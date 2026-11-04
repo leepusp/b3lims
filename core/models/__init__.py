@@ -42,6 +42,7 @@ from core.models.lab_tools.notebook import (
     NotebookSampleLink,
 )
 from core.models.lab_tools.notebook_taxonomy import NotebookCategory, NotebookStatus
+from core.models.lab_tools.notebook_template import NotebookTemplate
 from core.models.lab_tools.notebook_collab import (
     NotebookComment,
     NotebookEditLock,

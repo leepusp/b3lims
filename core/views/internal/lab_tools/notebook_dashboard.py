@@ -23,7 +23,7 @@ from core.permissions.notebook import (
     visible_notebook_entries_for_user,
 )
 from core.models import NotebookStatus
-from core.services import notebook_taxonomy
+from core.services import notebook_taxonomy, notebook_templates
 from core.services.notebook_composer import TAG_RE
 from core.services.notebook_search import HELP_ROWS, SearchSyntaxError, build_query
 
@@ -173,7 +173,7 @@ def notebook_dashboard(request):
             "due_steps": open_steps[:6],
             "now": now,
             "recent": mine.order_by("-updated_at")[:5],
-            "notebook_entry_templates": _notebook_entry_templates(),
+            "notebook_entry_templates": {**_notebook_entry_templates(), **notebook_templates.menu_entries(user)},
             "status_info": {st.slug: st for st in NotebookStatus.objects.all()},
         },
     )

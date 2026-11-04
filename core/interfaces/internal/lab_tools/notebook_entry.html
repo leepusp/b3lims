@@ -77,6 +77,8 @@
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li><button class="dropdown-item" type="button" id="bx-revisions"><i class="bi bi-clock-history me-2"></i>Revisions and compare</button></li>
                         <li><button class="dropdown-item" type="button" id="bx-print"><i class="bi bi-printer me-2"></i>Print entry</button></li>
+                        <li><button class="dropdown-item" type="button" id="bx-save-template"><i class="bi bi-file-earmark-plus me-2"></i>Save as template…</button></li>
+                        <li><a class="dropdown-item" href="{% url 'notebook_templates' %}"><i class="bi bi-files me-2"></i>My templates</a></li>
                         <li><a class="dropdown-item" href="{% url 'notebook_dashboard' %}"><i class="bi bi-grid-3x3-gap me-2"></i>All entries</a></li>
                         {% if can_delete %}<li><hr class="dropdown-divider"></li>
                         <li><button class="dropdown-item text-danger" type="button" id="bx-trash"><i class="bi bi-trash3 me-2"></i>Remove entry</button></li>{% endif %}
@@ -295,6 +297,35 @@
      data-definitions-url="{% url 'notebook_field_definitions_api' 0 %}"></div>
 {{ composer_state|json_script:"nb-composer-state" }}
 {{ page_state|json_script:"bx-state" }}
+
+{# save this entry as a reusable template #}
+<div class="modal fade" id="bx-tpl-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-file-earmark-plus me-1"></i> Save as template</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="small text-muted">The text, extra fields (without their values) and steps of this entry become a template you can start new entries from.</p>
+                <div class="mb-2" id="bx-tpl-replace-row" hidden>
+                    <label class="form-label small mb-1" for="bx-tpl-replace">Save as</label>
+                    <select class="form-select form-select-sm" id="bx-tpl-replace"></select>
+                </div>
+                <label class="form-label small mb-1" for="bx-tpl-name">Name</label>
+                <input type="text" class="form-control form-control-sm mb-2" id="bx-tpl-name" maxlength="120">
+                <label class="form-label small mb-1" for="bx-tpl-desc">Description (optional)</label>
+                <input type="text" class="form-control form-control-sm mb-2" id="bx-tpl-desc" maxlength="300">
+                <label class="form-label small mb-1" for="bx-tpl-vis">Who can use it</label>
+                <select class="form-select form-select-sm mb-2" id="bx-tpl-vis"></select>
+                <select class="form-select form-select-sm mb-2 d-none" id="bx-tpl-group" aria-label="Research group"></select>
+                <div class="small text-danger" id="bx-tpl-error" role="alert"></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="bx-tpl-save">Save template</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# sharing: visibility plus users and research groups with read, edit or manage access #}
 <div class="modal fade" id="bx-share-modal" tabindex="-1" aria-hidden="true">

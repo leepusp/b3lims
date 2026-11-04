@@ -34,7 +34,7 @@ from core.permissions.notebook import (
     can_manage_notebook_entry_sharing,
     visible_notebook_entries_for_user,
 )
-from core.services import notebook_collab, notebook_taxonomy
+from core.services import notebook_collab, notebook_taxonomy, notebook_templates
 from core.services.notebook_html import sanitize_notebook_html
 from core.views.internal.lab_tools.notebook import _get_entry_for_user, _notebook_entry_templates
 from core.views.internal.lab_tools.notebook_composer import composer_state
@@ -213,6 +213,8 @@ def notebook_entry(request, entry_id):
             "revisions": reverse("notebook_revisions_api", args=[entry.pk]),
             "comments": reverse("notebook_comments_api", args=[entry.pk]),
             "sharing": reverse("notebook_sharing_api", args=[entry.pk]),
+            "save_template": reverse("notebook_entry_save_template", args=[entry.pk]),
+            "template_options": reverse("notebook_entry_template_options", args=[entry.pk]),
             "lock": reverse("notebook_lock_api", args=[entry.pk]),
             "replace": reverse("notebook_file_replace_api", args=[entry.pk]),
             "file_caption": reverse("notebook_file_caption_api", args=[entry.pk]),
@@ -240,7 +242,7 @@ def notebook_entry(request, entry_id):
             "visibilities": NotebookEntry.VISIBILITY_CHOICES,
             "composer_state": composer_state(entry, request.user),
             "page_state": page_state,
-            "notebook_entry_templates": _notebook_entry_templates(),
+            "notebook_entry_templates": {**_notebook_entry_templates(), **notebook_templates.menu_entries(request.user)},
         },
     )
 

@@ -614,6 +614,14 @@ def _notebook_entry_template(template_key):
 @login_required
 def notebook_create(request):
     template_key = request.GET.get("template", "blank")
+
+    from core.services import notebook_templates
+
+    custom = notebook_templates.template_from_key(template_key, request.user)
+    if custom is not None:
+        new_entry = notebook_templates.create_entry_from_template(user=request.user, template=custom)
+        return redirect("notebook_entry", entry_id=new_entry.id)
+
     template = _notebook_entry_template(template_key)
 
     new_entry = NotebookEntry.objects.create(

@@ -1,0 +1,95 @@
+{% extends 'internal/common/base.html' %}
+
+{% block title %}ELN — My templates{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tp-row { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: .6rem; align-items: start; padding: .6rem 0; border-bottom: 1px solid #eef0f3; }
+    .tp-row .form-control, .tp-row .form-select { max-width: 26rem; }
+    .tp-meta { font-size: .8rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 980px">
+    <a href="{% url 'notebook_dashboard' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Entries</a>
+    <h4 class="mt-2">My templates</h4>
+    <p class="text-muted small">To make a template, open an entry and choose <em>More → Save as template</em>. New entries started from a template copy its text, extra fields (without values) and steps; the template itself is never changed by them.</p>
+    <div id="tp-error" class="alert alert-danger py-1 small d-none" role="alert"></div>
+    <div id="tp-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const api = "{% url 'notebook_templates_api' %}";
+    const createUrl = "{% url 'notebook_create' %}";
+    const csrf = "{{ csrf_token }}";
+    const err = document.getElementById("tp-error");
+    let state = null;
+
+    function show(msg) { err.textContent = msg || ""; err.classList.toggle("d-none", !msg); }
+    function call(payload) {
+        return fetch(api, {method: "POST", credentials: "same-origin",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": csrf}, body: JSON.stringify(payload)})
+            .then((r) => r.json()).then((d) => {
+                if (d.status !== "success") { show(d.message || "Not saved"); return null; }
+                show(""); state = d; draw(); return d;
+            });
+    }
+    function el(tag, attrs, kids) {
+        const n = document.createElement(tag);
+        Object.entries(attrs || {}).forEach(([k, v]) => { if (k === "text") n.textContent = v; else n.setAttribute(k, v); });
+        (kids || []).forEach((c) => n.appendChild(c));
+        return n;
+    }
+    function visLabel(t) {
+        const v = state.visibilities.find((x) => x.value === t.visibility);
+        return (v ? v.label : t.visibility) + (t.visibility === "group" && t.group_name ? ": " + t.group_name : "");
+    }
+    function row(t) {
+        const icon = el("i", {class: "bi " + t.icon + " fs-5"});
+        const body = el("div");
+        const meta = el("div", {class: "tp-meta", text: visLabel(t) + " · " + t.fields + " fields · " + t.steps + " steps · by " + (t.owner || "—") + " · updated " + t.updated_at});
+        if (t.can_edit) {
+            const name = el("input", {type: "text", class: "form-control form-control-sm fw-semibold mb-1", value: t.name, maxlength: 120, "aria-label": "Name"});
+            const desc = el("input", {type: "text", class: "form-control form-control-sm mb-1", value: t.description, maxlength: 300, placeholder: "Description", "aria-label": "Description"});
+            const vis = el("select", {class: "form-select form-select-sm d-inline-block w-auto me-1", "aria-label": "Who can use it"});
+            state.visibilities.forEach(function (v) {
+                if (v.value === "lab" && !state.can_share_lab && t.visibility !== "lab") return;
+                if (v.value === "group" && !state.groups.length && t.visibility !== "group") return;
+                const o = el("option", {value: v.value, text: v.label}); if (v.value === t.visibility) o.selected = true; vis.appendChild(o);
+            });
+            const grp = el("select", {class: "form-select form-select-sm d-inline-block w-auto", "aria-label": "Research group"});
+            state.groups.forEach(function (g) { const o = el("option", {value: String(g.id), text: g.name}); if (g.id === t.research_group) o.selected = true; grp.appendChild(o); });
+            const sync = () => grp.classList.toggle("d-none", vis.value !== "group");
+            sync();
+            const save = () => call({action: "update", id: t.id, name: name.value, description: desc.value,
+                visibility: vis.value, research_group: vis.value === "group" ? grp.value : null});
+            name.addEventListener("change", save); desc.addEventListener("change", save);
+            vis.addEventListener("change", function () { sync(); save(); }); grp.addEventListener("change", save);
+            [name, desc, el("div", {}, [vis, grp]), meta].forEach((n) => body.appendChild(n));
+        } else {
+            body.appendChild(el("div", {class: "fw-semibold", text: t.name}));
+            if (t.description) body.appendChild(el("div", {class: "small", text: t.description}));
+            body.appendChild(meta);
+        }
+        const actions = el("div", {class: "d-flex gap-1"});
+        actions.appendChild(el("a", {class: "btn btn-sm btn-primary", href: createUrl + "?template=" + t.key, text: "Use"}));
+        if (t.can_edit) {
+            const del = el("button", {type: "button", class: "btn btn-sm btn-outline-danger", title: "Remove template", text: "×"});
+            del.addEventListener("click", () => { if (confirm("Remove the template “" + t.name + "”? Entries already made from it are not affected.")) call({action: "delete", id: t.id}); });
+            actions.appendChild(del);
+        }
+        return el("div", {class: "tp-row"}, [icon, body, actions]);
+    }
+    function draw() {
+        const list = document.getElementById("tp-list"); list.replaceChildren();
+        if (!state.templates.length) list.appendChild(el("div", {class: "text-muted py-3", text: "No saved templates yet."}));
+        state.templates.forEach((t) => list.appendChild(row(t)));
+    }
+    fetch(api, {credentials: "same-origin"}).then((r) => r.json()).then((d) => { state = d; draw(); });
+})();
+</script>
+{% endblock %}
