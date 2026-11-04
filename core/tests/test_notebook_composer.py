@@ -156,6 +156,40 @@ class ComposerApiTests(ComposerTestBase):
         self.assertEqual(self.entry.rating, 4)
         self.assertEqual(sorted(t.name for t in self.entry.shared_tags.all()), ["BSL2", "host-range"])
 
+    def test_fields_json_round_trip_through_the_api(self):
+        """The JSON editor posts back what the page shows; nothing may change."""
+        payload = {
+            "extra_fields": {
+                "Medium": {"type": "select", "options": ["TSB", "LB"], "value": "LB", "required": True, "group_id": 1},
+                "Temperature": {"type": "number", "units": ["C", "K"], "unit": "C", "value": "37"},
+            },
+            "elabftw": {"extra_fields_groups": [{"id": 1, "name": "Culture"}]},
+        }
+        self.assertEqual(self.post("notebook_fields_api", {"metadata": payload}).status_code, 200)
+        shown = self.client.get(reverse("notebook_entry", args=[self.entry.pk]))
+        self.assertEqual(shown.status_code, 200)
+        self.entry.refresh_from_db()
+        again = {"extra_fields": self.entry.metadata["extra_fields"], "elabftw": self.entry.metadata["elabftw"]}
+        self.assertEqual(self.post("notebook_fields_api", {"metadata": again}).status_code, 200)
+        before = dict(self.entry.metadata)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.metadata, before)
+        self.assertEqual(self.entry.metadata["extra_fields"]["Medium"]["value"], "LB")
+
+    def test_fields_json_rejects_bad_documents_without_touching_the_entry(self):
+        self.post("notebook_fields_api", {"metadata": {"extra_fields": {"A": {"type": "text", "value": "keep"}}, "elabftw": {"extra_fields_groups": []}}})
+        for bad in (
+            {"extra_fields": {"B": {"type": "nonsense"}}},
+            {"extra_fields": {"B": {"type": "select", "options": []}}},
+            {"extra_fields": {"B": {"type": "text", "group_id": 9}}},
+            {"extra_fields": [1, 2]},
+        ):
+            response = self.post("notebook_fields_api", {"metadata": bad})
+            self.assertEqual(response.status_code, 400, bad)
+        self.entry.refresh_from_db()
+        self.assertEqual(list(self.entry.metadata["extra_fields"]), ["A"])
+        self.assertEqual(self.entry.metadata["extra_fields"]["A"]["value"], "keep")
+
     def test_steps_api_lifecycle(self):
         self.post("notebook_steps_api", {"action": "add", "body": "Dilute lysate"})
         self.post("notebook_steps_api", {"action": "add", "body": "Plate", "deadline": "2026-11-06T17:00"})

@@ -24,6 +24,7 @@
 .nb-star:disabled { cursor: default; }
 
 /* custom fields */
+.nb-json-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .8rem; white-space: pre; }
 .nb-field-editor, .nb-load-panel {
     border: 1px solid #b6d4fe; background: #f5f9ff; border-radius: .5rem;
     padding: .75rem; margin-bottom: .9rem;
