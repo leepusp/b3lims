@@ -14,6 +14,11 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [x] Editable entry templates (stored in the database: "Save as template" from any entry, shared with nobody, a research group or the lab; manage at /internal/lab-tools/notebook/templates/; built-in templates stay in code)
 - [x] Favourite tags panel and step groups (ELN tags and keywords now use the biobank-wide Tag and Keyword vocabulary; legacy NotebookTag and NotebookEntry.tags are kept for rollback and are to be dropped in a later release)
 - [ ] Field builder / JSON editor for extra fields
+- [ ] ELN as a hub of the LIMS: every entity an entry points to (sample, reagent,
+      construction / molecular record, Jupyter notebook, shipment, collection, storage
+      position) shows the entries that cite it, and each link opens both ways. Forward links
+      already exist (samples, reagents, molecular records, Jupyter, mentions); the reverse side
+      is mostly missing. Map first, then one panel "Used in experiments" per entity.
 - [ ] Browser check of all of the above on production
 
 ## Block B: Lab Calendar (new, runs on the existing `bench` Booking models)
