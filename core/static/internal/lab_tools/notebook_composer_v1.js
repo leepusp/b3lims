@@ -133,9 +133,23 @@
 
         const list = document.getElementById("nb-tag-list");
         if (list) {
-            list.innerHTML = state.tags.map((tag) =>
-                `<span class="nb-tag">#${esc(tag)}${canEdit ? `<button type="button" class="nb-tag-remove" data-tag="${esc(tag)}" aria-label="Remove tag ${esc(tag)}">×</button>` : ""}</span>`
-            ).join("") || (canEdit ? "" : '<span class="text-muted">No tags</span>');
+            const favs = (state.favorite_tags || []).map((t) => t.toLowerCase());
+            const tagHtml = state.tags.map((tag) => {
+                const fav = favs.includes(tag.toLowerCase());
+                return `<span class="nb-tag">#${esc(tag)}<button type="button" class="nb-tag-fav${fav ? " on" : ""}" data-tag="${esc(tag)}" data-fav="${fav ? 1 : 0}" title="${fav ? "Remove from favourites" : "Add to favourites"}" aria-label="Toggle favourite ${esc(tag)}"><i class="bi ${fav ? "bi-star-fill" : "bi-star"}"></i></button>${canEdit ? `<button type="button" class="nb-tag-remove" data-tag="${esc(tag)}" aria-label="Remove tag ${esc(tag)}">×</button>` : ""}</span>`;
+            }).join("");
+            const kwHtml = (state.keywords || []).map((kw) =>
+                `<span class="nb-tag nb-keyword" title="Keyword">${esc(kw)}${canEdit ? `<button type="button" class="nb-keyword-remove" data-keyword="${esc(kw)}" aria-label="Remove keyword ${esc(kw)}">×</button>` : ""}</span>`
+            ).join("");
+            list.innerHTML = tagHtml + kwHtml || (canEdit ? "" : '<span class="text-muted">No tags</span>');
+        }
+
+        const quick = document.getElementById("nb-fav-tags");
+        if (quick) {
+            const free = (state.favorite_tags || []).filter((t) => !state.tags.some((x) => x.toLowerCase() === t.toLowerCase()));
+            quick.innerHTML = canEdit && free.length
+                ? '<span class="nb-fav-label"><i class="bi bi-star-fill"></i> Favourites</span>' + free.map((t) => `<button type="button" class="nb-fav-chip" data-tag="${esc(t)}">#${esc(t)}</button>`).join("")
+                : "";
         }
 
         const rating = document.getElementById("nb-rating");
@@ -159,17 +173,40 @@
             tagInput.addEventListener("keydown", function (event) {
                 if (event.key !== "Enter" && event.key !== ",") return;
                 event.preventDefault();
-                const tag = tagInput.value.trim().replace(/^#/, "").toLowerCase();
-                if (!tag || state.tags.includes(tag)) { tagInput.value = ""; return; }
+                const raw = tagInput.value.trim().replace(/^#/, "");
+                if (!raw) { tagInput.value = ""; return; }
                 tagInput.value = "";
-                post(urls.headerUrl, {tags: state.tags.concat([tag])});
+                // "name: value" is a keyword, anything else is a tag.
+                // ("project:x" with no space stays a tag.)
+                if (/^[^:=]+(:\s+|\s*=\s*)\S/.test(raw)) {
+                    if (!(state.keywords || []).includes(raw)) post(urls.headerUrl, {keywords: (state.keywords || []).concat([raw])});
+                    return;
+                }
+                if (state.tags.some((t) => t.toLowerCase() === raw.toLowerCase())) return;
+                post(urls.headerUrl, {tags: state.tags.concat([raw])});
             });
         }
 
         document.getElementById("nb-tag-list")?.addEventListener("click", function (event) {
+            const fav = event.target.closest(".nb-tag-fav");
+            if (fav) {
+                post(urls.favoriteTagsUrl, {tag: fav.dataset.tag, favorite: fav.dataset.fav !== "1"});
+                return;
+            }
+            const kw = event.target.closest(".nb-keyword-remove");
+            if (kw) {
+                post(urls.headerUrl, {keywords: (state.keywords || []).filter((k) => k !== kw.dataset.keyword)});
+                return;
+            }
             const button = event.target.closest(".nb-tag-remove");
             if (!button) return;
             post(urls.headerUrl, {tags: state.tags.filter((t) => t !== button.dataset.tag)});
+        });
+
+        document.getElementById("nb-fav-tags")?.addEventListener("click", function (event) {
+            const chip = event.target.closest(".nb-fav-chip");
+            if (!chip || state.tags.some((t) => t.toLowerCase() === chip.dataset.tag.toLowerCase())) return;
+            post(urls.headerUrl, {tags: state.tags.concat([chip.dataset.tag])});
         });
 
         document.getElementById("nb-rating")?.addEventListener("click", function (event) {
@@ -495,9 +532,32 @@
         document.getElementById("nb-steps-bar").style.width = steps.length ? (100 * done / steps.length) + "%" : "0%";
 
         const now = new Date();
+        const groups = Array.from(new Set(steps.map((s) => s.group).filter(Boolean)));
+        const list = document.getElementById("nb-group-options");
+        if (list) list.innerHTML = groups.map((g) => `<option value="${esc(g)}"></option>`).join("");
+
+        let previous = null;
         document.getElementById("nb-steps").innerHTML = steps.map(function (step, index) {
             const overdue = step.deadline && !step.finished && new Date(step.deadline) < now;
-            return `<li class="nb-step${step.finished ? " done" : ""}" data-step="${step.id}">
+            let heading = "";
+            if (step.group !== previous) {
+                previous = step.group;
+                if (step.group) {
+                    const members = steps.filter((s) => s.group === step.group);
+                    const ready = members.filter((s) => s.finished).length;
+                    heading = `<li class="nb-step-group" data-group="${esc(step.group)}">
+                        <i class="bi bi-folder2-open"></i> <strong>${esc(step.group)}</strong>
+                        <span class="small text-muted">${ready} of ${members.length} done</span>
+                        ${canEdit ? `<span class="ms-auto">
+                            <button type="button" class="btn btn-sm btn-link text-secondary nb-group-all" title="${ready === members.length ? "Untick all" : "Tick all"}"><i class="bi bi-check2-all"></i></button>
+                            <button type="button" class="btn btn-sm btn-link text-secondary nb-group-rename" title="Rename group"><i class="bi bi-pencil"></i></button>
+                        </span>` : ""}
+                    </li>`;
+                } else if (index > 0) {
+                    heading = '<li class="nb-step-group nb-step-group-none"><span class="small text-muted">Other steps</span></li>';
+                }
+            }
+            return heading + `<li class="nb-step${step.group ? " grouped" : ""}${step.finished ? " done" : ""}" data-step="${step.id}">
                 <input class="form-check-input nb-step-check" type="checkbox" ${step.finished ? "checked" : ""} ${canEdit ? "" : "disabled"} aria-label="Done">
                 <span class="nb-step-n">${index + 1}.</span>
                 <span class="nb-step-body">${esc(step.body)}</span>
@@ -519,11 +579,24 @@
             event.preventDefault();
             const body = document.getElementById("nb-step-body");
             const deadline = document.getElementById("nb-step-deadline");
-            post(urls.stepsUrl, {action: "add", body: body.value, deadline: deadline.value})
+            const group = document.getElementById("nb-step-group");
+            post(urls.stepsUrl, {action: "add", body: body.value, deadline: deadline.value, group: group ? group.value : ""})
                 .then((ok) => { if (ok) { body.value = ""; deadline.value = ""; body.focus(); } });
         });
 
         document.getElementById("nb-steps").addEventListener("click", function (event) {
+            const head = event.target.closest(".nb-step-group");
+            if (head && head.dataset.group) {
+                const name = head.dataset.group;
+                if (event.target.closest(".nb-group-rename")) {
+                    const next = window.prompt("Group name (leave empty to remove the heading)", name);
+                    if (next !== null) post(urls.stepsUrl, {action: "rename_group", group: name, new_name: next.trim()});
+                } else if (event.target.closest(".nb-group-all")) {
+                    const members = state.steps.filter((s) => s.group === name);
+                    post(urls.stepsUrl, {action: "complete_group", group: name, finished: !members.every((s) => s.finished)});
+                }
+                return;
+            }
             const row = event.target.closest(".nb-step");
             if (!row) return;
             const id = Number(row.dataset.step);
@@ -534,7 +607,9 @@
             } else if (event.target.closest(".nb-step-edit")) {
                 const step = state.steps.find((s) => s.id === id);
                 const body = window.prompt("Step", step.body);
-                if (body !== null && body.trim()) post(urls.stepsUrl, {action: "update", step_id: id, body: body.trim()});
+                if (body === null || !body.trim()) return;
+                const group = window.prompt("Group (leave empty for none)", step.group || "");
+                post(urls.stepsUrl, {action: "update", step_id: id, body: body.trim(), group: group === null ? step.group : group.trim()});
             } else if (event.target.closest(".nb-step-up")) {
                 const order = state.steps.map((s) => s.id);
                 const i = order.indexOf(id);

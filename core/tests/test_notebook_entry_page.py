@@ -126,7 +126,7 @@ class EntryPageTests(TestCase):
         self.assertEqual(copy.author, self.other)
         self.assertEqual((copy.status, copy.visibility), ("draft", "private"))
         self.assertEqual(copy.metadata["extra_fields"]["Medium"]["value"], "TSB")
-        self.assertEqual([t.name for t in copy.tags.all()], ["bsl2"])
+        self.assertEqual([t.name for t in copy.shared_tags.all()], ["bsl2"])
         self.assertEqual([(s.body, s.finished) for s in copy.steps.all()], [("Plate", False)])
         self.assertEqual(copy.spreadsheets.get().data, [["=1+1"]])
         self.assertTrue(NotebookEntryLink.objects.filter(entry=copy, target=self.entry).exists())

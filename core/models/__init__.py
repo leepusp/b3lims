@@ -51,6 +51,7 @@ from core.models.lab_tools.notebook_collab import (
 )
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
+    NotebookFavoriteTag,
     NotebookPin,
     NotebookSpreadsheet,
     NotebookStep,

@@ -471,6 +471,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/<int:entry_id>/fields/', notebook_composer_views.notebook_fields_api, name='notebook_fields_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/header/', notebook_composer_views.notebook_header_api, name='notebook_header_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/steps/', notebook_composer_views.notebook_steps_api, name='notebook_steps_api'),
+    path('internal/lab-tools/notebook/api/<int:entry_id>/favorite-tags/', notebook_composer_views.notebook_favorite_tags_api, name='notebook_favorite_tags_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/entry-links/', notebook_composer_views.notebook_entry_links_api, name='notebook_entry_links_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/lookup/', notebook_composer_views.notebook_lookup_api, name='notebook_lookup_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/field-definitions/', notebook_composer_views.notebook_field_definitions_api, name='notebook_field_definitions_api'),

@@ -8,7 +8,8 @@ from django.urls import reverse
 
 from core.models.lab_tools.notebook import NotebookEntry
 from core.models.lab_tools.notebook_collab import NotebookComment
-from core.models.lab_tools.notebook_composer import NotebookStep, NotebookTag
+from core.models import Tag
+from core.models.lab_tools.notebook_composer import NotebookStep
 from core.services.notebook_search import SearchSyntaxError, build_query, has_structured_syntax
 
 
@@ -34,11 +35,11 @@ class SearchBase(TestCase):
         cls.bobs = make("Bob gel", author=cls.bob, status="completed", rating=5)
         cls.blank = make("Nothing here", status="reviewed")
 
-        pcr_tag, _ = NotebookTag.objects.get_or_create(name="pcr")
-        cloning, _ = NotebookTag.objects.get_or_create(name="cloning")
-        cls.pcr.tags.add(pcr_tag)
-        cls.gel.tags.add(cloning)
-        cls.gel.tags.add(pcr_tag)
+        pcr_tag, _ = Tag.objects.get_or_create(name="pcr")
+        cloning, _ = Tag.objects.get_or_create(name="cloning")
+        cls.pcr.shared_tags.add(pcr_tag)
+        cls.gel.shared_tags.add(cloning)
+        cls.gel.shared_tags.add(pcr_tag)
         NotebookStep.objects.create(entry=cls.pcr, body="Centrifuge 5 min")
         NotebookComment.objects.create(entry=cls.gel, author=cls.bob, body="looks clean")
 

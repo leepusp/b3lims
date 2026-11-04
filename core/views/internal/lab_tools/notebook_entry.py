@@ -460,9 +460,10 @@ def notebook_duplicate_api(request, entry_id):
             author=request.user,
             metadata=source.metadata or {},
         )
-        copy.tags.set(source.tags.all())
+        copy.shared_tags.set(source.shared_tags.all())
+        copy.keywords.set(source.keywords.all())
         NotebookStep.objects.bulk_create(
-            NotebookStep(entry=copy, body=step.body, position=step.position, deadline=step.deadline)
+            NotebookStep(entry=copy, body=step.body, group=step.group, position=step.position, deadline=step.deadline)
             for step in source.steps.all()
         )
         NotebookSpreadsheet.objects.bulk_create(

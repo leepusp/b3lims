@@ -183,9 +183,23 @@ class NotebookEntry(models.Model):
     custom_id = models.CharField(max_length=64, blank=True, default="", db_default="")
     rating = models.PositiveSmallIntegerField(default=0, db_default=0)
     metadata = models.JSONField(default=dict, blank=True, db_default={})
+    # Legacy notebook-only tags. The editor now uses ``shared_tags``; this
+    # list stays until the release that follows this one so a rollback
+    # still finds its data.
     tags = models.ManyToManyField(
         "core.NotebookTag",
         related_name="entries",
+        blank=True,
+    )
+    # The biobank-wide vocabulary, shared with samples and collections.
+    shared_tags = models.ManyToManyField(
+        "core.Tag",
+        related_name="notebook_entries",
+        blank=True,
+    )
+    keywords = models.ManyToManyField(
+        "core.KeywordValue",
+        related_name="notebook_entries",
         blank=True,
     )
 

@@ -3,7 +3,9 @@
 Mirrors the parts of an eLabFTW entry that a researcher assembles
 around the main text:
 
-- tags and a custom ID (NotebookTag, NotebookEntry.custom_id);
+- tags and keywords from the biobank-wide vocabulary (core.Tag,
+  core.KeywordValue; NotebookTag is the legacy list kept for rollback)
+  and a custom ID (NotebookEntry.custom_id);
 - custom fields, stored in NotebookEntry.metadata using eLabFTW's own
   JSON layout ({"extra_fields": {...}, "elabftw": {"extra_fields_groups": [...]}}),
   so an .eln export can carry them unchanged;
@@ -26,6 +28,34 @@ class NotebookTag(models.Model):
         return self.name
 
 
+class NotebookFavoriteTag(models.Model):
+    """A tag a user keeps one click away in the entry editor."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notebook_favorite_tags",
+    )
+    # The biobank-wide vocabulary (core.Tag), shared with samples,
+    # collections and biobanks, not a notebook-only list.
+    tag = models.ForeignKey(
+        "core.Tag",
+        on_delete=models.CASCADE,
+        related_name="notebook_favorites",
+    )
+    position = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["position", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "tag"], name="core_nb_favtag_unique"),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} favourite {self.tag_id}"
+
+
 class NotebookStep(models.Model):
     entry = models.ForeignKey(
         "core.NotebookEntry",
@@ -33,6 +63,9 @@ class NotebookStep(models.Model):
         related_name="steps",
     )
     body = models.CharField(max_length=500)
+    # Optional heading the step is listed under ("Preparation", "Imaging").
+    # db_default keeps inserts from an older release valid during cutover.
+    group = models.CharField(max_length=80, blank=True, default="", db_default="")
     position = models.PositiveIntegerField(default=0)
     finished = models.BooleanField(default=False)
     finished_at = models.DateTimeField(null=True, blank=True)

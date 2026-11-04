@@ -19,7 +19,9 @@ def composer_state(entry, user):
         "entry_id": entry.pk,
         "custom_id": entry.custom_id,
         "rating": entry.rating,
-        "tags": [tag.name for tag in entry.tags.all()],
+        "tags": [tag.name for tag in entry.shared_tags.all()],
+        "keywords": composer.keyword_labels(entry),
+        "favorite_tags": composer.favorite_tag_names(user),
         "fields": composer.describe_fields(entry, user),
         "missing_required": composer.missing_required_fields(entry.metadata),
         "steps": composer.serialize_steps(entry),
@@ -72,7 +74,21 @@ def notebook_header_api(request, entry_id):
             custom_id=data.get("custom_id"),
             rating=data.get("rating"),
             tags=data.get("tags"),
+            keywords=data.get("keywords"),
         )
+    except ValidationError as exc:
+        return _error(exc)
+    return _ok(entry, request.user)
+
+
+@login_required
+@require_POST
+def notebook_favorite_tags_api(request, entry_id):
+    """Star or unstar a tag for the current user; the entry is only read."""
+    entry = _get_entry_for_user(entry_id, request.user)
+    try:
+        data = _payload(request)
+        composer.set_favorite_tag(request.user, data.get("tag"), bool(data.get("favorite", True)))
     except ValidationError as exc:
         return _error(exc)
     return _ok(entry, request.user)
@@ -87,7 +103,11 @@ def notebook_steps_api(request, entry_id):
         action = data.get("action")
 
         if action == "add":
-            composer.add_step(entry, data.get("body"), data.get("deadline"))
+            composer.add_step(entry, data.get("body"), data.get("deadline"), data.get("group") or "")
+        elif action == "rename_group":
+            composer.rename_step_group(entry, data.get("group"), data.get("new_name"))
+        elif action == "complete_group":
+            composer.complete_step_group(entry, request.user, data.get("group"), data.get("finished", True))
         elif action == "reorder":
             composer.reorder_steps(entry, data.get("order") or [])
         elif action in {"update", "delete"}:
@@ -102,6 +122,7 @@ def notebook_steps_api(request, entry_id):
                     finished=data.get("finished"),
                     deadline=data.get("deadline"),
                     clear_deadline=bool(data.get("clear_deadline")),
+                    group=data.get("group"),
                 )
         else:
             raise ValidationError("Unknown step action.")

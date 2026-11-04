@@ -84,7 +84,12 @@ def _clean_icon(value):
 
 def _structure_of(entry):
     structure = field_definitions_from(entry)
-    structure["steps"] = [s.body for s in entry.steps.all()[:MAX_STEPS]]
+    # Plain strings keep older releases able to read the template; a step
+    # only becomes an object when it carries a group heading.
+    structure["steps"] = [
+        {"body": s.body, "group": s.group} if s.group else s.body
+        for s in entry.steps.all()[:MAX_STEPS]
+    ]
     return structure
 
 
@@ -183,6 +188,16 @@ def create_entry_from_template(*, user, template):
             "elabftw": structure.get("elabftw") or {},
         }
         entry.save(update_fields=["metadata"])
-    steps = [str(s)[:500] for s in (structure.get("steps") or [])[:MAX_STEPS] if str(s).strip()]
-    NotebookStep.objects.bulk_create(NotebookStep(entry=entry, body=body, position=i) for i, body in enumerate(steps))
+    steps = []
+    for raw in (structure.get("steps") or [])[:MAX_STEPS]:
+        if isinstance(raw, dict):
+            body, group = str(raw.get("body", ""))[:500], str(raw.get("group", ""))[:80]
+        else:
+            body, group = str(raw)[:500], ""
+        if body.strip():
+            steps.append((body, group.strip()))
+    NotebookStep.objects.bulk_create(
+        NotebookStep(entry=entry, body=body, group=group, position=i)
+        for i, (body, group) in enumerate(steps)
+    )
     return entry

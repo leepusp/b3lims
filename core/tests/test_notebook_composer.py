@@ -154,7 +154,7 @@ class ComposerApiTests(ComposerTestBase):
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.custom_id, "EXP-2026-031")
         self.assertEqual(self.entry.rating, 4)
-        self.assertEqual(sorted(t.name for t in self.entry.tags.all()), ["bsl2", "host-range"])
+        self.assertEqual(sorted(t.name for t in self.entry.shared_tags.all()), ["BSL2", "host-range"])
 
     def test_steps_api_lifecycle(self):
         self.post("notebook_steps_api", {"action": "add", "body": "Dilute lysate"})
@@ -305,7 +305,7 @@ class NotebookDashboardTests(TestCase):
         self.assertEqual(self.lab.status, "draft")
 
         self.batch("add_tag", [self.mine.pk], "#Phage")
-        self.assertIn("phage", [t.name for t in self.mine.tags.all()])
+        self.assertIn("Phage", [t.name for t in self.mine.shared_tags.all()])
 
         self.batch("archive", [self.mine.pk])
         self.mine.refresh_from_db()

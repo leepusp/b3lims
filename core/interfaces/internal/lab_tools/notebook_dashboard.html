@@ -208,7 +208,7 @@
                                 <td>
                                     {% if filters.state == "trash" %}<span class="ttl">{{ entry.title }}</span>{% else %}<a class="ttl" href="{% url 'notebook_entry' entry.id %}">{{ entry.title }}</a>{% endif %}
                                     <div>
-                                        {% for tag in entry.tags.all %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}
+                                        {% for tag in entry.shared_tags.all %}<a class="eln-tag" href="?tag={{ tag.name|urlencode }}">#{{ tag.name }}</a>{% endfor %}
                                         {% if entry.project %}<span class="small text-muted">{{ entry.project }}</span>{% endif %}
                                     </div>
                                 </td>

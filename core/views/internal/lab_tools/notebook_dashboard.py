@@ -13,7 +13,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.models.lab_tools.notebook import NotebookEntry
-from core.models.lab_tools.notebook_composer import NotebookPin, NotebookStep, NotebookTag
+from core.models import Tag
+from core.models.lab_tools.notebook_composer import NotebookPin, NotebookStep
+from core.services.metadata_vocabularies import get_or_create_active_tag
 from core.models.lab_tools.notebook_collab import NotebookEditLock
 from core.permissions.notebook import (
     can_delete_notebook_entry,
@@ -95,12 +97,12 @@ def _filtered_entries(request):
         filters["owner"] = ""
 
     if filters["tag"]:
-        qs = qs.filter(tags__name=filters["tag"])
+        qs = qs.filter(shared_tags__name__iexact=filters["tag"])
 
     qs = (
         qs.distinct()
         .select_related("author")
-        .prefetch_related("tags")
+        .prefetch_related("shared_tags")
         .annotate(
             step_total=Count("steps", distinct=True),
             step_done=Count("steps", filter=Q(steps__finished=True), distinct=True),
@@ -137,8 +139,8 @@ def notebook_dashboard(request):
     )
 
     tag_cloud = (
-        NotebookTag.objects.filter(entries__in=visible)
-        .annotate(n=Count("entries", distinct=True))
+        Tag.objects.filter(notebook_entries__in=visible)
+        .annotate(n=Count("notebook_entries", distinct=True))
         .order_by("-n", "name")[:24]
     )
 
@@ -291,12 +293,12 @@ def notebook_dashboard_batch_api(request):
                     entry.status = "archived"
                     entry.save(update_fields=["status", "updated_at"])
             elif action == "add_tag":
-                name = str(value or "").strip().lstrip("#").lower()
+                name = str(value or "").strip().lstrip("#")
                 if not TAG_RE.match(name):
                     raise ValidationError("Tags use letters, numbers and . + # / : - only.")
-                tag, _ = NotebookTag.objects.get_or_create(name=name)
+                tag, _ = get_or_create_active_tag(name)
                 for entry in editable:
-                    entry.tags.add(tag)
+                    entry.shared_tags.add(tag)
             else:
                 raise ValidationError("Unknown action.")
     except ValidationError as exc:

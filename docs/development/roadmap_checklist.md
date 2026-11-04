@@ -12,7 +12,7 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [~] Ownership transfer (to a person who already has access; former author keeps edit; history stays)
 - [x] Categories and statuses per research group, with colours (migration 0098; entry picks the group, coordinator and superusers edit the lists at /internal/lab-tools/notebook/lists/)
 - [x] Editable entry templates (stored in the database: "Save as template" from any entry, shared with nobody, a research group or the lab; manage at /internal/lab-tools/notebook/templates/; built-in templates stay in code)
-- [ ] Favourite tags panel and step groups
+- [x] Favourite tags panel and step groups (ELN tags and keywords now use the biobank-wide Tag and Keyword vocabulary; legacy NotebookTag and NotebookEntry.tags are kept for rollback and are to be dropped in a later release)
 - [ ] Field builder / JSON editor for extra fields
 - [ ] Browser check of all of the above on production
 

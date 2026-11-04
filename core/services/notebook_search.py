@@ -35,6 +35,8 @@ FIELDS = {
     "custom_id": "text",
     "project": "text",
     "tag": "tag",
+    "keyword": "keyword",
+    "keywords": "keyword",
     "status": "choice",
     "type": "choice",
     "category": "choice",
@@ -56,6 +58,7 @@ HELP_ROWS = [
     ("title:gel", "Title contains “gel”"),
     ("body:agarose", "Text of the entry contains “agarose”"),
     ("tag:pcr", "Has the tag #pcr"),
+    ("keyword:organism:coli", "Has the keyword “organism” with a value containing “coli”"),
     ("status:completed", "Status, by name or code (see the lists in Statuses and categories)"),
     ("type:protocol", "Entry type"),
     ("author:ana", "Written by a user whose name, username or e-mail contains “ana”"),
@@ -134,7 +137,8 @@ def free_text_q(text):
         | Q(custom_id__icontains=text)
         | Q(project__icontains=text)
         | Q(content__icontains=text)
-        | Q(tags__name__icontains=text.lstrip("#"))
+        | Q(shared_tags__name__icontains=text.lstrip("#"))
+        | Q(keywords__value__icontains=text)
     )
     if text.lstrip("#").isdigit():
         condition |= Q(pk=int(text.lstrip("#")))
@@ -185,8 +189,15 @@ def _term_q(field, op, value):
         return _compare("pk", op, int(number))
 
     if kind == "tag":
-        name = value.lstrip("#").lower()
-        return Q(tags__name=name) if op == "=" else Q(tags__name__icontains=name)
+        name = value.lstrip("#")
+        return Q(shared_tags__name__iexact=name) if op == "=" else Q(shared_tags__name__icontains=name)
+
+    if kind == "keyword":
+        # keyword:organism  ·  keyword:organism:coli  ·  keyword:coli
+        name, sep, wanted = value.partition(":")
+        if not sep:
+            return Q(keywords__keyword__name__icontains=value) | Q(keywords__value__icontains=value)
+        return Q(keywords__keyword__name__icontains=name.strip(), keywords__value__icontains=wanted.strip())
 
     if kind == "choice":
         from core.models.lab_tools.notebook import NotebookEntry
@@ -264,7 +275,7 @@ def _term_q(field, op, value):
         if what in ("step", "steps"):
             return Q(steps__isnull=False)
         if what in ("tag", "tags"):
-            return Q(tags__isnull=False)
+            return Q(shared_tags__isnull=False)
         raise SearchSyntaxError("has: accepts files, comments, steps or tags.")
 
     if kind == "extrafield":

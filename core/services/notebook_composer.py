@@ -24,8 +24,13 @@ from django.core.validators import URLValidator, validate_email
 from django.db import transaction
 from django.utils import timezone
 
+from core.services.metadata_vocabularies import (
+    get_or_create_active_keyword_value,
+    get_or_create_active_tag,
+)
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
+    NotebookFavoriteTag,
     NotebookStep,
     NotebookTag,
 )
@@ -58,6 +63,9 @@ MAX_OPTIONS = 100
 MAX_TEXT = 5000
 MAX_STEPS = 200
 MAX_TAGS = 30
+MAX_KEYWORDS = 30
+MAX_FAVORITE_TAGS = 20
+MAX_GROUP_LENGTH = 80
 MAX_LINKS = 100
 
 TAG_RE = re.compile(r"^[\w .+#/:-]{1,64}$")
@@ -398,7 +406,7 @@ def describe_fields(entry, user):
 # --- tags, custom id, rating -------------------------------------------------
 
 
-def update_header(entry, *, custom_id=None, rating=None, tags=None):
+def update_header(entry, *, custom_id=None, rating=None, tags=None, keywords=None):
     if custom_id is not None:
         custom_id = _text(custom_id, 64, "Custom ID")
         if not CUSTOM_ID_RE.match(custom_id):
@@ -422,13 +430,58 @@ def update_header(entry, *, custom_id=None, rating=None, tags=None):
             for name in names:
                 if not TAG_RE.match(name):
                     raise ValidationError(f"Tag '{name}': use letters, numbers and . + # / : - only.")
-            tag_objects = [
-                NotebookTag.objects.get_or_create(name=name.lower())[0]
-                for name in names
-            ]
-            entry.tags.set(tag_objects)
+            # An existing tag keeps its spelling; a new one joins the
+            # biobank vocabulary; an inactive one cannot be assigned.
+            entry.shared_tags.set([get_or_create_active_tag(name)[0] for name in names])
+
+        if keywords is not None:
+            entry.keywords.set([_keyword_value(raw) for raw in _string_list(keywords, "Keywords", MAX_KEYWORDS)])
 
     return entry
+
+
+def parse_keyword(raw):
+    """Split "Organism: E. coli" (or "Organism=E. coli") into (keyword, value)."""
+    match = re.match(r"^\s*([^:=]{1,120}?)\s*[:=]\s*(.{1,255}?)\s*$", str(raw))
+    if not match:
+        raise ValidationError(f"Keyword '{raw}': write it as name: value.")
+    return match.group(1), match.group(2)
+
+
+def _keyword_value(raw):
+    name, value = parse_keyword(raw)
+    return get_or_create_active_keyword_value(name, value)[0]
+
+
+def keyword_labels(entry):
+    return [f"{kv.keyword.name}: {kv.value}" for kv in entry.keywords.select_related("keyword")]
+
+
+# --- favourite tags -------------------------------------------------------------
+
+
+def favorite_tag_names(user):
+    return list(
+        NotebookFavoriteTag.objects.filter(user=user).values_list("tag__name", flat=True)
+    )
+
+
+def set_favorite_tag(user, name, favorite=True):
+    name = _text(name, 64, "Tag").lstrip("#")
+    if not TAG_RE.match(name):
+        raise ValidationError(f"Tag '{name}': use letters, numbers and . + # / : - only.")
+    if not favorite:
+        NotebookFavoriteTag.objects.filter(user=user, tag__name__iexact=name).delete()
+        return
+    if NotebookFavoriteTag.objects.filter(user=user, tag__name__iexact=name).exists():
+        return
+    if NotebookFavoriteTag.objects.filter(user=user).count() >= MAX_FAVORITE_TAGS:
+        raise ValidationError(f"At most {MAX_FAVORITE_TAGS} favourite tags.")
+    tag, _ = get_or_create_active_tag(name)
+    last = NotebookFavoriteTag.objects.filter(user=user).order_by("-position").first()
+    NotebookFavoriteTag.objects.create(
+        user=user, tag=tag, position=(last.position + 1) if last else 0
+    )
 
 
 # --- steps --------------------------------------------------------------------
@@ -446,8 +499,13 @@ def _parse_deadline(value):
     return parsed
 
 
-def add_step(entry, body, deadline=None):
+def _clean_group(value):
+    return _text(value, MAX_GROUP_LENGTH, "Group") if value else ""
+
+
+def add_step(entry, body, deadline=None, group=""):
     body = _text(body, 500, "Step")
+    group = _clean_group(group)
     if not body:
         raise ValidationError("A step needs a description.")
     if entry.steps.count() >= MAX_STEPS:
@@ -456,12 +514,15 @@ def add_step(entry, body, deadline=None):
     return NotebookStep.objects.create(
         entry=entry,
         body=body,
+        group=group,
         position=(last.position + 1) if last else 0,
         deadline=_parse_deadline(deadline),
     )
 
 
-def update_step(step, user, *, body=None, finished=None, deadline=None, clear_deadline=False):
+def update_step(step, user, *, body=None, finished=None, deadline=None, clear_deadline=False, group=None):
+    if group is not None:
+        step.group = _clean_group(group)
     if body is not None:
         body = _text(body, 500, "Step")
         if not body:
@@ -499,6 +560,28 @@ def reorder_steps(entry, ordered_ids):
                 steps[pk].save(update_fields=["position"])
 
 
+def rename_step_group(entry, old, new):
+    """Rename (or, with an empty ``new``, dissolve) a heading of the entry's steps."""
+    old = (old or "").strip()
+    new = _clean_group(new)
+    updated = entry.steps.filter(group=old).update(group=new)
+    if not updated:
+        raise ValidationError("That group has no steps.")
+    return updated
+
+
+def complete_step_group(entry, user, group, finished=True):
+    """Tick (or untick) every step under one heading."""
+    group = (group or "").strip()
+    steps = list(entry.steps.filter(group=group))
+    if not steps:
+        raise ValidationError("That group has no steps.")
+    with transaction.atomic():
+        for step in steps:
+            if step.finished != bool(finished):
+                update_step(step, user, finished=finished)
+
+
 # --- entry links --------------------------------------------------------------
 
 
@@ -527,6 +610,7 @@ def serialize_steps(entry):
         {
             "id": step.pk,
             "body": step.body,
+            "group": step.group,
             "finished": step.finished,
             "finished_at": timezone.localtime(step.finished_at).strftime("%Y-%m-%d %H:%M") if step.finished_at else None,
             "finished_by": step.finished_by.get_username() if step.finished_by else None,

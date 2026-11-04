@@ -5,6 +5,7 @@
      data-fields-url="{% url 'notebook_fields_api' active_entry.id %}"
      data-header-url="{% url 'notebook_header_api' active_entry.id %}"
      data-steps-url="{% url 'notebook_steps_api' active_entry.id %}"
+     data-favorite-tags-url="{% url 'notebook_favorite_tags_api' active_entry.id %}"
      data-links-url="{% url 'notebook_entry_links_api' active_entry.id %}"
      data-lookup-url="{% url 'notebook_lookup_api' active_entry.id %}"
      data-definitions-url="{% url 'notebook_field_definitions_api' 0 %}">
@@ -68,6 +69,9 @@
                                maxlength="500" placeholder="Describe the next step" required>
                         <input type="datetime-local" class="form-control form-control-sm nb-step-deadline"
                                id="nb-step-deadline" title="Deadline (optional)">
+                        <input type="text" class="form-control form-control-sm nb-step-group-input" id="nb-step-group"
+                               maxlength="80" placeholder="Group" list="nb-group-options">
+                        <datalist id="nb-group-options"></datalist>
                         <button type="submit" class="btn btn-sm btn-primary text-nowrap">
                             <i class="bi bi-plus-lg"></i> Add step
                         </button>
