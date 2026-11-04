@@ -1,5 +1,6 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
+{% load eln_backlinks %}
 
 {% block content %}
 {% csrf_token %}
@@ -652,6 +653,8 @@
             </form>
         </aside>
     </section>
+
+    {% eln_backlinks "molecule" molecule %}
 
     <section class="mw-card mw-sequence-card" data-mw-view-panel="sequence">
         <div class="mw-card-header mw-toolbar-header">

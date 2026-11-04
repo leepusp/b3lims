@@ -290,6 +290,10 @@ class FailedImportBatchTests(TestCase):
                     "Sensitive internal diagnostic"
                 ),
             ),
+            self.assertLogs(
+                "core.views.internal.samples.views",
+                level="ERROR",
+            ),
         ):
             response = self.client.post(
                 reverse("samples_import"),

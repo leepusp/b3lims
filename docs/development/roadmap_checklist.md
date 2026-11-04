@@ -14,11 +14,11 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
 - [x] Editable entry templates (stored in the database: "Save as template" from any entry, shared with nobody, a research group or the lab; manage at /internal/lab-tools/notebook/templates/; built-in templates stay in code)
 - [x] Favourite tags panel and step groups (ELN tags and keywords now use the biobank-wide Tag and Keyword vocabulary; legacy NotebookTag and NotebookEntry.tags are kept for rollback and are to be dropped in a later release)
 - [x] Field builder / JSON editor for extra fields (the builder was already there; the JSON button edits, formats, copies and downloads the eLabFTW layout, with server errors shown inline)
-- [ ] ELN as a hub of the LIMS: every entity an entry points to (sample, reagent,
-      construction / molecular record, Jupyter notebook, shipment, collection, storage
-      position) shows the entries that cite it, and each link opens both ways. Forward links
-      already exist (samples, reagents, molecular records, Jupyter, mentions); the reverse side
-      is mostly missing. Map first, then one panel "Used in experiments" per entity.
+- [x] ELN as a hub of the LIMS, part 1: sample, reagent, molecular record and Jupyter
+      notebook pages show a panel "Used in experiments" (links, @-mentions, creation entry),
+      listing only entries the viewer may see (`core/services/notebook_backlinks.py`).
+- [ ] ELN as a hub, part 2: shipments, collections, storage positions, constructions (with
+      Block D), and the same panel for extra-field references (items, compounds).
 - [ ] Browser check of all of the above on production
 
 ## Block B: Lab Calendar (new, runs on the existing `bench` Booking models)

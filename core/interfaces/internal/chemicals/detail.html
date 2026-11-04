@@ -1,4 +1,5 @@
 {% extends "internal/common/base.html" %}
+{% load eln_backlinks %}
 
 {% block title %}{{ chemical.name }} · Chemicals · B3 LIMS{% endblock %}
 {% block page_title %}Chemicals{% endblock %}
@@ -283,4 +284,5 @@
         </div>
     </div>
 </div>
+<div class="mt-4">{% eln_backlinks "chemical" chemical %}</div>
 {% endblock %}

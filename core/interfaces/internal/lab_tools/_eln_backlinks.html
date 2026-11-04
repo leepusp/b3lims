@@ -1,0 +1,19 @@
+<section class="card shadow-sm mb-4" id="eln-backlinks" aria-label="Used in experiments">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Used in experiments</h2>
+    {% if items %}
+      <ul class="list-unstyled mb-0">
+        {% for item in items %}
+          <li class="d-flex flex-wrap gap-2 align-items-baseline py-1 border-bottom">
+            <a href="{% url 'notebook_entry' item.entry.pk %}" class="fw-semibold">{{ item.entry.title|default:"Untitled entry" }}</a>
+            <span class="badge text-bg-light">{{ item.via }}</span>
+            <span class="text-muted small">{{ item.entry.author.get_full_name|default:item.entry.author.username }}{% if item.when %} · {{ item.when|date:"Y-m-d" }}{% endif %}</span>
+            {% if item.notes %}<span class="text-muted small">— {{ item.notes|truncatechars:80 }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted mb-0">No visible notebook entries cite this record yet.</p>
+    {% endif %}
+  </div>
+</section>

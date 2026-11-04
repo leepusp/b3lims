@@ -1,5 +1,6 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
+{% load eln_backlinks %}
 
 {% block extra_css %}
 {% include "common/map_assets_css.html" %}
@@ -2144,4 +2145,6 @@
 {% block extra_js %}
 {% include "common/map_assets_js.html" %}
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260923-map-resilience2"></script>
+<div class="mt-4">{% eln_backlinks "sample" sample %}</div>
+
 {% endblock %}

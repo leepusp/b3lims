@@ -1,4 +1,5 @@
 {% extends "internal/common/base.html" %}
+{% load eln_backlinks %}
 
 {% block title %}Jupyter · {{ jupyter_notebook.title }}{% endblock %}
 
@@ -250,6 +251,7 @@
                 </div>
             </div>
         {% endif %}
+        <div class="mt-4">{% eln_backlinks "jupyter" jupyter_notebook %}</div>
     </main>
 </div>
 {% endblock %}
