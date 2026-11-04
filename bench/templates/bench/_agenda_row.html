@@ -1,0 +1,5 @@
+<a class="d-flex align-items-start gap-2 text-decoration-none text-body py-1" href="{{ i.url }}">
+    <span class="rounded-circle flex-none mt-1" style="width:9px;height:9px;background:{{ i.color }};flex:none"></span>
+    <span class="small flex-grow-1 text-truncate" title="{{ i.title }}">{{ i.title }}</span>
+    <span class="small text-muted text-nowrap {% if i.overdue %}text-danger{% endif %}">{% if later %}{{ i.when|date:"D H:i" }}{% else %}{{ i.when|date:"H:i" }}{% if i.until %}–{{ i.until|date:"H:i" }}{% endif %}{% endif %}</span>
+</a>

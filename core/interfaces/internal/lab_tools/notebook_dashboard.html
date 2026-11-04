@@ -1,5 +1,6 @@
 {% extends 'internal/common/base.html' %}
 {% load static %}
+{% load extension_panels %}
 
 {% block title %}ELN — Entries{% endblock %}
 
@@ -262,6 +263,7 @@
         </section>
 
         <aside class="d-flex flex-column gap-3">
+            {% extension_panels "notebook_dashboard.sidebar" %}
             <section class="eln-card" id="eln-todo" data-url="{% url 'notebook_todos_api' %}">
                 <div class="hd"><i class="bi bi-check2-square"></i> My tasks <span class="ms-auto small fw-normal"><a href="#" id="eln-todo-clear" class="text-muted">Clear done</a></span></div>
                 <div class="bd">

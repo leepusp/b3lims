@@ -1,0 +1,13 @@
+<section class="eln-card" id="eln-agenda">
+    <div class="hd"><i class="bi bi-calendar-week"></i> Today and this week <a class="ms-auto small fw-normal" href="{% url 'lab_calendar' %}">Open calendar</a></div>
+    <div class="bd">
+        {% if agenda.total %}
+            {% if agenda.today %}<div class="small text-uppercase text-muted fw-bold mb-1">Today</div>
+            {% for i in agenda.today %}{% include "bench/_agenda_row.html" %}{% endfor %}{% endif %}
+            {% if agenda.later %}<div class="small text-uppercase text-muted fw-bold mt-2 mb-1">Later this week</div>
+            {% for i in agenda.later %}{% include "bench/_agenda_row.html" with later=True %}{% endfor %}{% endif %}
+        {% else %}
+            <div class="small text-muted">Nothing booked or due this week.</div>
+        {% endif %}
+    </div>
+</section>
