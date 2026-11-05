@@ -35,6 +35,7 @@ from core.models.chemicals.chemical import Chemical
 from core.services.molecular_registry_overview import (
     attach_registry_context,
     duplicate_groups,
+    inspector_context,
     type_counts,
 )
 from core.permissions.samples import can_edit_sample, can_view_sample, visible_samples_for_user
@@ -1317,11 +1318,22 @@ def molecular_sequence_detail(request, sequence_id):
         molecular_back_label = "ELN Notebook"
         molecular_origin = "eln"
 
+    inspector_universe = list(
+        _visible_molecular_sequences_for_user(request.user)
+        .select_related(None)
+        .only(
+            "id", "name", "sequence_type", "topology", "checksum_sha256"
+        )
+    )
+
     return render(
         request,
         "internal/lab_tools/molecular_sequence_detail.html",
         {
             "molecule": molecule,
+            "inspector_context": inspector_context(
+                request.user, molecule, inspector_universe
+            ),
             "sequence_types": MolecularSequence.SEQUENCE_TYPE_CHOICES,
             "topologies": MolecularSequence.TOPOLOGY_CHOICES,
             "feature_types": MolecularFeature.FEATURE_TYPES,

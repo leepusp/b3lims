@@ -97,3 +97,71 @@ class MolecularRegistryHubTests(TestCase):
 
         self.assertEqual(response.context["registry_total"], 4)
         self.assertNotContains(response, "Foreign copy of A")
+
+
+@override_settings(FORCE_SCRIPT_NAME=None)
+class MolecularInspectorContextTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.owner = user_model.objects.create_user(
+            username="insp-owner", password="test-password"
+        )
+        self.a = MolecularSequence.objects.create(
+            name="Insp A",
+            sequence_type="plasmid",
+            topology="circular",
+            sequence="ATGCATGC",
+            owner=self.owner,
+        )
+        self.b = MolecularSequence.objects.create(
+            name="Insp B",
+            sequence_type="plasmid",
+            topology="circular",
+            sequence="ATGCATGC",
+            owner=self.owner,
+        )
+
+    def test_detail_page_has_inspector_and_context(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("molecular_sequence_detail", args=[self.a.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="mw-inspector"')
+        self.assertContains(response, "molecular_inspector_calc.js")
+        self.assertContains(response, 'id="mw-inspector-context"')
+
+        context = response.context["inspector_context"]
+
+        self.assertEqual(
+            context["duplicates"],
+            [
+                {
+                    "id": self.b.id,
+                    "name": "Insp B",
+                    "url": reverse(
+                        "molecular_sequence_detail", args=[self.b.id]
+                    ),
+                }
+            ],
+        )
+        self.assertIsNone(context["sample"])
+
+    def test_inspector_context_never_names_records_the_user_cannot_see(self):
+        stranger = get_user_model().objects.create_user(
+            username="insp-stranger", password="test-password"
+        )
+        MolecularSequence.objects.create(
+            name="Hidden twin",
+            sequence_type="plasmid",
+            topology="circular",
+            sequence="ATGCATGC",
+            owner=stranger,
+        )
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("molecular_sequence_detail", args=[self.a.id])
+        )
+
+        self.assertNotContains(response, "Hidden twin")

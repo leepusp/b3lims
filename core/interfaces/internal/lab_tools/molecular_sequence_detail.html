@@ -7,6 +7,7 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261105-inspector-v1">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -187,6 +188,8 @@
         </div>
     </nav>
 
+    <div class="mw-body">
+    <div class="mw-main">
     <section class="mw-card mw-metadata-card" data-mw-shared-panel>
         <div class="mw-card-header">
             <div>
@@ -732,9 +735,14 @@
              class="mw-sequence-preview"
              aria-label="Coordinate sequence view"></div>
     </section>
+    </div>
+
+    <aside id="mw-inspector" class="mw-inspector" aria-label="Inspector"></aside>
+    </div>
 </div>
 
 {{ molecule.sequence|json_script:"mw-sequence-data" }}
+{{ inspector_context|json_script:"mw-inspector-context" }}
 
 {% if molecule.sequence_type != "protein" %}
 <script src="{% static 'internal/lab_tools/vendor/seqviz-3.10.22.min.js' %}?v=3.10.22"
@@ -760,6 +768,10 @@
 <script src="{% static 'internal/lab_tools/molecular_linear_browser.js' %}?v=20260810-final-ux-v2"
         defer></script>
 {% endif %}
+<script src="{% static 'internal/lab_tools/molecular_inspector_calc.js' %}?v=20261105-inspector-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_inspector.js' %}?v=20261105-inspector-v1"
+        defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
 {% if molecule.sequence_type == "rna" %}

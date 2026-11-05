@@ -138,3 +138,41 @@ def attach_registry_context(user, molecules, universe=None):
         molecule.duplicates = duplicates.get(molecule.id, [])
 
     return molecules
+
+
+def inspector_context(user, molecule, universe):
+    """JSON-safe context for the detail page inspector.
+
+    ``universe`` is every record the user can see (for duplicate lookup).
+    """
+    from django.urls import reverse
+
+    attach_registry_context(user, [molecule], universe)
+    context = molecule.registry_context
+    sample = molecule.linked_sample if context.get("sample_visible") else None
+    place_id = context.get("place_location_id")
+
+    return {
+        "sample": (
+            {
+                "id": sample.sample_id,
+                "url": reverse("sample_detail", args=[sample.id]),
+            }
+            if sample else None
+        ),
+        "place": context.get("place", ""),
+        "place_position": context.get("place_position", ""),
+        "place_url": (
+            reverse("storage_workspace") + f"?location={place_id}"
+            if place_id else ""
+        ),
+        "entries": context.get("entries", 0),
+        "duplicates": [
+            {
+                "id": other_id,
+                "name": other_name,
+                "url": reverse("molecular_sequence_detail", args=[other_id]),
+            }
+            for other_id, other_name in molecule.duplicates
+        ],
+    }
