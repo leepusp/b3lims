@@ -100,6 +100,11 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 `storage_isometric_v813.js`, `storage_2d_hierarchy_v89b.js`, `storage_graph_v811.js`,
 `storage_position_grid_v8146c3.js`). Not started; needs a review before any work.
 
+- [ ] Review how Storage behaves (moves, positions, capacity, occupancy, permissions, history)
+- [ ] Review how the interface illustrates it (isometric, hierarchy, graph, position grid):
+      what each view shows, what is redundant, what is broken or slow, and what the lab uses
+- [ ] Decide what to keep, merge or drop, then plan the changes in small releases
+
 - [ ] Review how Storage behaves (create, move, occupy, free, history, permissions)
 - [ ] Review how Storage is illustrated in the interface (which views stay, what each shows,
       browser behaviour, mobile, empty and full states)
@@ -124,3 +129,8 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 - [ ] Look for other test leftovers (collections, biobanks, users, samples)
 - [ ] Remove old `static-releases` (keep live, rollback and the two latest)
 - [ ] `notebook.py` still holds the Molecular Registry views; split it during Block D
+
+## Housekeeping: stored custom-field keys
+
+- [x] Expand: entries and templates store `custom_fields` / `custom_field_groups`, readers accept both, writers store both, migration 0101 copies rows
+- [ ] Contract (later release, once the pre-expand release is no longer a rollback target): set `WRITE_LEGACY_KEYS = False`, run `backfill_custom_field_layout`, drop the old keys
