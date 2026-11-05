@@ -100,9 +100,8 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 `storage_isometric_v813.js`, `storage_2d_hierarchy_v89b.js`, `storage_graph_v811.js`,
 `storage_position_grid_v8146c3.js`). Not started; needs a review before any work.
 
-- [ ] Review how Storage behaves (moves, positions, capacity, occupancy, permissions, history)
-- [ ] Review how the interface illustrates it (isometric, hierarchy, graph, position grid):
-      what each view shows, what is redundant, what is broken or slow, and what the lab uses
+- [x] Review how Storage behaves (moves, positions, capacity, occupancy, permissions, history): see `storage_review.md`
+- [x] Review how the interface illustrates it (isometric, hierarchy, graph, position grid): see `storage_review.md`
 - [ ] Decide what to keep, merge or drop, then plan the changes in small releases
 
 - [ ] Review how Storage behaves (create, move, occupy, free, history, permissions)
