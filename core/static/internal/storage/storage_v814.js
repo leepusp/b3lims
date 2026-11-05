@@ -2907,7 +2907,27 @@
       selected = previewContainer;
     }
 
+    // Deep links from the Sample pages:
+    // ?location=<id> opens a place, ?move_assignment=<id> opens the
+    // destination picker for that Sample.
+    const params = new URLSearchParams(window.location.search);
+    const wantedLocation = params.get("location") || "";
+    const wantedMove = params.get("move_assignment") || "";
+    const wantedItem = wantedMove
+      ? samples.find(item => String(item.id) === wantedMove)
+      : null;
+
+    if (wantedItem && byId.has(wantedItem.location)) {
+      selected = wantedItem.location;
+    } else if (byId.has(wantedLocation)) {
+      selected = wantedLocation;
+    }
+
     render();
+
+    if (wantedItem && byId.has(wantedItem.location) && window.B3StoragePicker) {
+      pickSampleMove(byId.get(wantedItem.location), [wantedItem]);
+    }
 
     if (root.dataset.b3sPreviewSamples === "1") {
       showTab("movements");

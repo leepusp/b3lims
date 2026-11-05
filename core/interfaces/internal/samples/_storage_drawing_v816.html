@@ -1,0 +1,8 @@
+{% load static %}
+{% if storage_drawings_v816 %}
+{{ storage_drawings_v816|json_script:"b3-sample-drawings" }}
+<link rel="stylesheet" href="{% static 'internal/samples/sample_storage_drawing_v816.css' %}?v=20261105-v819">
+<div id="b3SampleDrawings" class="b3-sd-wrap"
+     data-storage-url="{% url 'storage_workspace' %}"></div>
+<script defer src="{% static 'internal/samples/sample_storage_drawing_v816.js' %}?v=20261105-v819"></script>
+{% endif %}

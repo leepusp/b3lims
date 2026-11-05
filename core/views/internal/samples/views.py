@@ -64,6 +64,7 @@ from core.services.sample_micro_qr import (
 )
 from core.services.sample_export import export_samples_table
 from core.services.storage_locations import assign_sample_storage_from_text, get_all_storage_paths
+from core.services.storage_sample_drawing import build_sample_storage_drawings
 from core.services.shipment_factory import create_shipment_from_sample
 from core.services.sample_lifecycle import (
     activate_sample,
@@ -3060,6 +3061,7 @@ def sample_edit_view(request, sample_id):
         'current_phages_string': current_phages_string,
         'current_storage_location': current_storage_location,
         'current_storage_paths': current_storage_paths,
+        'storage_drawings_v816': build_sample_storage_drawings(base_sample, request.user),
         'storage_edit_destinations_v8146': build_storage_anchor_catalog(user=request.user),
         'storage_edit_assignments_v8146': base_sample.storage_assignments.filter(status='active').select_related('location').order_by('rank', 'pk'),
         'all_tags': all_tags,
@@ -3666,6 +3668,7 @@ def sample_detail_view(request, sample_id):
         "children": children,
         "sample_files": sample_files,
         "current_storage_paths": current_storage_paths,
+        "storage_drawings_v816": build_sample_storage_drawings(base_sample, request.user),
         "can_manage_sample_sharing": (
             can_manage_sharing
         ),

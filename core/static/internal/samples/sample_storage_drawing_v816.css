@@ -1,0 +1,21 @@
+.b3-sd-wrap { display: grid; gap: 12px; margin: 12px 0; min-width: 0; max-width: 100%; }
+.b3-sd-card { min-width: 0; max-width: 100%; box-sizing: border-box; border: 1px solid rgba(138,160,182,.55); border-radius: 8px; padding: 10px 12px; }
+.b3-sd-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+.b3-sd-head strong { font-size: .95rem; }
+.b3-sd-head small { color: #6b7b8b; }
+.b3-sd-legend { margin-left: auto; font-size: 12px; color: #6b7b8b; }
+.b3-sd-key { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin: 0 4px 0 8px; vertical-align: -1px; border: 1.5px solid #8aa0b6; background: #fff; }
+.b3-sd-key.is-other { background: #1f6fd6; border-color: #1559ad; }
+.b3-sd-key.is-mine { background: #f0a30a; border-color: #b97a00; }
+.b3-sd-canvas { overflow: auto; }
+.b3-sd-grid { display: inline-grid; gap: 3px; align-items: center; justify-items: center; }
+.b3-sd-axis { font-size: 10px; color: #6b7b8b; }
+.b3-sd-cell { border-radius: 5px; border: 1.5px solid #8aa0b6; background: #fff; display: block; }
+.b3-sd-cell.is-other, .b3-sd-slot.is-other { background: #1f6fd6; border-color: #1559ad; color: #fff; }
+.b3-sd-cell.is-mine, .b3-sd-slot.is-mine { background: #f0a30a; border-color: #b97a00; color: #1b1b1b; box-shadow: 0 0 0 2px rgba(240,163,10,.35); }
+.b3-sd-slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.b3-sd-slots.is-stack { flex-direction: column; }
+.b3-sd-slots.is-row { flex-direction: row; }
+.b3-sd-slot { flex: 1; min-width: 4.5rem; border: 1.5px solid #8aa0b6; border-radius: 7px; background: #fff; padding: 6px 9px; font-size: 13px; display: flex; flex-direction: column; gap: 1px; }
+.b3-sd-slot small { font-size: 11px; opacity: .85; }
+.b3-sd-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
