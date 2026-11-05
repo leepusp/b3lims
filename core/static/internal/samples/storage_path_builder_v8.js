@@ -329,6 +329,87 @@
 
         rows.addEventListener("input", renderMap);
 
+        // Tree browser: start at the top places and step down level by
+        // level; the nearest registered levels below the current one are
+        // offered as buttons.
+        const browse = document.getElementById("storageBrowseV8");
+
+        function depthOf(anchor) {
+            return String(anchor.full_path).split(" > ").length;
+        }
+
+        function renderBrowse() {
+            if (!browse) return;
+            browse.replaceChildren();
+
+            if (!anchors.length) return;
+
+            const here = selectedAnchor;
+            const prefix = here ? here.full_path + " > " : "";
+            const below = anchors.filter(item =>
+                !here || String(item.full_path).startsWith(prefix)
+            );
+
+            const minDepth = below.length
+                ? Math.min(...below.map(depthOf)) : 0;
+            const next = below
+                .filter(item => depthOf(item) === minDepth)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .slice(0, 40);
+
+            const title = document.createElement("div");
+
+            title.className = "form-text mb-1";
+            title.textContent = here
+                ? "Inside " + here.full_path + (
+                    next.length ? " — go deeper:"
+                        : " — no registered levels below."
+                )
+                : "Browse registered storage — start with:";
+            browse.append(title);
+
+            const bar = document.createElement("div");
+
+            bar.className = "d-flex flex-wrap gap-1";
+
+            if (here) {
+                const up = document.createElement("button");
+                const parentPath = String(here.full_path)
+                    .split(" > ").slice(0, -1).join(" > ");
+                const parent = anchors.find(
+                    item => item.full_path === parentPath
+                );
+
+                up.type = "button";
+                up.className = "btn btn-sm btn-outline-secondary";
+                up.textContent = "↑ Up";
+                up.addEventListener("click", () => {
+                    if (parent) {
+                        choose(parent);
+                    } else {
+                        window.setStorageLocationFromText("");
+                    }
+                });
+                bar.append(up);
+            }
+
+            for (const item of next) {
+                const button = document.createElement("button");
+
+                button.type = "button";
+                button.className = "btn btn-sm btn-outline-primary";
+                button.textContent = item.name + (
+                    ["grid", "slots"].includes(item.organization)
+                        ? " ▦" : ""
+                );
+                button.title = item.full_path + " · " + item.location_type;
+                button.addEventListener("click", () => choose(item));
+                bar.append(button);
+            }
+
+            browse.append(bar);
+        }
+
         function synchronize() {
             if (
                 selectedAnchor &&
@@ -359,8 +440,11 @@
                 anchorId.value = "";
 
                 status.textContent = path.value.trim()
-                    ? "Unverified text path. No physical location " +
-                      "will be created automatically."
+                    ? "This path is not (fully) in the registered " +
+                      "storage tree, so it is saved as text only and no " +
+                      "position is reserved. Pick levels from the " +
+                      "buttons above to link it, or register the " +
+                      "missing levels in Storage."
                     : "No storage assigned. Select a registered " +
                       "physical location to register Sample positions.";
             }
@@ -373,6 +457,7 @@
 
             updatePositionRows();
             renderMap();
+            renderBrowse();
         }
 
         function choose(anchor, position = "") {
@@ -591,6 +676,7 @@
                 );
 
                 anchors = fetchedAnchors.concat(newlyCreated);
+                renderBrowse();
 
                 if (!path.value.trim()) {
                     status.textContent = anchors.length
