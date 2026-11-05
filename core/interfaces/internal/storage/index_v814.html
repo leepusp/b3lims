@@ -9,7 +9,7 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}?v=20261105-v816">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261105-v817">
 <link rel="stylesheet"
 {% endblock %}
 
@@ -188,6 +188,10 @@ Physical locations, Sample custody and movement history.
             class="b3s-stats"
             aria-label="Selected location summary"></dl>
 
+        <form id="b3s-bd-layout" method="post" hidden
+              action="{% url 'storage_location_layout_update' %}">
+          {% csrf_token %}
+        </form>
         <form id="b3s-bd-bulk" method="post" hidden
               action="{% url 'sample_bulk_storage' %}">
           {% csrf_token %}
@@ -1169,6 +1173,6 @@ Physical locations, Sample custody and movement history.
         src="{% static 'internal/storage/storage_picker_v815.js' %}?v=20261105-v815">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v816">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v817">
 </script>
 {% endblock %}

@@ -2116,6 +2116,7 @@
     // A grid (box, rack) or named compartments (doors, drawers, shelves).
     // Colour says empty / recorded / more than one; a click opens the
     // actions for that position.
+    let boardEditNode = "";    // node id whose drawing is being edited
     let boardPick = null;      // {node, slot}
     let boardPending = null;   // assignment waiting for a free position
 
@@ -2191,14 +2192,41 @@
 
       const node = byId.get(selected);
       const names = node && !node.historical ? boardNames(node) : [];
+      const mayDraw = Boolean(
+        node && !node.historical && node.active === "1" && manageable(node)
+      );
 
-      section.hidden = !names.length;
+      if (!node || boardEditNode !== node.id) boardEditNode = "";
+
+      section.hidden = !names.length && !mayDraw;
       canvas.replaceChildren();
       detail.replaceChildren();
 
       if (!names.length) {
         boardPick = null;
         boardPending = null;
+        if (!mayDraw) return;
+        find("b3s-board-count").textContent = "no drawing yet";
+        canvas.append(
+          mk(
+            "p",
+            "No positions are drawn for this place. Draw a grid " +
+              "(rows and columns) or name its compartments (doors, " +
+              "drawers, shelves) to see and fill each position.",
+            "b3s-note"
+          )
+        );
+        if (boardEditNode === node.id) {
+          detail.append(boardEditor(node, {bySlot: new Map(), outside: []}));
+        } else {
+          const draw = mk("button", "Draw positions…", "btn btn-sm btn-primary");
+          draw.type = "button";
+          draw.addEventListener("click", () => {
+            boardEditNode = node.id;
+            renderBoard();
+          });
+          detail.append(draw);
+        }
         return;
       }
 
@@ -2270,6 +2298,11 @@
         `${used} of ${total} ${isSlots ? "compartments" : "positions"} in use`;
 
       // ---- side panel ----
+      if (boardEditNode === node.id) {
+        detail.append(boardEditor(node, usage));
+        return;
+      }
+
       if (boardPending) {
         detail.append(
           mk("h4", "Choose a free position"),
@@ -2395,7 +2428,150 @@
         move.addEventListener("click", () => beginMove(node));
         actions.append(move);
       }
+      if (canEdit && mayDraw) {
+        const edit = mk("button", "Edit drawing", "btn btn-sm btn-outline-secondary");
+        edit.type = "button";
+        edit.addEventListener("click", () => {
+          boardEditNode = node.id;
+          renderBoard();
+        });
+        actions.append(edit);
+      }
       if (actions.children.length) detail.append(actions);
+    }
+
+    // Edit the drawing of the selected place. The server refuses any change
+    // that would leave a Sample without a valid position.
+    function boardEditor(node, usage) {
+      const box = mk("div", null, "b3s-bd-editor");
+      box.append(mk("h4", "Edit drawing"));
+
+      let org = node.c3Organization === "slots" || node.c3Organization === "grid"
+        ? node.c3Organization : "grid";
+      let rows = gridRows(node) || 9;
+      let cols = gridColumns(node) || 9;
+      let dir = node.c3Direction === "row" ? "row" : "column";
+      let slots = node.c3Organization === "slots"
+        ? slotLabels(node).map(name => ({name, old: name}))
+        : [{name: "Door 1", old: ""}, {name: "Door 2", old: ""}];
+      const fields = mk("div", null, "b3s-bd-ed-fields");
+      const msg = mk("p", "", "b3s-bd-warn");
+
+      const drawFields = () => {
+        fields.replaceChildren();
+        if (org === "grid") {
+          const r = document.createElement("input");
+          r.type = "number"; r.min = "1"; r.max = "26"; r.value = String(rows);
+          r.className = "form-control form-control-sm";
+          r.addEventListener("input", () => { rows = Number(r.value) || 0; });
+          const c = document.createElement("input");
+          c.type = "number"; c.min = "1"; c.max = "24"; c.value = String(cols);
+          c.className = "form-control form-control-sm";
+          c.addEventListener("input", () => { cols = Number(c.value) || 0; });
+          const l1 = mk("label", "Rows (A…)"); l1.append(r);
+          const l2 = mk("label", "Columns"); l2.append(c);
+          fields.append(l1, l2, mk(
+            "p",
+            "Positions are named A1, B7… You cannot make the grid smaller " +
+              "than a position that holds a Sample.",
+            "b3s-note"
+          ));
+          return;
+        }
+        slots.forEach((slot, index) => {
+          const row = mk("div", null, "b3s-bd-ed-slot");
+          const input = document.createElement("input");
+          input.type = "text"; input.maxLength = 40; input.value = slot.name;
+          input.className = "form-control form-control-sm";
+          input.addEventListener("input", () => { slot.name = input.value; });
+          const holding = slot.old ? (usage.bySlot.get(slot.old) || []).length : 0;
+          const remove = mk("button", "Remove", "btn btn-sm btn-outline-secondary");
+          remove.type = "button";
+          remove.disabled = slots.length <= 1;
+          remove.addEventListener("click", () => {
+            slots.splice(index, 1);
+            drawFields();
+          });
+          row.append(input, remove);
+          if (holding) row.append(mk("small", `${holding} Sample(s) here: rename keeps them; removing is refused.`, "b3s-note"));
+          fields.append(row);
+        });
+        const add = mk("button", "Add a compartment", "btn btn-sm btn-outline-secondary");
+        add.type = "button";
+        add.disabled = slots.length >= 40;
+        add.addEventListener("click", () => {
+          slots.push({name: `Door ${slots.length + 1}`, old: ""});
+          drawFields();
+        });
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm";
+        for (const [value, label] of [["column", "Stacked (top to bottom)"], ["row", "Side by side"]]) {
+          const o = document.createElement("option");
+          o.value = value; o.textContent = label; o.selected = value === dir;
+          select.append(o);
+        }
+        select.addEventListener("change", () => { dir = select.value; });
+        const ld = mk("label", "Layout"); ld.append(select);
+        fields.append(add, ld);
+      };
+
+      const orgSelect = document.createElement("select");
+      orgSelect.className = "form-select form-select-sm";
+      for (const [value, label] of [["grid", "Grid of positions (box, rack)"], ["slots", "Named compartments (doors, drawers)"], ["free", "No drawing"]]) {
+        const o = document.createElement("option");
+        o.value = value; o.textContent = label; o.selected = value === org;
+        orgSelect.append(o);
+      }
+      if (org !== "grid" && org !== "slots") orgSelect.value = "grid";
+      orgSelect.addEventListener("change", () => {
+        org = orgSelect.value;
+        drawFields();
+      });
+      const lo = mk("label", "Kind of drawing");
+      lo.append(orgSelect);
+      box.append(lo, fields);
+      drawFields();
+
+      const save = mk("button", "Save drawing", "btn btn-sm btn-primary");
+      save.type = "button";
+      save.addEventListener("click", () => {
+        const form = find("b3s-bd-layout");
+        if (!form) return;
+        if (org === "slots") {
+          const seen = new Set();
+          for (const slot of slots) {
+            const name = slot.name.trim().replace(/\s+/g, " ");
+            if (!name) { msg.textContent = "Every compartment needs a name."; return; }
+            if (seen.has(name.toLowerCase())) { msg.textContent = `"${name}" is used twice.`; return; }
+            seen.add(name.toLowerCase());
+          }
+        }
+        for (const el of form.querySelectorAll("[data-gen]")) el.remove();
+        const add = (name, value) => {
+          const input = document.createElement("input");
+          input.type = "hidden"; input.name = name; input.value = String(value);
+          input.dataset.gen = "1";
+          form.append(input);
+        };
+        add("location_id", node.id);
+        add("organization", org);
+        if (org === "grid") { add("rows", rows); add("columns", cols); }
+        if (org === "slots") {
+          add("slot_direction", dir);
+          for (const slot of slots) { add("slot_label", slot.name); add("slot_old", slot.old); }
+        }
+        form.submit();
+      });
+      const cancel = mk("button", "Cancel", "btn btn-sm btn-outline-secondary");
+      cancel.type = "button";
+      cancel.addEventListener("click", () => {
+        boardEditNode = "";
+        renderBoard();
+      });
+      const actions = mk("div", null, "b3s-manage-actions");
+      actions.append(save, cancel);
+      box.append(msg, actions);
+      return box;
     }
 
     // Empty position: search any Sample by ID (placed or not yet placed)

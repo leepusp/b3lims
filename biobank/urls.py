@@ -48,6 +48,9 @@ from core.views.internal.profile.views import profile_view
 from core.views.internal.calendar.views import calendar_view
 from core.views.internal.storage.views import storage_workspace_view
 from core.views.internal.storage.sample_search import storage_sample_search
+from core.views.internal.storage.location_layout_update import (
+    storage_location_layout_update,
+)
 from core.views.internal.storage.anchor_catalog_v8 import (
     storage_anchor_catalog_v8,
 )
@@ -299,6 +302,11 @@ urlpatterns = [
         "storage/anchors/",
         storage_anchor_catalog_v8,
         name="storage_anchor_catalog_v8",
+    ),
+    path(
+        "storage/location/layout/",
+        storage_location_layout_update,
+        name="storage_location_layout_update",
     ),
     path(
         "storage/sample-search/",
