@@ -53,7 +53,7 @@
                 anchor &&
                 Number.isSafeInteger(Number(anchor.id)) &&
                 Number(anchor.id) > 0 &&
-                ["box", "rack", "other"].includes(String(anchor.location_type).toLowerCase())
+                String(anchor.location_type).toLowerCase() !== "position"
             );
 
         function sampleCount() {
@@ -173,6 +173,162 @@
             renderedCount = count;
         }
 
+        // Drawing of the chosen location: click free cells to fill the
+        // "Sample N position" fields in order; click again to release.
+        const mapHost = document.createElement("div");
+        mapHost.id = "storagePositionMapV8";
+        mapHost.className = "b3-pos-map";
+        rows.before(mapHost);
+
+        function nameOf(slot) {
+            return String(slot || "").trim();
+        }
+
+        function renderMap() {
+            mapHost.replaceChildren();
+            mapHost.hidden = true;
+
+            const anchor = selectedAnchor;
+
+            if (
+                !anchor || mode.value !== "physical" ||
+                !["grid", "slots"].includes(anchor.organization)
+            ) return;
+
+            const fields = Array.from(
+                rows.querySelectorAll('input[name="storage_positions[]"]')
+            );
+            const taken = new Set(
+                (anchor.occupied || []).map(v => nameOf(v).toLowerCase())
+            );
+            const chosen = new Map();
+
+            fields.forEach((field, index) => {
+                const value = nameOf(field.value).toLowerCase();
+
+                if (value) chosen.set(value, index);
+            });
+
+            function click(name) {
+                const key = name.toLowerCase();
+
+                if (taken.has(key)) return;
+
+                if (chosen.has(key)) {
+                    fields[chosen.get(key)].value = "";
+                } else {
+                    const free = fields.find(f => !nameOf(f.value))
+                        || (fields.length === 1 ? fields[0] : null);
+
+                    if (!free) {
+                        status.textContent =
+                            "Every Sample already has a position. " +
+                            "Click a chosen position to release it first.";
+                        return;
+                    }
+
+                    free.value = name;
+                }
+
+                fields.forEach(f => f.dispatchEvent(
+                    new Event("input", {bubbles: true})
+                ));
+                renderMap();
+            }
+
+            function cell(name, className) {
+                const key = name.toLowerCase();
+                const button = document.createElement("button");
+
+                button.type = "button";
+                button.className = className + (
+                    taken.has(key) ? " is-taken"
+                    : chosen.has(key) ? " is-chosen" : ""
+                );
+                button.title = taken.has(key)
+                    ? name + " (occupied)"
+                    : chosen.has(key)
+                        ? name + " (Sample " + (chosen.get(key) + 1) + ")"
+                        : name + " (free)";
+                button.setAttribute("aria-label", button.title);
+                button.addEventListener("click", () => click(name));
+
+                if (chosen.has(key) && fields.length > 1) {
+                    button.textContent = String(chosen.get(key) + 1);
+                }
+
+                return button;
+            }
+
+            const title = document.createElement("div");
+
+            title.className = "b3-pos-title";
+            title.textContent = anchor.name + " · click free positions " +
+                "for each Sample (white = free, dark = occupied)";
+            mapHost.append(title);
+
+            if (anchor.organization === "grid") {
+                const r = Number(anchor.rows);
+                const c = Number(anchor.columns);
+                const size = Math.max(14, Math.min(28, Math.floor(420 / c)));
+                const grid = document.createElement("div");
+
+                grid.className = "b3-pos-grid";
+                grid.style.gridTemplateColumns =
+                    `18px repeat(${c}, ${size}px)`;
+                grid.append(document.createElement("span"));
+
+                for (let col = 1; col <= c; col++) {
+                    const head = document.createElement("span");
+
+                    head.className = "b3-pos-axis";
+                    head.textContent = size >= 18 ? col : "";
+                    grid.append(head);
+                }
+
+                for (let row = 0; row < r; row++) {
+                    const head = document.createElement("span");
+
+                    head.className = "b3-pos-axis";
+                    head.textContent = String.fromCharCode(65 + row);
+                    grid.append(head);
+
+                    for (let col = 0; col < c; col++) {
+                        const btn = cell(
+                            String.fromCharCode(65 + row) + (col + 1),
+                            "b3-pos-cell"
+                        );
+
+                        btn.style.width = btn.style.height = size + "px";
+                        grid.append(btn);
+                    }
+                }
+
+                mapHost.append(grid);
+            } else {
+                const cabinet = document.createElement("div");
+
+                cabinet.className = "b3-pos-cabinet " + (
+                    anchor.direction === "row" ? "is-row" : "is-stack"
+                );
+
+                for (const name of anchor.slots || []) {
+                    const btn = cell(name, "b3-pos-slot");
+
+                    btn.textContent = btn.textContent
+                        ? name + " · Sample " + btn.textContent
+                        : name;
+                    cabinet.append(btn);
+                }
+
+                mapHost.append(cabinet);
+            }
+
+            mapHost.hidden = false;
+        }
+
+        rows.addEventListener("input", renderMap);
+
         function synchronize() {
             if (
                 selectedAnchor &&
@@ -216,6 +372,7 @@
             }
 
             updatePositionRows();
+            renderMap();
         }
 
         function choose(anchor, position = "") {

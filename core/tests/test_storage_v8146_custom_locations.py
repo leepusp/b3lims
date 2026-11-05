@@ -282,7 +282,7 @@ class CustomStorageLocationV8146ATests(TestCase):
                 actor=self.owner,
             )
 
-    def test_structural_levels_are_not_assignment_hosts(self):
+    def test_any_level_can_host_samples(self):
         shelf = StorageLocation.objects.create(
             name="User-named shelf",
             location_type="shelf",
@@ -290,49 +290,35 @@ class CustomStorageLocationV8146ATests(TestCase):
             parent=self.freezer,
         )
 
-        sample = self.sample("V8146A-STRUCTURAL-001")
-        assignment, _ = self.register(sample, "A1")
-
         for location in (self.room, self.freezer, shelf):
             with self.subTest(location_type=location.location_type):
-                self.assertFalse(
+                self.assertTrue(
                     can_register_at_storage_location(
                         self.owner,
                         location,
                     )
                 )
 
-                with self.assertRaises(ValidationError):
-                    validate_storage_anchor_plan(
-                        mode="physical",
-                        box_id=location.pk,
-                        positions=["B2"],
-                        expected_samples=1,
-                        actor=self.owner,
-                    )
-
-                with self.assertRaises(PermissionDenied):
-                    move_sample(
-                        assignment_id=assignment.pk,
-                        destination_id=location.pk,
-                        position="C3",
-                        expected_location_id=self.destination_a.pk,
-                        expected_position="A1",
-                        expected_source_path=self.destination_a.full_path,
-                        expected_destination_path=location.full_path,
-                        actor=self.owner,
-                        reason="Reject structural hierarchy as host.",
-                    )
-
-                assignment.refresh_from_db()
-                self.assertEqual(
-                    assignment.location_id,
-                    self.destination_a.pk,
+                plan = validate_storage_anchor_plan(
+                    mode="physical",
+                    box_id=location.pk,
+                    positions=["B2"],
+                    expected_samples=1,
+                    actor=self.owner,
                 )
-                self.assertEqual(
-                    assignment.position,
-                    "A1",
-                )
+                self.assertEqual(plan.box_id, location.pk)
+
+    def test_legacy_position_nodes_are_not_hosts(self):
+        node = StorageLocation.objects.create(
+            name="P1",
+            location_type="position",
+            workspace=self.workspace,
+            parent=self.freezer,
+        )
+
+        self.assertFalse(
+            can_register_at_storage_location(self.owner, node)
+        )
 
     def test_position_node_is_not_a_destination(self):
         position_node = StorageLocation.objects.create(

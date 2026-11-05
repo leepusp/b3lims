@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from core.services.storage_layout_position import position_for_layout
 from core.services.storage_position_names_v8146c2 import normalize_physical_position_v8146c2
 
 from core.models.samples.storage import (
@@ -57,7 +58,7 @@ def validate_storage_anchor_plan(
 
     box = StorageLocation.objects.filter(pk=pk).first()
 
-    if box is None or box.location_type not in {"box", "rack", "other"}:
+    if box is None or box.location_type == "position":
         raise ValidationError("Select a registered physical storage location.")
 
     if actor is not None:
@@ -97,7 +98,9 @@ def validate_storage_anchor_plan(
         )
 
     normalized = tuple(
-        normalize_physical_position_v8146c2(value)
+        position_for_layout(
+            box, normalize_physical_position_v8146c2(value)
+        )
         for value in positions
     )
 

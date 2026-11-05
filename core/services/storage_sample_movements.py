@@ -269,6 +269,15 @@ def _execute_movement(
 
         final_position = item["position"].strip()
 
+        if final_position:
+            from core.services.storage_layout_position import (
+                position_for_layout,
+            )
+
+            final_position = position_for_layout(
+                destination, final_position
+            )
+
         if (
             assignment.location_id == destination.pk
             and assignment.position == final_position

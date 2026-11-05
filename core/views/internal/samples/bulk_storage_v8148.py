@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -28,7 +29,11 @@ from core.services.storage_sample_movements import move_samples_bulk
 
 MAX_SELECTED = 50
 SIGNING_SALT = "b3lims.sample_bulk_storage_v8148"
-POSITION_PATTERN = re.compile(r"[A-Z]+[0-9]+\Z")
+from core.services.storage_layout_position import position_for_layout
+from core.services.storage_position_names_v8146c2 import (
+    normalize_physical_position_v8146c2,
+)
+
 
 
 def _ids(values):
@@ -101,7 +106,7 @@ def _rows(actor, ids, *, lock=False):
 def _destinations(actor):
     return [location for location in
         visible_storage_locations_for_user(actor).select_related("workspace", "parent")
-        .filter(is_active=True, location_type__in=("box", "rack", "other"))
+        .filter(~Q(location_type="position"), is_active=True)
         .order_by("workspace_id", "name", "pk")
         if can_register_at_storage_location(actor, location)
     ]
@@ -114,13 +119,17 @@ def _review(actor, ids, dest_id, positions, *, lock=False):
     destination = get_object_or_404(StorageLocation, pk=int(dest_id))
     if not can_register_at_storage_location(actor, destination):
         raise PermissionDenied("The physical destination is not authorized.")
-    if destination.location_type not in ("box", "rack", "other"):
-        raise ValidationError("Select a Box, Rack or custom position host.")
+    if destination.location_type == "position":
+        raise ValidationError("Select a registered physical destination.")
     if len(positions) != len(rows):
         raise ValidationError("Provide one position per selected Sample.")
-    positions = [str(p).strip().upper() for p in positions]
-    if any(not POSITION_PATTERN.fullmatch(p) or len(p) > 100 for p in positions):
-        raise ValidationError("Use unique positions such as A1 or P03.")
+    positions = [
+        position_for_layout(
+            destination,
+            normalize_physical_position_v8146c2(p),
+        )
+        for p in positions
+    ]
     if len(set(positions)) != len(positions):
         raise ValidationError("Duplicate destination positions are not allowed.")
 

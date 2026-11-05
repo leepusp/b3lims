@@ -1035,15 +1035,18 @@ Physical locations, Sample custody and movement history.
             </label>
 
             <label>
-              Organization
+              How does this location hold Samples?
               <select name="organization"
                       id="b3s-c3-organization"
                       required>
                 <option value="free">
-                  Free organization
+                  It is a single place (or it only holds other locations)
                 </option>
                 <option value="grid">
-                  Position grid
+                  Grid of positions (box, rack, plate)
+                </option>
+                <option value="slots">
+                  Named compartments (doors, drawers, shelves)
                 </option>
               </select>
             </label>
@@ -1073,6 +1076,49 @@ Physical locations, Sample custody and movement history.
                        disabled>
               </label>
             </div>
+
+            <div id="b3s-c3-slots"
+                 class="b3s-c3-slots"
+                 hidden>
+              <div class="b3s-c3-dimensions">
+                <label>
+                  Compartment
+                  <input type="text"
+                         id="b3s-c3-slot-word"
+                         maxlength="30"
+                         value="Door"
+                         placeholder="Door, Drawer, Shelf">
+                </label>
+
+                <label>
+                  How many
+                  <input type="number"
+                         id="b3s-c3-slot-count"
+                         min="1"
+                         max="40"
+                         value="4">
+                </label>
+
+                <label>
+                  Arranged
+                  <select name="slot_direction"
+                          id="b3s-c3-slot-direction"
+                          disabled>
+                    <option value="column">Stacked, top to bottom</option>
+                    <option value="row">Side by side</option>
+                  </select>
+                </label>
+              </div>
+
+              <p class="b3s-note">
+                Click a name in the drawing to rename it.
+                Each name is the position you pick when registering a Sample.
+              </p>
+              <div id="b3s-c3-slot-names" hidden></div>
+            </div>
+
+            <div id="b3s-c3-preview"
+                 class="b3s-c3-preview"></div>
 
             <p id="b3s-c3-capacity"
                class="b3s-note"
@@ -1114,6 +1160,8 @@ Physical locations, Sample custody and movement history.
           data-c3-organization="{{ location.layout_v8146c3.organization|default:'' }}"
           data-c3-rows="{{ location.layout_v8146c3.rows|default:'' }}"
           data-c3-columns="{{ location.layout_v8146c3.columns|default:'' }}"
+          data-c3-slots="{{ location.layout_v8146c3.slot_labels_json|default:'' }}"
+          data-c3-direction="{{ location.layout_v8146c3.slot_direction|default:'' }}"
           data-c3-type="{{ location.layout_v8146c3.type_label|default:'' }}"
           data-c3-temperature="{{ location.layout_v8146c3.temperature_label|default:'' }}"
           data-active="{% if location.is_active %}1{% else %}0{% endif %}">

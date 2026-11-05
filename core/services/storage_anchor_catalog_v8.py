@@ -69,6 +69,28 @@ def build_storage_anchor_catalog(*, user):
         finally:
             visiting.remove(pk)
 
+    from core.models.samples.storage import (
+        SampleStorageAssignment,
+        StorageLocationLayoutV8146C3,
+    )
+
+    layouts = {
+        layout.location_id: layout
+        for layout in StorageLocationLayoutV8146C3.objects.filter(
+            location_id__in=list(indexed)
+        ).exclude(organization="free")
+    }
+    occupied = {}
+
+    for location_id, position in (
+        SampleStorageAssignment.objects.filter(
+            location_id__in=list(layouts), status="active"
+        )
+        .exclude(position="")
+        .values_list("location_id", "position")
+    ):
+        occupied.setdefault(location_id, []).append(position)
+
     result = []
 
     for row in rows:
@@ -77,7 +99,15 @@ def build_storage_anchor_catalog(*, user):
         if parts is None:
             continue
 
+        layout = layouts.get(row["pk"])
+
         result.append({
+            "organization": layout.organization if layout else "free",
+            "rows": layout.rows if layout else 0,
+            "columns": layout.columns if layout else 0,
+            "slots": list(layout.slot_labels or []) if layout else [],
+            "direction": layout.slot_direction if layout else "column",
+            "occupied": occupied.get(row["pk"], []),
             "id": row["pk"],
             "parent_id": row["parent_id"],
             "name": row["name"],

@@ -4,6 +4,7 @@ import re
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from core.services.storage_layout_position import position_for_layout
 from core.services.storage_position_names_v8146c2 import normalize_physical_position_v8146c2
 
 from core.models.samples.sample import Sample
@@ -72,10 +73,12 @@ def register_initial_physical_storage(
 
     position = normalize_physical_position_v8146c2(position)
 
-    if box.location_type not in {"box", "rack", "other"}:
+    if box.location_type == "position":
         raise ValidationError(
-            "Select a Box, Rack, or user-defined storage destination."
+            "Select a registered physical storage location."
         )
+
+    position = position_for_layout(box, position)
 
     node = box
     visited = set()

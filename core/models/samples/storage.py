@@ -387,13 +387,66 @@ class StorageSceneConfiguration(models.Model):
         return self.name
 
 
+def clean_slot_labels(labels, *, maximum=40):
+    """Validated list of compartment names (1 to ``maximum``, unique)."""
+    import unicodedata
+
+    from django.core.exceptions import ValidationError
+
+    if not isinstance(labels, (list, tuple)):
+        raise ValidationError("Compartments must be a list of names.")
+
+    cleaned = []
+    seen = set()
+
+    for raw in labels:
+        name = " ".join(str(raw or "").split())
+
+        if not name:
+            raise ValidationError("Every compartment needs a name.")
+        if len(name) > 40:
+            raise ValidationError(
+                "Compartment names have at most 40 characters."
+            )
+        if any(ch in name for ch in (">", ";", ",")):
+            raise ValidationError(
+                "Compartment names cannot contain >, commas or semicolons."
+            )
+        if any(unicodedata.category(ch).startswith("C") for ch in name):
+            raise ValidationError(
+                "Compartment names cannot contain control characters."
+            )
+        if name.lower() in seen:
+            raise ValidationError(
+                f"Compartment name '{name}' is repeated."
+            )
+
+        seen.add(name.lower())
+        cleaned.append(name)
+
+    if not 1 <= len(cleaned) <= maximum:
+        raise ValidationError(
+            f"Define between 1 and {maximum} compartments."
+        )
+
+    return cleaned
+
+
 class StorageLocationLayoutV8146C3(models.Model):
     """Optional organization and capacity for a real storage location."""
 
     ORGANIZATION_CHOICES = (
         ("free", "Free organization"),
         ("grid", "Position grid"),
+        ("slots", "Named compartments"),
     )
+
+    DIRECTION_CHOICES = (
+        ("column", "Stacked, top to bottom"),
+        ("row", "Side by side"),
+    )
+
+    MAX_SLOTS = 40
 
     location = models.OneToOneField(
         StorageLocation,
@@ -409,6 +462,15 @@ class StorageLocationLayoutV8146C3(models.Model):
 
     rows = models.PositiveSmallIntegerField(default=0)
     columns = models.PositiveSmallIntegerField(default=0)
+
+    # Named compartments (doors, drawers, shelves): the names are the
+    # position names stored on the Sample assignments.
+    slot_labels = models.JSONField(default=list, blank=True)
+    slot_direction = models.CharField(
+        max_length=10,
+        choices=DIRECTION_CHOICES,
+        default="column",
+    )
 
     type_label = models.CharField(
         max_length=80,
@@ -427,7 +489,7 @@ class StorageLocationLayoutV8146C3(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(
-                        organization="free",
+                        organization__in=("free", "slots"),
                         rows=0,
                         columns=0,
                     )
@@ -445,9 +507,19 @@ class StorageLocationLayoutV8146C3(models.Model):
 
     @property
     def capacity(self):
-        if self.organization != "grid":
-            return None
-        return self.rows * self.columns
+        if self.organization == "grid":
+            return self.rows * self.columns
+        if self.organization == "slots":
+            return len(self.slot_labels or [])
+        return None
+
+    @property
+    def slot_labels_json(self):
+        import json
+
+        return json.dumps(
+            list(self.slot_labels or []), ensure_ascii=False
+        )
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -459,9 +531,25 @@ class StorageLocationLayoutV8146C3(models.Model):
                 raise ValidationError(
                     "Free organization must not define grid dimensions."
                 )
+            if self.slot_labels:
+                raise ValidationError(
+                    "Free organization must not define compartments."
+                )
+            return
+
+        if self.organization == "slots":
+            if self.rows != 0 or self.columns != 0:
+                raise ValidationError(
+                    "Compartments must not define grid dimensions."
+                )
+            self.slot_labels = clean_slot_labels(self.slot_labels)
             return
 
         if self.organization == "grid":
+            if self.slot_labels:
+                raise ValidationError(
+                    "A position grid must not define compartments."
+                )
             if not (
                 1 <= self.rows <= 26
                 and 1 <= self.columns <= 24
@@ -478,5 +566,7 @@ class StorageLocationLayoutV8146C3(models.Model):
         return (
             f"{self.location_id}: {self.rows}x{self.columns}"
             if self.organization == "grid"
+            else f"{self.location_id}: {len(self.slot_labels or [])} compartments"
+            if self.organization == "slots"
             else f"{self.location_id}: free"
         )

@@ -229,3 +229,18 @@
     border: 2px dashed #dee2e6 !important;
     background-color: #fbfbfb !important;
 }}
+
+/* Position picker drawn from the chosen storage location */
+.b3-pos-map { margin: .5rem 0 .75rem; }
+.b3-pos-title { font-size: .8rem; color: #5b6b7b; margin-bottom: .4rem; }
+.b3-pos-grid { display: inline-grid; gap: 3px; align-items: center; justify-items: center; padding: .5rem; border: 2px solid #1f2d3d; border-radius: .5rem; background: #f5f8fb; max-width: 100%; overflow: auto; }
+.b3-pos-axis { font-size: .65rem; color: #5b6b7b; }
+.b3-pos-cell { border-radius: 50%; border: 1.5px solid #8aa0b6; background: #fff; padding: 0; font-size: .65rem; line-height: 1; cursor: pointer; }
+.b3-pos-cell:hover:not(.is-taken) { border-color: #0d6efd; }
+.b3-pos-cell.is-taken, .b3-pos-slot.is-taken { background: #3b4a5a; border-color: #3b4a5a; color: #fff; cursor: not-allowed; }
+.b3-pos-cell.is-chosen, .b3-pos-slot.is-chosen { background: #0d6efd; border-color: #0d6efd; color: #fff; }
+.b3-pos-cabinet { display: flex; gap: 6px; padding: 8px; border: 2px solid #1f2d3d; border-radius: .5rem; background: #f5f8fb; max-width: 100%; }
+.b3-pos-cabinet.is-stack { flex-direction: column; max-width: 20rem; }
+.b3-pos-cabinet.is-row { flex-direction: row; overflow-x: auto; }
+.b3-pos-slot { flex: 1 1 0; min-width: 5.5rem; text-align: left; border: 1.5px solid #8aa0b6; border-radius: .35rem; background: #fff; padding: .35rem .5rem; font-weight: 600; font-size: .85rem; cursor: pointer; }
+.b3-pos-cabinet.is-row .b3-pos-slot { min-height: 6rem; display: flex; align-items: flex-start; }

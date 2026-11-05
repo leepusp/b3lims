@@ -106,7 +106,17 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 - [x] One occupancy rule (grid positions only; outside-a-grid and off-the-grid counted apart)
 - [x] Path tree fits the frame; columns named by location type
 - [x] Manage tab: list beside the edit form; historical registrations collapsed; transfers explained
-- [x] Layout tab: interactive drawing of how the storage is assembled (blocks, grids, details)
+- [x] Layout tab, first version (read-only; judged not useful on Nov 4, to be redone below)
+- [~] Storage is a free tree: the user picks the levels (institute, corridor, room, fridge, box...).
+      A location says how it holds Samples: a single place, a grid (box, rack) or named
+      compartments (doors, drawers, shelves), drawn live while it is created (migration 0102)
+- [~] Any level can receive Samples; the position is checked against the drawing (A1 inside the
+      grid, or one of the compartment names); sample registration shows the drawing and the
+      user clicks free positions
+- [ ] Redo the Layout tab: the drawing of a location with what is stored in it, and actions
+- [ ] Choose the destination of a move by clicking the tree and the drawing (compartment or
+      position included); move a whole box (all its Samples at once) or a single Sample
+- [ ] Edit the drawing of an existing location (add a door, widen a grid)
 - [ ] Server-side search and pagination of samples per location
 - [ ] Free-position helper and capacity check on registration and moves
 - [ ] Retire the legacy interface (`?legacy=1`), its scripts, scene model and services

@@ -2360,3 +2360,19 @@
 #b3-storage-v814 .b3s-layout-detail .b3s-manage-actions {
   margin-top: 12px;
 }
+
+/* Live drawing while creating a location */
+.b3s-c3-preview { margin: .5rem 0; }
+.b3s-c3-preview:empty { display: none; }
+.b3s-c3-pv-box { display: inline-block; padding: .6rem; border: 2px solid #1f2d3d; border-radius: .5rem; background: #f5f8fb; max-width: 100%; overflow: auto; }
+.b3s-c3-pv-grid { display: grid; gap: 3px; align-items: center; justify-items: center; }
+.b3s-c3-pv-axis { font-size: .65rem; color: #5b6b7b; }
+.b3s-c3-pv-cell { border-radius: 50%; border: 1.5px solid #8aa0b6; background: #fff; display: block; }
+.b3s-c3-pv-cabinet { display: flex; gap: 6px; padding: 8px; border: 2px solid #1f2d3d; border-radius: .5rem; background: #f5f8fb; max-width: 100%; }
+.b3s-c3-pv-cabinet.is-stack { flex-direction: column; max-width: 20rem; }
+.b3s-c3-pv-cabinet.is-row { flex-direction: row; overflow-x: auto; }
+.b3s-c3-pv-slot { margin: 0; flex: 1 1 0; min-width: 5.5rem; border: 1.5px solid #8aa0b6; border-radius: .35rem; background: #fff; padding: .15rem; }
+.b3s-c3-pv-cabinet.is-row .b3s-c3-pv-slot { min-height: 7rem; display: flex; align-items: flex-start; }
+.b3s-c3-pv-slot input { width: 100%; border: 0; background: transparent; font-weight: 600; font-size: .85rem; padding: .25rem .35rem; }
+.b3s-c3-pv-slot:focus-within { border-color: #0d6efd; box-shadow: 0 0 0 2px rgba(13,110,253,.2); }
+.b3s-c3-pv-slot input { border: 0 !important; box-shadow: none !important; background: transparent !important; height: auto !important; min-height: 0 !important; }

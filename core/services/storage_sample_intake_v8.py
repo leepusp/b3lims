@@ -113,14 +113,24 @@ def prepare_storage_sample_intake_v8(
             normalize_physical_position_v8146c2,
         )
 
-        prefix = f"{plan.box_path} > "
-
-        valid_path = (
-            storage_text.startswith(prefix)
-            and normalize_physical_position_v8146c2(
-                storage_text[len(prefix):]
-            ) == plan.positions[0]
+        from core.models.samples.storage import StorageLocation
+        from core.services.storage_layout_position import (
+            position_for_layout,
         )
+
+        prefix = f"{plan.box_path} > "
+        valid_path = storage_text.startswith(prefix)
+
+        if valid_path:
+            try:
+                valid_path = position_for_layout(
+                    StorageLocation.objects.get(pk=plan.box_id),
+                    normalize_physical_position_v8146c2(
+                        storage_text[len(prefix):]
+                    ),
+                ) == plan.positions[0]
+            except ValidationError:
+                valid_path = False
     else:
         valid_path = storage_text == plan.box_path
 
