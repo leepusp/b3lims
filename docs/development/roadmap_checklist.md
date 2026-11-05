@@ -23,8 +23,11 @@ before the next one starts. `[x]` done and live, `[~]` done, waiting for deploy,
       removable chips; the cloud became a "Tags and keywords" panel with favourites on top;
       the to-do and "Steps with deadlines" became one "My tasks" card (tasks can point to an entry);
       the JSON editor was removed.
-- [ ] Rename the stored keys (`extra_fields`, `elabftw.extra_fields_groups`) to our own names with
-      expand/contract: write both for one release, read either, drop the old in the next.
+- [~] Rename the stored keys (`extra_fields`, `elabftw.extra_fields_groups`) to `custom_fields` and
+      `custom_field_groups`. Expand release done in code (read either, write both, data migration
+      0101, `backfill_custom_field_layout` command for after a rollback). Contract release open:
+      set `WRITE_LEGACY_KEYS = False` in `core/services/custom_field_layout.py`, drop the fallbacks
+      and the old keys once the rollback target no longer needs them.
 - [ ] Gaps found against the reference screens, none built yet: "Draw something" canvas saved as
       an attachment (2.4), spreadsheet editor polish, compounds search, storage containers on the
       entry (2.3), exclusive "More" menu actions. Decide each one on use, not on parity.
@@ -80,8 +83,14 @@ Other useful functions
 
 ## Block E: workflows and submissions
 
-- [ ] Tools and workflow builders (Jupyter / Slurm, Galaxy)
+- [ ] Map the workflow steps already announced on the Laboratory hub (6.1 to 6.7) and what exists today
+- [ ] Workflow model: Biobank sample, then analysis, review and public data, as ordered steps with status
+- [ ] 6.3 Run Jupyter notebooks inside workflows (Slurm job, inputs and outputs linked to the ELN entry)
+- [ ] Galaxy steps in a workflow
+- [ ] Workflow builder screen (steps, inputs, outputs, who reviews)
+- [ ] 5.2 and 6.6 Data submissions: RO-Crate packages for ENA, Zenodo and the public catalog
 - [ ] Submissions: ENA, NCBI, Zenodo
+- [ ] Hub cards for Workflows and Data submissions move from "Planned" to "Available" as each ships
 
 ## Block F: Storage interface review (to be scheduled)
 
@@ -90,6 +99,11 @@ and the V8 scene files). It broke depending on the browser, so the lab moved to 
 view that is still visual and interactive (isometric, hierarchy, graph and position grid:
 `storage_isometric_v813.js`, `storage_2d_hierarchy_v89b.js`, `storage_graph_v811.js`,
 `storage_position_grid_v8146c3.js`). Not started; needs a review before any work.
+
+- [ ] Review how Storage behaves (create, move, occupy, free, history, permissions)
+- [ ] Review how Storage is illustrated in the interface (which views stay, what each shows,
+      browser behaviour, mobile, empty and full states)
+- [ ] Decide what to keep, merge or retire, then implement
 
 - [ ] Review the whole storage UI and how it is built: about 20 script files with version
       suffixes (`v4` to `v8146c3`), one 1,094-line template (`index_v814.html`) and two

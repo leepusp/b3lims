@@ -28,10 +28,10 @@ class SearchBase(TestCase):
 
         cls.gel = make("Gel run 1", status="completed", content="<p>agarose 1%</p>", rating=4,
                        experiment_date=date(2026, 2, 10),
-                       metadata={"extra_fields": {"Medium": {"type": "text", "value": "TSB broth"}}})
+                       metadata={"custom_fields": {"Medium": {"type": "text", "value": "TSB broth"}}})
         cls.pcr = make("PCR of 16S", status="draft", entry_type="protocol", rating=2,
                        experiment_date=date(2026, 5, 1),
-                       metadata={"extra_fields": {"Medium": {"type": "text", "value": "LB"}}})
+                       metadata={"custom_fields": {"Medium": {"type": "text", "value": "LB"}}})
         cls.bobs = make("Bob gel", author=cls.bob, status="completed", rating=5)
         cls.blank = make("Nothing here", status="reviewed")
 

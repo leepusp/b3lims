@@ -21,7 +21,9 @@ class NotebookTemplate(models.Model):
     entry_type = models.CharField(max_length=32, default="experiment")
     content = models.TextField(blank=True)
     protocol_content = models.TextField(blank=True)
-    # {"extra_fields": {...}, "elabftw": {"extra_fields_groups": [...]}, "steps": ["..."]}
+    # {"custom_fields": {...}, "custom_field_groups": [...], "steps": ["..."]}
+    # (older rows also carry extra_fields / elabftw.extra_fields_groups, see
+    # services/custom_field_layout.py)
     structure = models.JSONField(default=dict, blank=True)
 
     visibility = models.CharField(max_length=16, choices=Visibility.choices, default=Visibility.PRIVATE)

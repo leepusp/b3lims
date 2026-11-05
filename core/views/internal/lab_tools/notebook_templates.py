@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.models import NotebookTemplate, ResearchGroup
+from core.services import custom_field_layout as layout
 from core.services import notebook_taxonomy
 from core.services import notebook_templates as svc
 from core.views.internal.lab_tools.notebook import _get_entry_for_user
@@ -48,7 +49,7 @@ def _payload(template, user):
         "group_name": template.research_group.name if template.research_group else "",
         "owner": (template.owner.get_full_name() or template.owner.get_username()) if template.owner else "",
         "can_edit": svc.can_edit(user, template),
-        "fields": len((template.structure or {}).get("extra_fields") or {}),
+        "fields": len(layout.fields_of(template.structure)),
         "steps": len((template.structure or {}).get("steps") or []),
         "updated_at": template.updated_at.strftime("%Y-%m-%d"),
     }

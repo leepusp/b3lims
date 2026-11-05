@@ -41,22 +41,37 @@ class ComposerTestBase(TestCase):
 
     def normalize(self, fields, groups=None):
         return composer.normalize_metadata(
-            {"extra_fields": fields, "elabftw": {"extra_fields_groups": groups or []}},
+            {"custom_fields": fields, "custom_field_groups": groups or []},
             user=self.owner,
             entry=self.entry,
         )
 
 
 class CustomFieldRuleTests(ComposerTestBase):
-    def test_metadata_uses_elabftw_layout(self):
+    def test_metadata_uses_custom_field_layout(self):
         meta = self.normalize(
             {"Medium": field("select", "TSB", options=["TSB", "LB"], group_id=1, required=True)},
             [{"id": 1, "name": "Culture"}],
         )
-        self.assertEqual(meta["elabftw"]["extra_fields_groups"], [{"id": 1, "name": "Culture"}])
+        self.assertEqual(meta["custom_field_groups"], [{"id": 1, "name": "Culture"}])
+        self.assertEqual(meta["custom_fields"]["Medium"]["value"], "TSB")
+        self.assertTrue(meta["custom_fields"]["Medium"]["required"])
+        self.assertEqual(meta["custom_fields"]["Medium"]["position"], 0)
+
+    def test_old_payload_keys_are_still_accepted(self):
+        """A browser still running the previous script sends the old keys."""
+        meta = composer.normalize_metadata(
+            {
+                "extra_fields": {"Medium": field("text", "TSB", group_id=1)},
+                "elabftw": {"extra_fields_groups": [{"id": 1, "name": "Culture"}]},
+            },
+            user=self.owner,
+            entry=self.entry,
+        )
+        self.assertEqual(meta["custom_fields"]["Medium"]["value"], "TSB")
         self.assertEqual(meta["extra_fields"]["Medium"]["value"], "TSB")
-        self.assertTrue(meta["extra_fields"]["Medium"]["required"])
-        self.assertEqual(meta["extra_fields"]["Medium"]["position"], 0)
+        self.assertEqual(meta["custom_field_groups"], [{"id": 1, "name": "Culture"}])
+        self.assertEqual(meta["elabftw"]["extra_fields_groups"], [{"id": 1, "name": "Culture"}])
 
     def test_value_types_are_validated(self):
         good = {
@@ -72,9 +87,9 @@ class CustomFieldRuleTests(ComposerTestBase):
             "m": field("select", ["A", "B"], options=["A", "B", "C"], allow_multi_values=True),
         }
         meta = self.normalize(good)
-        self.assertEqual(meta["extra_fields"]["n"]["value"], "28.5")
-        self.assertEqual(meta["extra_fields"]["n"]["unit"], "K")
-        self.assertEqual(meta["extra_fields"]["m"]["value"], ["A", "B"])
+        self.assertEqual(meta["custom_fields"]["n"]["value"], "28.5")
+        self.assertEqual(meta["custom_fields"]["n"]["unit"], "K")
+        self.assertEqual(meta["custom_fields"]["m"]["value"], ["A", "B"])
 
         bad = [
             {"n": field("number", "abc")},
@@ -93,7 +108,7 @@ class CustomFieldRuleTests(ComposerTestBase):
 
     def test_reference_fields_respect_visibility(self):
         meta = self.normalize({"Host": field("items", self.sample.pk)})
-        self.assertEqual(meta["extra_fields"]["Host"]["value"], str(self.sample.pk))
+        self.assertEqual(meta["custom_fields"]["Host"]["value"], str(self.sample.pk))
 
         self.normalize({"Lysate": field("experiments", self.lab_entry.pk)})
 
@@ -106,9 +121,9 @@ class CustomFieldRuleTests(ComposerTestBase):
                 self.normalize(fields)
 
     def test_unchanged_stored_value_is_kept(self):
-        self.entry.metadata = {"extra_fields": {"Host": field("items", str(self.hidden_sample.pk))}}
+        self.entry.metadata = {"custom_fields": {"Host": field("items", str(self.hidden_sample.pk))}}
         meta = self.normalize({"Host": field("items", str(self.hidden_sample.pk))})
-        self.assertEqual(meta["extra_fields"]["Host"]["value"], str(self.hidden_sample.pk))
+        self.assertEqual(meta["custom_fields"]["Host"]["value"], str(self.hidden_sample.pk))
 
     def test_unknown_metadata_keys_are_preserved(self):
         self.entry.metadata = {"external": {"ena": "PRJEB1"}}
@@ -133,16 +148,16 @@ class ComposerApiTests(ComposerTestBase):
 
     def test_fields_api_saves_and_returns_state(self):
         response = self.post("notebook_fields_api", {"metadata": {
-            "extra_fields": {"Host": field("items", self.sample.pk, required=True)},
+            "custom_fields": {"Host": field("items", self.sample.pk, required=True)},
         }})
         self.assertEqual(response.status_code, 200)
         state = response.json()["state"]
         self.assertIn("B3-S-000142", state["fields"]["labels"]["Host"])
         self.entry.refresh_from_db()
-        self.assertEqual(self.entry.metadata["extra_fields"]["Host"]["value"], str(self.sample.pk))
+        self.assertEqual(self.entry.metadata["custom_fields"]["Host"]["value"], str(self.sample.pk))
 
     def test_fields_api_rejects_bad_value(self):
-        response = self.post("notebook_fields_api", {"metadata": {"extra_fields": {"n": field("number", "x")}}})
+        response = self.post("notebook_fields_api", {"metadata": {"custom_fields": {"n": field("number", "x")}}})
         self.assertEqual(response.status_code, 400)
         self.assertIn("number", response.json()["message"])
 
@@ -159,36 +174,36 @@ class ComposerApiTests(ComposerTestBase):
     def test_fields_json_round_trip_through_the_api(self):
         """Posting back the fields exactly as the page shows them changes nothing."""
         payload = {
-            "extra_fields": {
+            "custom_fields": {
                 "Medium": {"type": "select", "options": ["TSB", "LB"], "value": "LB", "required": True, "group_id": 1},
                 "Temperature": {"type": "number", "units": ["C", "K"], "unit": "C", "value": "37"},
             },
-            "elabftw": {"extra_fields_groups": [{"id": 1, "name": "Culture"}]},
+            "custom_field_groups": [{"id": 1, "name": "Culture"}],
         }
         self.assertEqual(self.post("notebook_fields_api", {"metadata": payload}).status_code, 200)
         shown = self.client.get(reverse("notebook_entry", args=[self.entry.pk]))
         self.assertEqual(shown.status_code, 200)
         self.entry.refresh_from_db()
-        again = {"extra_fields": self.entry.metadata["extra_fields"], "elabftw": self.entry.metadata["elabftw"]}
+        again = {"custom_fields": self.entry.metadata["custom_fields"], "custom_field_groups": self.entry.metadata["custom_field_groups"]}
         self.assertEqual(self.post("notebook_fields_api", {"metadata": again}).status_code, 200)
         before = dict(self.entry.metadata)
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.metadata, before)
-        self.assertEqual(self.entry.metadata["extra_fields"]["Medium"]["value"], "LB")
+        self.assertEqual(self.entry.metadata["custom_fields"]["Medium"]["value"], "LB")
 
     def test_fields_json_rejects_bad_documents_without_touching_the_entry(self):
-        self.post("notebook_fields_api", {"metadata": {"extra_fields": {"A": {"type": "text", "value": "keep"}}, "elabftw": {"extra_fields_groups": []}}})
+        self.post("notebook_fields_api", {"metadata": {"custom_fields": {"A": {"type": "text", "value": "keep"}}, "custom_field_groups": []}})
         for bad in (
-            {"extra_fields": {"B": {"type": "nonsense"}}},
-            {"extra_fields": {"B": {"type": "select", "options": []}}},
-            {"extra_fields": {"B": {"type": "text", "group_id": 9}}},
-            {"extra_fields": [1, 2]},
+            {"custom_fields": {"B": {"type": "nonsense"}}},
+            {"custom_fields": {"B": {"type": "select", "options": []}}},
+            {"custom_fields": {"B": {"type": "text", "group_id": 9}}},
+            {"custom_fields": [1, 2]},
         ):
             response = self.post("notebook_fields_api", {"metadata": bad})
             self.assertEqual(response.status_code, 400, bad)
         self.entry.refresh_from_db()
-        self.assertEqual(list(self.entry.metadata["extra_fields"]), ["A"])
-        self.assertEqual(self.entry.metadata["extra_fields"]["A"]["value"], "keep")
+        self.assertEqual(list(self.entry.metadata["custom_fields"]), ["A"])
+        self.assertEqual(self.entry.metadata["custom_fields"]["A"]["value"], "keep")
 
     def test_steps_api_lifecycle(self):
         self.post("notebook_steps_api", {"action": "add", "body": "Dilute lysate"})
@@ -223,7 +238,7 @@ class ComposerApiTests(ComposerTestBase):
     def test_other_users_cannot_edit(self):
         self.client.force_login(self.other)
         for name, payload in (
-            ("notebook_fields_api", {"metadata": {"extra_fields": {}}}),
+            ("notebook_fields_api", {"metadata": {"custom_fields": {}}}),
             ("notebook_header_api", {"rating": 1}),
             ("notebook_steps_api", {"action": "add", "body": "x"}),
             ("notebook_entry_links_api", {"action": "add", "target_id": self.lab_entry.pk}),
@@ -249,11 +264,11 @@ class ComposerApiTests(ComposerTestBase):
 
     def test_load_fields_copies_structure_without_values(self):
         NotebookEntry.objects.filter(pk=self.lab_entry.pk).update(metadata={
-            "extra_fields": {"Medium": field("select", "TSB", options=["TSB", "LB"])},
-            "elabftw": {"extra_fields_groups": []},
+            "custom_fields": {"Medium": field("select", "TSB", options=["TSB", "LB"])},
+            "custom_field_groups": [],
         })
         response = self.client.get(reverse("notebook_field_definitions_api", args=[self.lab_entry.pk]))
-        medium = response.json()["metadata"]["extra_fields"]["Medium"]
+        medium = response.json()["metadata"]["custom_fields"]["Medium"]
         self.assertEqual(medium["value"], "")
         self.assertEqual(medium["options"], ["TSB", "LB"])
 
@@ -270,8 +285,8 @@ class ComposerPageTests(TestCase):
     def test_template_creates_fields_and_steps(self):
         self.client.get(reverse("notebook_create") + "?template=plasmid_construction")
         entry = NotebookEntry.objects.get(author=self.user)
-        self.assertIn("Backbone", entry.metadata["extra_fields"])
-        self.assertEqual(entry.metadata["elabftw"]["extra_fields_groups"][0]["name"], "Construct")
+        self.assertIn("Backbone", entry.metadata["custom_fields"])
+        self.assertEqual(entry.metadata["custom_field_groups"][0]["name"], "Construct")
         self.assertEqual(NotebookStep.objects.filter(entry=entry).count(), 6)
 
     def test_page_renders_composer(self):

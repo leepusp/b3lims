@@ -31,8 +31,8 @@ class Base(TestCase):
             title=kw.pop("title", "PCR run"), author=user or self.owner,
             content=kw.pop("content", "<h3>Objective</h3><p>Amplify</p>"),
             protocol_content="Mix\n", entry_type="experiment",
-            metadata={"extra_fields": {"Temp": {"type": "number", "value": "72", "position": 0}},
-                      "elabftw": {"extra_fields_groups": [{"id": 1, "name": "Conditions"}]}},
+            metadata={"custom_fields": {"Temp": {"type": "number", "value": "72", "position": 0}},
+                      "custom_field_groups": [{"id": 1, "name": "Conditions"}]},
             **kw,
         )
         NotebookStep.objects.create(entry=entry, body="Prepare mix", position=0, finished=True)
@@ -48,13 +48,13 @@ class SaveAndUseTests(Base):
     def test_template_keeps_text_fields_and_steps_but_not_values_or_progress(self):
         tpl = self.make()
         self.assertEqual(tpl.structure["steps"], ["Prepare mix", "Cycle"])
-        self.assertEqual(tpl.structure["extra_fields"]["Temp"]["value"], "")  # cleared
+        self.assertEqual(tpl.structure["custom_fields"]["Temp"]["value"], "")  # cleared
         new = svc.create_entry_from_template(user=self.member, template=tpl)
         self.assertEqual(new.author, self.member)
         self.assertEqual(new.visibility, "private")
         self.assertEqual(new.status, "draft")
         self.assertIn("Amplify", new.content)
-        self.assertEqual(new.metadata["extra_fields"]["Temp"]["value"], "")
+        self.assertEqual(new.metadata["custom_fields"]["Temp"]["value"], "")
         steps = list(new.steps.values_list("body", "finished"))
         self.assertEqual(steps, [("Prepare mix", False), ("Cycle", False)])
 
@@ -62,7 +62,7 @@ class SaveAndUseTests(Base):
         entry = self.entry()
         svc.save_entry_as_template(entry=entry, user=self.owner, name="X")
         entry.refresh_from_db()
-        self.assertEqual(entry.metadata["extra_fields"]["Temp"]["value"], "72")
+        self.assertEqual(entry.metadata["custom_fields"]["Temp"]["value"], "72")
         self.assertTrue(entry.steps.filter(finished=True).exists())
 
     def test_overwrite_refreshes_content(self):

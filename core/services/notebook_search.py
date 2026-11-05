@@ -21,6 +21,8 @@ from datetime import date, datetime, time, timedelta
 from django.db.models import Q
 from django.utils import timezone
 
+from core.services import custom_field_layout as layout
+
 
 class SearchSyntaxError(ValueError):
     pass
@@ -283,12 +285,18 @@ def _term_q(field, op, value):
         name = name.strip()
         if not name or "__" in name:
             raise SearchSyntaxError("Use extrafield:Name:value, for example extrafield:Medium:TSB.")
-        base = f"metadata__extra_fields__{name}__value"
+        keys = (layout.FIELDS_KEY, layout.LEGACY_FIELDS_KEY)
         if not sep:
-            return Q(**{f"metadata__extra_fields__{name}__isnull": False})
+            return Q(**{f"metadata__{keys[0]}__{name}__isnull": False}) | Q(
+                **{f"metadata__{keys[1]}__{name}__isnull": False}
+            )
         if op == "=" or wanted.startswith("="):
-            return Q(**{base: wanted.lstrip("=")})
-        return Q(**{base + "__icontains": wanted})
+            lookup, wanted = "", wanted.lstrip("=")
+        else:
+            lookup = "__icontains"
+        return Q(**{f"metadata__{keys[0]}__{name}__value{lookup}": wanted}) | Q(
+            **{f"metadata__{keys[1]}__{name}__value{lookup}": wanted}
+        )
 
     raise SearchSyntaxError(f"Unsupported search field “{field}”.")  # pragma: no cover
 

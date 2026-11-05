@@ -117,7 +117,7 @@ class EntryPageTests(TestCase):
         composer.update_header(self.entry, tags=["bsl2"])
         NotebookStep.objects.create(entry=self.entry, body="Plate", finished=True)
         NotebookSpreadsheet.objects.create(entry=self.entry, title="T", data=[["=1+1"]])
-        self.entry.metadata = {"extra_fields": {"Medium": {"type": "text", "value": "TSB"}}}
+        self.entry.metadata = {"custom_fields": {"Medium": {"type": "text", "value": "TSB"}}}
         self.entry.save()
 
         self.client.force_login(self.other)
@@ -125,7 +125,7 @@ class EntryPageTests(TestCase):
         copy = NotebookEntry.objects.get(pk=response.json()["entry_id"])
         self.assertEqual(copy.author, self.other)
         self.assertEqual((copy.status, copy.visibility), ("draft", "private"))
-        self.assertEqual(copy.metadata["extra_fields"]["Medium"]["value"], "TSB")
+        self.assertEqual(copy.metadata["custom_fields"]["Medium"]["value"], "TSB")
         self.assertEqual([t.name for t in copy.shared_tags.all()], ["bsl2"])
         self.assertEqual([(s.body, s.finished) for s in copy.steps.all()], [("Plate", False)])
         self.assertEqual(copy.spreadsheets.get().data, [["=1+1"]])

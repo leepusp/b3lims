@@ -1,6 +1,6 @@
 /* B3 Bench 1.A — Notebook entry composer.
  *
- * Custom fields (eLabFTW metadata.extra_fields), steps, linked entries,
+ * Custom fields (metadata.custom_fields), steps, linked entries,
  * custom ID, tags and rating. State comes from the
  * #nb-composer-state JSON script; every change is posted to the
  * composer API and the server's normalized state is rendered back.
@@ -221,12 +221,12 @@
     // --- custom fields ------------------------------------------------------
 
     function sortedFields() {
-        return Object.entries(metadata().extra_fields || {})
+        return Object.entries(metadata().custom_fields || {})
             .sort((a, b) => (a[1].position || 0) - (b[1].position || 0));
     }
 
     function groups() {
-        return (metadata().elabftw && metadata().elabftw.extra_fields_groups) || [];
+        return metadata().custom_field_groups || [];
     }
 
     function fieldInput(name, field) {
@@ -330,9 +330,9 @@
 
     function setFieldValue(name, value, unit) {
         const meta = cloneMetadata();
-        if (!meta.extra_fields[name]) return;
-        meta.extra_fields[name].value = value;
-        if (unit !== undefined) meta.extra_fields[name].unit = unit;
+        if (!meta.custom_fields[name]) return;
+        meta.custom_fields[name].value = value;
+        if (unit !== undefined) meta.custom_fields[name].unit = unit;
         saveMetadata(meta);
     }
 
@@ -347,7 +347,7 @@
 
             if (target.classList.contains("nb-unit-input")) {
                 const meta = cloneMetadata();
-                meta.extra_fields[name].unit = target.value;
+                meta.custom_fields[name].unit = target.value;
                 saveMetadata(meta);
             } else if (target.type === "checkbox") {
                 setFieldValue(name, target.checked ? "on" : "");
@@ -365,7 +365,7 @@
             } else if (event.target.closest(".nb-field-delete") && row) {
                 if (!window.confirm(`Delete the field "${row.dataset.field}" and its value?`)) return;
                 const meta = cloneMetadata();
-                delete meta.extra_fields[row.dataset.field];
+                delete meta.custom_fields[row.dataset.field];
                 saveMetadata(meta);
             } else if (event.target.closest(".nb-field-edit") && row) {
                 openFieldEditor(row.dataset.field);
@@ -374,8 +374,8 @@
             } else if (event.target.closest(".nb-group-delete")) {
                 const groupId = Number(event.target.closest(".nb-group-delete").dataset.group);
                 const meta = cloneMetadata();
-                meta.elabftw.extra_fields_groups = groups().filter((g) => g.id !== groupId);
-                Object.values(meta.extra_fields).forEach((f) => { if (f.group_id === groupId) delete f.group_id; });
+                meta.custom_field_groups = groups().filter((g) => g.id !== groupId);
+                Object.values(meta.custom_fields).forEach((f) => { if (f.group_id === groupId) delete f.group_id; });
                 saveMetadata(meta);
             }
         });
@@ -386,7 +386,7 @@
             if (!name) return;
             const meta = cloneMetadata();
             const ids = groups().map((g) => g.id);
-            meta.elabftw.extra_fields_groups = groups().concat([{id: ids.length ? Math.max(...ids) + 1 : 1, name}]);
+            meta.custom_field_groups = groups().concat([{id: ids.length ? Math.max(...ids) + 1 : 1, name}]);
             saveMetadata(meta);
         });
         document.getElementById("nb-load-fields").addEventListener("click", openLoadPanel);
@@ -394,8 +394,8 @@
 
     function orderedMetadata(entries) {
         const meta = cloneMetadata();
-        meta.extra_fields = {};
-        entries.forEach(([n, f], i) => { f.position = i; meta.extra_fields[n] = f; });
+        meta.custom_fields = {};
+        entries.forEach(([n, f], i) => { f.position = i; meta.custom_fields[n] = f; });
         return meta;
     }
 
@@ -409,7 +409,7 @@
 
     function openFieldEditor(existingName) {
         const editor = document.getElementById("nb-field-editor");
-        const field = existingName ? metadata().extra_fields[existingName] : {type: "text", required: false};
+        const field = existingName ? metadata().custom_fields[existingName] : {type: "text", required: false};
         const typeOptions = Object.entries(TYPES).map(([k, label]) =>
             `<option value="${esc(k)}" ${k === field.type ? "selected" : ""}>${esc(label)}</option>`).join("");
         const groupOptions = '<option value="">No group</option>' + groups().map((g) =>
@@ -453,7 +453,7 @@
         editor.querySelector("#nbe-save").addEventListener("click", function () {
             const name = editor.querySelector("#nbe-name").value.trim();
             if (!name) { window.alert("Give the field a name."); return; }
-            if (name !== existingName && metadata().extra_fields[name]) { window.alert("A field with this name already exists."); return; }
+            if (name !== existingName && metadata().custom_fields[name]) { window.alert("A field with this name already exists."); return; }
 
             const type = typeSelect.value;
             const updated = {
@@ -497,23 +497,23 @@
         attachPicker(panel.querySelector(".nb-picker"), "experiments", function (id, label) {
             getJson(urls.definitionsUrl.replace("/0/", "/" + id + "/")).then(function (data) {
                 const source = data && data.metadata;
-                const count = source ? Object.keys(source.extra_fields).length : 0;
+                const count = source ? Object.keys(source.custom_fields).length : 0;
                 if (!count) { window.alert("That entry has no custom fields."); return; }
 
                 const meta = cloneMetadata();
                 const groupMap = {};
                 let nextGroup = groups().reduce((m, g) => Math.max(m, g.id), 0) + 1;
-                (source.elabftw.extra_fields_groups || []).forEach(function (g) {
-                    const existing = meta.elabftw.extra_fields_groups.find((x) => x.name === g.name);
+                (source.custom_field_groups || []).forEach(function (g) {
+                    const existing = meta.custom_field_groups.find((x) => x.name === g.name);
                     if (existing) groupMap[g.id] = existing.id;
-                    else { groupMap[g.id] = nextGroup; meta.elabftw.extra_fields_groups.push({id: nextGroup++, name: g.name}); }
+                    else { groupMap[g.id] = nextGroup; meta.custom_field_groups.push({id: nextGroup++, name: g.name}); }
                 });
                 let added = 0;
-                Object.entries(source.extra_fields).forEach(function ([n, f]) {
-                    if (meta.extra_fields[n]) return;
+                Object.entries(source.custom_fields).forEach(function ([n, f]) {
+                    if (meta.custom_fields[n]) return;
                     if (f.group_id != null) f.group_id = groupMap[f.group_id];
                     f.position = 1000 + added;
-                    meta.extra_fields[n] = f;
+                    meta.custom_fields[n] = f;
                     added += 1;
                 });
                 if (!added) { window.alert("All of those fields already exist here."); return; }

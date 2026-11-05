@@ -177,7 +177,7 @@ class NotebookEntry(models.Model):
         blank=True,
     )
 
-    # B3 Bench 1.A: eLabFTW-style composition (see notebook_composer.py).
+    # B3 Bench 1.A: composition (see notebook_composer.py).
     # db_default keeps inserts from older releases valid during cutover
     # and after a rollback.
     custom_id = models.CharField(max_length=64, blank=True, default="", db_default="")

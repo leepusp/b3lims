@@ -1,5 +1,6 @@
 """User-made entry templates: save an entry as a template, share it, start entries from it."""
 
+import copy
 import re
 
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -8,6 +9,7 @@ from django.db.models import Q
 
 from core.models import NotebookEntry, NotebookTemplate, ResearchGroup
 from core.models.lab_tools.notebook_composer import NotebookStep
+from core.services import custom_field_layout as layout
 from core.services.notebook_composer import field_definitions_from
 
 ICON_RE = re.compile(r"^bi-[a-z0-9-]{1,36}$")
@@ -83,7 +85,10 @@ def _clean_icon(value):
 
 
 def _structure_of(entry):
-    structure = field_definitions_from(entry)
+    definitions = field_definitions_from(entry)
+    structure = layout.with_layout(
+        {}, definitions[layout.FIELDS_KEY], definitions[layout.GROUPS_KEY]
+    )
     # Plain strings keep older releases able to read the template; a step
     # only becomes an object when it carries a group heading.
     structure["steps"] = [
@@ -182,11 +187,10 @@ def create_entry_from_template(*, user, template):
         protocol_content=template.protocol_content,
     )
     structure = template.structure if isinstance(template.structure, dict) else {}
-    if structure.get("extra_fields"):
-        entry.metadata = {
-            "extra_fields": structure["extra_fields"],
-            "elabftw": structure.get("elabftw") or {},
-        }
+    if layout.has_fields(structure):
+        entry.metadata = layout.with_layout(
+            {}, copy.deepcopy(layout.fields_of(structure)), copy.deepcopy(layout.groups_of(structure))
+        )
         entry.save(update_fields=["metadata"])
     steps = []
     for raw in (structure.get("steps") or [])[:MAX_STEPS]:

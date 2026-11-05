@@ -1,14 +1,13 @@
 """Rules for the composable parts of a Notebook entry (B3 Bench 1.A).
 
-Custom fields follow eLabFTW's metadata layout so they can be exported
-to .eln unchanged:
+Custom fields live in the entry metadata (see custom_field_layout.py):
 
     {
-      "extra_fields": {
+      "custom_fields": {
         "Medium": {"type": "select", "value": "TSB", "options": [...],
                    "required": true, "group_id": 1, "position": 0, ...}
       },
-      "elabftw": {"extra_fields_groups": [{"id": 1, "name": "Culture"}]}
+      "custom_field_groups": [{"id": 1, "name": "Culture"}]
     }
 
 Reference fields store the id of the referenced record; every id is
@@ -24,6 +23,7 @@ from django.core.validators import URLValidator, validate_email
 from django.db import transaction
 from django.utils import timezone
 
+from core.services import custom_field_layout as layout
 from core.services.metadata_vocabularies import (
     get_or_create_active_keyword_value,
     get_or_create_active_tag,
@@ -282,9 +282,13 @@ def normalize_metadata(raw, *, user, entry):
         raise ValidationError("Metadata must be an object.")
 
     previous_meta = entry.metadata if isinstance(entry.metadata, dict) else {}
-    previous_fields = previous_meta.get("extra_fields") or {}
+    previous_fields = layout.fields_of(previous_meta)
 
-    raw_groups = ((raw.get("elabftw") or {}).get("extra_fields_groups")) or []
+    # Shape is checked below, so read the raw values rather than fields_of().
+    if layout.GROUPS_KEY in raw:
+        raw_groups = raw[layout.GROUPS_KEY] or []
+    else:
+        raw_groups = (raw.get(layout.LEGACY_NAMESPACE) or {}).get(layout.LEGACY_GROUPS_KEY) or []
     if not isinstance(raw_groups, list) or len(raw_groups) > MAX_GROUPS:
         raise ValidationError(f"At most {MAX_GROUPS} field groups.")
 
@@ -303,7 +307,8 @@ def normalize_metadata(raw, *, user, entry):
         group_ids.add(group_id)
         groups.append({"id": group_id, "name": group_name})
 
-    raw_fields = raw.get("extra_fields") or {}
+    raw_fields = raw[layout.FIELDS_KEY] if layout.FIELDS_KEY in raw else raw.get(layout.LEGACY_FIELDS_KEY)
+    raw_fields = raw_fields or {}
     if not isinstance(raw_fields, dict) or len(raw_fields) > MAX_FIELDS:
         raise ValidationError(f"At most {MAX_FIELDS} custom fields.")
 
@@ -356,16 +361,11 @@ def normalize_metadata(raw, *, user, entry):
         )
         fields[name] = clean
 
-    metadata = dict(previous_meta)
-    metadata["extra_fields"] = fields
-    elab = dict(previous_meta.get("elabftw") or {})
-    elab["extra_fields_groups"] = groups
-    metadata["elabftw"] = elab
-    return metadata
+    return layout.with_layout(previous_meta, fields, groups)
 
 
 def missing_required_fields(metadata):
-    fields = (metadata or {}).get("extra_fields") or {}
+    fields = layout.fields_of(metadata)
     return [
         name
         for name, field in fields.items()
@@ -376,7 +376,7 @@ def missing_required_fields(metadata):
 def describe_fields(entry, user):
     """Fields with display labels for reference values, for the page."""
     metadata = entry.metadata if isinstance(entry.metadata, dict) else {}
-    fields = metadata.get("extra_fields") or {}
+    fields = layout.fields_of(metadata)
     labels = {}
 
     for name, field in fields.items():
@@ -391,12 +391,8 @@ def describe_fields(entry, user):
 
     return {
         "metadata": {
-            "extra_fields": fields,
-            "elabftw": {
-                "extra_fields_groups": (metadata.get("elabftw") or {}).get(
-                    "extra_fields_groups", []
-                )
-            },
+            layout.FIELDS_KEY: fields,
+            layout.GROUPS_KEY: layout.groups_of(metadata),
         },
         "labels": labels,
         "types": FIELD_TYPES,
@@ -640,16 +636,11 @@ def field_definitions_from(source):
     """Field structure of another entry, with values cleared ("Load fields")."""
     metadata = source.metadata if isinstance(source.metadata, dict) else {}
     fields = {}
-    for name, field in (metadata.get("extra_fields") or {}).items():
+    for name, field in layout.fields_of(metadata).items():
         copy = {k: v for k, v in field.items() if k != "value"}
         copy["value"] = [] if field.get("allow_multi_values") else ""
         fields[name] = copy
-    return {
-        "extra_fields": fields,
-        "elabftw": {
-            "extra_fields_groups": (metadata.get("elabftw") or {}).get("extra_fields_groups", [])
-        },
-    }
+    return {layout.FIELDS_KEY: fields, layout.GROUPS_KEY: layout.groups_of(metadata)}
 
 
 # --- starting structure for the built-in entry templates ----------------------
@@ -726,10 +717,7 @@ def apply_template_structure(entry, template_key):
     structure = TEMPLATE_STRUCTURE.get(template_key)
     if not structure:
         return entry
-    entry.metadata = {
-        "extra_fields": structure["fields"],
-        "elabftw": {"extra_fields_groups": structure["groups"]},
-    }
+    entry.metadata = layout.with_layout({}, structure["fields"], structure["groups"])
     entry.save(update_fields=["metadata"])
     NotebookStep.objects.bulk_create(
         NotebookStep(entry=entry, body=body, position=i)

@@ -1,14 +1,14 @@
 """Composable structure of a Notebook entry (B3 Bench step 1.A).
 
-Mirrors the parts of an eLabFTW entry that a researcher assembles
-around the main text:
+The parts of an entry that a researcher assembles around the main
+text:
 
 - tags and keywords from the biobank-wide vocabulary (core.Tag,
   core.KeywordValue; NotebookTag is the legacy list kept for rollback)
   and a custom ID (NotebookEntry.custom_id);
-- custom fields, stored in NotebookEntry.metadata using eLabFTW's own
-  JSON layout ({"extra_fields": {...}, "elabftw": {"extra_fields_groups": [...]}}),
-  so an .eln export can carry them unchanged;
+- custom fields, stored in NotebookEntry.metadata as
+  {"custom_fields": {...}, "custom_field_groups": [...]},
+  (older rows also keep the previous key names until the contract release);
 - steps with completion and deadlines (NotebookStep);
 - links between entries (NotebookEntryLink).
 """
