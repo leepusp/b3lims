@@ -1,5 +1,5 @@
 <section class="eln-card" id="eln-agenda">
-    <div class="hd"><i class="bi bi-calendar-week"></i> Today and this week <a class="ms-auto small fw-normal" href="{% url 'lab_calendar' %}">Open calendar</a></div>
+    <div class="hd text-nowrap"><i class="bi bi-calendar-week"></i> <span class="text-truncate">Today and this week</span> <a class="ms-auto small fw-normal" href="{% url 'lab_calendar' %}">Calendar</a></div>
     <div class="bd">
         {% if agenda.total %}
             {% if agenda.today %}<div class="small text-uppercase text-muted fw-bold mb-1">Today</div>

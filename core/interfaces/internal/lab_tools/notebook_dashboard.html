@@ -24,7 +24,9 @@
     .eln-card > .hd { padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); font-weight: 700; display: flex; align-items: center; gap: .5rem; }
     .eln-card > .bd { padding: .75rem .9rem; }
 
-    .eln-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .5rem; padding: .75rem .9rem; border-bottom: 1px solid var(--eln-border); }
+    .eln-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .75rem .9rem; border-bottom: 1px solid var(--eln-border); }
+    .eln-filters > select { flex: 1 1 130px; min-width: 0; width: auto; }
+    .eln-filters > .eln-actions { flex: 0 0 auto; display: flex; gap: .25rem; }
     .eln-pins { display: flex; gap: .5rem; overflow-x: auto; padding: .6rem .9rem; border-bottom: 1px solid var(--eln-border); background: #fbfcfd; }
     .eln-pin {
         flex: 0 0 220px; border: 1px solid var(--eln-border); border-radius: .5rem; background: #fff;
@@ -54,14 +56,13 @@
 
     @media (max-width: 1200px) {
         .eln-layout { grid-template-columns: 1fr; }
-        .eln-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .eln-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
-        .eln-filters, .eln-stats { grid-template-columns: 1fr 1fr; }
-        .eln-q { grid-column: 1 / -1; }
+        .eln-stats { grid-template-columns: 1fr 1fr; }
+        .eln-filters > select { flex-basis: 45%; }
     }
-    .eln-q { position: relative; grid-column: 1 / -1; }
+    .eln-q { position: relative; flex: 1 0 100%; }
     .eln-q input { padding-right: 2rem; }
     .eln-q-help { position: absolute; right: 0; top: 0; padding: .1rem .5rem; color: var(--eln-muted, #6c757d); }
     .eln-help-table { background: #f8f9fa; border-bottom: 1px solid var(--eln-border); }
@@ -140,7 +141,7 @@
                 </select>
                 {% if filters.tag %}<input type="hidden" name="tag" value="{{ filters.tag }}">{% endif %}
                 {% if filters.keyword %}<input type="hidden" name="keyword" value="{{ filters.keyword }}">{% endif %}
-                <div class="d-flex gap-1">
+                <div class="eln-actions">
                     <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i></button>
                     <a class="btn btn-sm btn-outline-secondary" href="?" title="Clear filters"><i class="bi bi-x-lg"></i></a>
                 </div>
