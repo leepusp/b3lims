@@ -2398,57 +2398,91 @@
       if (actions.children.length) detail.append(actions);
     }
 
-    // Empty position: choose which recorded Sample goes here, or register
-    // a new one. The server preview validates before anything changes.
+    // Empty position: search any Sample by ID (placed or not yet placed)
+    // and send it through the same preview-and-confirm page used for
+    // selections made in the Samples list.
+    function boardSendToBulk(node, slot, sample) {
+      const form = find("b3s-bd-bulk");
+      if (!form) return;
+      for (const el of form.querySelectorAll("[data-gen]")) el.remove();
+      const add = (name, value) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = String(value);
+        input.dataset.gen = "1";
+        form.append(input);
+      };
+      add("action", "preview");
+      add("sample_ids", sample.id);
+      add("destination_id", node.id);
+      add("position_" + sample.id, slot);
+      form.submit();
+    }
+
     function boardPutForm(node, slot) {
       const form = mk("div", null, "b3s-bd-put");
-      const listId = "b3s-bd-sample-list";
-      let list = document.getElementById(listId);
-      if (!list) {
-        list = document.createElement("datalist");
-        list.id = listId;
-        root.append(list);
-      }
-      list.replaceChildren();
-      const seen = new Set();
-      for (const item of samples) {
-        if (!item.id || !item.sample || seen.has(item.sample)) continue;
-        if (item.location === node.id && boardSlotOf(node, item) === slot) continue;
-        seen.add(item.sample);
-        if (seen.size > 800) break;
-        const option = document.createElement("option");
-        option.value = item.sample;
-        list.append(option);
-      }
-
-      const label = mk("label", "Put a recorded Sample here");
+      const label = mk("label", "Put a Sample here");
       const input = document.createElement("input");
-      input.type = "text";
+      input.type = "search";
       input.className = "form-control form-control-sm";
-      input.setAttribute("list", listId);
-      input.placeholder = "Sample ID";
+      input.placeholder = "Type part of the Sample ID";
+      input.autocomplete = "off";
       label.append(input);
 
-      const error = mk("p", "", "b3s-bd-warn");
-      const go = mk("button", "Preview move here", "btn btn-sm btn-primary");
-      go.type = "button";
-      go.addEventListener("click", () => {
-        const wanted = input.value.trim().toLowerCase();
-        const item = samples.find(
-          it => it.id && (it.sample || "").toLowerCase() === wanted
-        );
-        if (!item) {
-          error.textContent = "Pick a Sample ID that has a recorded location.";
+      const results = mk("ul", null, "b3s-bd-results");
+      const status = mk("p", "", "b3s-note");
+      let timer = 0;
+      let counter = 0;
+
+      const run = () => {
+        const text = input.value.trim();
+        const url = find("b3s-board")?.dataset.searchUrl;
+        results.replaceChildren();
+        if (!url || text.length < 2) {
+          status.textContent = text ? "Type at least 2 characters." : "";
           return;
         }
-        window.location.href = pickUrl([
-          ["preview_sample", "1"],
-          ["assignment_id", item.id],
-          ["destination_id", node.id],
-          ["position", slot]
-        ], "storage-sample-preview");
+        const ticket = ++counter;
+        status.textContent = "Searching…";
+        fetch(url + "?q=" + encodeURIComponent(text), {
+          credentials: "same-origin",
+          headers: {Accept: "application/json"}
+        })
+          .then(response => response.ok ? response.json() : {results: []})
+          .then(data => {
+            if (ticket !== counter) return;
+            results.replaceChildren();
+            const list = data.results || [];
+            status.textContent = list.length
+              ? ""
+              : "No Sample found that you can place.";
+            for (const item of list) {
+              const li = mk("li");
+              const button = mk("button", null, "b3s-bd-result");
+              button.type = "button";
+              button.append(
+                mk("strong", item.sample),
+                mk("small", item.where ? item.where : "not placed yet")
+              );
+              button.addEventListener("click", () =>
+                boardSendToBulk(node, slot, item)
+              );
+              li.append(button);
+              results.append(li);
+            }
+          })
+          .catch(() => {
+            if (ticket === counter) status.textContent = "Search failed.";
+          });
+      };
+
+      input.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(run, 250);
       });
-      form.append(label, go, error);
+
+      form.append(label, results, status);
 
       const addUrl = find("b3s-board")?.dataset.addUrl;
       if (addUrl) {

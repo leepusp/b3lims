@@ -1,4 +1,5 @@
 {% extends "internal/common/base.html" %}
+{% load static %}
 {% block title %}Move Selected to Storage · B3 LIMS{% endblock %}
 {% block content %}
 <div class="container-fluid py-4" data-b3-bulk-storage-v8148>
@@ -24,6 +25,23 @@
           </select>
           <div class="form-text">Only destinations authorized for physical registration are listed.</div>
         </div>
+        <div id="bulkDrawing" class="b3-bulk-drawing" hidden>
+          <div class="d-flex flex-wrap align-items-baseline gap-3 mb-2">
+            <strong>How the destination looks</strong>
+            <span id="bulkDrawingCount" class="small text-muted"></span>
+            <span class="small ms-auto b3-bulk-legend" aria-hidden="true">
+              <i class="b3-bk-key"></i> free
+              <i class="b3-bk-key is-used"></i> occupied
+              <i class="b3-bk-key is-mine"></i> these Samples
+            </span>
+          </div>
+          <div id="bulkDrawingCanvas" class="b3-bulk-canvas"></div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+            <button type="button" id="bulkAutoFill" class="btn btn-sm btn-outline-secondary">Fill free positions in order</button>
+            <button type="button" id="bulkClear" class="btn btn-sm btn-outline-secondary">Clear positions</button>
+            <span class="small text-muted">Click a free position to give it to the next Sample without one; click a green one to release it.</span>
+          </div>
+        </div>
         <div class="table-responsive"><table class="table table-sm align-middle">
           <thead><tr><th>Sample</th><th>Existing physical storage</th><th>Operation</th><th>New position</th></tr></thead>
           <tbody>
@@ -32,7 +50,8 @@
             <td>{{ entry.old_path }}{% if entry.assignment and entry.assignment.position %} — {{ entry.assignment.position }}{% endif %}</td>
             <td>{% if entry.kind == "register" %}Initial registration{% else %}Move primary assignment{% endif %}</td>
             <td><input class="form-control form-control-sm" name="position_{{ entry.sample.pk }}"
-                       maxlength="100" pattern="[A-Za-z]+[0-9]+" placeholder="e.g. B5" required
+                       maxlength="100" placeholder="e.g. B5 or Door 1" required
+                       data-bulk-position autocomplete="off"
                        aria-label="New position for {{ entry.sample.sample_id }}"></td>
           </tr>{% endfor %}
           </tbody>
@@ -64,4 +83,9 @@
     </div>
   </div>
 </div>
+{% if bulk_stage == "choose" %}
+{{ bulk_catalog|json_script:"b3-bulk-catalog" }}
+<link rel="stylesheet" href="{% static 'internal/samples/bulk_storage_v8148.css' %}?v=20261105-v816">
+<script src="{% static 'internal/samples/bulk_storage_v8148.js' %}?v=20261105-v816"></script>
+{% endif %}
 {% endblock %}

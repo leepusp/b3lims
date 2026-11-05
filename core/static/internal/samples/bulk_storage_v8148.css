@@ -1,0 +1,16 @@
+.b3-bulk-drawing { border: 1px solid rgba(138,160,182,.5); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+.b3-bulk-canvas { overflow: auto; }
+.b3-bk-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 4px 0 10px; vertical-align: -1px; border: 1.5px solid #8aa0b6; background: #fff; }
+.b3-bk-key.is-used { background: #d9534f; border-color: #a8322e; }
+.b3-bk-key.is-mine { background: #2e9e5b; border-color: #1f7a43; }
+.b3-bk-grid { display: inline-grid; gap: 4px; align-items: center; justify-items: center; }
+.b3-bk-axis { font-size: 11px; color: #6b7b8b; }
+.b3-bk-cell { width: 34px; height: 34px; padding: 0; border-radius: 6px; border: 1.5px solid #8aa0b6; background: #fff; cursor: pointer; font-size: 11px; font-weight: 600; line-height: 1; }
+.b3-bk-cell:hover:not(:disabled), .b3-bk-slot:hover:not(:disabled) { box-shadow: 0 0 0 2px rgba(31,111,214,.45); }
+.b3-bk-cell.is-used, .b3-bk-slot.is-used { background: #d9534f; border-color: #a8322e; color: #fff; cursor: not-allowed; opacity: .85; }
+.b3-bk-cell.is-mine, .b3-bk-slot.is-mine { background: #2e9e5b; border-color: #1f7a43; color: #fff; }
+.b3-bk-slots { display: flex; gap: 8px; }
+.b3-bk-slots.is-stack { flex-direction: column; }
+.b3-bk-slot { flex: 1; min-width: 6rem; min-height: 3rem; text-align: left; border: 1.5px solid #8aa0b6; border-radius: 8px; background: #fff; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.b3-bk-slots.is-row .b3-bk-slot { min-height: 5rem; }
+.b3-bk-slot small { font-size: 12px; opacity: .9; }

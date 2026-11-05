@@ -2263,3 +2263,7 @@
   #b3-storage-v814 .b3s-board-split { grid-template-columns: 1fr; }
   #b3-storage-v814 .b3s-board-detail { position: static; }
 }
+#b3-storage-v814 .b3s-bd-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
+#b3-storage-v814 .b3s-bd-result { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border: 1px solid rgba(138,160,182,.6); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+#b3-storage-v814 .b3s-bd-result:hover { border-color: #1f6fd6; background: rgba(31,111,214,.08); }
+#b3-storage-v814 .b3s-bd-result small { opacity: .75; }

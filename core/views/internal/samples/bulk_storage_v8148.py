@@ -160,8 +160,25 @@ def _review(actor, ids, dest_id, positions, *, lock=False):
     return rows, destination, move_preview
 
 
+def _catalog(actor, destinations):
+    """Layout and occupied positions of the offered destinations."""
+    from core.services.storage_anchor_catalog_v8 import (
+        build_storage_anchor_catalog,
+    )
+
+    wanted = {location.pk for location in destinations}
+    return [
+        item for item in build_storage_anchor_catalog(user=actor)
+        if item["id"] in wanted
+    ]
+
+
 def _page(request, *, rows, destinations=None, stage="choose", error="",
           destination=None, confirm_token="", selection_ids=None):
+    catalog = (
+        _catalog(request.user, destinations)
+        if destinations and stage == "choose" else []
+    )
     return render(request, "internal/samples/bulk_storage_v8148.html", {
         "bulk_rows": rows,
         "bulk_destinations": destinations if destinations is not None else [],
@@ -170,6 +187,7 @@ def _page(request, *, rows, destinations=None, stage="choose", error="",
         "bulk_destination": destination,
         "bulk_token": confirm_token,
         "bulk_ids": selection_ids or [r["sample"].pk for r in rows],
+        "bulk_catalog": catalog,
     }, status=400 if error else 200)
 
 
