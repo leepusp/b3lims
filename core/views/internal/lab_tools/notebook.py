@@ -32,6 +32,11 @@ from core.models.lab_tools.notebook import (
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
+from core.services.molecular_registry_overview import (
+    attach_registry_context,
+    duplicate_groups,
+    type_counts,
+)
 from core.permissions.samples import can_edit_sample, can_view_sample, visible_samples_for_user
 from core.permissions.chemicals import visible_chemicals_for_user
 from core.permissions.notebook import (
@@ -1203,6 +1208,11 @@ def molecular_registry_index(request):
         )
         .order_by("-updated_at", "-id")
     )
+    registry_universe = list(
+        molecules.select_related(None).only(
+            "id", "name", "sequence_type", "topology", "checksum_sha256"
+        )
+    )
 
     query = str(
         request.GET.get("q") or ""
@@ -1229,6 +1239,9 @@ def molecular_registry_index(request):
 
     molecule_count = molecules.count()
     molecules = list(molecules)
+    attach_registry_context(
+        request.user, molecules, registry_universe
+    )
 
     for molecule in molecules:
         molecule.can_delete_from_registry = (
@@ -1244,6 +1257,11 @@ def molecular_registry_index(request):
         {
             "molecules": molecules,
             "molecule_count": molecule_count,
+            "type_counts": type_counts(registry_universe),
+            "registry_total": len(registry_universe),
+            "duplicate_total": len(
+                duplicate_groups(registry_universe)
+            ),
             "query": query,
             "active_type": active_type,
             "sequence_types": (

@@ -5,6 +5,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261105-hub">
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_type_profiles.css' %}?v=20260808-molecular-type-profiles-v2-protein">
 
@@ -146,6 +147,30 @@
         </form>
     </div>
 
+    <div class="mr-hub row g-2 mb-3" aria-label="Registry by type">
+        <div class="col-6 col-md-4 col-xl">
+            <a class="mr-hub-card{% if not active_type %} is-active{% endif %}"
+               href="{% url 'molecular_registry_index' %}">
+                <span class="mr-hub-count">{{ registry_total }}</span>
+                <span class="mr-hub-label">All records</span>
+                {% if duplicate_total %}
+                    <span class="mr-hub-note text-warning-emphasis">
+                        <i class="bi bi-copy"></i> {{ duplicate_total }} with an identical sequence
+                    </span>
+                {% endif %}
+            </a>
+        </div>
+        {% for value, label, count in type_counts %}
+            <div class="col-6 col-md-4 col-xl">
+                <a class="mr-hub-card{% if active_type == value %} is-active{% endif %}"
+                   href="?type={{ value }}">
+                    <span class="mr-hub-count">{{ count }}</span>
+                    <span class="mr-hub-label">{{ label }}</span>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-header bg-white">
             <form method="get"
@@ -251,22 +276,46 @@
                                     {% endif %}
                                 </td>
 
-                                <td>
-                                    {% if molecule.source_entry %}
-                                        <span class="small">
-                                            <i class="bi bi-journal-bookmark me-1"></i>
-                                            {{ molecule.source_entry.title }}
-                                        </span>
-                                    {% elif molecule.linked_sample %}
-                                        <span class="small">
-                                            <i class="bi bi-box-seam me-1"></i>
-                                            {{ molecule.linked_sample.sample_id }}
-                                        </span>
-                                    {% else %}
-                                        <span class="small text-muted">
-                                            Standalone record
-                                        </span>
-                                    {% endif %}
+                                <td class="mr-context">
+                                    {% with c=molecule.registry_context %}
+                                        {% if molecule.source_entry %}
+                                            <div class="small">
+                                                <i class="bi bi-journal-bookmark me-1"></i>
+                                                {{ molecule.source_entry.title }}
+                                            </div>
+                                        {% endif %}
+                                        {% if molecule.linked_sample %}
+                                            <div class="small">
+                                                <i class="bi bi-box-seam me-1"></i>
+                                                {% if c.sample_visible %}
+                                                    <a href="{% url 'sample_detail' molecule.linked_sample_id %}">{{ molecule.linked_sample.sample_id }}</a>
+                                                {% else %}
+                                                    {{ molecule.linked_sample.sample_id }}
+                                                {% endif %}
+                                            </div>
+                                            {% if c.place %}
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-geo-alt me-1"></i>
+                                                    <a href="{% url 'storage_workspace' %}?location={{ c.place_location_id }}">{{ c.place }}</a>{% if c.place_position %} · {{ c.place_position }}{% endif %}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if not molecule.source_entry and not molecule.linked_sample %}
+                                            <span class="small text-muted">Not linked yet</span>
+                                        {% endif %}
+                                        <div class="mr-chips">
+                                            {% if c.features %}<span class="badge text-bg-light border">{{ c.features }} feature{{ c.features|pluralize }}</span>{% endif %}
+                                            {% if c.entries %}<span class="badge text-bg-light border">{{ c.entries }} ELN entr{{ c.entries|pluralize:"y,ies" }}</span>{% endif %}
+                                            {% if c.alignments %}<span class="badge text-bg-light border">{{ c.alignments }} alignment{{ c.alignments|pluralize }}</span>{% endif %}
+                                            {% if c.structures %}<span class="badge text-bg-light border">{{ c.structures }} structure{{ c.structures|pluralize }}</span>{% endif %}
+                                            {% if molecule.duplicates %}
+                                                <span class="badge text-bg-warning"
+                                                      title="Same sequence as: {% for did, dname in molecule.duplicates %}{{ dname }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                                    <i class="bi bi-copy"></i> identical to {{ molecule.duplicates|length }} other{{ molecule.duplicates|length|pluralize }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    {% endwith %}
                                 </td>
 
                                 <td>
