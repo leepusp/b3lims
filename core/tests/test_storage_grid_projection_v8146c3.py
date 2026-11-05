@@ -80,7 +80,7 @@ class StorageGridProjectionC3Tests(TestCase):
             'data-c3-columns="9"',
         )
 
-        self.assertContains(
+        self.assertNotContains(
             response,
             'storage_position_grid_v8146c3.js',
         )

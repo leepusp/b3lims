@@ -1577,90 +1577,6 @@
     }
 
 
-    function renderPositionMap() {
-      const host = find("b3s-position-map");
-      if (!host) return;
-
-      host.replaceChildren();
-
-      const node = byId.get(selected);
-      if (!node) return;
-
-      // Configured grids are drawn by the position map
-      // (storage_position_grid_v8146c3.js); avoid a duplicate.
-      if (!node.historical && gridCapacity(node)) return;
-
-      const items = node.historical
-        ? visibleLegacySamples.filter(
-            item => item.location === node.id
-          )
-        : samples.filter(
-            item => item.location === node.id
-          );
-
-      const withPositions = items
-        .filter(item => String(item.position || "").trim())
-        .sort((a, b) =>
-          String(a.position).localeCompare(
-            String(b.position),
-            undefined,
-            {numeric: true, sensitivity: "base"}
-          )
-        );
-
-      if (!withPositions.length) return;
-
-      const title = mk(
-        "h4",
-        "Recorded positions — " + displayName(node)
-      );
-
-      const note = mk(
-        "p",
-        "Only recorded positions are shown. " +
-        "Other positions have not been verified as free.",
-        "b3s-note"
-      );
-
-      const grid = mk(
-        "div",
-        null,
-        "b3s-position-grid"
-      );
-
-      for (const item of withPositions) {
-        const cell = mk(
-          "div",
-          null,
-          "b3s-position-cell"
-        );
-
-        cell.append(
-          mk(
-            "strong",
-            String(item.position).toUpperCase()
-          )
-        );
-
-        const code = String(item.sample || "");
-
-        if (
-          item.url &&
-          String(item.url).startsWith("/")
-        ) {
-          const link = mk("a", code);
-          link.href = item.url;
-          cell.append(link);
-        } else {
-          cell.append(mk("span", code));
-        }
-
-        grid.append(cell);
-      }
-
-      host.append(title, note, grid);
-    }
-
     function renderLegacy() {
       const host = find("b3s-legacy");
       host.replaceChildren();
@@ -2196,289 +2112,364 @@
       detail.append(actions);
     }
 
-    // ---- Layout: the storage drawn as it is assembled ----------------
-    // Freezer > shelves stacked > racks side by side > boxes as grids of
-    // cells. Everything is clickable; the side panel explains the pick.
-    let layoutLevels = 5;
-    let layoutOnlyFilled = false;
-    let layoutFocus = "";
-    let layoutCell = null;
+    // ---- Board: the selected place drawn, every position clickable ----
+    // A grid (box, rack) or named compartments (doors, drawers, shelves).
+    // Colour says empty / recorded / more than one; a click opens the
+    // actions for that position.
+    let boardPick = null;      // {node, slot}
+    let boardPending = null;   // assignment waiting for a free position
 
-    const LAYOUT_KID_LIMIT = 60;
-
-    function layoutKids(node) {
-      return (children.get(node.id) || []).filter(item => !item.historical);
+    function boardNames(node) {
+      if (node.c3Organization === "slots") return slotLabels(node);
+      const names = [];
+      if (!gridCapacity(node)) return names;
+      for (let r = 0; r < gridRows(node); r++) {
+        for (let c = 0; c < gridColumns(node); c++) {
+          names.push(String.fromCharCode(65 + r) + (c + 1));
+        }
+      }
+      return names;
     }
 
-    function layoutRoots() {
-      return (children.get("") || []).filter(item =>
-        !item.historical && (!workspace || item.workspace === workspace)
+    function boardSlotOf(node, item) {
+      if (node.c3Organization === "slots") return slotName(node, item.position);
+      return window.B3StorageV814.gridSlot(
+        item.position, gridRows(node), gridColumns(node)
       );
     }
 
-    function layoutSamplesAt(node) {
-      return samples.filter(item => item.location === node.id);
+    function boardUsage(node) {
+      const bySlot = new Map();
+      const outside = [];
+      for (const item of samples.filter(it => it.location === node.id)) {
+        const slot = boardSlotOf(node, item);
+        if (!slot) { outside.push(item); continue; }
+        if (!bySlot.has(slot)) bySlot.set(slot, []);
+        bySlot.get(slot).push(item);
+      }
+      return {bySlot, outside};
     }
 
-    function layoutUnit(node, levelsLeft) {
-      const info = summary(node);
-      const state = tileState(node);
-      const unit = mk("div", null, `b3s-unit ${state}`);
-      unit.dataset.unit = node.id;
-      if (node.id === layoutFocus) unit.classList.add("is-focus");
-      if (node.id === selected) unit.classList.add("is-selected");
-
-      const head = mk("button", null, "b3s-unit-head");
-      head.type = "button";
-      head.dataset.unit = node.id;
-      head.title = `${pathFor(node)} · ${plural(info.samples, "Sample")}`;
-      head.append(
-        mk("span", typeLabel(node), "b3s-chip"),
-        mk("strong", displayName(node)),
-        mk(
-          "small",
-          info.capacity
-            ? `${info.used}/${info.capacity}`
-            : plural(info.samples, "Sample")
-        )
-      );
-      unit.append(head);
-
-      const kids = layoutKids(node);
-
-      if (node.c3Organization === "slots" && slotLabels(node).length) {
-        const bySlot = new Map();
-
-        for (const item of layoutSamplesAt(node)) {
-          const name = slotName(node, item.position);
-          if (!name) continue;
-          if (!bySlot.has(name)) bySlot.set(name, []);
-          bySlot.get(name).push(item.sample || "Sample");
-        }
-
-        const cabinet = mk(
-          "div", null,
-          "b3s-slots " + (node.c3Direction === "row" ? "is-row" : "is-stack")
-        );
-        cabinet.dataset.unit = node.id;
-
-        for (const name of slotLabels(node)) {
-          const inside = bySlot.get(name) || [];
-          const tile = mk("div", null, "b3s-slot" + (
-            inside.length > 1 ? " is-conflict" : inside.length ? " is-used" : ""
-          ));
-          tile.dataset.slot = name;
-          tile.append(mk("strong", name));
-          if (inside.length) tile.append(mk("small", inside.join(", ")));
-          cabinet.append(tile);
-        }
-
-        unit.append(cabinet);
-      } else if (gridCapacity(node)) {
-        const rows = gridRows(node);
-        const cols = gridColumns(node);
-        const bySlot = new Map();
-
-        for (const item of layoutSamplesAt(node)) {
-          const slot = window.B3StorageV814.gridSlot(item.position, rows, cols);
-          if (!slot) continue;
-          bySlot.set(slot, (bySlot.get(slot) || 0) + 1);
-        }
-
-        const grid = mk("div", null, "b3s-cells");
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        grid.dataset.unit = node.id;
-
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const slot = String.fromCharCode(65 + r) + (c + 1);
-            const count = bySlot.get(slot) || 0;
-            const cell = mk("i", null, "b3s-cell");
-            cell.dataset.slot = slot;
-            if (count) cell.classList.add(count > 1 ? "is-conflict" : "is-used");
-            grid.append(cell);
-          }
-        }
-
-        unit.append(grid);
-      } else if (!kids.length && info.samples) {
-        unit.append(
-          mk("p", "Positions are not tracked here.", "b3s-unit-note")
-        );
-      }
-
-      if (kids.length) {
-        if (levelsLeft <= 1) {
-          unit.append(
-            mk(
-              "p",
-              `${plural(kids.length, "location")} inside · select to open`,
-              "b3s-unit-note"
-            )
-          );
-        } else {
-          const shown = layoutOnlyFilled
-            ? kids.filter(kid => summary(kid).samples)
-            : kids;
-          const wrap = mk(
-            "div",
-            null,
-            "b3s-unit-kids " + (
-              kids.every(kid => kid.type === "shelf") ? "is-stack" : "is-row"
-            )
-          );
-
-          for (const kid of shown.slice(0, LAYOUT_KID_LIMIT)) {
-            wrap.append(layoutUnit(kid, levelsLeft - 1));
-          }
-
-          if (shown.length > LAYOUT_KID_LIMIT) {
-            wrap.append(
-              mk(
-                "p",
-                `+${shown.length - LAYOUT_KID_LIMIT} more: open this location`,
-                "b3s-unit-note"
-              )
-            );
-          }
-
-          if (!shown.length) {
-            wrap.append(mk("p", "Nothing with Samples here.", "b3s-unit-note"));
-          }
-
-          unit.append(wrap);
-        }
-      }
-
-      return unit;
+    function boardStateOf(items) {
+      return !items || !items.length
+        ? "is-empty"
+        : items.length > 1 ? "is-conflict" : "is-used";
     }
 
-    function renderLayoutDetail() {
-      const host = find("b3s-layout-detail");
-      if (!host) return;
-      host.replaceChildren();
+    function boardLink(item) {
+      const link = mk("a", item.sample || "Sample");
+      if (item.url) link.href = item.url;
+      return link;
+    }
 
-      const node = byId.get(layoutFocus);
+    function boardTarget(node, slot, items) {
+      if (boardPending) {
+        if (items.length) {
+          boardNote = `${slot} is taken. Pick a free position.`;
+          renderBoard();
+          return;
+        }
+        window.location.href = pickUrl([
+          ["preview_sample", "1"],
+          ["assignment_id", boardPending.id],
+          ["destination_id", node.id],
+          ["position", slot]
+        ], "storage-sample-preview");
+        return;
+      }
+      boardPick = {node: node.id, slot};
+      renderBoard();
+    }
 
-      if (!node) {
-        host.append(
-          mk("h4", "Nothing selected"),
-          mk(
-            "p",
-            "Click a freezer, shelf, rack or box to see what it holds. " +
-              "Click a cell of a box to see its position.",
-            "b3s-note"
-          )
-        );
+    let boardNote = "";
+
+    function renderBoard() {
+      const section = find("b3s-board");
+      const canvas = find("b3s-board-canvas");
+      const detail = find("b3s-board-detail");
+      if (!section || !canvas || !detail) return;
+
+      const node = byId.get(selected);
+      const names = node && !node.historical ? boardNames(node) : [];
+
+      section.hidden = !names.length;
+      canvas.replaceChildren();
+      detail.replaceChildren();
+
+      if (!names.length) {
+        boardPick = null;
+        boardPending = null;
         return;
       }
 
-      const info = summary(node);
-      host.append(
-        mk("small", typeLabel(node), "b3s-chip"),
-        mk("h4", displayName(node)),
-        mk("p", pathFor(node), "b3s-note")
-      );
+      if (boardPick && boardPick.node !== node.id) boardPick = null;
+      if (boardPending && boardPending.location !== node.id) boardPending = null;
 
-      const dl = mk("dl", null, "b3s-layout-facts");
-      const fact = (label, value) => {
-        dl.append(mk("dt", label), mk("dd", value));
-      };
-      fact("Samples inside", String(info.samples));
-      fact("Locations inside", String(Math.max(0, info.locations)));
-      if (info.capacity) {
-        fact("Grid positions", `${info.used} of ${info.capacity} used`);
-      }
-      if (info.untracked && info.capacity) {
-        fact("Outside a grid", String(info.untracked));
-      }
-      if (info.offGrid) fact("Off the grid", String(info.offGrid));
-      host.append(dl);
+      const usage = boardUsage(node);
+      const isSlots = node.c3Organization === "slots";
+      const canEdit = manageable(node);
 
-      let cellItems = [];
-
-      if (layoutCell && layoutCell.unit === node.id) {
+      if (isSlots) {
+        const cabinet = mk(
+          "div", null,
+          "b3s-bd-slots " + (node.c3Direction === "row" ? "is-row" : "is-stack")
+        );
+        for (const name of names) {
+          const items = usage.bySlot.get(name) || [];
+          const tile = mk(
+            "button", null,
+            `b3s-bd-slot ${boardStateOf(items)}` +
+              (boardPick && boardPick.slot === name ? " is-picked" : "")
+          );
+          tile.type = "button";
+          tile.dataset.slot = name;
+          tile.append(
+            mk("strong", name),
+            mk(
+              "small",
+              items.length
+                ? items.map(it => it.sample || "Sample").join(", ")
+                : "empty"
+            )
+          );
+          cabinet.append(tile);
+        }
+        canvas.append(cabinet);
+      } else {
         const rows = gridRows(node);
         const cols = gridColumns(node);
-        const isSlots = node.c3Organization === "slots";
-        const here = layoutSamplesAt(node).filter(
-          item => isSlots
-            ? slotName(node, item.position) === layoutCell.slot
-            : window.B3StorageV814.gridSlot(item.position, rows, cols) ===
-              layoutCell.slot
-        );
-        cellItems = here;
-        host.append(mk("h5", node.c3Organization === "slots"
-          ? layoutCell.slot
-          : `Position ${layoutCell.slot}`));
+        const grid = mk("div", null, "b3s-bd-grid");
+        grid.style.setProperty("--cols", String(cols));
+        grid.append(mk("span", "", "b3s-bd-axis"));
+        for (let c = 1; c <= cols; c++) grid.append(mk("span", String(c), "b3s-bd-axis"));
+        for (let r = 0; r < rows; r++) {
+          grid.append(mk("span", String.fromCharCode(65 + r), "b3s-bd-axis"));
+          for (let c = 1; c <= cols; c++) {
+            const slot = String.fromCharCode(65 + r) + c;
+            const items = usage.bySlot.get(slot) || [];
+            const cell = mk(
+              "button", "",
+              `b3s-bd-cell ${boardStateOf(items)}` +
+                (boardPick && boardPick.slot === slot ? " is-picked" : "")
+            );
+            cell.type = "button";
+            cell.dataset.slot = slot;
+            cell.title = items.length
+              ? `${slot}: ${items.map(it => it.sample || "Sample").join(", ")}`
+              : `${slot}: empty`;
+            cell.setAttribute("aria-label", cell.title);
+            grid.append(cell);
+          }
+        }
+        canvas.append(grid);
+      }
 
-        if (!here.length) {
-          host.append(
-            mk("p", "No Sample recorded here.", "b3s-note")
-          );
-        } else {
-          const list = mk("ul", null, "b3s-layout-samples");
-          for (const item of here) {
+      const total = names.length;
+      const used = names.filter(n => usage.bySlot.has(n)).length;
+      find("b3s-board-count").textContent =
+        `${used} of ${total} ${isSlots ? "compartments" : "positions"} in use`;
+
+      // ---- side panel ----
+      if (boardPending) {
+        detail.append(
+          mk("h4", "Choose a free position"),
+          mk(
+            "p",
+            `${boardPending.sample || "Sample"} will move to the position ` +
+              "you click. You will see a preview before anything changes.",
+            "b3s-note"
+          )
+        );
+        if (boardNote) detail.append(mk("p", boardNote, "b3s-bd-warn"));
+        const cancel = mk("button", "Cancel", "btn btn-sm btn-outline-secondary");
+        cancel.type = "button";
+        cancel.addEventListener("click", () => {
+          boardPending = null;
+          boardNote = "";
+          renderBoard();
+        });
+        detail.append(cancel);
+        return;
+      }
+
+      boardNote = "";
+
+      if (!boardPick) {
+        detail.append(
+          mk("h4", displayName(node)),
+          mk(
+            "p",
+            canEdit
+              ? "Click a free position to put a Sample there, or an occupied one to open, move or reposition it."
+              : "Click a position to see what is recorded there.",
+            "b3s-note"
+          )
+        );
+      } else {
+        const slot = boardPick.slot;
+        const items = usage.bySlot.get(slot) || [];
+        detail.append(
+          mk(
+            "small",
+            items.length > 1 ? "MORE THAN ONE" : items.length ? "IN USE" : "EMPTY",
+            "b3s-chip"
+          ),
+          mk("h4", isSlots ? slot : `Position ${slot}`),
+          mk("p", `${pathFor(node)} › ${slot}`, "b3s-note")
+        );
+
+        if (items.length) {
+          const list = mk("ul", null, "b3s-bd-samples");
+          for (const item of items) {
             const li = mk("li");
-            const link = mk("a", item.sample || "Sample");
-            if (item.url) link.href = item.url;
-            li.append(link);
+            li.append(boardLink(item));
+            if (canEdit && item.id) {
+              const move = mk("button", "Move…", "btn btn-sm btn-outline-primary");
+              move.type = "button";
+              move.addEventListener("click", () => pickSampleMove(node, [item]));
+              const reposition = mk(
+                "button", "Change position", "btn btn-sm btn-outline-secondary"
+              );
+              reposition.type = "button";
+              reposition.addEventListener("click", () => {
+                boardPending = item;
+                boardPick = null;
+                renderBoard();
+              });
+              li.append(move, reposition);
+            }
             list.append(li);
           }
-          host.append(list);
+          detail.append(list);
+        } else if (canEdit) {
+          detail.append(boardPutForm(node, slot));
+        } else {
+          detail.append(mk("p", "Nothing recorded here.", "b3s-note"));
         }
       }
 
-      const actions = mk("div", null, "b3s-manage-actions");
-      const open = mk("button", "Open contents", "btn btn-sm btn-outline-secondary");
-      open.type = "button";
-      open.addEventListener("click", () => {
-        choose(node.id);
-        showTab("contents");
-      });
-      actions.append(open);
+      if (usage.outside.length) {
+        const box = mk("div", null, "b3s-bd-outside");
+        box.append(
+          mk(
+            "h5",
+            `${plural(usage.outside.length, "Sample")} without a position on this drawing`
+          )
+        );
+        const list = mk("ul", null, "b3s-bd-samples");
+        for (const item of usage.outside.slice(0, 25)) {
+          const li = mk("li");
+          li.append(boardLink(item));
+          if (item.position) li.append(mk("small", ` (${item.position})`));
+          if (canEdit && item.id) {
+            const place = mk("button", "Place…", "btn btn-sm btn-outline-secondary");
+            place.type = "button";
+            place.addEventListener("click", () => {
+              boardPending = item;
+              boardPick = null;
+              renderBoard();
+            });
+            li.append(place);
+          }
+          list.append(li);
+        }
+        box.append(list);
+        detail.append(box);
+      }
 
+      const actions = mk("div", null, "b3s-manage-actions");
+      const here = samples.filter(it => it.location === node.id && it.id);
+      if (canEdit && here.length && window.B3StoragePicker) {
+        const all = mk(
+          "button",
+          here.length === 1 ? "Move the Sample…" : `Move all ${here.length} Samples…`,
+          "btn btn-sm btn-outline-primary"
+        );
+        all.type = "button";
+        all.addEventListener("click", () => pickSampleMove(node, here));
+        actions.append(all);
+      }
       if (movable(node)) {
         const move = mk("button", "Move this location", "btn btn-sm btn-outline-primary");
         move.type = "button";
         move.addEventListener("click", () => beginMove(node));
         actions.append(move);
       }
+      if (actions.children.length) detail.append(actions);
+    }
 
-      const here = layoutSamplesAt(node);
-      const movableHere = here.filter(item => item.id);
-
-      const atCell = cellItems.filter(item => item.id);
-
-      if (manageable(node) && atCell.length && window.B3StoragePicker) {
-        const one = mk(
-          "button",
-          atCell.length === 1
-            ? "Move this Sample…"
-            : `Move these ${atCell.length} Samples…`,
-          "btn btn-sm btn-primary"
-        );
-        one.type = "button";
-        one.addEventListener("click", () => pickSampleMove(node, atCell));
-        actions.append(one);
+    // Empty position: choose which recorded Sample goes here, or register
+    // a new one. The server preview validates before anything changes.
+    function boardPutForm(node, slot) {
+      const form = mk("div", null, "b3s-bd-put");
+      const listId = "b3s-bd-sample-list";
+      let list = document.getElementById(listId);
+      if (!list) {
+        list = document.createElement("datalist");
+        list.id = listId;
+        root.append(list);
+      }
+      list.replaceChildren();
+      const seen = new Set();
+      for (const item of samples) {
+        if (!item.id || !item.sample || seen.has(item.sample)) continue;
+        if (item.location === node.id && boardSlotOf(node, item) === slot) continue;
+        seen.add(item.sample);
+        if (seen.size > 800) break;
+        const option = document.createElement("option");
+        option.value = item.sample;
+        list.append(option);
       }
 
-      if (
-        manageable(node) && movableHere.length > atCell.length &&
-        window.B3StoragePicker
-      ) {
-        const label = movableHere.length === 1
-          ? "Move this Sample"
-          : `Move all ${movableHere.length} Samples`;
-        const moveSamples = mk("button", label + "…", "btn btn-sm btn-outline-primary");
-        moveSamples.type = "button";
-        moveSamples.addEventListener("click", () =>
-          pickSampleMove(node, movableHere)
-        );
-        actions.append(moveSamples);
-      }
+      const label = mk("label", "Put a recorded Sample here");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "form-control form-control-sm";
+      input.setAttribute("list", listId);
+      input.placeholder = "Sample ID";
+      label.append(input);
 
-      host.append(actions);
+      const error = mk("p", "", "b3s-bd-warn");
+      const go = mk("button", "Preview move here", "btn btn-sm btn-primary");
+      go.type = "button";
+      go.addEventListener("click", () => {
+        const wanted = input.value.trim().toLowerCase();
+        const item = samples.find(
+          it => it.id && (it.sample || "").toLowerCase() === wanted
+        );
+        if (!item) {
+          error.textContent = "Pick a Sample ID that has a recorded location.";
+          return;
+        }
+        window.location.href = pickUrl([
+          ["preview_sample", "1"],
+          ["assignment_id", item.id],
+          ["destination_id", node.id],
+          ["position", slot]
+        ], "storage-sample-preview");
+      });
+      form.append(label, go, error);
+
+      const addUrl = find("b3s-board")?.dataset.addUrl;
+      if (addUrl) {
+        const add = mk("a", "Register a new Sample", "btn btn-sm btn-outline-secondary");
+        add.href = addUrl;
+        form.append(add);
+      }
+      return form;
+    }
+
+    function wireBoard() {
+      const canvas = find("b3s-board-canvas");
+      if (!canvas) return;
+      canvas.addEventListener("click", event => {
+        const target = event.target.closest("[data-slot]");
+        if (!target) return;
+        const node = byId.get(selected);
+        if (!node) return;
+        const items = boardUsage(node).bySlot.get(target.dataset.slot) || [];
+        boardTarget(node, target.dataset.slot, items);
+      });
     }
 
     // Move Samples one by one or all together: pick the first free
@@ -2517,76 +2508,12 @@
       });
     }
 
-    function renderLayout() {
-      const canvas = find("b3s-layout-canvas");
-      if (!canvas) return;
-      canvas.replaceChildren();
-
-      const start = byId.get(selected);
-      const top = start ? [start] : layoutRoots();
-
-      if (!top.length) {
-        canvas.append(
-          mk("p", "No locations available for this view.", "b3s-note")
-        );
-        renderLayoutDetail();
-        return;
-      }
-
-      const frame = mk("div", null, "b3s-layout-frame");
-      for (const node of top) frame.append(layoutUnit(node, layoutLevels));
-      canvas.append(frame);
-      renderLayoutDetail();
-    }
-
-    function wireLayout() {
-      const canvas = find("b3s-layout-canvas");
-      if (!canvas) return;
-
-      canvas.addEventListener("click", event => {
-        const cell = event.target.closest(".b3s-cell, .b3s-slot");
-        const unit = event.target.closest("[data-unit]");
-        if (!unit) return;
-
-        layoutFocus = unit.dataset.unit;
-        layoutCell = cell
-          ? {unit: unit.dataset.unit, slot: cell.dataset.slot}
-          : null;
-
-        for (const el of canvas.querySelectorAll(".is-focus")) {
-          el.classList.remove("is-focus");
-        }
-        canvas
-          .querySelector(`.b3s-unit[data-unit="${layoutFocus}"]`)
-          ?.classList.add("is-focus");
-        renderLayoutDetail();
-      });
-
-      canvas.addEventListener("dblclick", event => {
-        const unit = event.target.closest(".b3s-unit");
-        if (!unit) return;
-        choose(unit.dataset.unit);
-        showTab("layout");
-      });
-
-      find("b3s-layout-levels")?.addEventListener("change", event => {
-        layoutLevels = Number(event.target.value) || 5;
-        renderLayout();
-      });
-
-      find("b3s-layout-filled")?.addEventListener("change", event => {
-        layoutOnlyFilled = event.target.checked;
-        renderLayout();
-      });
-    }
-
     function render() {
       renderTree();
       renderContents();
-      renderPositionMap();
       renderLegacy();
       renderGraph();
-      renderLayout();
+      renderBoard();
       renderManage();
     }
 
@@ -2602,7 +2529,6 @@
 
       for (const [name, id] of [
         ["contents", "b3s-contents"],
-        ["layout", "b3s-layout"],
         ["tree", "b3s-path-tree"],
         ["movements", "b3s-movements"],
         ["manage", "b3s-manage"]
@@ -2616,7 +2542,7 @@
       if (tab === "tree") revealGraphFocus();
     }
 
-    wireLayout();
+    wireBoard();
 
     for (const button of root.querySelectorAll(
       "[data-b3s-tab]"

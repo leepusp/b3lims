@@ -9,9 +9,8 @@ Physical locations, Sample custody and movement history.
 
 {% block extra_css %}
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_v814.css' %}?v=20261028-v8147-no-search">
+      href="{% static 'internal/storage/storage_v814.css' %}?v=20261105-v816">
 <link rel="stylesheet"
-      href="{% static 'internal/storage/storage_position_grid_v8146c3.css' %}?v=20261028-c3-compact">
 {% endblock %}
 
 {% block content %}
@@ -151,12 +150,6 @@ Physical locations, Sample custody and movement history.
         </button>
         <button type="button"
                 role="tab"
-                data-b3s-tab="layout"
-                aria-selected="false">
-          Layout
-        </button>
-        <button type="button"
-                role="tab"
                 data-b3s-tab="tree"
                 aria-selected="false">
           Path tree
@@ -195,6 +188,26 @@ Physical locations, Sample custody and movement history.
             class="b3s-stats"
             aria-label="Selected location summary"></dl>
 
+        <section id="b3s-board"
+                 class="b3s-board"
+                 data-add-url="{% url 'sample_add' %}"
+                 hidden>
+          <div class="b3s-board-head">
+            <h4>Layout</h4>
+            <span id="b3s-board-count" class="b3s-note"></span>
+            <span class="b3s-board-legend" aria-hidden="true">
+              <i class="b3s-bd-key is-empty"></i> empty
+              <i class="b3s-bd-key is-used"></i> in use
+              <i class="b3s-bd-key is-conflict"></i> more than one
+            </span>
+          </div>
+          <div class="b3s-board-split">
+            <div id="b3s-board-canvas" class="b3s-board-canvas"></div>
+            <aside id="b3s-board-detail" class="b3s-board-detail"
+                   aria-live="polite"></aside>
+          </div>
+        </section>
+
         <h4>Child locations</h4>
         <div id="b3s-children"
              class="b3s-children"></div>
@@ -207,10 +220,6 @@ Physical locations, Sample custody and movement history.
         <div id="b3s-assignments"
              class="b3s-assignments"></div>
 
-        <div id="b3s-position-map"
-             class="b3s-position-map"
-             aria-live="polite"></div>
-
         <details class="b3s-historical-block">
           <summary>Historical registrations</summary>
           <p class="b3s-note">
@@ -220,46 +229,6 @@ Physical locations, Sample custody and movement history.
           <div id="b3s-legacy"></div>
         </details>
 
-      </section>
-
-      <section id="b3s-layout"
-               class="b3s-section"
-               role="tabpanel"
-               hidden>
-        <h3>Layout</h3>
-        <p class="b3s-note">
-          How the selected location is assembled. Click a block to see
-          what it holds, click a cell of a box to see its position, and
-          double-click a block to zoom into it.
-        </p>
-        <div class="b3s-layout-bar">
-          <label>
-            Levels shown
-            <select id="b3s-layout-levels">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5" selected>5</option>
-              <option value="6">6</option>
-            </select>
-          </label>
-          <label>
-            <input type="checkbox" id="b3s-layout-filled">
-            Only with Samples
-          </label>
-          <span class="b3s-layout-legend" aria-hidden="true">
-            <i class="b3s-cell"></i> empty
-            <i class="b3s-cell is-used"></i> recorded
-            <i class="b3s-cell is-conflict"></i> more than one
-          </span>
-        </div>
-        <div class="b3s-layout-split">
-          <div id="b3s-layout-canvas" class="b3s-layout-canvas"></div>
-          <aside id="b3s-layout-detail"
-                 class="b3s-layout-detail"
-                 aria-live="polite"></aside>
-        </div>
       </section>
 
       <section id="b3s-path-tree"
@@ -1194,9 +1163,6 @@ Physical locations, Sample custody and movement history.
         src="{% static 'internal/storage/storage_picker_v815.js' %}?v=20261105-v815">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v815">
-</script>
-<script defer
-        src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v816">
 </script>
 {% endblock %}
