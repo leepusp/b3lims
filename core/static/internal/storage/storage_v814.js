@@ -280,7 +280,28 @@
       );
     }
 
+    // Named compartments (doors, drawers, shelves) of a location.
+    function slotLabels(node) {
+      if (!node || node.c3Organization !== "slots") return [];
+
+      try {
+        const labels = JSON.parse(node.c3Slots || "[]");
+        return Array.isArray(labels) ? labels.map(String) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function slotName(node, position) {
+      const text = String(position || "").trim().toLowerCase();
+      return slotLabels(node).find(name => name.toLowerCase() === text) || "";
+    }
+
     function gridCapacity(node) {
+      if (node && node.c3Organization === "slots") {
+        return slotLabels(node).length;
+      }
+
       if (!node || node.c3Organization !== "grid") return 0;
 
       const rows = Number(node.c3Rows);
@@ -304,6 +325,19 @@
 
       for (const item of samples) {
         if (item.location === node.id) positions.push(item.position);
+      }
+
+      if (node.c3Organization === "slots") {
+        const used = new Set();
+        let offGrid = 0;
+
+        for (const position of positions) {
+          const name = slotName(node, position);
+          if (name) used.add(name);
+          else offGrid += 1;
+        }
+
+        return {used: used.size, offGrid};
       }
 
       return window.B3StorageV814.gridUsage(
@@ -898,8 +932,34 @@
       return clash ? "A location with this name already exists there." : "";
     }
 
+    function pickUrl(params, hash) {
+      const url = new URL(window.location.href);
+      url.search = "";
+      url.hash = hash;
+      for (const [key, value] of params) url.searchParams.append(key, value);
+      return url.toString();
+    }
+
+    // Move a location, with everything inside it, to a place chosen on
+    // the drawing. The server preview checks it again before any change.
     function beginMove(node) {
       if (!movable(node)) return;
+
+      if (window.B3StoragePicker) {
+        const inside = summary(node).samples;
+        window.B3StoragePicker.open({
+          title: `Move ${displayName(node)}`,
+          mode: "node",
+          workspace: node.workspace,
+          exclude: node.id,
+          confirmLabel: "Preview move",
+          onPick: result => {
+            window.location.href = previewUrl(node.id, result.id);
+          }
+        });
+        return;
+      }
+
       moveState = {id: node.id, destination: ""};
       selected = node.id;
       showTab("tree");
@@ -2186,7 +2246,35 @@
 
       const kids = layoutKids(node);
 
-      if (gridCapacity(node)) {
+      if (node.c3Organization === "slots" && slotLabels(node).length) {
+        const bySlot = new Map();
+
+        for (const item of layoutSamplesAt(node)) {
+          const name = slotName(node, item.position);
+          if (!name) continue;
+          if (!bySlot.has(name)) bySlot.set(name, []);
+          bySlot.get(name).push(item.sample || "Sample");
+        }
+
+        const cabinet = mk(
+          "div", null,
+          "b3s-slots " + (node.c3Direction === "row" ? "is-row" : "is-stack")
+        );
+        cabinet.dataset.unit = node.id;
+
+        for (const name of slotLabels(node)) {
+          const inside = bySlot.get(name) || [];
+          const tile = mk("div", null, "b3s-slot" + (
+            inside.length > 1 ? " is-conflict" : inside.length ? " is-used" : ""
+          ));
+          tile.dataset.slot = name;
+          tile.append(mk("strong", name));
+          if (inside.length) tile.append(mk("small", inside.join(", ")));
+          cabinet.append(tile);
+        }
+
+        unit.append(cabinet);
+      } else if (gridCapacity(node)) {
         const rows = gridRows(node);
         const cols = gridColumns(node);
         const bySlot = new Map();
@@ -2307,14 +2395,22 @@
       if (info.offGrid) fact("Off the grid", String(info.offGrid));
       host.append(dl);
 
+      let cellItems = [];
+
       if (layoutCell && layoutCell.unit === node.id) {
         const rows = gridRows(node);
         const cols = gridColumns(node);
+        const isSlots = node.c3Organization === "slots";
         const here = layoutSamplesAt(node).filter(
-          item => window.B3StorageV814.gridSlot(item.position, rows, cols) ===
-            layoutCell.slot
+          item => isSlots
+            ? slotName(node, item.position) === layoutCell.slot
+            : window.B3StorageV814.gridSlot(item.position, rows, cols) ===
+              layoutCell.slot
         );
-        host.append(mk("h5", `Position ${layoutCell.slot}`));
+        cellItems = here;
+        host.append(mk("h5", node.c3Organization === "slots"
+          ? layoutCell.slot
+          : `Position ${layoutCell.slot}`));
 
         if (!here.length) {
           host.append(
@@ -2349,7 +2445,76 @@
         actions.append(move);
       }
 
+      const here = layoutSamplesAt(node);
+      const movableHere = here.filter(item => item.id);
+
+      const atCell = cellItems.filter(item => item.id);
+
+      if (manageable(node) && atCell.length && window.B3StoragePicker) {
+        const one = mk(
+          "button",
+          atCell.length === 1
+            ? "Move this Sample…"
+            : `Move these ${atCell.length} Samples…`,
+          "btn btn-sm btn-primary"
+        );
+        one.type = "button";
+        one.addEventListener("click", () => pickSampleMove(node, atCell));
+        actions.append(one);
+      }
+
+      if (
+        manageable(node) && movableHere.length > atCell.length &&
+        window.B3StoragePicker
+      ) {
+        const label = movableHere.length === 1
+          ? "Move this Sample"
+          : `Move all ${movableHere.length} Samples`;
+        const moveSamples = mk("button", label + "…", "btn btn-sm btn-outline-primary");
+        moveSamples.type = "button";
+        moveSamples.addEventListener("click", () =>
+          pickSampleMove(node, movableHere)
+        );
+        actions.append(moveSamples);
+      }
+
       host.append(actions);
+    }
+
+    // Move Samples one by one or all together: pick the first free
+    // position and the Samples fill the next free ones.
+    function pickSampleMove(node, items) {
+      window.B3StoragePicker.open({
+        title: items.length === 1
+          ? "Move Sample"
+          : `Move ${items.length} Samples`,
+        mode: "place",
+        count: items.length,
+        workspace: node.workspace,
+        ignore: items.map(item => item.id),
+        confirmLabel: "Preview move",
+        onPick: result => {
+          if (items.length === 1) {
+            window.location.href = pickUrl([
+              ["preview_sample", "1"],
+              ["assignment_id", items[0].id],
+              ["destination_id", result.id],
+              ["position", result.positions[0] || ""]
+            ], "storage-sample-preview");
+            return;
+          }
+
+          const params = [["preview_bulk_samples", "1"]];
+          items.forEach((item, index) => {
+            params.push(
+              ["bulk_assignment_id", item.id],
+              ["bulk_destination_id", result.id],
+              ["bulk_position", result.positions[index] || ""]
+            );
+          });
+          window.location.href = pickUrl(params, "storage-sample-bulk-preview");
+        }
+      });
     }
 
     function renderLayout() {
@@ -2379,7 +2544,7 @@
       if (!canvas) return;
 
       canvas.addEventListener("click", event => {
-        const cell = event.target.closest(".b3s-cell");
+        const cell = event.target.closest(".b3s-cell, .b3s-slot");
         const unit = event.target.closest("[data-unit]");
         if (!unit) return;
 
@@ -2607,6 +2772,14 @@
     }
 
     render();
+
+    if (root.dataset.b3sPreviewSamples === "1") {
+      showTab("movements");
+      (
+        find("storage-sample-bulk-preview") ||
+        find("storage-sample-preview")
+      )?.scrollIntoView({block: "start"});
+    }
 
     if (root.dataset.b3sPreviewOpen === "1") {
       showTab("tree");

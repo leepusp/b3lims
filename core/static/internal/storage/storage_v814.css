@@ -2376,3 +2376,53 @@
 .b3s-c3-pv-slot input { width: 100%; border: 0; background: transparent; font-weight: 600; font-size: .85rem; padding: .25rem .35rem; }
 .b3s-c3-pv-slot:focus-within { border-color: #0d6efd; box-shadow: 0 0 0 2px rgba(13,110,253,.2); }
 .b3s-c3-pv-slot input { border: 0 !important; box-shadow: none !important; background: transparent !important; height: auto !important; min-height: 0 !important; }
+
+/* Destination picker */
+.b3s-pk { width: min(1000px, 96vw); max-height: 92vh; padding: 0; border: 1px solid #c9d3dd; border-radius: .6rem; }
+.b3s-pk::backdrop { background: rgba(20,30,45,.45); }
+.b3s-pk-body { display: grid; grid-template-columns: minmax(240px, 34%) 1fr; gap: 0; min-height: 22rem; max-height: 60vh; }
+.b3s-pk-tree { border-right: 1px solid #dde4ec; padding: .75rem; overflow: auto; }
+.b3s-pk-draw { padding: 1rem 1.25rem; overflow: auto; }
+.b3s-pk-search { width: 100%; margin-bottom: .5rem; padding: .3rem .5rem; border: 1px solid #c9d3dd; border-radius: .35rem; }
+.b3s-pk-row { display: flex; align-items: center; gap: .15rem; border-radius: .3rem; }
+.b3s-pk-row.is-shown { background: #e4effc; }
+.b3s-pk-row.is-blocked { opacity: .45; }
+.b3s-pk-toggle { border: 0; background: none; width: 1.4rem; color: #5b6b7b; }
+.b3s-pk-name { display: flex; align-items: center; gap: .4rem; border: 0; background: none; text-align: left; padding: .2rem .3rem; flex: 1; min-width: 0; }
+.b3s-pk-name span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.b3s-pk-type { font-size: .62rem; text-transform: uppercase; letter-spacing: .03em; color: #5b6b7b; background: #eef2f6; border-radius: .25rem; padding: 0 .3rem; }
+.b3s-pk-count { margin-left: auto; font-size: .7rem; color: #0d4fa3; background: #e4effc; border-radius: 1rem; padding: 0 .4rem; }
+.b3s-pk-title { font-size: 1.1rem; margin: 0; }
+.b3s-pk-canvas { margin: .75rem 0; overflow: auto; padding: .6rem; border: 2px solid #1f2d3d; border-radius: .5rem; background: #f5f8fb; display: inline-block; max-width: 100%; }
+.b3s-pk-grid { display: grid; gap: 3px; align-items: center; justify-items: center; }
+.b3s-pk-axis { font-size: .65rem; color: #5b6b7b; }
+.b3s-pk-pos { border: 1.5px solid #8aa0b6; background: #fff; padding: 0; }
+.b3s-pk-grid .b3s-pk-pos { border-radius: 50%; }
+.b3s-pk-pos.is-used { background: #0d6efd; border-color: #0a58ca; }
+.b3s-pk-pos:disabled { cursor: not-allowed; }
+.b3s-pk-pos:not(:disabled):hover { border-color: #0d6efd; }
+.b3s-pk-pos.is-preview { background: #cfe2ff; border-color: #0d6efd; }
+.b3s-pk-pos.is-chosen { background: #198754; border-color: #146c43; }
+.b3s-pk-cabinet { display: flex; gap: 6px; }
+.b3s-pk-cabinet.is-stack { flex-direction: column; min-width: 14rem; }
+.b3s-pk-cabinet.is-row { flex-direction: row; }
+.b3s-pk-cabinet .b3s-pk-pos { border-radius: .35rem; padding: .5rem .6rem; text-align: left; display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 6rem; }
+.b3s-pk-cabinet.is-row .b3s-pk-pos { min-height: 7rem; }
+.b3s-pk-cabinet .b3s-pk-pos.is-used { color: #fff; }
+.b3s-pk-in { font-size: .72rem; font-weight: 400; }
+.b3s-pk-foot { display: flex; gap: .5rem; align-items: center; padding: .75rem 1rem; border-top: 1px solid #dde4ec; }
+.b3s-pk-summary { flex: 1; margin: 0; font-size: .85rem; }
+@media (max-width: 800px) { .b3s-pk-body { grid-template-columns: 1fr; max-height: none; } .b3s-pk-tree { border-right: 0; border-bottom: 1px solid #dde4ec; max-height: 12rem; } }
+
+/* Named compartments in the Layout tab */
+.b3s-slots { display: flex; gap: 6px; margin: .35rem 0; }
+.b3s-slots.is-stack { flex-direction: column; }
+.b3s-slots.is-row { flex-direction: row; }
+.b3s-slot { flex: 1; min-width: 5rem; border: 1.5px solid #8aa0b6; border-radius: .35rem; background: #fff; padding: .3rem .5rem; display: flex; flex-direction: column; gap: .1rem; cursor: pointer; }
+.b3s-slots.is-row .b3s-slot { min-height: 4.5rem; }
+.b3s-slot.is-used { background: #0d6efd; border-color: #0a58ca; color: #fff; }
+.b3s-slot.is-conflict { background: #dc3545; border-color: #b02a37; color: #fff; }
+.b3s-slot small { font-size: .7rem; opacity: .9; }
+/* Picker header */
+.b3s-pk .b3s-dialog-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem .5rem; }
+.b3s-pk .b3s-dialog-header h2 { font-size: 1.25rem; margin: 0 0 .25rem; }

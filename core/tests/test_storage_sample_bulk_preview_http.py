@@ -240,12 +240,12 @@ class StorageSampleBulkPreviewHTTPTests(TestCase):
             response.context["storage_sample_bulk_preview"]
         )
 
-    def test_more_than_five_rows_is_rejected(self):
+    def test_more_than_fifty_rows_is_rejected(self):
         self.client.force_login(self.owner)
 
         rows = [
             (self.first.pk, self.box_b.pk, f"P{i:02d}")
-            for i in range(6)
+            for i in range(51)
         ]
 
         response = self.preview(rows)

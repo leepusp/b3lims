@@ -768,7 +768,7 @@ def storage_workspace_view(
         )
 
         if not (
-            1 <= len(raw_assignments) <= 5
+            1 <= len(raw_assignments) <= 50
             and len(raw_assignments) == len(raw_destinations)
             and len(raw_assignments) == len(raw_positions)
         ):
@@ -826,7 +826,7 @@ def storage_workspace_view(
             bulk_rows = (
                 display_rows
                 + [dict(empty_bulk_row) for _ in range(5)]
-            )[:5]
+            )[:max(5, len(display_rows))]
 
             if invalid:
                 bulk_preview_error = (

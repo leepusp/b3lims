@@ -20,6 +20,7 @@ Physical locations, Sample custody and movement history.
          data-b3s-preview-container="{{ storage_preview_container_id|default_if_none:'' }}"
          data-b3s-preview-destination="{{ storage_preview_destination_id|default_if_none:'' }}"
          data-b3s-preview-open="{% if storage_container_preview or storage_container_preview_error %}1{% endif %}"
+         data-b3s-preview-samples="{% if storage_sample_preview or storage_sample_bulk_preview or storage_sample_bulk_preview_error %}1{% endif %}"
          aria-label="Physical storage management">
 
   <header class="b3s-header">
@@ -1190,7 +1191,10 @@ Physical locations, Sample custody and movement history.
         src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4e">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261030-v8149">
+        src="{% static 'internal/storage/storage_picker_v815.js' %}?v=20261105-v815">
+</script>
+<script defer
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v815">
 </script>
 <script defer
         src="{% static 'internal/storage/storage_position_grid_v8146c3.js' %}?v=20261027-c3c">

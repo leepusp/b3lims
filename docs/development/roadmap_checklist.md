@@ -113,9 +113,12 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 - [~] Any level can receive Samples; the position is checked against the drawing (A1 inside the
       grid, or one of the compartment names); sample registration shows the drawing and the
       user clicks free positions
-- [ ] Redo the Layout tab: the drawing of a location with what is stored in it, and actions
-- [ ] Choose the destination of a move by clicking the tree and the drawing (compartment or
-      position included); move a whole box (all its Samples at once) or a single Sample
+- [~] Layout tab redone: grids and named compartments drawn with what is stored in them; select
+      a position or compartment to see its Samples and move them
+- [~] Destination picker: the tree on the left, the drawing of the chosen place on the right;
+      click the first free position and N Samples take the next N free ones. Used to move a
+      whole location (all Samples inside go with it), one Sample, or a batch (up to 50 per preview).
+      Every move still goes through the server preview and confirmation
 - [ ] Edit the drawing of an existing location (add a door, widen a grid)
 - [ ] Server-side search and pagination of samples per location
 - [ ] Free-position helper and capacity check on registration and moves
