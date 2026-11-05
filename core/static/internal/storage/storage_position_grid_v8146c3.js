@@ -17,7 +17,7 @@
     for (const item of assignments) {
       const raw = String(item.position || "").trim();
       const code = raw.toUpperCase();
-      const match = /^([A-Z])([1-9][0-9]*)$/.exec(code);
+      const match = /^([A-Z])0*([1-9][0-9]*)$/.exec(code);
 
       if (!match) {
         outside.push(item);

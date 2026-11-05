@@ -102,7 +102,14 @@ view that is still visual and interactive (isometric, hierarchy, graph and posit
 
 - [x] Review how Storage behaves (moves, positions, capacity, occupancy, permissions, history): see `storage_review.md`
 - [x] Review how the interface illustrates it (isometric, hierarchy, graph, position grid): see `storage_review.md`
-- [ ] Decide what to keep, merge or drop, then plan the changes in small releases
+- [x] Decide what to keep, merge or drop, then plan the changes in small releases
+- [x] One occupancy rule (grid positions only; outside-a-grid and off-the-grid counted apart)
+- [x] Path tree fits the frame; columns named by location type
+- [x] Manage tab: list beside the edit form; historical registrations collapsed; transfers explained
+- [x] Layout tab: interactive drawing of how the storage is assembled (blocks, grids, details)
+- [ ] Server-side search and pagination of samples per location
+- [ ] Free-position helper and capacity check on registration and moves
+- [ ] Retire the legacy interface (`?legacy=1`), its scripts, scene model and services
 
 - [ ] Review how Storage behaves (create, move, occupy, free, history, permissions)
 - [ ] Review how Storage is illustrated in the interface (which views stay, what each shows,

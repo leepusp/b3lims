@@ -42,8 +42,39 @@
     return [...nodes.values()].filter(safe);
   }
 
+  // Canonical slot name ("A1") when `position` is a cell of a
+  // rows x columns grid, otherwise "". Same naming as the position map.
+  function gridSlot(position, rows, columns) {
+    const match = /^([A-Z])0*([1-9][0-9]*)$/.exec(
+      String(position || "").trim().toUpperCase()
+    );
+    if (!match) return "";
+    const row = match[1].charCodeAt(0) - 65;
+    const column = Number(match[2]) - 1;
+    if (row >= rows || column >= columns) return "";
+    return match[1] + (column + 1);
+  }
+
+  // Occupancy of one location from its own assignments.
+  // used: distinct grid cells recorded; offGrid: samples of a grid
+  // location whose position is blank or not a cell of that grid.
+  function gridUsage(rows, columns, positions) {
+    const cells = new Set();
+    let offGrid = 0;
+    for (const position of positions) {
+      const slot = gridSlot(position, rows, columns);
+      if (slot) cells.add(slot);
+      else offGrid += 1;
+    }
+    return {used: cells.size, offGrid};
+  }
+
   if (typeof window !== "undefined") {
-    window.B3StorageV814 = {buildModel};
+    window.B3StorageV814 = {buildModel, gridSlot, gridUsage};
+  }
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = {buildModel, gridSlot, gridUsage};
   }
 
   if (typeof document === "undefined") return;
@@ -260,36 +291,64 @@
         : 0;
     }
 
-    function occupiedPositions(node) {
-      const names = new Set();
+    function gridRows(node) {
+      return Number(node.c3Rows);
+    }
+
+    function gridColumns(node) {
+      return Number(node.c3Columns);
+    }
+
+    function usageOf(node) {
+      const positions = [];
 
       for (const item of samples) {
-        if (item.location !== node.id) continue;
-        const position = String(item.position || "").trim();
-        if (position) names.add(position.toUpperCase());
+        if (item.location === node.id) positions.push(item.position);
       }
 
-      return names.size;
+      return window.B3StorageV814.gridUsage(
+        gridRows(node),
+        gridColumns(node),
+        positions
+      );
     }
 
     const summaryCache = new Map();
 
+    // One occupancy rule for the tree, cards and stats:
+    // capacity/used only count grid locations (capacity = cells, used =
+    // distinct valid cells recorded). Samples in locations without a grid
+    // are counted as samples only (untracked), samples of a grid location
+    // that are not on the grid are offGrid.
     function summary(node) {
-      if (!node) return {samples: 0, locations: 0, capacity: 0, used: 0};
+      if (!node) {
+        return {
+          samples: 0, locations: 0, capacity: 0, used: 0,
+          offGrid: 0, untracked: 0
+        };
+      }
       if (summaryCache.has(node.id)) return summaryCache.get(node.id);
 
-      const result = {samples: 0, locations: -1, capacity: 0, used: 0};
+      const result = {
+        samples: 0, locations: -1, capacity: 0, used: 0,
+        offGrid: 0, untracked: 0
+      };
 
       for (const id of subtreeIds(node)) {
         const item = byId.get(id);
+        const direct = directSampleCount.get(id) || 0;
         result.locations += 1;
-        result.samples += directSampleCount.get(id) || 0;
+        result.samples += direct;
 
         const capacity = gridCapacity(item);
 
         if (capacity) {
+          const usage = usageOf(item);
           result.capacity += capacity;
-          result.used += Math.min(capacity, occupiedPositions(item));
+          result.used += usage.used;
+          result.offGrid += usage.offGrid;
+        } else {
+          result.untracked += direct;
         }
       }
 
@@ -619,6 +678,43 @@
     }
 
 
+    // Small tiles for what a location holds (shelves in a freezer,
+    // boxes in a rack...), coloured by how full each one is, so a level
+    // is seen as a picture and not only as a number.
+    const TILE_LIMIT = 16;
+
+    function tileState(node) {
+      const info = summary(node);
+      if (!info.samples) return "is-empty";
+      if (info.capacity && info.untracked === 0) {
+        return info.used / info.capacity >= 0.9 ? "is-full" : "is-partial";
+      }
+      return "is-partial";
+    }
+
+    function childTiles(child) {
+      const kids = (children.get(child.id) || []).filter(
+        item => !item.historical
+      );
+      if (!kids.length) return null;
+
+      const row = mk("div", null, "b3s-tiles");
+      row.setAttribute("aria-hidden", "true");
+
+      for (const kid of kids.slice(0, TILE_LIMIT)) {
+        const info = summary(kid);
+        const tile = mk("i", null, `b3s-tile ${tileState(kid)}`);
+        tile.title = `${displayName(kid)} · ${plural(info.samples, "Sample")}`;
+        row.append(tile);
+      }
+
+      if (kids.length > TILE_LIMIT) {
+        row.append(mk("em", `+${kids.length - TILE_LIMIT}`, "b3s-tile-more"));
+      }
+
+      return row;
+    }
+
     function childCard(child) {
       const info = summary(child);
       const button = mk("button", null, "b3s-child");
@@ -652,17 +748,19 @@
         bar.setAttribute("role", "img");
         bar.setAttribute(
           "aria-label",
-          `${info.used} of ${info.capacity} positions recorded as occupied`
+          `${info.used} of ${info.capacity} grid positions recorded as occupied`
         );
+
+        const parts = [
+          `${info.used}/${info.capacity} grid positions`,
+          plural(info.samples, "Sample")
+        ];
+        if (info.untracked) parts.push(`${info.untracked} outside a grid`);
+        if (info.offGrid) parts.push(`${info.offGrid} off the grid`);
 
         button.append(
           bar,
-          mk(
-            "small",
-            `${info.used}/${info.capacity} positions · ` +
-              plural(info.samples, "Sample"),
-            "b3s-child-meta"
-          )
+          mk("small", parts.join(" · "), "b3s-child-meta")
         );
       } else {
         const parts = [plural(info.samples, "Sample")];
@@ -671,6 +769,9 @@
         }
         button.append(mk("small", parts.join(" · "), "b3s-child-meta"));
       }
+
+      const tiles = childTiles(child);
+      if (tiles) button.append(tiles);
 
       button.addEventListener("click", () => choose(child.id));
       return button;
@@ -708,13 +809,19 @@
 
       if (info.capacity) {
         add(
-          "Occupancy",
+          "Grid occupancy",
           `${Math.round((info.used / info.capacity) * 100)}%`
         );
       }
 
+      if (info.capacity && info.untracked) {
+        add("Outside a grid", String(info.untracked));
+      }
+
+      if (info.offGrid) add("Off the grid", String(info.offGrid));
+
       if (node.c3Temperature) add("Temperature", node.c3Temperature);
-      add("Level", String(ancestorsOf(node).length + 1));
+      add("Path depth", String(ancestorsOf(node).length + 1));
     }
 
     function renderHeadActions(node) {
@@ -940,7 +1047,7 @@
         const link = mk("button", displayName(item), "b3s-level-link");
         link.type = "button";
         link.addEventListener("click", () => choose(item.id));
-        li.append(mk("span", `Level ${index + 1}`, "b3s-level-no"), link);
+        li.append(mk("span", typeLabel(item) || `Level ${index + 1}`, "b3s-level-no"), link);
         list.append(li);
       });
 
@@ -994,6 +1101,7 @@
     function renderGraph() {
       const target = find("b3s-graph");
       target.replaceChildren();
+      target.scrollLeft = 0;
       renderLegend();
       renderPathPanel();
 
@@ -1020,13 +1128,13 @@
       }
 
       const ids = new Set(visible.map(item => item.id));
-      const W = 184;
+      const ROOT = "__root__";
       const H = 52;
-      const COLUMN = 226;
       const ROW = 64;
       const PAD_X = 14;
       const PAD_Y = 34;
-      const ROOT = "__root__";
+      let W = 184;
+      let COLUMN = 226;
 
       const kidsOf = id => (
         id === ROOT
@@ -1055,6 +1163,19 @@
         depthMax = Math.max(depthMax, depth);
         return y;
       })(ROOT, 0, new Set());
+
+      // Fit all levels in the frame when they can be made narrower
+      // (down to ~60%); beyond that the diagram scrolls.
+      const available = (target.clientWidth || 880) - 44;
+      const natural = depthMax * COLUMN + W + PAD_X * 2;
+      if (natural > available) {
+        const scale = Math.max(available / natural, 0.6);
+        W = Math.round(W * scale);
+        COLUMN = Math.round(COLUMN * scale);
+        for (const point of place.values()) {
+          point.x = point.depth * COLUMN + PAD_X;
+        }
+      }
 
       const width = depthMax * COLUMN + W + PAD_X * 2;
       const height = Math.max(leaf, 1) * ROW + PAD_Y + 6;
@@ -1090,12 +1211,30 @@
         class: "b3s-svg-tree"
       });
 
+      // Column title: the most common location type at that depth
+      // (Freezer, Shelf, Box...), so a level reads as what it holds.
+      const typesAt = new Map();
+      for (const [id, point] of place) {
+        if (id === ROOT) continue;
+        const counts = typesAt.get(point.depth) || new Map();
+        const label = typeLabel(byId.get(id));
+        counts.set(label, (counts.get(label) || 0) + 1);
+        typesAt.set(point.depth, counts);
+      }
+
+      const levelTitle = depth => {
+        const counts = typesAt.get(depth);
+        if (!counts) return `Level ${depth}`;
+        const [top] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+        return `${top}${counts.size > 1 ? " and others" : ""}`;
+      };
+
       for (let depth = 0; depth <= depthMax; depth++) {
         drawing.append(
           svg(
             "text",
             {x: depth * COLUMN + PAD_X, y: 18, class: "b3s-level-label"},
-            depth === 0 ? "Storage" : `Level ${depth}`
+            depth === 0 ? "Storage" : levelTitle(depth)
           )
         );
       }
@@ -1174,8 +1313,8 @@
 
         group.append(
           svg("rect", {class: "b3s-svg-box", width: W, height: H, rx: 8}),
-          svg("text", {class: "b3s-svg-name", x: 11, y: 20}, clip(name, 24)),
-          svg("text", {class: "b3s-svg-sub", x: 11, y: 36}, clip(subtitle, 30))
+          svg("text", {class: "b3s-svg-name", x: 11, y: 20}, clip(name, Math.max(12, Math.floor(W / 7.6)))),
+          svg("text", {class: "b3s-svg-sub", x: 11, y: 36}, clip(subtitle, Math.max(14, Math.floor(W / 6.1))))
         );
 
         if (info && info.capacity) {
@@ -1252,8 +1391,13 @@
       const box = focus.getBoundingClientRect();
       const frame = target.getBoundingClientRect();
 
-      if (box.right > frame.right || box.left < frame.left) {
-        target.scrollLeft += box.left - frame.left - frame.width / 2 + box.width / 2;
+      // Move as little as possible and keep the ancestors in view:
+      // only scroll when the node is outside the frame, and then put it
+      // at the nearest edge instead of centring it.
+      if (box.right > frame.right) {
+        target.scrollLeft += box.right - frame.right + 16;
+      } else if (box.left < frame.left) {
+        target.scrollLeft -= frame.left - box.left + 16;
       }
       if (box.bottom > frame.bottom || box.top < frame.top) {
         target.scrollTop += box.top - frame.top - frame.height / 2 + box.height / 2;
@@ -1992,12 +2136,292 @@
       detail.append(actions);
     }
 
+    // ---- Layout: the storage drawn as it is assembled ----------------
+    // Freezer > shelves stacked > racks side by side > boxes as grids of
+    // cells. Everything is clickable; the side panel explains the pick.
+    let layoutLevels = 5;
+    let layoutOnlyFilled = false;
+    let layoutFocus = "";
+    let layoutCell = null;
+
+    const LAYOUT_KID_LIMIT = 60;
+
+    function layoutKids(node) {
+      return (children.get(node.id) || []).filter(item => !item.historical);
+    }
+
+    function layoutRoots() {
+      return (children.get("") || []).filter(item =>
+        !item.historical && (!workspace || item.workspace === workspace)
+      );
+    }
+
+    function layoutSamplesAt(node) {
+      return samples.filter(item => item.location === node.id);
+    }
+
+    function layoutUnit(node, levelsLeft) {
+      const info = summary(node);
+      const state = tileState(node);
+      const unit = mk("div", null, `b3s-unit ${state}`);
+      unit.dataset.unit = node.id;
+      if (node.id === layoutFocus) unit.classList.add("is-focus");
+      if (node.id === selected) unit.classList.add("is-selected");
+
+      const head = mk("button", null, "b3s-unit-head");
+      head.type = "button";
+      head.dataset.unit = node.id;
+      head.title = `${pathFor(node)} · ${plural(info.samples, "Sample")}`;
+      head.append(
+        mk("span", typeLabel(node), "b3s-chip"),
+        mk("strong", displayName(node)),
+        mk(
+          "small",
+          info.capacity
+            ? `${info.used}/${info.capacity}`
+            : plural(info.samples, "Sample")
+        )
+      );
+      unit.append(head);
+
+      const kids = layoutKids(node);
+
+      if (gridCapacity(node)) {
+        const rows = gridRows(node);
+        const cols = gridColumns(node);
+        const bySlot = new Map();
+
+        for (const item of layoutSamplesAt(node)) {
+          const slot = window.B3StorageV814.gridSlot(item.position, rows, cols);
+          if (!slot) continue;
+          bySlot.set(slot, (bySlot.get(slot) || 0) + 1);
+        }
+
+        const grid = mk("div", null, "b3s-cells");
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        grid.dataset.unit = node.id;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const slot = String.fromCharCode(65 + r) + (c + 1);
+            const count = bySlot.get(slot) || 0;
+            const cell = mk("i", null, "b3s-cell");
+            cell.dataset.slot = slot;
+            if (count) cell.classList.add(count > 1 ? "is-conflict" : "is-used");
+            grid.append(cell);
+          }
+        }
+
+        unit.append(grid);
+      } else if (!kids.length && info.samples) {
+        unit.append(
+          mk("p", "Positions are not tracked here.", "b3s-unit-note")
+        );
+      }
+
+      if (kids.length) {
+        if (levelsLeft <= 1) {
+          unit.append(
+            mk(
+              "p",
+              `${plural(kids.length, "location")} inside · select to open`,
+              "b3s-unit-note"
+            )
+          );
+        } else {
+          const shown = layoutOnlyFilled
+            ? kids.filter(kid => summary(kid).samples)
+            : kids;
+          const wrap = mk(
+            "div",
+            null,
+            "b3s-unit-kids " + (
+              kids.every(kid => kid.type === "shelf") ? "is-stack" : "is-row"
+            )
+          );
+
+          for (const kid of shown.slice(0, LAYOUT_KID_LIMIT)) {
+            wrap.append(layoutUnit(kid, levelsLeft - 1));
+          }
+
+          if (shown.length > LAYOUT_KID_LIMIT) {
+            wrap.append(
+              mk(
+                "p",
+                `+${shown.length - LAYOUT_KID_LIMIT} more: open this location`,
+                "b3s-unit-note"
+              )
+            );
+          }
+
+          if (!shown.length) {
+            wrap.append(mk("p", "Nothing with Samples here.", "b3s-unit-note"));
+          }
+
+          unit.append(wrap);
+        }
+      }
+
+      return unit;
+    }
+
+    function renderLayoutDetail() {
+      const host = find("b3s-layout-detail");
+      if (!host) return;
+      host.replaceChildren();
+
+      const node = byId.get(layoutFocus);
+
+      if (!node) {
+        host.append(
+          mk("h4", "Nothing selected"),
+          mk(
+            "p",
+            "Click a freezer, shelf, rack or box to see what it holds. " +
+              "Click a cell of a box to see its position.",
+            "b3s-note"
+          )
+        );
+        return;
+      }
+
+      const info = summary(node);
+      host.append(
+        mk("small", typeLabel(node), "b3s-chip"),
+        mk("h4", displayName(node)),
+        mk("p", pathFor(node), "b3s-note")
+      );
+
+      const dl = mk("dl", null, "b3s-layout-facts");
+      const fact = (label, value) => {
+        dl.append(mk("dt", label), mk("dd", value));
+      };
+      fact("Samples inside", String(info.samples));
+      fact("Locations inside", String(Math.max(0, info.locations)));
+      if (info.capacity) {
+        fact("Grid positions", `${info.used} of ${info.capacity} used`);
+      }
+      if (info.untracked && info.capacity) {
+        fact("Outside a grid", String(info.untracked));
+      }
+      if (info.offGrid) fact("Off the grid", String(info.offGrid));
+      host.append(dl);
+
+      if (layoutCell && layoutCell.unit === node.id) {
+        const rows = gridRows(node);
+        const cols = gridColumns(node);
+        const here = layoutSamplesAt(node).filter(
+          item => window.B3StorageV814.gridSlot(item.position, rows, cols) ===
+            layoutCell.slot
+        );
+        host.append(mk("h5", `Position ${layoutCell.slot}`));
+
+        if (!here.length) {
+          host.append(
+            mk("p", "No Sample recorded here.", "b3s-note")
+          );
+        } else {
+          const list = mk("ul", null, "b3s-layout-samples");
+          for (const item of here) {
+            const li = mk("li");
+            const link = mk("a", item.sample || "Sample");
+            if (item.url) link.href = item.url;
+            li.append(link);
+            list.append(li);
+          }
+          host.append(list);
+        }
+      }
+
+      const actions = mk("div", null, "b3s-manage-actions");
+      const open = mk("button", "Open contents", "btn btn-sm btn-outline-secondary");
+      open.type = "button";
+      open.addEventListener("click", () => {
+        choose(node.id);
+        showTab("contents");
+      });
+      actions.append(open);
+
+      if (movable(node)) {
+        const move = mk("button", "Move this location", "btn btn-sm btn-outline-primary");
+        move.type = "button";
+        move.addEventListener("click", () => beginMove(node));
+        actions.append(move);
+      }
+
+      host.append(actions);
+    }
+
+    function renderLayout() {
+      const canvas = find("b3s-layout-canvas");
+      if (!canvas) return;
+      canvas.replaceChildren();
+
+      const start = byId.get(selected);
+      const top = start ? [start] : layoutRoots();
+
+      if (!top.length) {
+        canvas.append(
+          mk("p", "No locations available for this view.", "b3s-note")
+        );
+        renderLayoutDetail();
+        return;
+      }
+
+      const frame = mk("div", null, "b3s-layout-frame");
+      for (const node of top) frame.append(layoutUnit(node, layoutLevels));
+      canvas.append(frame);
+      renderLayoutDetail();
+    }
+
+    function wireLayout() {
+      const canvas = find("b3s-layout-canvas");
+      if (!canvas) return;
+
+      canvas.addEventListener("click", event => {
+        const cell = event.target.closest(".b3s-cell");
+        const unit = event.target.closest("[data-unit]");
+        if (!unit) return;
+
+        layoutFocus = unit.dataset.unit;
+        layoutCell = cell
+          ? {unit: unit.dataset.unit, slot: cell.dataset.slot}
+          : null;
+
+        for (const el of canvas.querySelectorAll(".is-focus")) {
+          el.classList.remove("is-focus");
+        }
+        canvas
+          .querySelector(`.b3s-unit[data-unit="${layoutFocus}"]`)
+          ?.classList.add("is-focus");
+        renderLayoutDetail();
+      });
+
+      canvas.addEventListener("dblclick", event => {
+        const unit = event.target.closest(".b3s-unit");
+        if (!unit) return;
+        choose(unit.dataset.unit);
+        showTab("layout");
+      });
+
+      find("b3s-layout-levels")?.addEventListener("change", event => {
+        layoutLevels = Number(event.target.value) || 5;
+        renderLayout();
+      });
+
+      find("b3s-layout-filled")?.addEventListener("change", event => {
+        layoutOnlyFilled = event.target.checked;
+        renderLayout();
+      });
+    }
+
     function render() {
       renderTree();
       renderContents();
       renderPositionMap();
       renderLegacy();
       renderGraph();
+      renderLayout();
       renderManage();
     }
 
@@ -2013,6 +2437,7 @@
 
       for (const [name, id] of [
         ["contents", "b3s-contents"],
+        ["layout", "b3s-layout"],
         ["tree", "b3s-path-tree"],
         ["movements", "b3s-movements"],
         ["manage", "b3s-manage"]
@@ -2025,6 +2450,8 @@
 
       if (tab === "tree") revealGraphFocus();
     }
+
+    wireLayout();
 
     for (const button of root.querySelectorAll(
       "[data-b3s-tab]"

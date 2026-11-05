@@ -150,6 +150,12 @@ Physical locations, Sample custody and movement history.
         </button>
         <button type="button"
                 role="tab"
+                data-b3s-tab="layout"
+                aria-selected="false">
+          Layout
+        </button>
+        <button type="button"
+                role="tab"
                 data-b3s-tab="tree"
                 aria-selected="false">
           Path tree
@@ -204,13 +210,55 @@ Physical locations, Sample custody and movement history.
              class="b3s-position-map"
              aria-live="polite"></div>
 
-        <h4>Historical registrations</h4>
-        <p class="b3s-note">
-          Unverified textual paths are not authorized
-          physical destinations.
-        </p>
-        <div id="b3s-legacy"></div>
+        <details class="b3s-historical-block">
+          <summary>Historical registrations</summary>
+          <p class="b3s-note">
+            Unverified textual paths are not authorized
+            physical destinations.
+          </p>
+          <div id="b3s-legacy"></div>
+        </details>
 
+      </section>
+
+      <section id="b3s-layout"
+               class="b3s-section"
+               role="tabpanel"
+               hidden>
+        <h3>Layout</h3>
+        <p class="b3s-note">
+          How the selected location is assembled. Click a block to see
+          what it holds, click a cell of a box to see its position, and
+          double-click a block to zoom into it.
+        </p>
+        <div class="b3s-layout-bar">
+          <label>
+            Levels shown
+            <select id="b3s-layout-levels">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="b3s-layout-filled">
+            Only with Samples
+          </label>
+          <span class="b3s-layout-legend" aria-hidden="true">
+            <i class="b3s-cell"></i> empty
+            <i class="b3s-cell is-used"></i> recorded
+            <i class="b3s-cell is-conflict"></i> more than one
+          </span>
+        </div>
+        <div class="b3s-layout-split">
+          <div id="b3s-layout-canvas" class="b3s-layout-canvas"></div>
+          <aside id="b3s-layout-detail"
+                 class="b3s-layout-detail"
+                 aria-live="polite"></aside>
+        </div>
       </section>
 
       <section id="b3s-path-tree"
@@ -356,7 +404,9 @@ Physical locations, Sample custody and movement history.
         <p class="b3s-note">
           Recent audited movements you are allowed to see.
           Moving a location records one event and lists every
-          Sample address that changed with it.
+          Sample address that changed with it. To move Samples
+          one by one or in bulk, use <strong>Sample transfers</strong>
+          below; those moves are recorded in this same history.
         </p>
         <div class="b3s-table-wrap">
           <table class="b3s-history-table">
@@ -441,8 +491,7 @@ Physical locations, Sample custody and movement history.
           </table>
         </div>
         <div class="b3s-transfer-dock" aria-label="Sample transfer tools">
-        <details id="b3s-sample-transfer-details"
-                 {% if storage_sample_preview or storage_sample_preview_error or storage_sample_bulk_preview or storage_sample_bulk_preview_error %}open{% endif %}>
+        <details id="b3s-sample-transfer-details" open>
 
           <summary id="b3s-sample-transfers-heading">
             Sample transfers
@@ -536,6 +585,8 @@ Physical locations, Sample custody and movement history.
             </form>
           </details>
 
+          <div class="b3s-manage-grid">
+          <div class="b3s-manage-list">
           <h3>Existing locations</h3>
           <p class="b3s-note">
             Select a physical location to edit its metadata,
@@ -547,6 +598,9 @@ Physical locations, Sample custody and movement history.
                class="b3s-existing-locations"
                aria-label="Existing locations"></div>
 
+          </div>
+
+          <div class="b3s-manage-detail">
           <h3 class="b3s-management-subtitle">
             Selected location
           </h3>
@@ -640,6 +694,8 @@ Physical locations, Sample custody and movement history.
             <input type="hidden" name="reason" value="">
 
           </form>
+          </div>
+          </div>
 
         </div>
 
