@@ -90,11 +90,11 @@
         return protein;
     }
 
-    /** Longest forward ORF (ATG..stop) over the three frames. */
-    function longestOrf(sequence, minAminoAcids) {
+    /** Every forward ORF (ATG..stop) of at least `min` amino acids. */
+    function findOrfs(sequence, minAminoAcids) {
         const seq = clean(sequence).replace(/U/g, "T");
         const min = Number(minAminoAcids) || 30;
-        let best = null;
+        const found = [];
 
         for (let frame = 0; frame < 3; frame++) {
             let start = -1;
@@ -109,13 +109,13 @@
                 if (start >= 0 && CODONS[codon] === "*") {
                     const length = (i - start) / 3;
 
-                    if (length >= min && (!best || length > best.aminoAcids)) {
-                        best = {
+                    if (length >= min) {
+                        found.push({
                             start: start + 1,
                             end: i + 3,
                             aminoAcids: length,
                             frame: frame + 1,
-                        };
+                        });
                     }
 
                     start = -1;
@@ -123,7 +123,12 @@
             }
         }
 
-        return best;
+        return found.sort((a, b) => b.aminoAcids - a.aminoAcids);
+    }
+
+    /** Longest forward ORF over the three frames, or null. */
+    function longestOrf(sequence, minAminoAcids) {
+        return findOrfs(sequence, minAminoAcids)[0] || null;
     }
 
     // SantaLucia (1998) unified nearest-neighbour parameters.
@@ -276,6 +281,7 @@
         gcPercent,
         reverseComplement,
         translate,
+        findOrfs,
         longestOrf,
         meltingTemperature,
         primerChecks,

@@ -32,6 +32,11 @@ assert.deepEqual(
 );
 assert.equal(calc.longestOrf("ATGGCTTAA", 30), null);
 
+const two = calc.findOrfs(
+  "ATG" + "GCT".repeat(35) + "TAA" + "CC" + "ATG" + "GCT".repeat(60) + "TGA", 30
+);
+assert.deepEqual(two.map(o => o.aminoAcids), [61, 36]);
+
 // Melting temperature: ordered by GC and refused outside its range.
 const at = calc.meltingTemperature("ATATATATATATATATATAT");
 const gc = calc.meltingTemperature("GCGCGCGCGCGCGCGCGCGC");

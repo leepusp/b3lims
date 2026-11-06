@@ -349,8 +349,23 @@
 
     let queued = false;
 
+    /*
+     * The annotation editor used to float over the page. It is created
+     * lazily by the workspace, so dock it under the inspector the first
+     * time it exists; the editor and the inspector then read as one panel.
+     */
+    function dockEditor() {
+        const dock = document.getElementById("mw-inspector-editor");
+        const drawer = document.getElementById("mw-annotation-drawer");
+
+        if (dock && drawer && drawer.parentElement !== dock) {
+            dock.appendChild(drawer);
+        }
+    }
+
     function render() {
         queued = false;
+        dockEditor();
 
         const workspace = api();
 
