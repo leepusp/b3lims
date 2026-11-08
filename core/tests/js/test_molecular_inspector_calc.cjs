@@ -72,3 +72,20 @@ assert.ok(basic.isoelectricPoint > 10);
 assert.ok(acidic.chargeAt74 < 0 && basic.chargeAt74 > 0);
 
 console.log("molecular inspector calc: OK");
+
+// ORFs on both strands: coordinates stay on the forward strand.
+{
+  const body = "ATG" + "GCT".repeat(40) + "TAA";
+  const fwd = "CC" + body + "GG";
+  const rev = calc.reverseComplement(fwd);
+  const both = calc.findOrfs(rev, 30, {strand: "both"});
+
+  assert.equal(calc.findOrfs(rev, 30).length, 0);
+  assert.equal(both.length, 1);
+  assert.equal(both[0].strand, "-");
+  assert.equal(both[0].aminoAcids, 41);
+  assert.equal(both[0].start, 3);
+  assert.equal(both[0].end, 2 + body.length);
+  assert.equal(calc.findOrfs(fwd, 30, {strand: "-"}).length, 0);
+  assert.equal(calc.findOrfs(fwd, 30, {strand: "both"})[0].strand, "+");
+}

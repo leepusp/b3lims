@@ -16,15 +16,6 @@
     if (!root || !host || !calc) return;
 
     const NUCLEOTIDE = ["dna", "rna", "plasmid", "primer", "insert"];
-    let context = {};
-
-    try {
-        context = JSON.parse(
-            document.getElementById("mw-inspector-context").textContent
-        ) || {};
-    } catch (error) {
-        context = {};
-    }
 
     const api = () => window.BiobankMolecularWorkspace;
 
@@ -110,90 +101,10 @@
         return null;
     }
 
-    function recordSection(snapshot) {
-        const box = section("Record");
-
-        box.append(row("Name", snapshot.name || "—"));
-        box.append(row(
-            "Type",
-            snapshot.sequenceType +
-            (NUCLEOTIDE.includes(snapshot.sequenceType)
-                ? " · " + snapshot.topology : "")
-        ));
-
-        const info = context || {};
-
-        if (info.sample && info.sample.id) {
-            const line = el("div", "mwi-link");
-
-            line.append(el("i", "bi bi-box-seam me-1"));
-
-            if (info.sample.url) {
-                const anchor = el("a", "", info.sample.id);
-
-                anchor.href = info.sample.url;
-                line.append(anchor);
-            } else {
-                line.append(document.createTextNode(info.sample.id));
-            }
-
-            box.append(line);
-        }
-
-        if (info.place) {
-            const line = el("div", "mwi-link text-muted");
-
-            line.append(el("i", "bi bi-geo-alt me-1"));
-
-            if (info.place_url) {
-                const anchor = el("a", "", info.place);
-
-                anchor.href = info.place_url;
-                line.append(anchor);
-            } else {
-                line.append(document.createTextNode(info.place));
-            }
-
-            if (info.place_position) {
-                line.append(document.createTextNode(" · " + info.place_position));
-            }
-
-            box.append(line);
-        }
-
-        if (info.entries) {
-            box.append(row("ELN entries", String(info.entries)));
-        }
-
-        if (info.duplicates && info.duplicates.length) {
-            const warn = el("div", "mwi-warning");
-
-            warn.append(el("i", "bi bi-copy me-1"));
-            warn.append(document.createTextNode(
-                "Same sequence as: "
-            ));
-
-            info.duplicates.forEach((item, position) => {
-                const anchor = el("a", "", item.name);
-
-                anchor.href = item.url;
-                warn.append(anchor);
-
-                if (position < info.duplicates.length - 1) {
-                    warn.append(document.createTextNode(", "));
-                }
-            });
-
-            box.append(warn);
-        }
-
-        return box;
-    }
-
     function nucleotideFacts(box, seq, type, whole) {
         const gc = calc.gcPercent(seq);
 
-        if (gc !== null) box.append(row("GC", gc + "%"));
+        if (gc !== null && !whole) box.append(row("GC", gc + "%"));
 
         const tm = calc.meltingTemperature(seq);
 
@@ -252,7 +163,7 @@
             ));
         }
 
-        box.append(row("Length", seq.length + " " + unit));
+        if (!whole) box.append(row("Length", seq.length + " " + unit));
 
         if (type === "protein") {
             const props = calc.proteinProperties(seq);
@@ -363,9 +274,16 @@
         }
     }
 
+    function titleChecksum() {
+        const node = document.getElementById("mw-stat-checksum");
+
+        if (node) node.title = node.textContent.trim();
+    }
+
     function render() {
         queued = false;
         dockEditor();
+        titleChecksum();
 
         const workspace = api();
 
@@ -374,10 +292,7 @@
         const snapshot = workspace.getSnapshot();
         const selection = resolveSelection(snapshot);
 
-        host.replaceChildren(
-            recordSection(snapshot),
-            selectionSection(snapshot, selection)
-        );
+        host.replaceChildren(selectionSection(snapshot, selection));
 
         const orf = selection ? null : orfSection(snapshot);
 

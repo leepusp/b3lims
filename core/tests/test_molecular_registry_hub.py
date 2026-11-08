@@ -130,7 +130,8 @@ class MolecularInspectorContextTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="mw-inspector"')
         self.assertContains(response, "molecular_inspector_calc.js")
-        self.assertContains(response, 'id="mw-inspector-context"')
+        self.assertContains(response, 'class="mw-factbar"')
+        self.assertNotContains(response, 'id="mw-inspector-context"')
 
         context = response.context["inspector_context"]
 

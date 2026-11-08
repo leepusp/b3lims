@@ -7,7 +7,7 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261106-shell-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261108-bar-v3">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -128,28 +128,7 @@
         </div>
     </header>
 
-    <div class="mw-context-strip" aria-label="Where this record is used">
-        {% if inspector_context.sample %}
-            <span class="chip is-place"><i class="bi bi-box-seam"></i>
-                <a href="{{ inspector_context.sample.url }}">{{ inspector_context.sample.id }}</a></span>
-        {% endif %}
-        {% if inspector_context.place %}
-            <span class="chip is-place"><i class="bi bi-geo-alt"></i>
-                <a href="{{ inspector_context.place_url }}">{{ inspector_context.place }}</a>{% if inspector_context.place_position %} · {{ inspector_context.place_position }}{% endif %}</span>
-        {% endif %}
-        {% if inspector_context.entries %}
-            <span class="chip"><i class="bi bi-journal-bookmark"></i>
-                {{ inspector_context.entries }} notebook entr{{ inspector_context.entries|pluralize:"y,ies" }}</span>
-        {% endif %}
-        {% for other in inspector_context.duplicates %}
-            <span class="chip is-warn"><i class="bi bi-copy"></i>
-                Same sequence as <a href="{{ other.url }}">{{ other.name }}</a></span>
-        {% endfor %}
-        {% if not inspector_context.sample and not inspector_context.entries and not inspector_context.duplicates %}
-            <span class="chip">Not linked to a Sample or notebook entry yet</span>
-        {% endif %}
-    </div>
-
+    <div class="mw-factbar">
     <section class="mw-stats" aria-label="Molecular statistics">
         <div class="mw-stat">
             <span>Length</span>
@@ -177,15 +156,31 @@
             </code>
         </div>
     </section>
+    <div class="mw-context-strip" aria-label="Where this record is used">
+        {% if inspector_context.sample %}
+            <span class="chip is-place"><i class="bi bi-box-seam"></i>
+                <a href="{{ inspector_context.sample.url }}">{{ inspector_context.sample.id }}</a></span>
+        {% endif %}
+        {% if inspector_context.place %}
+            <span class="chip is-place"><i class="bi bi-geo-alt"></i>
+                <a href="{{ inspector_context.place_url }}">{{ inspector_context.place }}</a>{% if inspector_context.place_position %} · {{ inspector_context.place_position }}{% endif %}</span>
+        {% endif %}
+        {% if inspector_context.entries %}
+            <span class="chip"><i class="bi bi-journal-bookmark"></i>
+                {{ inspector_context.entries }} notebook entr{{ inspector_context.entries|pluralize:"y,ies" }}</span>
+        {% endif %}
+        {% for other in inspector_context.duplicates %}
+            <span class="chip is-warn"><i class="bi bi-copy"></i>
+                Same sequence as <a href="{{ other.url }}">{{ other.name }}</a></span>
+        {% endfor %}
+        {% if not inspector_context.sample and not inspector_context.entries and not inspector_context.duplicates %}
+            <span class="chip">Not linked to a Sample or notebook entry yet</span>
+        {% endif %}
+    </div>
+    </div>
 
     <nav class="mw-view-switcher" aria-label="Molecular workspace view">
-        <div>
-            <strong>Molecular workspace</strong>
-            <span data-molecular-workspace-description>
-                Use SeqViz for inspection; open annotation or sequence tools only when needed.
-            </span>
-        </div>
-
+        <span data-molecular-workspace-description hidden></span>
         <div class="mw-view-options" role="group" aria-label="Visualization mode">
             <button type="button" class="mw-view-option" data-mw-view="seqviz">
                 <i class="bi bi-compass"></i>
@@ -201,7 +196,7 @@
 {% endif %}
             <button type="button" class="mw-view-option" data-mw-view="construction">
                 <i class="bi bi-tags"></i>
-                Annotations
+                Feature table
             </button>
             <button type="button" class="mw-view-option" data-mw-view="sequence">
                 <i class="bi bi-body-text"></i>
@@ -768,7 +763,6 @@
 </div>
 
 {{ molecule.sequence|json_script:"mw-sequence-data" }}
-{{ inspector_context|json_script:"mw-inspector-context" }}
 
 {% if molecule.sequence_type != "protein" %}
 <script src="{% static 'internal/lab_tools/vendor/seqviz-3.10.22.min.js' %}?v=3.10.22"
@@ -794,11 +788,11 @@
 <script src="{% static 'internal/lab_tools/molecular_linear_browser.js' %}?v=20260810-final-ux-v2"
         defer></script>
 {% endif %}
-<script src="{% static 'internal/lab_tools/molecular_inspector_calc.js' %}?v=20261105-inspector-v1"
+<script src="{% static 'internal/lab_tools/molecular_inspector_calc.js' %}?v=20261108-orf-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_inspector.js' %}?v=20261105-inspector-v1"
+<script src="{% static 'internal/lab_tools/molecular_inspector.js' %}?v=20261108-bar-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_tracks.js' %}?v=20261106-tracks-v1"
+<script src="{% static 'internal/lab_tools/molecular_tracks.js' %}?v=20261108-orf-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

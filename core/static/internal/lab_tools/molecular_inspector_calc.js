@@ -91,9 +91,7 @@
     }
 
     /** Every forward ORF (ATG..stop) of at least `min` amino acids. */
-    function findOrfs(sequence, minAminoAcids) {
-        const seq = clean(sequence).replace(/U/g, "T");
-        const min = Number(minAminoAcids) || 30;
+    function scanOrfs(seq, min, strand) {
         const found = [];
 
         for (let frame = 0; frame < 3; frame++) {
@@ -115,12 +113,46 @@
                             end: i + 3,
                             aminoAcids: length,
                             frame: frame + 1,
+                            strand,
                         });
                     }
 
                     start = -1;
                 }
             }
+        }
+
+        return found;
+    }
+
+    /**
+     * ORFs (ATG to stop, linear). options.strand: "+" (default), "-" or
+     * "both". Coordinates are always on the forward strand, 1-based
+     * inclusive; for "-" ORFs start < end still holds and frame counts
+     * from the reverse complement's first base.
+     */
+    function findOrfs(sequence, minAminoAcids, options) {
+        const seq = clean(sequence).replace(/U/g, "T");
+        const min = Number(minAminoAcids) || 30;
+        const which = (options && options.strand) || "+";
+        let found = [];
+
+        if (which === "+" || which === "both") {
+            found = found.concat(scanOrfs(seq, min, "+"));
+        }
+
+        if (which === "-" || which === "both") {
+            const length = seq.length;
+
+            scanOrfs(reverseComplement(seq), min, "-").forEach(orf => {
+                found.push({
+                    start: length - orf.end + 1,
+                    end: length - orf.start + 1,
+                    aminoAcids: orf.aminoAcids,
+                    frame: orf.frame,
+                    strand: "-",
+                });
+            });
         }
 
         return found.sort((a, b) => b.aminoAcids - a.aminoAcids);
