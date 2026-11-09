@@ -7,7 +7,7 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261108-bar-v3">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-bench-v1">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -205,9 +205,24 @@
         </div>
     </nav>
 
+    <div class="mwb-bar" role="toolbar" aria-label="Workbench">
+        <div class="mwb-modes" role="group" aria-label="What do you want to do">
+            <button type="button" class="mwb-mode is-active" data-mwb-mode="map" aria-pressed="true">Map</button>
+            {% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" %}
+            <button type="button" class="mwb-mode" data-mwb-mode="digest" aria-pressed="false">Digest</button>
+            {% endif %}
+        </div>
+        <div class="mwb-tools" role="group" aria-label="Layout">
+            <button type="button" class="mwb-tool is-active" data-mwb-rail="tracks" aria-pressed="true">Tracks</button>
+            <button type="button" class="mwb-tool is-active" data-mwb-rail="inspector" aria-pressed="true">Inspector</button>
+            <button type="button" class="mwb-tool" data-mwb-focus aria-pressed="false">Focus</button>
+        </div>
+    </div>
+
     <div class="mw-body">
     <aside id="mw-tracks" class="mw-tracks" aria-label="Tracks"></aside>
     <div class="mw-main">
+    <div id="mw-digest" class="mwd" hidden></div>
     <section class="mw-card mw-metadata-card" data-mw-shared-panel>
         <div class="mw-card-header">
             <div>
@@ -793,6 +808,10 @@
 <script src="{% static 'internal/lab_tools/molecular_inspector.js' %}?v=20261108-bar-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_tracks.js' %}?v=20261108-orf-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-bench-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
