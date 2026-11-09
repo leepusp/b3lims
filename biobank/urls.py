@@ -46,6 +46,7 @@ from core.views.internal.workspace.views import home
 # --- NOVAS VIEWS: PROFILE & CALENDAR ---
 from core.views.internal.profile.views import profile_view
 from core.views.internal.calendar.views import calendar_view
+from core.views.internal.calendar.history import activity_history
 from core.views.internal.storage.views import storage_workspace_view
 from core.views.internal.storage.sample_search import storage_sample_search
 from core.views.internal.storage.location_layout_update import (
@@ -213,6 +214,7 @@ urlpatterns = [
     # USER TOOLS
     path("profile/", profile_view, name="user_profile"),
     path("calendar/", calendar_view, name="lab_calendar"),
+    path("calendar/history/", activity_history, name="activity_history"),
 
     # ---------------- BIOBANKS & COLLECTIONS (GESTÃO) ----------------
     path("biobanks/", biobanks_list_view, name="biobanks_list"),

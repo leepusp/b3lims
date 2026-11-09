@@ -67,3 +67,5 @@ from core.models.lab_tools.tool_record import ToolRecord
 from core.models.samples.access import SampleAccessGrant
 from core.models.access_grants import ResourceAccessGrant
 from .user_profile import UserProfile
+
+from .activity import ActivityLog

@@ -7,3 +7,6 @@ class CoreConfig(AppConfig):
     def ready(self):
         # Importa os signals para que eles comecem a ouvir as mudanças nos modelos
         import core.signals
+        from core.services import activity
+
+        activity.connect()

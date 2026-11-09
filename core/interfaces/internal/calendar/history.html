@@ -1,0 +1,78 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Activity history · B3 LIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" id="activity-history">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h1 class="h4 mb-0">Activity history</h1>
+            <div class="text-muted small">Everything added, changed or removed{% if not request.user.is_superuser %} by you{% endif %}. Repeated saves of the same item within 10 minutes count once.</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="?{{ query }}{% if query %}&{% endif %}format=csv"><i class="bi bi-download me-1"></i>Export CSV</a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'lab_calendar' %}"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+        </div>
+    </div>
+
+    <form method="get" class="card card-body border-0 shadow-sm mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3"><label class="form-label small mb-1" for="ah-q">Search</label>
+                <input class="form-control form-control-sm" id="ah-q" name="q" value="{{ filters.q }}" placeholder="Name or label"></div>
+            <div class="col-md-2"><label class="form-label small mb-1" for="ah-entity">Entity</label>
+                <select class="form-select form-select-sm" id="ah-entity" name="entity">
+                    <option value="">All</option>
+                    {% for value, label in entity_options %}<option value="{{ value }}" {% if filters.entity == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select></div>
+            <div class="col-md-2"><label class="form-label small mb-1" for="ah-verb">Action</label>
+                <select class="form-select form-select-sm" id="ah-verb" name="verb">
+                    <option value="">All</option>
+                    {% for value, label in verb_options %}<option value="{{ value }}" {% if filters.verb == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select></div>
+            {% if actor_options %}
+            <div class="col-md-2"><label class="form-label small mb-1" for="ah-actor">Person</label>
+                <select class="form-select form-select-sm" id="ah-actor" name="actor">
+                    <option value="">Everyone</option>
+                    {% for u in actor_options %}<option value="{{ u.id }}" {% if filters.actor == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>{% endfor %}
+                </select></div>
+            {% endif %}
+            <div class="col-md-1"><label class="form-label small mb-1" for="ah-from">From</label>
+                <input type="date" class="form-control form-control-sm" id="ah-from" name="from" value="{{ filters.from }}"></div>
+            <div class="col-md-1"><label class="form-label small mb-1" for="ah-to">To</label>
+                <input type="date" class="form-control form-control-sm" id="ah-to" name="to" value="{{ filters.to }}"></div>
+            <div class="col-md-1 d-flex gap-1"><button class="btn btn-sm btn-primary" type="submit">Filter</button><a class="btn btn-sm btn-light" href="{% url 'activity_history' %}">Clear</a></div>
+        </div>
+    </form>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th>When</th><th>Who</th><th>Action</th><th>Type</th><th>Name</th></tr></thead>
+                <tbody>
+                {% for row in page %}
+                    <tr>
+                        <td class="text-nowrap small">{{ row.updated_at|date:"Y-m-d H:i" }}</td>
+                        <td class="small">{{ row.actor_name|default:"—" }}</td>
+                        <td><span class="badge text-bg-{% if row.verb == 'created' %}success{% elif row.verb == 'deleted' %}danger{% else %}secondary{% endif %}">{{ row.get_verb_display }}</span>{% if row.count > 1 %} <span class="text-muted small">×{{ row.count }}</span>{% endif %}</td>
+                        <td class="small">{{ row.type_label }}</td>
+                        <td>{% if row.url %}<a href="{{ row.url }}">{{ row.entity_label|default:"(unnamed)" }}</a>{% else %}{{ row.entity_label|default:"(unnamed)" }}{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No activity matches these filters.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page.paginator.num_pages > 1 %}
+    <nav class="mt-3 d-flex justify-content-between align-items-center small">
+        <span>Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} records</span>
+        <span class="d-flex gap-2">
+            {% if page.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{{ query }}{% if query %}&{% endif %}page={{ page.previous_page_number }}">Previous</a>{% endif %}
+            {% if page.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{{ query }}{% if query %}&{% endif %}page={{ page.next_page_number }}">Next</a>{% endif %}
+        </span>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
