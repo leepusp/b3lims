@@ -51,5 +51,43 @@
         }
     });
 
+    /*
+     * Mol* opens with its Structure Tools panel beside the 3D view, which halves
+     * a small window. The panel starts closed and a "Tools" button on the view
+     * opens it (CSS: molecular_pro.css, .mw-mol-tools-open).
+     */
+    let toolsTimer = 0;
+
+    function addToolsToggles() {
+        host.querySelectorAll(".msp-plugin").forEach(plugin => {
+            const stage = plugin.parentElement;
+
+            // Mol* may rebuild its container, so look for the button itself.
+            if (!stage || stage.querySelector(":scope > .mw-mol-tools-btn")) return;
+
+            stage.classList.add("mw-mol-stage");
+
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "mw-mol-tools-btn";
+            button.textContent = "Tools";
+            button.title = "Show or hide the Mol* tools panel";
+            button.classList.toggle("is-on", stage.classList.contains("mw-mol-tools-open"));
+            button.addEventListener("click", () => {
+                const open = stage.classList.toggle("mw-mol-tools-open");
+
+                button.classList.toggle("is-on", open);
+                window.setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+            });
+            stage.appendChild(button);
+        });
+    }
+
+    new MutationObserver(() => {
+        window.clearTimeout(toolsTimer);
+        toolsTimer = window.setTimeout(addToolsToggles, 150);
+    }).observe(host, {childList: true, subtree: true});
+
     poll();
 })();

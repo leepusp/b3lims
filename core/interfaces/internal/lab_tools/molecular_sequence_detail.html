@@ -52,7 +52,7 @@
 
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
 <link rel="stylesheet"
-      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v7">
+      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v7b">
 {% endif %}
 
 <div id="molecular-workspace"
@@ -911,7 +911,7 @@
 <script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v16"
         defer></script>
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
-<script src="{% static 'internal/lab_tools/molecular_structure_window.js' %}?v=20261109-window-v1"
+<script src="{% static 'internal/lab_tools/molecular_structure_window.js' %}?v=20261109-window-v3"
         defer></script>
 {% endif %}
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"

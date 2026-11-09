@@ -241,3 +241,14 @@ class SequenceColorStandardTests(SimpleTestCase):
         for hue in ("#2B8A3E", "#C92A2A", "#E67700", "#1971C2"):
             self.assertGreaterEqual(canvas.count(hue), 2, hue)
         self.assertIn('s.sequenceType === "protein" ? RESIDUE_COLOR : BASE_COLOR', canvas)
+
+
+class MolstarToolsPanelTests(SimpleTestCase):
+    def test_structure_window_starts_with_the_mol_tools_panel_closed(self):
+        window = (STATIC / "molecular_structure_window.js").read_text(encoding="utf-8")
+        css = (STATIC / "molecular_pro.css").read_text(encoding="utf-8")
+
+        self.assertIn("mw-mol-tools-btn", window)
+        self.assertIn("mw-mol-tools-open", window)
+        self.assertIn(".msp-layout-right{display:none!important}", css)
+        self.assertIn(".mw-mol-tools-btn", css)
