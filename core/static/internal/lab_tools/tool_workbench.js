@@ -65,28 +65,214 @@
         return page.querySelector('[data-tw-pane="' + key + '"]');
     }
 
-    function render() {
-        WINDOWS.forEach(key => {
-            const isOpen = open.indexOf(key) !== -1;
-            const pane = paneOf(key);
+    /* ---------- layout ---------- */
 
-            pane.hidden = !isOpen;
-            page.querySelector('[data-tw-toggle="' + key + '"]').classList.toggle("is-open", isOpen);
-        });
-        document.getElementById("tw-none").hidden = open.length > 0;
+    const L = {mode: "split", order: [], collapsed: [], sideWidth: 0, focus: "", active: ""};
+    const mainEl = document.getElementById("tw-main");
+    const sideEl = document.getElementById("tw-side");
+    const dividerEl = document.getElementById("tw-divider");
+    const gridEl = document.getElementById("tw-grid");
+    const tabsEl = document.getElementById("tw-tabs");
+    const noneEl = document.getElementById("tw-none");
+    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: "Chemical", notes: "Notes"};
+    const MODES = ["split", "stack", "tabs"];
 
-        if (open.indexOf("gel") !== -1 && window.BiobankGel) {
-            window.requestAnimationFrame(() => window.BiobankGel.refresh());
+    L.order = [tool].concat(WINDOWS.filter(key => key !== tool));
+
+    function applyLayoutState(state) {
+        if (!state || typeof state !== "object") return;
+
+        if (MODES.indexOf(state.mode) !== -1) L.mode = state.mode;
+
+        if (Array.isArray(state.order)) {
+            const known = state.order.filter(key => WINDOWS.indexOf(key) !== -1);
+
+            L.order = known.concat(WINDOWS.filter(key => known.indexOf(key) === -1));
         }
 
+        if (Array.isArray(state.collapsed)) L.collapsed = state.collapsed.filter(key => WINDOWS.indexOf(key) !== -1);
+
+        L.sideWidth = Math.max(0, Number(state.sideWidth) || 0);
+        L.active = WINDOWS.indexOf(state.active) !== -1 ? state.active : "";
+    }
+
+    function notifyLayout() {
+        window.requestAnimationFrame(() => {
+            if (window.BiobankGel && open.indexOf("gel") !== -1) window.BiobankGel.refresh();
+        });
+    }
+
+    function render() {
+        const visible = L.order.filter(key => open.indexOf(key) !== -1);
+        let shown = visible;
+
+        if (L.focus && visible.indexOf(L.focus) !== -1) {
+            shown = [L.focus];
+        } else {
+            L.focus = "";
+
+            if (L.mode === "tabs") {
+                if (visible.indexOf(L.active) === -1) L.active = visible[0] || "";
+
+                shown = L.active ? [L.active] : [];
+            }
+        }
+
+        const split = L.mode === "split" && !L.focus && shown.length > 1;
+        const mainKeys = split ? [shown[0]] : shown;
+        const sideKeys = split ? shown.slice(1) : [];
+
+        WINDOWS.forEach(key => {
+            const pane = paneOf(key);
+            const isShown = shown.indexOf(key) !== -1;
+
+            pane.hidden = !isShown;
+            pane.classList.toggle("is-collapsed", L.collapsed.indexOf(key) !== -1);
+            page.querySelector('[data-tw-toggle="' + key + '"]').classList.toggle("is-open", open.indexOf(key) !== -1);
+            updatePaneTools(pane, key, visible, shown);
+        });
+        mainKeys.forEach(key => mainEl.insertBefore(paneOf(key), noneEl));
+        sideKeys.forEach(key => sideEl.append(paneOf(key)));
+        sideEl.hidden = dividerEl.hidden = !sideKeys.length;
+        sideEl.style.flexBasis = (L.sideWidth || 544) + "px";
+        noneEl.hidden = shown.length > 0;
+        page.querySelectorAll("[data-tw-layout]").forEach(node => node.classList.toggle("is-open", node.dataset.twLayout === L.mode));
+
+        tabsEl.hidden = L.mode !== "tabs" || !visible.length;
+        tabsEl.replaceChildren();
+        visible.forEach(key => {
+            const tab = document.createElement("button");
+
+            tab.type = "button";
+            tab.className = "tw-tab" + (key === L.active ? " is-active" : "");
+            tab.textContent = TITLES[key];
+            tab.setAttribute("role", "tab");
+            tab.addEventListener("click", () => {
+                L.active = key;
+                render();
+            });
+            tabsEl.append(tab);
+        });
+
+        notifyLayout();
         schedule();
     }
+
+    function tool_(label, title, onClick) {
+        const node = document.createElement("button");
+
+        node.type = "button";
+        node.className = "tw-x";
+        node.textContent = label;
+        node.title = title;
+        node.setAttribute("aria-label", title);
+        node.addEventListener("click", onClick);
+
+        return node;
+    }
+
+    function swapOrder(key, delta) {
+        const visible = L.order.filter(item => open.indexOf(item) !== -1);
+        const at = visible.indexOf(key);
+        const other = visible[at + delta];
+
+        if (other === undefined) return;
+
+        const i = L.order.indexOf(key);
+        const j = L.order.indexOf(other);
+
+        L.order[i] = other;
+        L.order[j] = key;
+        render();
+    }
+
+    // Window tools are built once per pane and refreshed for state-dependent bits.
+    function updatePaneTools(pane, key, visible, shown) {
+        let tools = pane.querySelector(".tw-pane-tools");
+
+        if (!tools) {
+            const head = pane.querySelector(".tw-pane-head");
+            const close = head.querySelector("[data-tw-close]");
+
+            tools = document.createElement("span");
+            tools.className = "tw-pane-tools";
+            tools.append(
+                tool_("▲", "Move up / make it the main window", () => swapOrder(key, -1)),
+                tool_("▼", "Move down", () => swapOrder(key, 1)),
+                tool_("–", "Collapse or expand this window", () => {
+                    const at = L.collapsed.indexOf(key);
+
+                    if (at === -1) L.collapsed.push(key);
+                    else L.collapsed.splice(at, 1);
+
+                    render();
+                }),
+                tool_("⤢", "Show only this window (press again to go back)", () => {
+                    L.focus = L.focus === key ? "" : key;
+                    render();
+                }),
+            );
+            head.insertBefore(tools, close);
+        }
+
+        const buttons = tools.querySelectorAll("button");
+
+        buttons[0].disabled = visible.indexOf(key) <= 0;
+        buttons[1].disabled = visible.indexOf(key) === visible.length - 1;
+        buttons[3].textContent = L.focus === key ? "⤡" : "⤢";
+    }
+
+    page.querySelectorAll("[data-tw-layout]").forEach(node => {
+        node.addEventListener("click", () => {
+            L.mode = node.dataset.twLayout;
+            L.focus = "";
+            render();
+        });
+    });
+
+    // Drag the divider to give the side column more or less room.
+    function setSideFromPointer(clientX) {
+        const box = gridEl.getBoundingClientRect();
+        const width = Math.round(box.right - clientX - dividerEl.offsetWidth / 2);
+
+        L.sideWidth = Math.max(288, Math.min(Math.round(box.width * 0.7), width));
+        sideEl.style.flexBasis = L.sideWidth + "px";
+    }
+
+    dividerEl.addEventListener("pointerdown", event => {
+        dividerEl.setPointerCapture(event.pointerId);
+        dividerEl.classList.add("is-drag");
+        event.preventDefault();
+    });
+    dividerEl.addEventListener("pointermove", event => {
+        if (dividerEl.classList.contains("is-drag")) setSideFromPointer(event.clientX);
+    });
+    ["pointerup", "pointercancel"].forEach(type => dividerEl.addEventListener(type, () => {
+        if (!dividerEl.classList.contains("is-drag")) return;
+
+        dividerEl.classList.remove("is-drag");
+        notifyLayout();
+        schedule();
+    }));
+    dividerEl.addEventListener("keydown", event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+
+        L.sideWidth = Math.max(288, (L.sideWidth || sideEl.offsetWidth) + (event.key === "ArrowLeft" ? 40 : -40));
+        sideEl.style.flexBasis = L.sideWidth + "px";
+        notifyLayout();
+        schedule();
+        event.preventDefault();
+    });
 
     function toggle(key, force) {
         const isOpen = open.indexOf(key) !== -1;
         const want = force === undefined ? !isOpen : force;
 
-        if (want && !isOpen) open.push(key);
+        if (want && !isOpen) {
+            open.push(key);
+            L.active = key;
+            L.focus = "";
+        }
         if (!want && isOpen) open = open.filter(item => item !== key);
 
         render();
@@ -102,7 +288,7 @@
     /* ---------- state ---------- */
 
     function collect() {
-        const data = {windows: open.slice(), notes: notes.value};
+        const data = {windows: open.slice(), notes: notes.value, layout: JSON.parse(JSON.stringify(L))};
 
         if (window.BiobankGel) data.gel = window.BiobankGel.getState();
         if (window.BiobankAssembly) data.assembly = window.BiobankAssembly.getState();
@@ -289,6 +475,8 @@
         open = Array.isArray(stored.windows) && stored.windows.length
             ? stored.windows.filter(key => WINDOWS.indexOf(key) !== -1)
             : [tool];
+
+        applyLayoutState(stored.layout);
 
         if (stored.assembly && window.BiobankAssembly) window.BiobankAssembly.setState(stored.assembly);
         if (stored.chemical && window.BiobankChemical) window.BiobankChemical.setState(stored.chemical);

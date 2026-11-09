@@ -120,6 +120,18 @@ class ToolRecordViewsTests(TestCase):
             for key in ("gel", "assembly", "chemical", "notes"):
                 self.assertContains(response, f'data-tw-toggle="{key}"')
 
+    def test_page_has_layout_controls_and_a_resizable_side_column(self):
+        record = self.make("gel")
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("tool_record_detail", args=[record.id]))
+
+        for mode in ("split", "stack", "tabs"):
+            self.assertContains(response, f'data-tw-layout="{mode}"')
+
+        self.assertContains(response, 'id="tw-divider"')
+        self.assertContains(response, 'id="tw-side"')
+        self.assertContains(response, 'id="tw-tabs"')
+
     def test_only_the_owner_opens_a_record(self):
         record = self.make()
         url = reverse("tool_record_detail", args=[record.id])

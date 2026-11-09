@@ -5,7 +5,7 @@
 {% block content %}
 {% csrf_token %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v3">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v4">
 
 <div class="container-fluid py-4 tw-page"
      id="tool-workbench"
@@ -38,6 +38,12 @@
         <button type="button" class="tw-win" data-tw-toggle="assembly">Plasmid assembly</button>
         <button type="button" class="tw-win" data-tw-toggle="chemical">Chemical</button>
         <button type="button" class="tw-win" data-tw-toggle="notes">Notes</button>
+        <span class="tw-bar-label tw-layout-label">Layout</span>
+        <span class="tw-seg" role="group" aria-label="Window layout">
+            <button type="button" class="tw-win" data-tw-layout="split" title="Main window on the left, the others stacked on the right (drag the divider)">Split</button>
+            <button type="button" class="tw-win" data-tw-layout="stack" title="Every window full width, one under the other">Stack</button>
+            <button type="button" class="tw-win" data-tw-layout="tabs" title="One window at a time">Tabs</button>
+        </span>
         <span class="tw-file" id="tw-file">
             <span id="tw-file-name" class="text-muted"></span>
             <button type="button" class="tw-btn" id="tw-file-pick"><i class="bi bi-paperclip"></i> <span id="tw-file-label">Attach file</span></button>
@@ -47,8 +53,10 @@
         </span>
     </div>
 
+    <div class="tw-tabs" id="tw-tabs" role="tablist" hidden></div>
     <div class="tw-grid" id="tw-grid">
-        <section class="tw-pane is-wide" data-tw-pane="gel" hidden aria-label="Gel">
+      <div class="tw-main" id="tw-main">
+        <section class="tw-pane" data-tw-pane="gel" hidden aria-label="Gel">
             <div class="tw-pane-head"><h2 class="tw-pane-title">Gel</h2><button type="button" class="tw-x" data-tw-close="gel" aria-label="Close window">×</button></div>
             <div id="mw-gel" class="mwp mwp-gel" role="group" aria-label="Gel photo reader"></div>
         </section>
@@ -65,13 +73,16 @@
             <textarea id="tw-notes" class="form-control" rows="10" placeholder="Description, conditions, observations…">{{ record.description }}</textarea>
         </section>
         <div class="tw-empty" id="tw-none" hidden>No window open. Use the Windows bar to open one.</div>
+      </div>
+      <div class="tw-divider" id="tw-divider" role="separator" aria-orientation="vertical" aria-label="Resize the side column" tabindex="0" hidden></div>
+      <div class="tw-side" id="tw-side" hidden></div>
     </div>
 </div>
 
 {{ record.data|json_script:"tw-initial" }}
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
-<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v3"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v3"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v3"></script>
+<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v4"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v4"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v4"></script>
 {% endblock %}

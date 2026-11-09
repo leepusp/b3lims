@@ -12,10 +12,25 @@
 .tw-win:hover{background:#eef2f8}
 .tw-win.is-open{background:#e7f0ff;border-color:#1d4ed8;color:#1d4ed8}
 .tw-file{margin-left:auto;display:flex;align-items:center;gap:.4rem;font-size:.8rem}
-.tw-grid{display:flex;flex-wrap:wrap;gap:.8rem;align-items:flex-start}
-.tw-pane{flex:1 1 34rem;min-width:min(100%,24rem);background:#fff;border:1px solid var(--tw-border);border-radius:.6rem;padding:.7rem .8rem}
+.tw-grid{display:flex;align-items:flex-start;gap:0}
+.tw-main{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:.8rem}
+.tw-side{flex:0 0 34rem;min-width:18rem;max-width:70%;display:flex;flex-direction:column;gap:.8rem}
+.tw-side[hidden],.tw-divider[hidden],.tw-tabs[hidden]{display:none}
+.tw-divider{flex:0 0 .9rem;align-self:stretch;cursor:col-resize;position:relative;touch-action:none}
+.tw-divider::after{content:"";position:absolute;left:.4rem;top:0;bottom:0;width:2px;border-radius:2px;background:#d3dae3}
+.tw-divider:hover::after,.tw-divider:focus-visible::after,.tw-divider.is-drag::after{background:#1d4ed8;width:3px;left:.35rem}
+.tw-divider:focus-visible{outline:none}
+.tw-pane{background:#fff;border:1px solid var(--tw-border);border-radius:.6rem;padding:.7rem .8rem;min-width:0}
 .tw-pane[hidden]{display:none}
-.tw-pane.is-wide{flex-basis:60rem}
+.tw-pane.is-collapsed>:not(.tw-pane-head){display:none}
+.tw-pane.is-collapsed .tw-pane-head{margin-bottom:0}
+.tw-pane-tools{display:flex;gap:.1rem}
+.tw-seg{display:inline-flex;gap:.2rem}
+.tw-layout-label{margin-left:.8rem}
+.tw-tabs{display:flex;gap:.2rem;margin-bottom:.6rem;border-bottom:1px solid var(--tw-border)}
+.tw-tab{border:1px solid transparent;border-bottom:0;background:transparent;border-radius:.45rem .45rem 0 0;padding:.35rem .9rem;font-size:.82rem;font-weight:600;color:#566474;cursor:pointer;margin-bottom:-1px}
+.tw-tab.is-active{background:#fff;border-color:var(--tw-border);color:#1d4ed8}
+@media (max-width:991px){.tw-grid{flex-direction:column;gap:.8rem}.tw-main,.tw-side{width:100%;flex:1 1 auto;max-width:none}.tw-divider{display:none}}
 .tw-pane-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
 .tw-pane-title{font-size:.95rem;font-weight:700;margin:0}
 .tw-x{border:0;background:transparent;color:#8a96a5;border-radius:.3rem;padding:.1rem .45rem;cursor:pointer;font-size:1rem}
