@@ -75,6 +75,7 @@
         body.classList.toggle("is-inspector-hidden", !prefs.inspector);
         main.classList.toggle("is-digest", mode === "digest");
         root.classList.toggle("is-digest", mode === "digest");
+        root.classList.toggle("is-metadata-hidden", mode !== "features");
 
         root.querySelectorAll("[data-mwb-focus]").forEach(button => {
             button.classList.toggle("is-active", prefs.focus);
@@ -96,8 +97,26 @@
         if (panel) panel.hidden = mode !== "digest";
     }
 
+    // The old "Viewer / Feature table / Sequence data" switcher stays in the
+    // page (other scripts listen to it) but is hidden; these modes drive it.
+    const LEGACY_VIEW = {
+        map: "seqviz",
+        structure: "secondary-structure",
+        features: "construction",
+        data: "sequence",
+    };
+
     function setMode(next) {
         mode = next;
+
+        if (LEGACY_VIEW[next]) {
+            const legacy = root.querySelector(
+                '[data-mw-view="' + LEGACY_VIEW[next] + '"]'
+            );
+
+            if (legacy) legacy.click();
+        }
+
         applyLayout();
 
         if (mode === "digest") renderDigest();
@@ -361,58 +380,207 @@
     }
 
     /*
-     * Viewer bar: one layout switch and zoom buttons drive the existing
-     * viewer controls (kept inside "View options"), so there is a single
-     * source of truth and nothing else in the viewer has to change.
+     * Viewer bar. The page still contains three renderers (SeqViz, the
+     * detailed map, the linear browser) with a toolbar each. Here they are
+     * presented as one viewer: a layout switch picks the renderer, zoom works
+     * on whichever is active, and the active renderer's own controls live in
+     * "View options" instead of stacking above the map.
      */
     function bindViewerBar() {
-        const mode = document.getElementById("mw-seqviz-mode");
-        const zoom = document.getElementById("mw-seqviz-zoom");
+        const zoomRange = document.getElementById("mw-seqviz-zoom");
+        const modeSelect = document.getElementById("mw-seqviz-mode");
         const label = document.getElementById("mwv-zoom-label");
-        const buttons = root.querySelectorAll("[data-mwv-layout]");
-        const steps = root.querySelectorAll("[data-mwv-zoom]");
+        const layoutButtons = root.querySelectorAll("[data-mwv-layout]");
+        const zoomButtons = root.querySelectorAll("[data-mwv-zoom]");
+        const zoomGroup = root.querySelector(".mwv-zoom");
+        const menus = root.querySelectorAll(".mwv-more");
+        const panelBody = root.querySelector(".mwv-view .mwv-more-panel");
+        const isRna = root.dataset.sequenceType === "rna";
+        const sections = {};
+        const adopted = {detailed: false, linear: false};
 
-        function sync() {
-            if (mode) {
-                buttons.forEach(button => {
-                    const on = button.dataset.mwvLayout === mode.value;
+        function section(name, title) {
+            const box = el("div", "mwv-opts");
 
-                    button.classList.toggle("is-active", on);
-                    button.setAttribute("aria-pressed", String(on));
-                });
-            }
+            box.dataset.mwvOpts = name;
+            box.append(el("div", "mwv-opts-title", title));
+            panelBody.append(box);
+            sections[name] = box;
 
-            if (zoom && label) label.textContent = zoom.value + "%";
+            return box;
         }
 
-        buttons.forEach(button => {
-            button.addEventListener("click", () => {
-                if (!mode) return;
+        if (panelBody) {
+            const own = panelBody.querySelector(".mw-seqviz-controls");
 
-                mode.value = button.dataset.mwvLayout;
-                mode.dispatchEvent(new Event("change", {bubbles: true}));
-                sync();
+            if (own) {
+                const box = el("div", "mwv-opts");
+
+                box.dataset.mwvOpts = "seqviz";
+                panelBody.insertBefore(box, own);
+                box.append(own);
+                sections.seqviz = box;
+            }
+
+            section("detailed", "Map options");
+            section("linear", "Sequence options");
+        }
+
+        const engineOf = () => {
+            const active = root.querySelector(".mpm-view-button.is-active");
+
+            return active ? active.dataset.mpmView : "seqviz";
+        };
+
+        function layoutOf(engine) {
+            if (engine === "detailed") return "map";
+            if (engine === "linear") return "seq";
+            return isRna ? "seq" : "both";
+        }
+
+        function mapSvg() {
+            return document.querySelector("#mw-detailed-plasmid-map svg");
+        }
+
+        function zoomText(engine) {
+            if (engine === "seqviz" && zoomRange) return zoomRange.value + "%";
+
+            const svgNode = mapSvg();
+            const box = svgNode && svgNode.getAttribute("viewBox");
+
+            if (engine === "detailed" && box) {
+                const width = Number(box.split(/\s+/)[2]);
+
+                if (width > 0) return Math.round(1000 / width * 100) + "%";
+            }
+
+            return "";
+        }
+
+        function sync() {
+            const engine = engineOf();
+            const layout = layoutOf(engine);
+
+            layoutButtons.forEach(button => {
+                const on = button.dataset.mwvLayout === layout;
+
+                button.classList.toggle("is-active", on);
+                button.setAttribute("aria-pressed", String(on));
+            });
+
+            Object.entries(sections).forEach(([name, box]) => {
+                box.hidden = name !== engine;
+            });
+
+            if (zoomGroup) zoomGroup.hidden = engine === "linear";
+            if (label) label.textContent = zoomText(engine) || "100%";
+        }
+
+        function chooseEngine(name) {
+            const button = root.querySelector('[data-mpm-view="' + name + '"]');
+
+            if (button) button.click();
+            window.setTimeout(sync, 60);
+        }
+
+        layoutButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                const layout = button.dataset.mwvLayout;
+
+                if (layout === "map") {
+                    chooseEngine("detailed");
+                } else if (layout === "seq" && !isRna) {
+                    chooseEngine("linear");
+                } else {
+                    chooseEngine("seqviz");
+
+                    if (modeSelect) {
+                        modeSelect.value = layout === "seq" ? "linear" : "both";
+                        modeSelect.dispatchEvent(new Event("change", {bubbles: true}));
+                    }
+                }
             });
         });
-        steps.forEach(button => {
-            button.addEventListener("click", () => {
-                if (!zoom) return;
 
+        zoomButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                const engine = engineOf();
                 const step = button.dataset.mwvZoom;
-                const next = step === "fit"
-                    ? 50
-                    : Math.max(0, Math.min(100, Number(zoom.value) + Number(step)));
 
-                zoom.value = String(next);
-                zoom.dispatchEvent(new Event("input", {bubbles: true}));
-                sync();
+                if (engine === "seqviz" && zoomRange) {
+                    const next = step === "fit"
+                        ? 50
+                        : Math.max(0, Math.min(100, Number(zoomRange.value) + Number(step)));
+
+                    zoomRange.value = String(next);
+                    zoomRange.dispatchEvent(new Event("input", {bubbles: true}));
+                } else if (engine === "detailed") {
+                    if (step === "fit") {
+                        const reset = document.getElementById("mpm-reset-view");
+
+                        if (reset) reset.click();
+                    } else if (mapSvg()) {
+                        const rect = mapSvg().getBoundingClientRect();
+
+                        mapSvg().dispatchEvent(new WheelEvent("wheel", {
+                            deltaY: Number(step) > 0 ? -100 : 100,
+                            clientX: rect.left + rect.width / 2,
+                            clientY: rect.top + rect.height / 2,
+                            bubbles: true,
+                            cancelable: true,
+                        }));
+                    }
+                }
+
+                window.setTimeout(sync, 80);
             });
         });
 
-        [mode, zoom].forEach(control => {
+        // Bring the other renderers' toolbars into View options once they exist.
+        function adopt() {
+            const shell = document.getElementById("mw-detailed-plasmid-map");
+
+            if (shell && !adopted.detailed && shell.querySelector(".mpm-toolbar")) {
+                [".mpm-toolbar", "#mpm-selected-enzymes-wrap", ".mpm-secondary-row"]
+                    .forEach(selector => {
+                        const node = shell.querySelector(selector);
+
+                        if (node && sections.detailed) sections.detailed.append(node);
+                    });
+                adopted.detailed = true;
+            }
+
+            const linear = document.querySelector(".mlb-toolbar");
+
+            if (linear && !adopted.linear && sections.linear) {
+                sections.linear.append(linear);
+                adopted.linear = true;
+            }
+
+            return adopted.detailed && adopted.linear;
+        }
+
+        let tries = 0;
+        const timer = window.setInterval(() => {
+            tries += 1;
+
+            if (adopt() || tries > 60) window.clearInterval(timer);
+
+            sync();
+        }, 200);
+
+        const switcher = root.querySelector(".mpm-view-switcher");
+
+        if (switcher) {
+            new MutationObserver(sync).observe(switcher, {
+                subtree: true, attributes: true, attributeFilter: ["class"],
+            });
+        }
+
+        [zoomRange, modeSelect].forEach(control => {
             if (control) {
-                control.addEventListener("change", sync);
                 control.addEventListener("input", sync);
+                control.addEventListener("change", sync);
             }
         });
 
@@ -420,17 +588,55 @@
 
         if (reset) reset.addEventListener("click", () => window.setTimeout(sync, 0));
 
-        // Close the options popover on an outside click or Escape.
-        const more = root.querySelector(".mwv-more");
+        // One popover open at a time; closes on outside click or Escape.
+        menus.forEach(menu => {
+            menu.addEventListener("toggle", () => {
+                if (menu.open) menus.forEach(other => {
+                    if (other !== menu) other.open = false;
+                });
+            });
+        });
+        document.addEventListener("click", event => {
+            menus.forEach(menu => {
+                if (menu.open && !menu.contains(event.target)) menu.open = false;
+            });
+        });
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") menus.forEach(menu => {
+                menu.open = false;
+            });
+        });
 
-        if (more) {
-            document.addEventListener("click", event => {
-                if (more.open && !more.contains(event.target)) more.open = false;
+        // Edit & export: the old "Sequence data" and annotation views stay
+        // available, reached from here instead of from extra tabs.
+        const press = id => {
+            const node = document.getElementById(id);
+
+            if (node) node.click();
+        };
+        const ACTIONS = {
+            "edit-sequence": () => setMode("data"),
+            "edit-annotations": () => setMode("features"),
+            import: () => {
+                setMode("data");
+                window.setTimeout(() => press("mw-import-fasta"), 120);
+            },
+            copy: () => press("mw-copy"),
+            fasta: () => press("mw-export-fasta"),
+            genbank: () => press("mw-export-genbank"),
+        };
+
+        root.querySelectorAll("[data-mwv-act]").forEach(item => {
+            item.addEventListener("click", () => {
+                const run = ACTIONS[item.dataset.mwvAct];
+
+                menus.forEach(menu => {
+                    menu.open = false;
+                });
+
+                if (run) run();
             });
-            document.addEventListener("keydown", event => {
-                if (event.key === "Escape" && more.open) more.open = false;
-            });
-        }
+        });
 
         sync();
     }

@@ -7,7 +7,7 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v3">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -208,6 +208,9 @@
     <div class="mwb-bar" role="toolbar" aria-label="Workbench">
         <div class="mwb-modes" role="group" aria-label="What do you want to do">
             <button type="button" class="mwb-mode is-active" data-mwb-mode="map" aria-pressed="true">Map</button>
+{% if molecule.sequence_type == "rna" %}
+            <button type="button" class="mwb-mode" data-mwb-mode="structure" aria-pressed="false">Structure</button>
+{% endif %}
             {% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" %}
             <button type="button" class="mwb-mode" data-mwb-mode="digest" aria-pressed="false">Digest</button>
             {% endif %}
@@ -298,11 +301,11 @@
             <div class="mwv-quick" role="toolbar" aria-label="Map layout and zoom">
                 <div class="mwv-seg" role="group" aria-label="Layout">
 {% if molecule.sequence_type == "rna" %}
-                    <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="linear" aria-pressed="true">Sequence</button>
+                    <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="seq" aria-pressed="true">Sequence</button>
 {% else %}
                     <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="both" aria-pressed="true">Map + sequence</button>
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="circular" aria-pressed="false">Map</button>
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="linear" aria-pressed="false">Sequence</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="map" aria-pressed="false">Map</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
 {% endif %}
                 </div>
                 <div class="mwv-zoom" role="group" aria-label="Zoom">
@@ -311,7 +314,19 @@
                     <button type="button" class="mwv-zoom-btn" data-mwv-zoom="15" aria-label="Zoom in">+</button>
                     <button type="button" class="mwv-fit-btn" data-mwv-zoom="fit">Fit</button>
                 </div>
-                <details class="mwv-more">
+                <details class="mwv-more mwv-file">
+                    <summary>Edit &amp; export</summary>
+                    <div class="mwv-more-panel mwv-menu" role="menu">
+                        <button type="button" role="menuitem" data-mwv-act="edit-sequence">Edit sequence text…</button>
+                        <button type="button" role="menuitem" data-mwv-act="edit-annotations">Move or resize annotations…</button>
+                        <button type="button" role="menuitem" data-mwv-act="import">Import a sequence file…</button>
+                        <hr>
+                        <button type="button" role="menuitem" data-mwv-act="copy">Copy sequence</button>
+                        <button type="button" role="menuitem" data-mwv-act="fasta">Export FASTA</button>
+                        <button type="button" role="menuitem" data-mwv-act="genbank">Export GenBank</button>
+                    </div>
+                </details>
+                <details class="mwv-more mwv-view">
                     <summary>View options</summary>
                     <div class="mwv-more-panel">
             <div class="mw-toolbar mw-seqviz-controls">
@@ -829,7 +844,7 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-viewer-bar-v1"
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-viewer-bar-v3"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

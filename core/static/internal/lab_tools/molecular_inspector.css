@@ -131,3 +131,27 @@ body.mw-focus .lims-main{margin-left:0}
 .mwv-more[open]>summary{background:#E8F0FF;border-color:#1D4ED8;color:#1D4ED8}
 .mwv-more-panel{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:min(560px,92vw);background:#fff;border:1px solid #DDE3EA;border-radius:10px;box-shadow:0 12px 32px rgba(18,28,39,.18);padding:.8rem}
 .mwv-more-panel .mw-toolbar{justify-content:flex-start;max-width:none}
+
+/* One chrome: legacy switchers are driven from the workbench bar */
+.mw-page .mw-view-switcher,
+.mw-seqviz-card .mpm-view-switcher{display:none!important}
+.mwv-opts{display:block}
+.mwv-opts[hidden]{display:none}
+.mwv-opts+.mwv-opts{border-top:1px solid #E6EBF1;margin-top:.6rem;padding-top:.6rem}
+.mwv-opts-title{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#566474;font-weight:600;margin-bottom:.4rem}
+.mwv-more-panel{max-height:min(70vh,560px);overflow:auto}
+.mwv-more-panel .mpm-toolbar,.mwv-more-panel .mlb-toolbar{display:flex;flex-wrap:wrap;gap:.6rem .8rem;align-items:flex-end}
+.mwv-more-panel .mpm-toolbar-group{display:flex;flex-wrap:wrap;gap:.6rem .8rem;align-items:flex-end}
+.mwv-more-panel .mpm-secondary-row{display:flex;flex-wrap:wrap;gap:.6rem .9rem;align-items:flex-end;margin-top:.6rem}
+.mwv-more-panel .mpm-density-note{display:none}
+.mwv-more-panel .mpm-status{font-size:.75rem;color:#566474;max-width:320px}
+.mwv-more-panel label{display:flex;flex-direction:column;gap:.15rem;font-size:.72rem;color:#566474}
+.mwv-more-panel label.mpm-check,.mwv-more-panel label.mlb-check{flex-direction:row;align-items:center;gap:.4rem}
+
+.mwv-more.mwv-view{margin-left:0}
+.mwv-more.mwv-file{margin-left:auto}
+.mwv-more.mwv-file+.mwv-more{margin-left:0}
+.mwv-menu{width:260px;padding:.35rem;display:flex;flex-direction:column}
+.mwv-menu button{border:0;background:transparent;text-align:left;padding:.55rem .7rem;border-radius:7px;font-size:.85rem;font-weight:500;color:#121C27;min-height:40px;cursor:pointer}
+.mwv-menu button:hover,.mwv-menu button:focus-visible{background:#F0F3F7;outline:none}
+.mwv-menu hr{margin:.3rem 0;border:0;border-top:1px solid #E6EBF1}
