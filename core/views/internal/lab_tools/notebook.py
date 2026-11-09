@@ -35,6 +35,7 @@ from core.models.chemicals.chemical import Chemical
 from core.services.molecular_registry_overview import (
     attach_registry_context,
     duplicate_groups,
+    existing_matches,
     inspector_context,
     type_counts,
 )
@@ -854,12 +855,44 @@ def molecular_registry_import_preview_api(request):
             status=400,
         )
 
+    matches = existing_matches(
+        _visible_molecular_sequences_for_user(request.user),
+        imported_record.get("sequence"),
+        imported_record.get("topology"),
+    )
+
+    for match in matches:
+        match["url"] = reverse(
+            "molecular_sequence_detail",
+            kwargs={"sequence_id": match["id"]},
+        )
+
+    imported_record["duplicates"] = matches
+
+    if matches:
+        imported_record.setdefault("warnings", []).append(
+            "The same sequence is already registered as "
+            + ", ".join(match["name"] for match in matches)
+            + "."
+        )
+
     return JsonResponse(
         {
             "status": "ok",
             "record": imported_record,
         }
     )
+
+
+REGISTRY_TYPE_HELP = {
+    "dna": "Annotate, search motifs, digest, design primers.",
+    "rna": "Sequence, ORFs, secondary structure.",
+    "protein": "Domains, alignments, 3D structure, the CDS that encodes it.",
+    "plasmid": "Circular map, restriction digest, annotation, verification.",
+    "primer": "Tm, GC, where it binds in the Registry.",
+    "insert": "Junctions, homology arms, assembly into a vector.",
+    "other": "Any sequence that fits no type yet.",
+}
 
 
 @login_required
@@ -1259,6 +1292,15 @@ def molecular_registry_index(request):
             "molecules": molecules,
             "molecule_count": molecule_count,
             "type_counts": type_counts(registry_universe),
+            "type_cards": [
+                (value, label, count, REGISTRY_TYPE_HELP.get(value, ""))
+                for value, label, count in type_counts(registry_universe)
+            ],
+            "unlinked_total": (
+                _visible_molecular_sequences_for_user(request.user)
+                .filter(linked_sample__isnull=True)
+                .count()
+            ),
             "registry_total": len(registry_universe),
             "duplicate_total": len(
                 duplicate_groups(registry_universe)

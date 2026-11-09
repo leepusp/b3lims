@@ -5,7 +5,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261105-hub">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261109-home-v1">
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_type_profiles.css' %}?v=20260808-molecular-type-profiles-v2-protein">
 
@@ -22,8 +22,9 @@
             </h1>
 
             <p class="text-muted mb-0">
-                Design, annotate and register DNA, RNA, plasmids,
-                primers, inserts and protein sequences.
+                Register, annotate and work on DNA, RNA, plasmids,
+                primers, inserts and protein sequences. What you open
+                here can be cited in a notebook entry.
             </p>
         </div>
 
@@ -147,8 +148,24 @@
         </form>
     </div>
 
+    <div class="mr-home">
+    <div class="mr-main">
+
+    <section class="mr-intake" aria-label="Register from a file">
+        <div class="mr-drop" id="mr-home-drop" tabindex="0" role="button"
+             aria-label="Drop a file here or press Enter to choose one">
+            <strong>Drop a file here to register it</strong>
+            <span>GenBank, FASTA, SnapGene (.dna), EMBL or APE. The record
+                type is detected and the Registry is checked for the same
+                sequence before anything is created.</span>
+            <input type="file" id="mr-home-file" hidden
+                   accept=".dna,.gb,.gbk,.gbff,.genbank,.ape,.embl,.fa,.fasta,.fna,.ffn,.faa,.frn,.txt">
+        </div>
+        <div class="mr-detect" id="mr-home-result" hidden aria-live="polite"></div>
+    </section>
+
     <div class="mr-hub row g-2 mb-3" aria-label="Registry by type">
-        <div class="col-6 col-md-4 col-xl">
+        <div class="col-6 col-md-4 col-xl-3">
             <a class="mr-hub-card{% if not active_type %} is-active{% endif %}"
                href="{% url 'molecular_registry_index' %}">
                 <span class="mr-hub-count">{{ registry_total }}</span>
@@ -160,15 +177,23 @@
                 {% endif %}
             </a>
         </div>
-        {% for value, label, count in type_counts %}
-            <div class="col-6 col-md-4 col-xl">
+        {% for value, label, count, help in type_cards %}
+            <div class="col-6 col-md-4 col-xl-3">
                 <a class="mr-hub-card{% if active_type == value %} is-active{% endif %}"
                    href="?type={{ value }}">
                     <span class="mr-hub-count">{{ count }}</span>
                     <span class="mr-hub-label">{{ label }}</span>
+                    <span class="mr-hub-help">{{ help }}</span>
                 </a>
             </div>
         {% endfor %}
+        <div class="col-6 col-md-4 col-xl-3">
+            <div class="mr-hub-card is-soon" aria-disabled="true">
+                <span class="mr-hub-count">&mdash;</span>
+                <span class="mr-hub-label">Chemical</span>
+                <span class="mr-hub-help">Structures, formula, mass and reaction tables. Coming soon.</span>
+            </div>
+        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -362,6 +387,28 @@
             </div>
         {% endif %}
     </div>
+
+    </div>
+
+    <aside class="mr-aside" aria-label="Registry overview">
+        <section class="mr-aside-card">
+            <h2 class="mr-aside-title">Needs attention</h2>
+            <ul class="mr-aside-list">
+                <li><b>{{ duplicate_total }}</b> record{{ duplicate_total|pluralize }} sharing a sequence with another</li>
+                <li><b>{{ unlinked_total }}</b> not linked to a Sample yet</li>
+            </ul>
+        </section>
+        <section class="mr-aside-card">
+            <h2 class="mr-aside-title">Coming to the Registry</h2>
+            <ul class="mr-aside-list is-muted">
+                <li>Chemical structures and reaction tables</li>
+                <li>Primer designer and binding sites across records</li>
+                <li>Bench calculators (dilution, molarity, vector : insert)</li>
+                <li>Workflow steps for structure prediction and docking</li>
+            </ul>
+        </section>
+    </aside>
+    </div>
 </div>
 <script>
 (() => {
@@ -441,6 +488,7 @@
 </script>
 
 
+<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v1" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v2" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

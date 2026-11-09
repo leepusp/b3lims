@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -97,6 +98,78 @@ class MolecularRegistryHubTests(TestCase):
 
         self.assertEqual(response.context["registry_total"], 4)
         self.assertNotContains(response, "Foreign copy of A")
+
+
+@override_settings(FORCE_SCRIPT_NAME=None)
+class MolecularRegistryHomeTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.owner = user_model.objects.create_user(
+            username="home-owner", password="test-password"
+        )
+        self.other = user_model.objects.create_user(
+            username="home-other", password="test-password"
+        )
+        self.existing = MolecularSequence.objects.create(
+            name="Registered vector",
+            sequence_type="dna",
+            topology="linear",
+            sequence="ATGCATGCATGC",
+            owner=self.owner,
+        )
+        MolecularSequence.objects.create(
+            name="Someone else's copy",
+            sequence_type="dna",
+            topology="linear",
+            sequence="GGGGTTTTAAAA",
+            owner=self.other,
+        )
+
+    def fasta(self, sequence, name="upload.fa"):
+        return SimpleUploadedFile(
+            name,
+            f">upload\n{sequence}\n".encode(),
+            content_type="text/plain",
+        )
+
+    def test_home_has_intake_type_help_and_attention(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("molecular_registry_index"))
+
+        self.assertContains(response, 'id="mr-home-drop"')
+        self.assertContains(response, "mr-hub-help")
+        self.assertContains(response, "Needs attention")
+        self.assertContains(response, "Chemical")
+        self.assertEqual(response.context["unlinked_total"], 1)
+
+    def test_preview_reports_a_visible_record_with_the_same_sequence(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("molecular_registry_import_preview_api"),
+            {"file": self.fasta("ATGCATGCATGC")},
+        )
+        record = response.json()["record"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item["id"] for item in record["duplicates"]], [self.existing.id]
+        )
+        self.assertTrue(
+            any("already registered" in w for w in record["warnings"])
+        )
+
+    def test_preview_never_reveals_records_the_user_cannot_see(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("molecular_registry_import_preview_api"),
+            {"file": self.fasta("GGGGTTTTAAAA")},
+        )
+        record = response.json()["record"]
+
+        self.assertEqual(record["duplicates"], [])
+        self.assertFalse(
+            any("already registered" in w for w in record["warnings"])
+        )
 
 
 @override_settings(FORCE_SCRIPT_NAME=None)

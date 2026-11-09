@@ -4,6 +4,7 @@ Everything here is read-only and works on a list of MolecularSequence rows the
 caller already filtered for visibility, so it never widens access.
 """
 
+import hashlib
 from collections import defaultdict
 
 from django.db.models import Count
@@ -176,3 +177,39 @@ def inspector_context(user, molecule, universe):
             for other_id, other_name in molecule.duplicates
         ],
     }
+
+
+def sequence_checksum(sequence):
+    """SHA-256 of a sequence cleaned the way MolecularSequence.save() does."""
+    cleaned = MolecularSequence(sequence=sequence or "")._clean_sequence()
+
+    return hashlib.sha256(cleaned.encode("utf-8")).hexdigest() if cleaned else ""
+
+
+def existing_matches(visible_molecules, sequence, topology=None):
+    """Visible records that already hold exactly this sequence.
+
+    Used before registering a file, so the person can open the existing record
+    instead of creating a duplicate. Topology is compared only when given.
+    """
+    checksum = sequence_checksum(sequence)
+
+    if not checksum:
+        return []
+
+    matches = visible_molecules.filter(checksum_sha256=checksum)
+
+    if topology:
+        matches = matches.filter(topology=topology)
+
+    return [
+        {
+            "id": molecule.id,
+            "name": molecule.name,
+            "sequence_type": molecule.sequence_type,
+            "topology": molecule.topology,
+        }
+        for molecule in matches.select_related(None).only(
+            "id", "name", "sequence_type", "topology"
+        )[:5]
+    ]
