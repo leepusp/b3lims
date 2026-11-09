@@ -98,7 +98,7 @@ Other useful functions
 - [ ] Review NoLabs (Apache-2.0; FastAPI microservices for ESMFold, DiffDock, RFdiffusion, ProteinMPNN, BLAST; Celery + Redis scheduler) as a source of model steps: call its microservice REST endpoints from a workflow step, store result as a Registry record (PDB to Protein structure); do not adopt its UI or workflow engine
 - [x] Workflow builder screen (canvas, side panel, import of ELN steps, members)
 - [x] 5.2 and 6.6 Data submissions (phase 1): packages with taxon, review (proposed, approved) and publication to the internal repository at /scratch/global/databases/biobank as manifest.json + RO-Crate
-- [ ] Submissions: ENA, NCBI, Zenodo
+- [x] Submissions (phase 2): GenBank/SRA, wwPDB and Zenodo export folders with checks, README steps, reference field and optional Zenodo draft upload (sandbox by default); ENA not covered
 - [ ] Hub cards for Workflows and Data submissions move from "Planned" to "Available" as each ships
 
 ## Block F: Storage interface review (to be scheduled)

@@ -306,6 +306,10 @@ BIOBANK_JUPYTER_PARTITIONS = ("basic", "max50")
 # Internal data repository and the NCBI taxonomy dump it is linked to (DaVinci).
 BIOBANK_REPOSITORY_ROOT = os.environ.get("BIOBANK_REPOSITORY_ROOT", "/scratch/global/databases/biobank")
 BIOBANK_TAXONOMY_DIR = os.environ.get("BIOBANK_TAXONOMY_DIR", "/scratch/global/databases/taxonomy")
+# Zenodo drafts: empty token disables the upload. The default API is the sandbox;
+# set BIOBANK_ZENODO_API=https://zenodo.org/api for the real service.
+BIOBANK_ZENODO_TOKEN = os.environ.get("BIOBANK_ZENODO_TOKEN", "")
+BIOBANK_ZENODO_API = os.environ.get("BIOBANK_ZENODO_API", "https://sandbox.zenodo.org/api")
 BIOBANK_JUPYTER_NODES = ("n01", "gn01", "gn02", "gn03")
 BIOBANK_JUPYTER_PARTITION_MAX_HOURS = {
     "basic": 72,

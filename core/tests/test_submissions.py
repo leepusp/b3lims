@@ -225,18 +225,10 @@ class PublishToRepositoryTests(SubmissionBase):
         self.assertContains(hit, "GFP data set")
         self.assertNotContains(miss, "GFP data set")
 
-    def test_cannot_publish_twice_unapproved_or_to_other_destinations(self):
+    def test_cannot_publish_twice_unapproved_or_by_others(self):
         self.assertEqual(self.api({"action": "publish"}).status_code, 400)
 
         self.approve_package()
-
-        self.package.destination = "zenodo"
-        self.package.save()
-
-        self.assertEqual(self.api({"action": "publish"}, user=self.ana).status_code, 400)
-
-        self.package.destination = "internal"
-        self.package.save()
 
         self.assertEqual(self.api({"action": "publish"}, user=self.bia).status_code, 404)
         self.assertEqual(self.api({"action": "publish"}, user=self.ana).status_code, 200)
@@ -283,3 +275,193 @@ class SubmissionWiringTests(SubmissionBase):
         self.assertRedirects(response, reverse("submission_detail", args=[package.pk]))
         self.assertEqual(package.destination, "zenodo")
         self.assertTrue(package.owner == self.ana)
+
+
+class DestinationAdapterTests(SubmissionBase):
+    def make(self, destination, **fields):
+        package = SubmissionPackage.objects.create(title="Export set", owner=self.ana, destination=destination, **fields)
+
+        return package
+
+    def add(self, package, kind, ref):
+        return self.api({"action": "add_item", "kind": kind, "ref": ref}, package=package)
+
+    def approve_and_publish(self, package):
+        self.assertEqual(self.api({"action": "propose"}, user=self.ana, package=package).status_code, 200)
+        self.assertEqual(self.api({"action": "approve"}, user=self.boss, package=package).status_code, 200)
+
+        return self.api({"action": "publish"}, user=self.ana, package=package)
+
+    def test_genbank_needs_nucleotides_and_a_taxon(self):
+        self.build_index()
+
+        package = self.make("genbank")
+
+        self.assertEqual(self.api({"action": "propose"}, package=package).status_code, 400)
+
+        protein = MolecularSequence.objects.create(name="GFP protein", sequence_type="protein", sequence="MSKGEEL" * 40, owner=self.ana)
+
+        self.add(package, "sequence", protein.pk)
+
+        message = self.api({"action": "propose"}, package=package).json()["message"]
+
+        self.assertIn("only has proteins", message)
+
+        self.add(package, "sequence", self.seq.pk)
+        self.assertIn("choose a taxon", self.api({"action": "propose"}, package=package).json()["message"])
+
+        bad = MolecularSequence.objects.create(name="bad", sequence_type="dna", sequence="ATGXZ" * 50, owner=self.ana)
+
+        self.add(package, "sequence", bad.pk)
+        self.assertIn("not nucleotide codes", self.api({"action": "propose"}, package=package).json()["message"])
+
+    def test_genbank_export_files(self):
+        self.build_index()
+
+        plasmid = MolecularSequence.objects.create(name="pGFP 1", sequence_type="plasmid", topology="circular", sequence="ATGC" * 80, owner=self.ana)
+        package = self.make("genbank")
+
+        self.api({"action": "update", "taxon_id": "1280"}, package=package)
+        self.add(package, "sequence", self.seq.pk)
+        self.add(package, "sequence", plasmid.pk)
+
+        self.assertEqual(self.approve_and_publish(package).status_code, 200)
+
+        package.refresh_from_db()
+
+        base = self.root / package.repository_path
+        fasta = (base / "genbank" / "sequences.fsa").read_text()
+        table = (base / "genbank" / "source_modifiers.tsv").read_text().splitlines()
+
+        self.assertTrue(package.repository_path.startswith("exports/genbank/"))
+        self.assertIn(">gfp_1 [organism=Staphylococcus aureus] [moltype=genomic]", fasta)
+        self.assertIn(">pGFP_1 [organism=Staphylococcus aureus] [topology=circular] [moltype=genomic]", fasta)
+        self.assertEqual(table[0], "Sequence_ID\tOrganism\tdb_xref")
+        self.assertEqual(table[1], "gfp_1\tStaphylococcus aureus\ttaxon:1280")
+        self.assertTrue((base / "genbank" / "README.txt").is_file())
+        self.assertTrue((base / "manifest.json").is_file())
+
+        # exports are private to the owner, not part of the shared repository
+        self.client.force_login(self.bia)
+
+        self.assertEqual(self.client.get(reverse("submission_detail", args=[package.pk])).status_code, 404)
+
+    def test_pdb_needs_a_structure_and_exports_entities(self):
+        from core.models.lab_tools.notebook import MolecularStructure
+
+        self.build_index()
+
+        protein = MolecularSequence.objects.create(name="GFP protein", sequence_type="protein", sequence="MSKGEEL" * 10, owner=self.ana)
+        package = self.make("pdb")
+
+        self.add(package, "sequence", protein.pk)
+
+        self.assertIn("at least one 3D structure", self.api({"action": "propose"}, package=package).json()["message"])
+
+        structure = MolecularStructure.objects.create(
+            molecule=protein, file="s/model.pdb", original_filename="model.pdb", source_format="pdb", uploaded_by=self.ana
+        )
+
+        self.add(package, "structure", structure.pk)
+        self.api({"action": "update", "taxon_id": "1280", "metadata": {"authors": "Ana; Bia", "keywords": "gfp, fold"}}, package=package)
+
+        from unittest import mock
+
+        with mock.patch.object(repository, "_read_structure", return_value=b"data_model\n"):
+            response = self.approve_and_publish(package)
+
+        self.assertEqual(response.status_code, 200, response.content)
+
+        package.refresh_from_db()
+
+        base = self.root / package.repository_path
+        meta = json.loads((base / "wwpdb" / "deposition_metadata.json").read_text())
+
+        self.assertEqual(meta["authors"], ["Ana", "Bia"])
+        self.assertEqual(meta["keywords"], ["gfp", "fold"])
+        self.assertEqual(meta["source_organism"]["ncbi_taxid"], "1280")
+        self.assertIn(">entity_1|GFP_protein|protein Staphylococcus aureus (taxid 1280)", (base / "wwpdb" / "entity_sequences.fasta").read_text())
+        self.assertTrue((base / "structures" / "model.pdb").is_file())
+
+        warnings = self.api({"action": "update", "title": "x"}, package=package).status_code
+
+        self.assertEqual(warnings, 400)  # published packages are read-only
+
+    def test_zenodo_metadata_and_validation(self):
+        from core.services import submission_adapters as adapters
+
+        package = self.make("zenodo", metadata={"license": "https://creativecommons.org/publicdomain/zero/1.0/", "authors": "Silva, Ana;Souza, Bia", "keywords": "a; b"})
+
+        self.add(package, "entry", self.entry.pk)
+
+        self.assertIn("needs a description", self.api({"action": "propose"}, package=package).json()["message"])
+
+        package.description = "Reporter constructs"
+        package.save()
+
+        data = adapters.zenodo_metadata(package)
+
+        self.assertEqual(data["license"], "cc0-1.0")
+        self.assertEqual([c["name"] for c in data["creators"]], ["Silva, Ana", "Souza, Bia"])
+        self.assertEqual(data["keywords"], ["a", "b"])
+        self.assertEqual(data["upload_type"], "dataset")
+
+        package.metadata = {"license": "https://example.org/own"}
+
+        self.assertEqual(adapters.zenodo_metadata(package)["license"], "cc-by-4.0")
+        self.assertTrue(any("license" in w for w in adapters.validate(package)["warnings"]))
+
+    def test_zenodo_draft_upload_never_publishes_and_references_are_saved(self):
+        from unittest import mock
+
+        from core.services import submission_adapters as adapters
+
+        package = self.make("zenodo", description="Reporter constructs")
+
+        self.add(package, "entry", self.entry.pk)
+        self.assertEqual(self.approve_and_publish(package).status_code, 200)
+        self.assertEqual(self.api({"action": "upload_zenodo"}, package=package).status_code, 400)  # not configured
+
+        calls = []
+
+        def fake(method, url, token, body=None, content_type="application/json", timeout=60):
+            calls.append((method, url))
+
+            if method == "POST":
+                return {"id": 77, "links": {"bucket": "https://z.test/api/files/b1", "html": "https://z.test/deposit/77"}}
+
+            return {}
+
+        with override_settings(BIOBANK_ZENODO_TOKEN="t0k", BIOBANK_ZENODO_API="https://z.test/api"), \
+                mock.patch.object(adapters, "_zenodo_request", side_effect=fake):
+            response = self.api({"action": "upload_zenodo"}, package=package)
+
+            self.assertEqual(response.status_code, 200, response.content)
+            self.assertEqual(self.api({"action": "upload_zenodo"}, package=package).status_code, 400)
+
+        package.refresh_from_db()
+
+        self.assertEqual(package.external_reference, "https://z.test/deposit/77")
+        self.assertEqual(calls[0], ("POST", "https://z.test/api/deposit/depositions"))
+        self.assertTrue(any(m == "PUT" and "/files/b1/" in u for m, u in calls))
+        self.assertTrue(any(u.endswith("/deposit/depositions/77") for _, u in calls))
+        self.assertFalse(any("publish" in u for _, u in calls))
+
+        self.assertEqual(self.api({"action": "set_reference", "value": "10.5281/zenodo.77"}, package=package).status_code, 200)
+        self.assertEqual(self.api({"action": "set_reference", "value": "x"}, user=self.bia, package=package).status_code, 404)
+
+        draft = self.make("zenodo")
+
+        self.assertEqual(self.api({"action": "set_reference", "value": "x"}, user=self.ana, package=draft).status_code, 400)
+
+    def test_zenodo_errors_become_validation_errors(self):
+        import urllib.error
+        from unittest import mock
+
+        from django.core.exceptions import ValidationError
+
+        from core.services import submission_adapters as adapters
+
+        with override_settings(BIOBANK_ZENODO_TOKEN="t"), mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
+            with self.assertRaises(ValidationError):
+                adapters.upload_zenodo_draft(self.package, {"a.txt": b"x"})

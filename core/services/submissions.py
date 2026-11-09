@@ -10,7 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from core.models.lab_tools.submission import SubmissionItem, SubmissionPackage
-from core.services import repository
+from core.services import repository, submission_adapters
 
 S = SubmissionPackage.Status
 MAX_TEXT = {"title": 200, "description": 5000, "review_note": 2000}
@@ -27,11 +27,11 @@ def is_owner(user, package) -> bool:
 
 
 def visible_packages(user):
-    """Own packages; published ones are the lab's shared repository; approvers see the review queue."""
+    """Own packages; published internal ones are the lab's shared repository; approvers see the review queue."""
     if user.is_superuser:
         return SubmissionPackage.objects.all()
 
-    query = Q(owner=user) | Q(status=S.PUBLISHED)
+    query = Q(owner=user) | Q(status=S.PUBLISHED, destination=SubmissionPackage.Destination.INTERNAL)
 
     if can_approve(user):
         query |= Q(status__in=[S.PROPOSED, S.APPROVED, S.REJECTED])
@@ -139,8 +139,10 @@ def add_item(package, user, kind, ref) -> SubmissionItem:
 def propose(package, user) -> None:
     if not can_edit(user, package):
         raise ValidationError("Only the owner can propose a draft or a rejected package.")
-    if not package.items.exists():
-        raise ValidationError("Add at least one record before proposing.")
+    problems = submission_adapters.validate(package)["errors"]
+
+    if problems:
+        raise ValidationError(problems)
 
     package.status = S.PROPOSED
     package.proposed_at = timezone.now()
@@ -179,7 +181,37 @@ def publish(package, user) -> str:
     if not (is_owner(user, package) or can_approve(user)):
         raise ValidationError("You cannot publish this package.")
 
-    return repository.publish_internal(package)
+    return repository.publish_package(package)
+
+
+def set_reference(package, user, value) -> None:
+    """Record the accession, PDB id or DOI the destination gave back."""
+    if not (is_owner(user, package) or can_approve(user)):
+        raise ValidationError("You cannot change this package.")
+    if package.status != S.PUBLISHED:
+        raise ValidationError("Publish the package first.")
+
+    package.external_reference = str(value or "").strip()[:300]
+    package.save(update_fields=["external_reference", "updated_at"])
+
+
+def upload_zenodo(package, user) -> str:
+    """Create a Zenodo draft with the exported files. The draft is never published here."""
+    if not (is_owner(user, package) or can_approve(user)):
+        raise ValidationError("You cannot upload this package.")
+    if package.destination != SubmissionPackage.Destination.ZENODO or package.status != S.PUBLISHED:
+        raise ValidationError("Only published Zenodo packages can be uploaded.")
+    if package.external_reference:
+        raise ValidationError("This package already has a reference; create a new package for a new upload.")
+
+    base = (repository.repository_root() / package.repository_path).resolve()
+    files = {str(p.relative_to(base)): p.read_bytes() for p in sorted(base.rglob("*")) if p.is_file()}
+    url = submission_adapters.upload_zenodo_draft(package, files)
+
+    package.external_reference = url
+    package.save(update_fields=["external_reference", "updated_at"])
+
+    return url
 
 
 # --- serialisation -------------------------------------------------------------
@@ -227,6 +259,13 @@ def serialize(package, user) -> dict:
         "approved_at": package.approved_at.isoformat(timespec="seconds") if package.approved_at else "",
         "repository_path": package.repository_path,
         "manifest_sha256": package.manifest_sha256,
+        "external_reference": package.external_reference,
+        "validation": submission_adapters.validate(package),
+        "can_upload_zenodo": (
+            package.status == S.PUBLISHED and package.destination == "zenodo" and not package.external_reference
+            and submission_adapters.zenodo_configured() and (is_owner(user, package) or can_approve(user))
+        ),
+        "can_set_reference": package.status == S.PUBLISHED and (is_owner(user, package) or can_approve(user)),
         "items": items,
         "can_edit": can_edit(user, package),
         "can_review": package.status == S.PROPOSED and can_approve(user) and (package.owner_id != user.pk or user.is_superuser),

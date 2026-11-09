@@ -134,6 +134,10 @@ def submission_api(request, package_id):
             service.reject(package, user, data.get("note"))
         elif action == "publish":
             service.publish(package, user)
+        elif action == "set_reference":
+            service.set_reference(package, user, data.get("value"))
+        elif action == "upload_zenodo":
+            service.upload_zenodo(package, user)
         elif action == "delete":
             if not service.serialize(package, user)["can_delete"]:
                 raise ValidationError("This package cannot be deleted.")

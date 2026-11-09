@@ -68,8 +68,17 @@
                 <button class="btn btn-sm btn-outline-secondary" id="sp-taxon-set" type="button">Choose taxon</button>
                 <button class="btn btn-sm btn-link text-danger" id="sp-taxon-clear" type="button">Clear</button>
             </div></div>
+            <div class="card border-0 shadow-sm mb-3" id="sp-checks" hidden><div class="card-body">
+                <h2 class="h6">Checks for this destination</h2>
+                <ul class="small mb-0 ps-3" id="sp-check-list"></ul>
+            </div></div>
+            <div class="card border-0 shadow-sm mb-3" id="sp-reference" hidden><div class="card-body">
+                <h2 class="h6">Reference given by the destination</h2>
+                <div class="small text-muted mb-2">Accession (GenBank), PDB id or DOI/URL. Files to upload are in the repository folder below.</div>
+                <div class="input-group input-group-sm"><input class="form-control" id="sp-ref-input" maxlength="300" aria-label="Reference"><button class="btn btn-outline-primary" id="sp-ref-save" type="button">Save</button></div>
+            </div></div>
             <div class="card border-0 shadow-sm" id="sp-published" hidden><div class="card-body">
-                <h2 class="h6">In the repository</h2>
+                <h2 class="h6" id="sp-published-title">In the repository</h2>
                 <div class="small mb-1">Path: <code id="sp-path"></code></div>
                 <div class="small mb-2">Manifest SHA-256: <code id="sp-sha" class="text-break"></code></div>
                 <pre class="small bg-light p-2 rounded" id="sp-manifest" style="max-height:320px;overflow:auto"></pre>
@@ -96,5 +105,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261109-sp1"></script>
+<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261109-sp2"></script>
 {% endblock %}

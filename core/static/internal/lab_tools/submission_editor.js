@@ -124,9 +124,22 @@
 
         if (pkg.can_edit) actions.appendChild(button(pkg.status === "rejected" ? "Propose again" : "Propose for review", "btn-primary", () => act({action: "propose"})));
         if (pkg.can_review) actions.appendChild(button("Review…", "btn-warning", () => bootstrap.Modal.getOrCreateInstance($("sp-review")).show()));
-        if (pkg.can_publish) actions.appendChild(button("Publish to repository", "btn-success", () => act({action: "publish"})));
+        if (pkg.can_publish) actions.appendChild(button(pkg.destination === "internal" ? "Publish to repository" : "Prepare files for upload", "btn-success", () => act({action: "publish"})));
+        if (pkg.can_upload_zenodo) actions.appendChild(button("Create Zenodo draft", "btn-outline-success", () => { if (window.confirm("Create a draft on Zenodo with these files? It is not published until you publish it there.")) act({action: "upload_zenodo"}); }));
         if (pkg.can_delete) actions.appendChild(button("Delete", "btn-outline-danger", () => { if (window.confirm("Delete this package?")) act({action: "delete"}); }));
 
+        const checks = $("sp-check-list");
+        const problems = pkg.validation.errors.map((m) => ["text-danger", m]).concat(pkg.validation.warnings.map((m) => ["text-warning-emphasis", m]));
+
+        checks.innerHTML = "";
+        problems.forEach(([cls, msg]) => { const li = document.createElement("li"); li.className = cls; li.textContent = msg; checks.appendChild(li); });
+        $("sp-checks").hidden = !problems.length || pkg.status === "published";
+
+        $("sp-reference").hidden = !pkg.can_set_reference;
+
+        if (document.activeElement !== $("sp-ref-input")) $("sp-ref-input").value = pkg.external_reference || "";
+
+        $("sp-published-title").textContent = pkg.destination === "internal" ? "In the repository" : "Ready to upload (kept in the repository)";
         $("sp-published").hidden = !pkg.repository_path;
         $("sp-path").textContent = pkg.repository_path;
         $("sp-sha").textContent = pkg.manifest_sha256;
@@ -148,6 +161,7 @@
     $("sp-reject").addEventListener("click", async () => {
         if (await act({action: "reject", note: $("sp-review-note").value})) bootstrap.Modal.getOrCreateInstance($("sp-review")).hide();
     });
+    $("sp-ref-save").addEventListener("click", () => act({action: "set_reference", value: $("sp-ref-input").value}));
     $("sp-taxon-clear").addEventListener("click", () => act({action: "update", taxon_id: ""}));
 
     function openPicker(kind, callback) {

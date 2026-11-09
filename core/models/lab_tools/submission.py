@@ -50,6 +50,8 @@ class SubmissionPackage(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     repository_path = models.CharField(max_length=400, blank=True, default="", db_default="")
+    # Accession, PDB id or DOI given by the destination once the submission is done.
+    external_reference = models.CharField(max_length=300, blank=True, default="", db_default="")
     manifest_sha256 = models.CharField(max_length=64, blank=True, default="", db_default="")
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <h1 class="h4 mb-0">Data submissions</h1>
-            <div class="text-muted small">Package records with metadata and a taxon, get them approved, then publish to the internal repository (GenBank/SRA, wwPDB and Zenodo follow).</div>
+            <div class="text-muted small">Package records with metadata and a taxon, get them approved, then publish to the internal repository or prepare the files for GenBank/SRA, wwPDB or Zenodo.</div>
         </div>
         <form method="post" action="{% url 'submission_create' %}" class="d-flex gap-2 flex-wrap">
             {% csrf_token %}

@@ -28,7 +28,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from core.models.lab_tools.submission import SubmissionPackage
-from core.services import taxonomy_local
+from core.services import submission_adapters, taxonomy_local
 
 SCHEMA = "b3-lims-package/1"
 LICENSE_DEFAULT = "https://creativecommons.org/licenses/by/4.0/"
@@ -50,8 +50,12 @@ def safe_name(text: str, fallback: str = "file") -> str:
 
 def package_relpath(package: SubmissionPackage) -> str:
     year = (package.approved_at or timezone.now()).year
+    name = f"{package.pk}-{slugify(package.title)}"
 
-    return f"packages/{year}/{package.pk}-{slugify(package.title)}"
+    if package.destination == SubmissionPackage.Destination.INTERNAL:
+        return f"packages/{year}/{name}"
+
+    return f"exports/{package.destination}/{year}/{name}"
 
 
 def _sha256(data: bytes) -> str:
@@ -268,12 +272,19 @@ def _write_tree(base: Path, files: dict[str, bytes]) -> None:
         target.write_bytes(data)
 
 
-def publish_internal(package: SubmissionPackage) -> str:
-    """Write an approved package to the internal repository. Returns its relative path."""
+def publish_package(package: SubmissionPackage) -> str:
+    """Write an approved package to the repository. Returns its relative path.
+
+    Internal packages go to ``packages/``; packages for GenBank, wwPDB or Zenodo are
+    kept as ready-to-upload folders under ``exports/<destination>/``.
+    """
     if package.status != SubmissionPackage.Status.APPROVED:
         raise ValidationError("Only approved packages can be published.")
-    if package.destination != SubmissionPackage.Destination.INTERNAL:
-        raise ValidationError("This destination is not available yet; only the internal repository is.")
+
+    problems = submission_adapters.validate(package)["errors"]
+
+    if problems:
+        raise ValidationError(problems)
 
     root = repository_root()
 
@@ -287,6 +298,9 @@ def publish_internal(package: SubmissionPackage) -> str:
         raise ValidationError("This package already exists in the repository.")
 
     files, described = collect_files(package)
+
+    files.update(submission_adapters.destination_files(package))
+
     manifest = build_manifest(package, described, files)
     manifest_bytes = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode()
 
@@ -326,7 +340,7 @@ def publish_internal(package: SubmissionPackage) -> str:
 def _append_index(root: Path, package: SubmissionPackage, manifest: dict) -> None:
     """One JSON line per published package, for tools that do not run Django."""
     line = {
-        "id": package.pk, "title": package.title, "path": package.repository_path,
+        "id": package.pk, "title": package.title, "path": package.repository_path, "destination": package.destination,
         "taxon_id": package.taxon_id, "taxon_name": package.taxon_name,
         "lineage_ids": [str(x.get("taxid")) for x in package.lineage],
         "published_at": package.published_at.isoformat(timespec="seconds"),
