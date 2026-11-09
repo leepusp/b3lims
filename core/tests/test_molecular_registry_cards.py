@@ -113,6 +113,15 @@ class MapCanvasMountTests(TestCase):
 
         self.assertIn('"feature-edit"', (tools / "molecular_map_canvas.js").read_text())
 
+    def test_digest_is_a_window_of_the_viewer_not_a_separate_mode(self):
+        html = self._page("plasmid", "circular")
+        self.assertIn('data-mwv-layout="digest"', html)
+        self.assertNotIn('data-mwb-mode="digest"', html)
+        self.assertLess(html.index('id="mw-split"'), html.index('id="mw-digest"'))
+
+        for kind in ("rna", "protein"):
+            self.assertNotIn('id="mw-digest"', self._page(kind, "linear"))
+
     def test_rna_and_protein_keep_their_own_views(self):
         for kind in ("rna", "protein"):
             html = self._page(kind, "linear")

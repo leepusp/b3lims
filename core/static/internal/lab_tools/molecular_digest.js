@@ -177,7 +177,10 @@
     gelHead.append(el("span", "mwd-label", "Gel"), ladderSelect, percentSelect);
     gelCard.append(gelHead, gelHost, el("p", "mwd-note", "Hover a band to see it, click it to select that fragment on the map and in the sequence."));
     fragmentCard.append(fragmentTitle, fragmentList, exportRow);
-    panel.replaceChildren(enzymeCard, fragmentCard, gelCard);
+    const grid = el("div", "mwd-grid");
+
+    grid.append(enzymeCard, fragmentCard, gelCard);
+    panel.replaceChildren(grid);
 
     /* ---------- enzymes ---------- */
 
@@ -529,8 +532,8 @@
     });
     clearButton.addEventListener("click", () => window.BiobankDigest.clear());
 
-    document.addEventListener("biobank:workbench-mode", event => {
-        mode = event.detail.mode;
+    document.addEventListener("biobank:viewer-layout", event => {
+        mode = event.detail.layout === "digest" ? "digest" : "map";
 
         if (mode === "digest") {
             renderAll();

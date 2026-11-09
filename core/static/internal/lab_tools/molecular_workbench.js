@@ -4,7 +4,7 @@
  * - Focus mode: hides the app menu and top bar so the work area uses the
  *   whole window.
  * - Rails: the tracks and inspector columns can be hidden.
- * - Modes: Map (the existing viewer) and Digest (molecular_digest.js).
+ * - Modes: Map (the viewer, whose layouts include Digest: molecular_digest.js).
  *
  * Everything shares the workspace selection: clicking a fragment selects its
  * range through BiobankMolecularWorkspace, so the map, sequence, tracks and
@@ -16,7 +16,6 @@
     const root = document.getElementById("molecular-workspace");
     const body = root && root.querySelector(".mw-body");
     const main = root && root.querySelector(".mw-main");
-    const panel = document.getElementById("mw-digest");
 
     if (!root || !body || !main) return;
 
@@ -78,7 +77,6 @@
             button.setAttribute("aria-pressed", String(on));
         });
 
-        if (panel) panel.hidden = mode !== "digest";
     }
 
     // The old "Viewer / Feature table / Sequence data" switcher stays in the
@@ -103,15 +101,6 @@
 
         applyLayout();
 
-        // The restriction map needs room: show the map alone, not the split.
-        if (mode === "digest") {
-            const both = root.querySelector('[data-mwv-layout="both"].is-active');
-            const mapOnly = root.querySelector('[data-mwv-layout="map"]');
-
-            if (both && mapOnly) mapOnly.click();
-        }
-
-        document.dispatchEvent(new CustomEvent("biobank:workbench-mode", {detail: {mode}}));
     }
 
     function bind() {
@@ -178,11 +167,16 @@
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
             const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
-            const mapWanted = usable && (currentLayout === "map" || currentLayout === "both");
+            const mapWanted = usable && ["map", "both", "digest"].includes(currentLayout);
             const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both");
+            const digestPane = document.getElementById("mw-digest");
 
             if (card) card.classList.toggle("is-canvas", mapWanted || seqWanted);
             if (split) split.classList.toggle("is-both", mapWanted && seqWanted);
+            if (split) split.classList.toggle("is-digest", usable && currentLayout === "digest");
+            if (digestPane) digestPane.hidden = !(usable && currentLayout === "digest");
+
+            document.dispatchEvent(new CustomEvent("biobank:viewer-layout", {detail: {layout: currentLayout}}));
             if (canvasApi()) canvasApi().setActive(mapWanted);
             if (seqApi()) seqApi().setActive(seqWanted);
         }
