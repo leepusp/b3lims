@@ -239,7 +239,7 @@
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
             const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
-            const PANES = {digest: "mw-digest", features: "mw-features", orfs: "mw-orfs", gel: "mw-gel", primers: "mw-primers"};
+            const PANES = {digest: "mw-digest", features: "mw-features", orfs: "mw-orfs", gel: "mw-gel", primers: "mw-primers", cloning: "mw-cloning"};
             const inPane = usable && currentLayout in PANES;
             const mapWanted = usable && (currentLayout === "map" || currentLayout === "both" || (inPane && paneLeft === "map"));
             const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both" || (inPane && paneLeft === "seq"));

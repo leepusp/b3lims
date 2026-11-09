@@ -321,3 +321,15 @@ input.mwp-cell[type=number]{width:100%}
 .mwpr-products{display:flex;gap:.8rem;align-items:flex-start;flex-wrap:wrap}
 .mwpr-productlist{flex:1 1 18rem;display:flex;flex-direction:column;gap:.3rem}
 .mwpr-gel{width:150px;height:190px;flex:none}
+
+/* Cloning window. */
+.mwp-cloning{display:flex;flex-direction:column;gap:.55rem}
+.mwp-cloning[hidden]{display:none}
+.mwcl-body{display:grid;grid-template-columns:minmax(0,1fr);gap:.55rem}
+@container (min-width:44rem){.mwcl-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.mwcl-result-card{grid-column:1 / -1}}
+.mwp-cloning{container-type:inline-size}
+.mwcl-results{display:flex;flex-direction:column;gap:.2rem}
+.mwcl-result{text-align:left;border:1px solid #dde3ea;background:#fff;border-radius:.4rem;padding:.3rem .5rem;font-size:.78rem;cursor:pointer}
+.mwcl-result:hover{background:#eef2f8}
+.mwcl-junction{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.76rem}
+.mwcl-primers td.mwpr-seqline{font-size:.72rem}

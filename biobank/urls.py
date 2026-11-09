@@ -506,6 +506,7 @@ urlpatterns = [
     path('internal/lab-tools/molecular-registry/', notebook_views.molecular_registry_index, name='molecular_registry_index'),
     path('internal/lab-tools/molecular-registry/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/update/', notebook_views.molecular_sequence_update_api, name='molecular_sequence_update_api'),
+    path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/data/', notebook_views.molecular_sequence_data_api, name='molecular_sequence_data_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/alignments/', notebook_views.molecular_sequence_alignments_api, name='molecular_sequence_alignments_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/structures/', notebook_views.molecular_sequence_structures_api, name='molecular_sequence_structures_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/structure-search/', notebook_views.molecular_sequence_structure_search_api, name='molecular_sequence_structure_search_api'),

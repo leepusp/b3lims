@@ -4157,6 +4157,34 @@ def search_molecular_sequences_api(request):
 
 
 @login_required
+def molecular_sequence_data_api(request, sequence_id):
+    """Read-only sequence of one record the user may see (cloning window)."""
+
+    if request.method != "GET":
+        return JsonResponse(
+            {"status": "error", "message": "GET is required."},
+            status=405,
+        )
+
+    molecule = _get_molecular_sequence_for_user(
+        sequence_id,
+        request.user,
+    )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "id": molecule.id,
+            "name": _safe_str(molecule.name),
+            "sequence_type": _safe_str(molecule.sequence_type),
+            "topology": _safe_str(molecule.topology),
+            "length": molecule.length,
+            "sequence": _safe_str(molecule.sequence),
+        }
+    )
+
+
+@login_required
 def notebook_link_molecular_sequence_api(
     request,
     entry_id,

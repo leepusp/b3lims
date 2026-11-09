@@ -240,3 +240,69 @@ class PrimerWindowAndGenbankExportTests(TestCase):
 
         for needle in ('ori: "rep_origin"', 'primer_bind', '"misc_feature"', "ApEinfo_fwdcolor", "padStart(11)", "mol_type"):
             self.assertIn(needle, workspace)
+
+
+class MolecularSequenceDataApiTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        self.owner = get_user_model().objects.create_user(username="data-api-owner", password="pw")
+        self.other = get_user_model().objects.create_user(username="data-api-other", password="pw")
+
+    def make(self):
+        from core.models.lab_tools.notebook import MolecularSequence
+
+        return MolecularSequence.objects.create(owner=self.owner, name="DataApi", sequence_type="dna", sequence="ATGCATGC", length=8)
+
+    def test_owner_reads_the_sequence(self):
+        from django.test import override_settings
+        from django.urls import reverse
+
+        record = self.make()
+        self.client.force_login(self.owner)
+
+        with override_settings(FORCE_SCRIPT_NAME=None):
+            response = self.client.get(reverse("molecular_sequence_data_api", args=[record.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sequence"], "ATGCATGC")
+        self.assertEqual(response.json()["name"], "DataApi")
+
+    def test_other_user_and_anonymous_cannot_read_it(self):
+        from django.test import override_settings
+        from django.urls import reverse
+
+        record = self.make()
+
+        with override_settings(FORCE_SCRIPT_NAME=None):
+            url = reverse("molecular_sequence_data_api", args=[record.id])
+            self.assertIn(self.client.get(url).status_code, (302, 401, 403))
+            self.client.force_login(self.other)
+            self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_post_is_refused(self):
+        from django.test import override_settings
+        from django.urls import reverse
+
+        record = self.make()
+        self.client.force_login(self.owner)
+
+        with override_settings(FORCE_SCRIPT_NAME=None):
+            self.assertEqual(self.client.post(reverse("molecular_sequence_data_api", args=[record.id])).status_code, 405)
+
+
+class CloningWindowWiringTests(TestCase):
+    def test_cloning_window_is_wired_with_restriction_and_homology_plans(self):
+        from django.template.loader import get_template
+
+        tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+        cloning = (tools / "molecular_cloning_panel.js").read_text()
+        source = get_template("internal/lab_tools/molecular_sequence_detail.html").template.source
+
+        for needle in ("function restrictionPlan(", "function homologyPlan(", "replaceRange", "window.BiobankCloning"):
+            self.assertIn(needle, cloning)
+
+        self.assertIn('data-mwv-layout="cloning"', source)
+        self.assertIn('id="mw-cloning"', source)
+        self.assertIn("molecular_cloning_panel.js", source)
+        self.assertIn('cloning: "mw-cloning"', (tools / "molecular_workbench.js").read_text())
