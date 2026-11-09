@@ -23,8 +23,3 @@
 .mw-canvas-record .mw-seqviz-shell,.mw-canvas-record .mw-sequence-card{display:none!important}
 .msc-find{width:15rem;max-width:100%;border:1px solid #C9D2DE;border-radius:.4rem;padding:.12rem .55rem;font-size:.82rem}
 .msc-found{color:#566474;font-size:.8rem;min-width:4.5rem}
-.msc-dialog{border:1px solid #C9D2DE;border-radius:.6rem;padding:1rem;width:min(34rem,92vw);box-shadow:0 12px 40px rgba(27,39,51,.25)}
-.msc-dialog::backdrop{background:rgba(27,39,51,.35)}
-.msc-dialog textarea{display:block;width:100%;margin:.6rem 0;font:13px ui-monospace,Menlo,Consolas,monospace;border:1px solid #C9D2DE;border-radius:.4rem;padding:.5rem}
-.msc-dialog-row{display:flex;justify-content:flex-end;gap:.5rem}
-.msc-btn-primary{background:#1D4ED8;border-color:#1D4ED8;color:#fff}.msc-btn-primary:hover:not(:disabled){background:#1E40AF}

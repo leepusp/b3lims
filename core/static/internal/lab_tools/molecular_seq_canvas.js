@@ -85,26 +85,19 @@
     host.textContent = "";
 
     const bar = el("div", "msc-bar");
-    const undoBtn = el("button", "msc-btn", "Undo");
-    const redoBtn = el("button", "msc-btn", "Redo");
     const compLabel = el("label", "msc-check");
     const compInput = document.createElement("input");
     const transLabel = el("label", "msc-check");
     const transInput = document.createElement("input");
     const find = document.createElement("input");
     const found = el("span", "msc-found");
-    const info = el("span", "msc-info");
     const viewport = el("div", "msc-viewport");
     const inner = el("div", "msc-inner");
     const canvas = el("canvas", "msc-canvas");
     const tip = el("div", "msc-tip");
-    const dialog = document.createElement("dialog");
-    const dialogText = document.createElement("textarea");
+
     const hint = el("div", "msc-hint", "Click to place the cursor · drag to select · type to edit · Ctrl + scroll to zoom");
 
-    undoBtn.type = redoBtn.type = "button";
-    undoBtn.title = "Undo (Ctrl+Z)";
-    redoBtn.title = "Redo (Ctrl+Shift+Z)";
     compInput.type = transInput.type = "checkbox";
     compInput.checked = true;
     transInput.checked = true;
@@ -114,24 +107,12 @@
     find.className = "msc-find";
     find.placeholder = "Find motif (Enter = next)";
     find.setAttribute("aria-label", "Find a sequence motif on both strands");
-    bar.append(undoBtn, redoBtn, compLabel, transLabel, find, found, info);
+    bar.append(compLabel, transLabel, find, found);
     inner.append(canvas);
     viewport.append(inner);
     viewport.tabIndex = 0;
     tip.hidden = true;
-    dialog.className = "msc-dialog";
-    dialogText.rows = 7;
-    dialogText.placeholder = "Paste or type bases here. FASTA headers and spaces are ignored.";
-
-    const dialogTitle = el("strong", "msc-dialog-title", "Insert at the cursor");
-    const dialogApply = el("button", "msc-btn msc-btn-primary", "Insert");
-    const dialogCancel = el("button", "msc-btn", "Cancel");
-    const dialogRow = el("div", "msc-dialog-row");
-
-    dialogApply.type = dialogCancel.type = "button";
-    dialogRow.append(dialogCancel, dialogApply);
-    dialog.append(dialogTitle, dialogText, dialogRow);
-    host.append(bar, viewport, tip, hint, dialog);
+    host.append(bar, viewport, tip, hint);
 
     const ctx = canvas.getContext("2d");
 
@@ -580,27 +561,19 @@
     }
 
     function updateChrome(s) {
-        const a = Math.min(st.selA, st.selB);
-        const b = Math.max(st.selA, st.selB);
-        const unit = s.sequenceType === "protein" ? "aa" : "bp";
-        const history = api() && api().history ? api().history() : {undo: 0, redo: 0};
+        const key = [st.caret, st.selA, st.selB, s.sequence.length].join(":");
 
-        if (Date.now() < st.noticeUntil) {
-            undoBtn.disabled = !s.canEdit || !history.undo;
-            redoBtn.disabled = !s.canEdit || !history.redo;
-
-            return;
-        }
-
-        info.textContent = b > a
-            ? "Selected " + (a + 1) + "–" + b + " · " + (b - a).toLocaleString() + " " + unit
-            : "Cursor after " + st.caret.toLocaleString() + " of " + s.sequence.length.toLocaleString() + " " + unit;
-        undoBtn.disabled = !s.canEdit || !history.undo;
-        redoBtn.disabled = !s.canEdit || !history.redo;
-        undoBtn.hidden = redoBtn.hidden = !s.canEdit;
         hint.textContent = s.canEdit
             ? "Click to place the cursor · drag to select · type to edit · Ctrl + scroll to zoom"
             : "Click to place the cursor · drag to select · Ctrl + scroll to zoom · this record is read only";
+
+        if (key !== st.chromeKey) {
+            st.chromeKey = key;
+            host.dispatchEvent(new CustomEvent("msc:caret", {
+                bubbles: true,
+                detail: {caret: st.caret, selA: st.selA, selB: st.selB},
+            }));
+        }
     }
 
     /* ---------- geometry and hits ---------- */
@@ -1016,62 +989,6 @@
         event.stopPropagation();
     });
 
-    function openInsert() {
-        const s = snap();
-
-        if (!s || !s.canEdit) {
-            notice("This record is read only");
-
-            return;
-        }
-
-        const [a, b] = selectionBounds();
-
-        dialogTitle.textContent = b > a
-            ? "Replace the selected " + (b - a).toLocaleString() + " bases with"
-            : "Insert at the cursor (after base " + st.caret.toLocaleString() + ")";
-        dialogApply.textContent = b > a ? "Replace" : "Insert";
-        dialogText.value = "";
-
-        if (typeof dialog.showModal === "function") dialog.showModal();
-        else dialog.setAttribute("open", "");
-
-        dialogText.focus();
-    }
-
-    function closeInsert() {
-        if (typeof dialog.close === "function") dialog.close();
-        else dialog.removeAttribute("open");
-
-        viewport.focus({preventScroll: true});
-    }
-
-    dialogCancel.addEventListener("click", closeInsert);
-    dialogApply.addEventListener("click", () => {
-        const text = dialogText.value;
-
-        closeInsert();
-
-        if (text.trim()) typeText(text);
-    });
-
-    let noticeTimer = 0;
-
-    function notice(text) {
-        info.textContent = text;
-        st.noticeUntil = Date.now() + 2800;
-        window.clearTimeout(noticeTimer);
-        noticeTimer = window.setTimeout(schedule, 2800);
-    }
-
-    undoBtn.addEventListener("click", () => {
-        history("undo");
-        viewport.focus({preventScroll: true});
-    });
-    redoBtn.addEventListener("click", () => {
-        history("redo");
-        viewport.focus({preventScroll: true});
-    });
     compInput.addEventListener("change", () => {
         st.showComp = compInput.checked;
         st.layoutKey = "";
@@ -1142,17 +1059,15 @@
                 schedule();
             }
         },
-        focus() {
-            viewport.focus({preventScroll: true});
-            notice(snap() && snap().canEdit
-                ? "Editing: click where you want to type, then type bases"
-                : "This record is read only");
+        setCaret(index) {
+            const s = snap();
+
+            st.caret = clamp(index, 0, s ? s.sequence.length : 0);
+            st.selA = st.selB = st.caret;
+            reveal(st.caret);
+            schedule();
         },
-        openInsert,
-        notice,
-        undo: () => history("undo"),
-        redo: () => history("redo"),
-        hasSelection: () => selectionBounds()[1] > selectionBounds()[0],
+        focus: () => viewport.focus({preventScroll: true}),
         zoomIn: () => setCharWidth(st.charW * 1.25),
         zoomOut: () => setCharWidth(st.charW / 1.25),
         fit: () => setCharWidth(DEFAULT_CHAR),

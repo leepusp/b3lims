@@ -673,28 +673,7 @@
 
             if (node) node.click();
         };
-        // Make sure the sequence editor is on screen before acting on it.
-        const withEditor = run => () => {
-            if (!seqOn()) {
-                const both = root.querySelector('[data-mwv-layout="both"]');
-
-                if (both) both.click();
-            }
-
-            window.setTimeout(() => seqApi() && run(seqApi()), 60);
-        };
         const ACTIONS = {
-            "edit-focus": withEditor(editor => editor.focus()),
-            "edit-insert": withEditor(editor => editor.openInsert()),
-            "edit-undo": withEditor(editor => editor.undo()),
-            "edit-redo": withEditor(editor => editor.redo()),
-            "edit-feature": withEditor(editor => {
-                if (editor.hasSelection() && api()) {
-                    api().createFeatureFromSelection({focusEditor: true});
-                } else {
-                    editor.notice("Select a region first, then add the annotation");
-                }
-            }),
             "edit-sequence": () => setMode("data"),
             "edit-annotations": () => setMode("features"),
             import: () => {

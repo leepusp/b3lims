@@ -1,0 +1,13 @@
+.mw-editstrip{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .5rem;padding:.4rem .6rem;margin:0 0 .5rem;background:#F4F6F9;border:1px solid #DDE3EA;border-radius:.55rem}
+.mw-editstrip[hidden]{display:none}
+.mes-label{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#566474;margin-right:.2rem}
+.mes-sep{width:1px;align-self:stretch;background:#D3DAE3;margin:0 .15rem}
+.mes-btn{border:1px solid #C9D2DE;background:#fff;color:#2B3A4A;border-radius:.4rem;padding:.2rem .65rem;font-size:.82rem;cursor:pointer}
+.mes-btn:hover:not(:disabled){background:#EEF2F8;border-color:#AEBBCB}
+.mes-btn:disabled{opacity:.4;cursor:not-allowed}
+.mes-btn.is-primary{background:#1D4ED8;border-color:#1D4ED8;color:#fff}.mes-btn.is-primary:hover:not(:disabled){background:#1E40AF}
+.mes-status{margin-left:auto;font-size:.8rem;color:#566474;font-variant-numeric:tabular-nums}
+.mes-dialog{border:1px solid #C9D2DE;border-radius:.6rem;padding:1rem;width:min(34rem,92vw);box-shadow:0 12px 40px rgba(27,39,51,.25)}
+.mes-dialog::backdrop{background:rgba(27,39,51,.35)}
+.mes-dialog textarea{display:block;width:100%;margin:.6rem 0;font:13px ui-monospace,Menlo,Consolas,monospace;border:1px solid #C9D2DE;border-radius:.4rem;padding:.5rem}
+.mes-dialog-row{display:flex;justify-content:flex-end;gap:.5rem}
