@@ -171,7 +171,6 @@
 .mw-page[data-sequence-type="rna"] .mwb-modes,
 .mw-page[data-sequence-type="protein"] .mwb-modes,
 .mw-page[data-sequence-type="rna"] [data-mwb-rail="tracks"]{display:none!important}
-.mw-page[data-sequence-type="rna"] #mw-rna-secondary-structure[hidden]{display:block!important}
 
 /* ---- Interactive 2D / 3D structure figure ---- */
 .mrp-figure{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;overflow:hidden}
@@ -217,3 +216,21 @@
 .mpro-controls .mrp-select{min-height:34px}
 .mpro-controls .mrp-export{margin-left:auto;align-self:flex-end}
 .mpro-view{max-height:none}
+
+/* ---- Structure window (RNA secondary structure / Protein Mol*) ---- */
+.mwp-structure{padding:0!important}
+.mwp-structure>.mrss-card,.mwp-structure>.mps-card{margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.mwp-structure .mrss-body{grid-template-columns:minmax(0,1fr)!important}
+.mwp-structure .mrss-sidebar{min-height:0;border-right:0;border-bottom:1px solid var(--mp-border);border-radius:0}
+.mwp-structure .mrss-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.mwp-structure .mrp-2d,.mwp-structure .mrp-3d{height:min(560px,60vh)}
+.mwp-structure .mrss-heading p,.mwp-structure .mrss-list-heading{display:none}
+.mwp-structure .mrss-header{padding:.55rem .75rem .35rem}
+.mwp-structure .mrss-sidebar{padding:.5rem .75rem}
+.mwp-structure .mrss-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.mwp-structure .mrss-list-item{flex:1 1 9.5rem;min-width:0;padding:.35rem .55rem}
+.mwp-structure .mrss-main{padding:.5rem .75rem .75rem}
+.mwp-structure .mrp-stats{grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr));gap:.3rem}
+.mwp-structure .mrp-stat{padding:.3rem .5rem}
+.mwp-structure .mrp-stat strong{font-size:.85rem}
+.mwp-structure .mrp-tabs{flex-wrap:wrap}

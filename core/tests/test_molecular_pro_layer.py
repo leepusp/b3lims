@@ -165,3 +165,33 @@ class MolecularUnifiedLayoutTests(SimpleTestCase):
         block = registry[max(0, start - 200):start]
 
         self.assertIn("hidden", block)
+
+
+class MolecularStructureWindowTests(SimpleTestCase):
+    """Structure is a window of the viewer, next to the map or the sequence."""
+
+    def test_structure_is_a_viewer_window_for_rna_and_protein(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        workbench = (STATIC / "molecular_workbench.js").read_text(encoding="utf-8")
+        window = (STATIC / "molecular_structure_window.js").read_text(encoding="utf-8")
+
+        self.assertIn('data-mwv-layout="structure"', template)
+        self.assertIn('id="mw-structure"', template)
+        self.assertLess(template.index('id="mw-split"'), template.index('id="mw-structure"'))
+        self.assertIn('structure: "mw-structure"', workbench)
+        self.assertIn("mw-rna-secondary-structure", window)
+        self.assertIn("mw-protein-structure", window)
+
+    def test_window_script_is_loaded_and_valid(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        node = shutil.which("node")
+
+        self.assertIn("molecular_structure_window.js", template)
+
+        if node:
+            result = subprocess.run(
+                [node, "--check", str(STATIC / "molecular_structure_window.js")],
+                capture_output=True, text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)

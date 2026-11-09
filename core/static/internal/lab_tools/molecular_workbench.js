@@ -240,7 +240,7 @@
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
             const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
-            const PANES = {digest: "mw-digest", features: "mw-features", orfs: "mw-orfs", gel: "mw-gel", primers: "mw-primers", cloning: "mw-cloning"};
+            const PANES = {digest: "mw-digest", features: "mw-features", structure: "mw-structure", orfs: "mw-orfs", gel: "mw-gel", primers: "mw-primers", cloning: "mw-cloning"};
             const inPane = usable && currentLayout in PANES;
             const mapWanted = usable && (currentLayout === "map" || currentLayout === "both" || (inPane && paneLeft === "map"));
             const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both" || (inPane && paneLeft === "seq"));
@@ -402,6 +402,7 @@
          */
         const WINDOWS = {
             features: ["Features", "Every annotation in an editable table"],
+            structure: ["Structure", "Secondary structure or 3D, next to the map or the sequence"],
             orfs: ["ORFs", "Open reading frames in the six frames"],
             digest: ["Digest", "Restriction enzymes, fragments and a simulated gel"],
             cloning: ["Cloning", "Put an insert into this record"],
@@ -409,8 +410,8 @@
             primers: ["Primers", "Check primers and simulate a PCR"],
         };
         const DEFAULT_OPEN = {
-            protein: ["features"],
-            rna: ["features"],
+            protein: ["features", "structure"],
+            rna: ["features", "structure"],
             plasmid: ["features", "orfs", "digest", "cloning"],
             dna: ["features", "orfs", "digest"],
             insert: ["features", "orfs", "primers"],
@@ -419,7 +420,7 @@
         const typeName = root.dataset.sequenceType || "";
         const windowButtons = Array.from(root.querySelectorAll("[data-mwv-window]"));
         const allowed = windowButtons.map(button => button.dataset.mwvWindow);
-        const storeKey = "biobank.windows." + typeName;
+        const storeKey = "biobank.windows." + typeName + (typeName === "rna" || typeName === "protein" ? ".v2" : "");
         let openWindows = (DEFAULT_OPEN[typeName] || allowed).filter(name => allowed.includes(name));
 
         try {

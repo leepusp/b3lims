@@ -50,7 +50,7 @@
 
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
 <link rel="stylesheet"
-      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v3">
+      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v5">
 {% endif %}
 
 <div id="molecular-workspace"
@@ -313,6 +313,9 @@
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="map" aria-pressed="false">Map</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="features" data-mwv-window="features" aria-pressed="false">Features</button>
+{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="structure" data-mwv-window="structure" aria-pressed="false">Structure</button>
+{% endif %}
 {% if molecule.sequence_type != "protein" and molecule.sequence_type != "rna" %}
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="orfs" data-mwv-window="orfs" aria-pressed="false">ORFs</button>
 {% endif %}
@@ -445,6 +448,9 @@
             <div id="mw-primers" class="mwp mwp-primers" role="group" aria-label="Primers and PCR" hidden></div>
 {% endif %}
             <div id="mw-features" class="mwp mwp-features" role="group" aria-label="Annotations" hidden></div>
+{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
+            <div id="mw-structure" class="mwp mwp-structure" role="group" aria-label="Structure" hidden></div>
+{% endif %}
 {% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
             <div id="mw-orfs" class="mwp mwp-orfs" role="group" aria-label="Open reading frames" hidden></div>
 {% endif %}
@@ -900,8 +906,12 @@
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v4" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v2" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v7" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v15"
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v16"
         defer></script>
+{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
+<script src="{% static 'internal/lab_tools/molecular_structure_window.js' %}?v=20261109-window-v1"
+        defer></script>
+{% endif %}
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
 {% if molecule.sequence_type == "rna" %}
