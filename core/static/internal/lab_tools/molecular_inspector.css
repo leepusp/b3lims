@@ -333,3 +333,10 @@ input.mwp-cell[type=number]{width:100%}
 .mwcl-result:hover{background:#eef2f8}
 .mwcl-junction{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.76rem}
 .mwcl-primers td.mwpr-seqline{font-size:.72rem}
+
+/* Windows of the viewer can be closed and opened again. */
+.mwv-x{margin-left:.4rem;opacity:.45;font-weight:700;cursor:pointer;border-radius:.25rem;padding:0 .2rem}
+.mwv-x:hover{opacity:1;background:rgba(0,0,0,.08)}
+.mwv-seg-btn[hidden]{display:none}
+.mwv-addwin>summary{white-space:nowrap}
+.mwv-addwin[hidden]{display:none}

@@ -321,3 +321,50 @@ class SaveCopyAsNewRecordWiringTests(TestCase):
         self.assertIn('"save-copy"', (tools / "molecular_workbench.js").read_text())
         self.assertIn('data-mwv-act="save-copy"', source)
         self.assertIn("data-registry-url", source)
+
+
+class ViewerWindowManagerTests(TestCase):
+    def render(self, record_type):
+        from django.contrib.auth import get_user_model
+        from django.test import override_settings
+        from django.urls import reverse
+
+        from core.models.lab_tools.notebook import MolecularSequence
+
+        user = get_user_model().objects.create_user(username="wm-" + record_type, password="pw")
+        record = MolecularSequence.objects.create(
+            owner=user, name="WM " + record_type, sequence_type=record_type, topology="linear", sequence="ATGCATGCATGC", length=12,
+        )
+        self.client.force_login(user)
+
+        with override_settings(FORCE_SCRIPT_NAME=None):
+            return self.client.get(reverse("molecular_sequence_detail", args=[record.id])).content.decode()
+
+    def test_plasmid_gets_every_window_that_can_be_opened_or_closed(self):
+        html = self.render("plasmid")
+
+        for name in ("features", "orfs", "digest", "cloning", "gel", "primers"):
+            self.assertIn(f'data-mwv-window="{name}"', html)
+
+    def test_primer_has_its_own_view_without_map_orfs_or_digest(self):
+        html = self.render("primer")
+
+        self.assertIn('data-mwv-window="primers"', html)
+        self.assertIn("data-mwv-fixed", html)
+
+        for name in ("map", "both", "orfs", "digest", "cloning", "gel", "features"):
+            self.assertNotIn(f'data-mwv-layout="{name}"', html)
+
+    def test_protein_and_rna_do_not_get_dna_windows(self):
+        for record_type in ("protein", "rna"):
+            html = self.render(record_type)
+
+            for name in ("digest", "cloning", "gel", "primers"):
+                self.assertNotIn(f'data-mwv-window="{name}"', html)
+
+    def test_window_manager_code_is_present(self):
+        tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+        bench = (tools / "molecular_workbench.js").read_text()
+
+        for needle in ("DEFAULT_OPEN", "openWindow", "closeWindow", "biobank.windows.", "window.BiobankWindows"):
+            self.assertIn(needle, bench)

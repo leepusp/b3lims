@@ -302,21 +302,22 @@
                 <div class="mwv-seg" role="group" aria-label="Layout">
 {% if molecule.sequence_type == "rna" %}
                     <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="seq" aria-pressed="true">Sequence</button>
+{% elif molecule.sequence_type == "primer" %}
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
+                    <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="primers" data-mwv-window="primers" data-mwv-fixed aria-pressed="true">Primers</button>
 {% else %}
                     <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="both" aria-pressed="true">Map + sequence</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="map" aria-pressed="false">Map</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
 {% if molecule.sequence_type != "protein" %}
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="features" aria-pressed="false">Features</button>
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="orfs" aria-pressed="false">ORFs</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="features" data-mwv-window="features" aria-pressed="false">Features</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="orfs" data-mwv-window="orfs" aria-pressed="false">ORFs</button>
 {% endif %}
 {% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" %}
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="digest" aria-pressed="false">Digest</button>
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="cloning" aria-pressed="false">Cloning</button>
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="gel" aria-pressed="false">Gel photo</button>
-{% endif %}
-{% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" or molecule.sequence_type == "primer" %}
-                    <button type="button" class="mwv-seg-btn" data-mwv-layout="primers" aria-pressed="false">Primers</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="digest" data-mwv-window="digest" aria-pressed="false">Digest</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="cloning" data-mwv-window="cloning" aria-pressed="false">Cloning</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="gel" data-mwv-window="gel" aria-pressed="false">Gel photo</button>
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="primers" data-mwv-window="primers" aria-pressed="false">Primers</button>
 {% endif %}
 {% endif %}
                 </div>

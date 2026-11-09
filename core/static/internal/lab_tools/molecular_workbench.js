@@ -365,34 +365,167 @@
             window.setTimeout(sync, 60);
         }
 
-        layoutButtons.forEach(button => {
-            button.addEventListener("click", () => {
-                const layout = button.dataset.mwvLayout;
+        function chooseLayout(layout) {
+            currentLayout = layout;
+            applyCanvases();
 
-                currentLayout = layout;
-                applyCanvases();
+            // Nucleotide records have no other renderer to switch to.
+            if (canvasHost && seqHost) {
+                sync();
 
-                // Nucleotide records have no other renderer to switch to.
-                if (canvasHost && seqHost) {
-                    sync();
+                return;
+            }
 
-                    return;
+            if (layout === "map") {
+                chooseEngine("detailed");
+            } else if (layout === "seq" && !isRna) {
+                chooseEngine("linear");
+            } else {
+                chooseEngine("seqviz");
+
+                if (modeSelect) {
+                    modeSelect.value = layout === "seq" ? "linear" : "both";
+                    modeSelect.dispatchEvent(new Event("change", {bubbles: true}));
                 }
+            }
+        }
 
-                if (layout === "map") {
-                    chooseEngine("detailed");
-                } else if (layout === "seq" && !isRna) {
-                    chooseEngine("linear");
-                } else {
-                    chooseEngine("seqviz");
+        layoutButtons.forEach(button => {
+            button.addEventListener("click", () => chooseLayout(button.dataset.mwvLayout));
+        });
 
-                    if (modeSelect) {
-                        modeSelect.value = layout === "seq" ? "linear" : "both";
-                        modeSelect.dispatchEvent(new Event("change", {bubbles: true}));
-                    }
+        /*
+         * Windows: the main views (map, sequence) are always there; every other
+         * window of the record type can be opened or closed. What is open is
+         * remembered per record type.
+         */
+        const WINDOWS = {
+            features: ["Features", "Every annotation in an editable table"],
+            orfs: ["ORFs", "Open reading frames in the six frames"],
+            digest: ["Digest", "Restriction enzymes, fragments and a simulated gel"],
+            cloning: ["Cloning", "Put an insert into this record"],
+            gel: ["Gel photo", "Read band sizes from a gel photograph"],
+            primers: ["Primers", "Check primers and simulate a PCR"],
+        };
+        const DEFAULT_OPEN = {
+            plasmid: ["features", "orfs", "digest", "cloning"],
+            dna: ["features", "orfs", "digest"],
+            insert: ["features", "orfs", "primers"],
+            primer: ["primers"],
+        };
+        const typeName = root.dataset.sequenceType || "";
+        const windowButtons = Array.from(root.querySelectorAll("[data-mwv-window]"));
+        const allowed = windowButtons.map(button => button.dataset.mwvWindow);
+        const storeKey = "biobank.windows." + typeName;
+        let openWindows = (DEFAULT_OPEN[typeName] || allowed).filter(name => allowed.includes(name));
+
+        try {
+            const saved = JSON.parse(window.localStorage.getItem(storeKey) || "null");
+
+            if (Array.isArray(saved)) openWindows = saved.filter(name => allowed.includes(name));
+        } catch (error) {
+            // Storage blocked or unreadable: the defaults stand.
+        }
+
+        const addMenu = el("details", "mwv-more mwv-addwin");
+        const addSummary = el("summary", "", "+ Window");
+        const addList = el("div", "mwv-menu");
+        const isFixed = name => windowButtons.some(button => button.dataset.mwvWindow === name && button.hasAttribute("data-mwv-fixed"));
+
+        addMenu.append(addSummary, addList);
+
+        function saveWindows() {
+            try {
+                window.localStorage.setItem(storeKey, JSON.stringify(openWindows));
+            } catch (error) {
+                // Not persisted; fine.
+            }
+        }
+
+        function refreshWindows() {
+            windowButtons.forEach(button => {
+                const name = button.dataset.mwvWindow;
+                const open = openWindows.includes(name) || isFixed(name);
+
+                button.hidden = !open;
+
+                if (open && !isFixed(name) && !button.querySelector(".mwv-x")) {
+                    const close = el("span", "mwv-x", "×");
+
+                    close.setAttribute("role", "button");
+                    close.setAttribute("aria-label", "Close the " + WINDOWS[name][0] + " window");
+                    close.title = "Close this window";
+                    close.addEventListener("click", event => {
+                        event.stopPropagation();
+                        closeWindow(name);
+                    });
+                    button.append(close);
                 }
             });
-        });
+
+            addList.replaceChildren();
+
+            const closed = allowed.filter(name => !openWindows.includes(name) && !isFixed(name));
+
+            closed.forEach(name => {
+                const item = el("button", "", WINDOWS[name][0] + " — " + WINDOWS[name][1]);
+
+                item.type = "button";
+                item.setAttribute("role", "menuitem");
+                item.addEventListener("click", () => {
+                    addMenu.open = false;
+                    openWindow(name);
+                });
+                addList.append(item);
+            });
+            addMenu.hidden = !closed.length;
+        }
+
+        function openWindow(name) {
+            if (!openWindows.includes(name)) openWindows.push(name);
+
+            saveWindows();
+            refreshWindows();
+            chooseLayout(name);
+        }
+
+        function closeWindow(name) {
+            openWindows = openWindows.filter(item => item !== name);
+            saveWindows();
+            refreshWindows();
+
+            if (currentLayout === name) chooseLayout(typeName === "primer" ? "primers" : "both");
+        }
+
+        if (windowButtons.length) {
+            const seg = root.querySelector(".mwv-seg");
+
+            if (seg) seg.after(addMenu);
+
+            document.addEventListener("click", event => {
+                if (addMenu.open && !addMenu.contains(event.target)) addMenu.open = false;
+            });
+            refreshWindows();
+            window.BiobankWindows = {
+                open: openWindow,
+                close: closeWindow,
+                opened: () => openWindows.slice(),
+                allowed: () => allowed.slice(),
+            };
+        }
+
+        if (typeName === "primer") {
+            paneLeft = store.get("left", "seq") === "map" ? "seq" : store.get("left", "seq");
+            currentLayout = "primers";
+            Object.entries(dividerButtons).forEach(([key, node]) => {
+                if (key === "map") {
+                    node.remove();
+                    delete dividerButtons.map;
+                }
+            });
+            applyCanvases();
+            sync();
+        }
 
         zoomButtons.forEach(button => {
             button.addEventListener("click", () => {
