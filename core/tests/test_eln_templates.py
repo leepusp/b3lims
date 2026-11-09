@@ -130,3 +130,45 @@ class ELNStructuredLayoutTests(TestCase):
             "Conclusion", "References", "Appendix",
         ):
             self.assertIn(f"<h2>{heading}</h2>", html)
+
+
+class ELNToolsPanelTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        self.user = get_user_model().objects.create_user("tools-user", password="x")
+        self.client.force_login(self.user)
+
+    def test_entry_page_loads_the_tools_drawer(self):
+        entry = NotebookEntry.objects.create(title="Tools", author=self.user)
+        response = self.client.get(reverse("notebook_entry", args=[entry.id]))
+
+        self.assertContains(response, 'id="bx-tools"')
+        self.assertContains(response, "eln_tools_calc.js")
+        self.assertContains(response, "eln_tools.js")
+        self.assertContains(response, "eln_tools.css")
+
+    def test_calculator_logic_and_scripts_are_valid(self):
+        import shutil
+        import subprocess
+        from pathlib import Path
+
+        from django.conf import settings
+
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node not available")
+
+        base = Path(settings.BASE_DIR, "core")
+        for script in (
+            base / "tests/js/test_eln_tools_calc.cjs",
+        ):
+            result = subprocess.run([node, str(script)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("eln calc ok", result.stdout)
+
+        check = subprocess.run(
+            [node, "--check", str(base / "static/internal/lab_tools/eln_tools.js")],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(check.returncode, 0, check.stderr)
