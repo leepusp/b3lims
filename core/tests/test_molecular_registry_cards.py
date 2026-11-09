@@ -41,3 +41,20 @@ class RegistryCardsTests(TestCase):
         self.assertIn("mr-card", html)
         self.assertIn('stroke="#ff0000"', html)
         self.assertIn("<mark>AGAAC</mark>", html)
+
+
+class CleanRecordNameTests(TestCase):
+    def test_uniprot_header_becomes_entry_name(self):
+        from core.services.molecular_sequences import clean_record_name
+
+        self.assertEqual(
+            clean_record_name(">sp|P01308|INS_HUMAN Insulin OS=Homo sapiens"),
+            "INS_HUMAN",
+        )
+
+    def test_plain_names_are_untouched(self):
+        from core.services.molecular_sequences import clean_record_name
+
+        self.assertEqual(clean_record_name("  pET-28a(+) "), "pET-28a(+)")
+        self.assertEqual(clean_record_name(">simple desc"), "simple")
+        self.assertEqual(clean_record_name(">"), "")

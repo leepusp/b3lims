@@ -50,6 +50,7 @@ from core.permissions.notebook import (
 
 from core.services.molecular_sequences import (
     MolecularSequenceInputError,
+    clean_record_name,
     normalize_molecular_sequence,
     validate_molecular_feature,
 )
@@ -931,7 +932,7 @@ def molecular_registry_index(request):
                     uploaded_file
                 )
 
-            name = str(
+            name = clean_record_name(
                 request.POST.get("name")
                 or (
                     imported_record.get("name")
@@ -939,7 +940,7 @@ def molecular_registry_index(request):
                     else ""
                 )
                 or ""
-            ).strip()
+            )
 
             if not name:
                 raise MolecularSequenceInputError(

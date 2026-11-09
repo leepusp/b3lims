@@ -18,6 +18,30 @@ SEQUENCE_ALPHABETS = {
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
+def clean_record_name(raw_name):
+    """Turn a pasted FASTA header into a short, readable record name.
+
+    ">sp|P01308|INS_HUMAN Insulin OS=Homo sapiens ..." becomes "INS_HUMAN".
+    Plain names are returned unchanged (only trimmed).
+    """
+    text = str(raw_name or "").strip()
+
+    if not text.startswith(">"):
+        return text[:255]
+
+    identifier = text.lstrip(">").strip().split()[0] if text.lstrip(">").strip() else ""
+    parts = [part for part in identifier.split("|") if part]
+
+    if len(parts) >= 3:
+        identifier = parts[2]
+    elif len(parts) == 2:
+        identifier = parts[1]
+    elif parts:
+        identifier = parts[0]
+
+    return identifier[:255]
+
+
 def normalize_molecular_sequence(raw_sequence, sequence_type):
     """
     Normalize one raw or FASTA-formatted molecular sequence and validate its

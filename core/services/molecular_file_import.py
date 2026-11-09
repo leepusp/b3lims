@@ -9,6 +9,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from core.services.molecular_sequences import clean_record_name
+
 
 MAX_MOLECULAR_IMPORT_BYTES = 20 * 1024 * 1024
 MAX_IMPORTED_FEATURES = 5000
@@ -319,7 +321,7 @@ def _record_name(
         if value == ".":
             continue
 
-        return value[:255]
+        return clean_record_name(value) or "Imported molecular sequence"
 
     return "Imported molecular sequence"
 
