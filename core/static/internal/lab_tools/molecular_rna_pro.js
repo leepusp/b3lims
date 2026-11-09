@@ -727,7 +727,19 @@
 
     // The legacy module rebuilds its DOM asynchronously and re-renders the
     // list on every selection, so follow its list instead of polling timers.
+    let queued = false;
     const observer = new MutationObserver(() => {
+        // Debounced so our own DOM updates can never re-enter synchronously.
+        if (queued) return;
+
+        queued = true;
+        setTimeout(() => {
+            queued = false;
+            onCardChange();
+        }, 60);
+    });
+
+    function onCardChange() {
         if (!card.querySelector(".mrss-main")) return;
 
         if (!ui || !card.contains(ui.stage)) {
@@ -744,7 +756,7 @@
             fillCompare();
             renderView();
         }
-    });
+    }
 
     observer.observe(card, {subtree: true, childList: true, attributes: true, attributeFilter: ["class"]});
 

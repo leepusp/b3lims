@@ -422,8 +422,15 @@ class BioWorkbenchTests(TestCase):
         record.refresh_from_db()
         self.assertEqual(record.data["rna"]["structure"], "((((...))))")
 
-    def test_dashboard_lists_the_new_types(self):
+    def test_dashboard_offers_one_rna_and_one_protein_item(self):
         html = self.client.get("/internal/lab-tools/molecular-registry/").content.decode()
 
-        self.assertIn('value="tool:rnafold"', html)
-        self.assertIn('value="tool:protein3d"', html)
+        # RNA and Protein are registry types, not separate "workbench" tools.
+        self.assertIn('value="rna"', html)
+        self.assertIn('value="protein"', html)
+        self.assertNotIn('value="tool:rnafold"', html)
+        self.assertNotIn('value="tool:protein3d"', html)
+        self.assertNotIn("RNA workbench", html)
+        self.assertNotIn("Protein workbench", html)
+        self.assertNotIn("Independent tools", html)
+        self.assertIn('value="tool:chemical"', html)

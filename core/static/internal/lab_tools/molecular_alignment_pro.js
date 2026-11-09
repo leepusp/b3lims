@@ -670,10 +670,15 @@
         const key = activeKey(host);
 
         if (!key) {
-            shell.classList.remove("is-pro");
-            shell.querySelectorAll(".mpro-root").forEach(n => n.remove());
-            proRoot = null;
-            state.key = "";
+            // Touch the DOM only when there is something to undo: even a
+            // no-op classList.remove() rewrites the attribute, which this
+            // layer's own MutationObserver would see again (endless loop).
+            if (proRoot || shell.classList.contains("is-pro")) {
+                shell.classList.remove("is-pro");
+                shell.querySelectorAll(".mpro-root").forEach(n => n.remove());
+                proRoot = null;
+                state.key = "";
+            }
 
             return;
         }
@@ -718,7 +723,18 @@
 
         if (!host) return;
 
-        new MutationObserver(() => sync(host)).observe(host, {
+        // Debounced: never re-enter synchronously from our own DOM changes.
+        let queued = false;
+
+        new MutationObserver(() => {
+            if (queued) return;
+
+            queued = true;
+            setTimeout(() => {
+                queued = false;
+                sync(host);
+            }, 60);
+        }).observe(host, {
             subtree: true, childList: true, attributes: true, attributeFilter: ["class"],
         });
         sync(host);

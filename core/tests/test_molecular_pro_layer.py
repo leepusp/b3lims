@@ -85,3 +85,24 @@ class MolecularProLayerTests(SimpleTestCase):
         for needle in ("Identity to reference", "Hydrophobicity", "Conservation",
                        "Consensus FASTA", "Go to position", "Motif (regex)"):
             self.assertIn(needle, source)
+
+
+class MolecularProLoopGuardTests(SimpleTestCase):
+    """A layer that observes the DOM must never re-trigger itself.
+
+    Regression: calling classList.remove() on an element without the class
+    still rewrites the attribute, which an attribute observer sees again. On a
+    protein without alignments this froze the page.
+    """
+
+    def test_alignment_layer_only_touches_dom_when_needed(self):
+        source = (STATIC / "molecular_alignment_pro.js").read_text(encoding="utf-8")
+
+        self.assertIn('if (proRoot || shell.classList.contains("is-pro"))', source)
+
+    def test_observers_are_debounced(self):
+        for name in ("molecular_alignment_pro.js", "molecular_rna_pro.js"):
+            source = (STATIC / name).read_text(encoding="utf-8")
+
+            self.assertIn("queued", source, name)
+            self.assertIn("setTimeout", source, name)

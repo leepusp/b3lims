@@ -95,11 +95,9 @@
                                     {{ label }}
                                 </option>
                             {% endfor %}
-                            <optgroup label="Independent tools">
-                                {% for value, label in tool_choices %}
-                                    <option value="tool:{{ value }}">{{ label }}</option>
-                                {% endfor %}
-                            </optgroup>
+                            {% for value, label in tool_choices %}
+                                <option value="tool:{{ value }}">{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -139,7 +137,7 @@
 
                     <div class="col-12" data-tool-only hidden>
                         <div class="form-text">
-                            Independent tools open in their own workspace and do
+                            This type opens in its own workspace and does
                             not need a sequence. Their files are stored in your
                             <code>biobank</code> folder, in a folder named after
                             the tool; windows of other tools can be opened inside.
@@ -245,14 +243,12 @@
                                 {{ label }}
                             </option>
                         {% endfor %}
-                        <optgroup label="Independent tools">
-                            {% for value, label in tool_choices %}
-                                <option value="{{ value }}"
-                                        {% if active_tool == value %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                            {% endfor %}
-                        </optgroup>
+                        {% for value, label in tool_choices %}
+                            <option value="{{ value }}"
+                                    {% if active_tool == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -352,7 +348,7 @@
     {% if tool_records or active_tool %}
     <div class="card shadow-sm mt-3" id="tool-records">
         <div class="card-header d-flex justify-content-between">
-            <strong>Independent tools</strong>
+            <strong>Tool records</strong>
             <span class="badge text-bg-light border">{{ tool_records|length }}</span>
         </div>
         {% if tool_records %}
@@ -414,7 +410,7 @@
         <section class="mr-aside-card">
             <h2 class="mr-aside-title">Coming to the Registry</h2>
             <ul class="mr-aside-list is-muted">
-                <li>Chemical structure drawing (Ketcher) and reaction tables</li>
+                <li>RNA and Protein as interactive panels, with 3D views</li>
                 <li>Primer designer and binding sites across records</li>
                 <li>Bench calculators (dilution, molarity, vector : insert)</li>
                 <li>Workflow steps for structure prediction and docking</li>

@@ -1318,7 +1318,7 @@ def molecular_registry_index(request):
             tool_universe.count(value),
             tool_help.get(value, ""),
         )
-        for value, label in ToolRecord.TOOL_CHOICES
+        for value, label in ToolRecord.CREATABLE_CHOICES
     ]
 
     molecule_count = molecules.count()
@@ -1368,7 +1368,7 @@ def molecular_registry_index(request):
             "tool_records": tool_records,
             "tool_total": len(tool_universe),
             "active_tool": active_tool,
-            "tool_choices": ToolRecord.TOOL_CHOICES,
+            "tool_choices": ToolRecord.CREATABLE_CHOICES,
             "duplicate_total": len(
                 duplicate_groups(registry_universe)
             ),

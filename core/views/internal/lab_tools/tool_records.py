@@ -138,7 +138,7 @@ def tool_record_detail(request, record_id):
         {
             "record": record,
             "tool_label": record.get_tool_display(),
-            "tool_choices": ToolRecord.TOOL_CHOICES,
+            "tool_choices": ToolRecord.CREATABLE_CHOICES,
             "has_file": bool(record.file and record.file.name),
         },
     )

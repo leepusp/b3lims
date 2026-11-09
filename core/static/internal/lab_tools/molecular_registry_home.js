@@ -118,12 +118,10 @@
         result.replaceChildren(...nodes);
     }
 
-    // Files that belong to an independent tool open that tool with the file.
+    // Files that belong to a tool type open that tool with the file.
     const TOOL_FILES = [
         {tool: "gel", label: "Gel", pattern: /\.(png|jpe?g|gif|webp|bmp)$/i},
         {tool: "chemical", label: "Chemical", pattern: /\.(mol|sdf|smi|cdxml)$/i},
-        {tool: "protein3d", label: "Protein workbench", pattern: /\.(pdb|ent|cif|mmcif)$/i},
-        {tool: "rnafold", label: "RNA workbench", pattern: /\.(dbn|ct)$/i},
     ];
 
     function toolFor(file) {
