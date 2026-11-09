@@ -40,6 +40,10 @@ class ELNTemplateTests(TestCase):
                 "analysis",
                 "sample_characterization",
                 "plasmid_construction",
+                "lab_report",
+                "pcr",
+                "cell_culture",
+                "meeting",
                 "sequencing_bioinformatics",
             ],
         )
@@ -98,3 +102,31 @@ class ELNTemplateTests(TestCase):
         self.assertIn("Sequence validation", entry.content)
         self.assertIn("Screening plan", entry.protocol_content)
 
+
+
+class ELNStructuredLayoutTests(TestCase):
+    def test_every_layout_has_real_structure_and_survives_sanitising(self):
+        from core.services.notebook_html import sanitize_notebook_html
+        from core.services.notebook_layouts import LAYOUTS, layout_html
+
+        for key in LAYOUTS:
+            html = layout_html(key)
+
+            self.assertIn("<h2>", html, key)
+            self.assertIn("<table", html, key)
+            self.assertIn('class="b3-hint"', html, key)
+            clean = sanitize_notebook_html(html)
+            self.assertEqual(clean.count("<table"), html.count("<table"), key)
+            self.assertIn("b3-tpl", clean, key)
+
+    def test_lab_report_follows_the_protocol_template_sections(self):
+        from core.services.notebook_layouts import layout_html
+
+        html = layout_html("lab_report")
+
+        for heading in (
+            "Objective", "Theoretical background", "Materials and equipment",
+            "Experimental procedure", "Results and measurements", "Discussion",
+            "Conclusion", "References", "Appendix",
+        ):
+            self.assertIn(f"<h2>{heading}</h2>", html)

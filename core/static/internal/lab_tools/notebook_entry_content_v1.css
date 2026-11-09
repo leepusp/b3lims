@@ -26,3 +26,6 @@ code { background: #f1f3f5; border-radius: 3px; padding: 0 .25em; font-size: .92
 .b3-ref[data-kind="compounds"] { background: #fff4e5; border-color: #fbd38d; color: #9a3412; }
 .b3-ref[data-kind="molecules"] { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; }
 .notebook-molecular-reference-card { max-width: 720px; }
+.b3-hint { color: #6b7685; font-size: .9em; margin: 0 0 .5em; }
+table.b3-tpl { width: 100%; margin: .3em 0 .8em; }
+table.b3-info th { width: 14rem; text-align: left; font-weight: 600; }

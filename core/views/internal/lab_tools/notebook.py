@@ -449,6 +449,9 @@ def _sectioned_notebook_content(*sections):
     )
 
 
+from core.services.notebook_layouts import layout_html
+
+
 def _notebook_entry_templates():
     return {
         "blank": {
@@ -472,13 +475,7 @@ def _notebook_entry_templates():
             "icon": "bi-flask",
             "title": "New experiment",
             "entry_type": "experiment",
-            "content": _sectioned_notebook_content(
-                "Objective",
-                "Hypothesis",
-                "Observations",
-                "Results",
-                "Conclusion",
-            ),
+            "content": layout_html("experiment"),
             "protocol_content": (
                 "Materials\n\n"
                 "Method\n\n"
@@ -495,13 +492,7 @@ def _notebook_entry_templates():
             "icon": "bi-list-check",
             "title": "New protocol",
             "entry_type": "protocol",
-            "content": _sectioned_notebook_content(
-                "Purpose",
-                "Scope",
-                "Safety and prerequisites",
-                "References",
-                "Change notes",
-            ),
+            "content": layout_html("protocol"),
             "protocol_content": (
                 "Materials and equipment\n\n"
                 "Preparation\n\n"
@@ -521,14 +512,7 @@ def _notebook_entry_templates():
             "icon": "bi-graph-up",
             "title": "New analysis",
             "entry_type": "analysis",
-            "content": _sectioned_notebook_content(
-                "Question",
-                "Data sources",
-                "Analysis plan",
-                "Results",
-                "Interpretation",
-                "Conclusion",
-            ),
+            "content": layout_html("analysis"),
             "protocol_content": (
                 "Software and versions\n\n"
                 "Parameters\n\n"
@@ -544,14 +528,7 @@ def _notebook_entry_templates():
             "icon": "bi-droplet",
             "title": "Sample characterization",
             "entry_type": "experiment",
-            "content": _sectioned_notebook_content(
-                "Characterization objective",
-                "Sample context",
-                "Measurements",
-                "Quality control",
-                "Results",
-                "Interpretation",
-            ),
+            "content": layout_html("sample_characterization"),
             "protocol_content": (
                 "Sample preparation\n\n"
                 "Assay or instrument\n\n"
@@ -568,14 +545,7 @@ def _notebook_entry_templates():
             "icon": "bi-bezier2",
             "title": "Plasmid construction",
             "entry_type": "experiment",
-            "content": _sectioned_notebook_content(
-                "Design objective",
-                "Vector and insert",
-                "Assembly strategy",
-                "Screening results",
-                "Sequence validation",
-                "Final construct",
-            ),
+            "content": layout_html("plasmid_construction"),
             "protocol_content": (
                 "DNA inputs\n\n"
                 "Assembly method\n\n"
@@ -583,6 +553,42 @@ def _notebook_entry_templates():
                 "Screening plan\n\n"
                 "Validation criteria\n"
             ),
+        },
+        "lab_report": {
+            "label": "Lab report",
+            "description": "Full report: objective, theory, materials, procedure, results, discussion and references.",
+            "icon": "bi-journal-text",
+            "title": "New lab report",
+            "entry_type": "experiment",
+            "content": layout_html("lab_report"),
+            "protocol_content": "",
+        },
+        "pcr": {
+            "label": "PCR / qPCR",
+            "description": "Primers, reaction setup, cycling program, controls and results.",
+            "icon": "bi-thermometer-half",
+            "title": "PCR / qPCR",
+            "entry_type": "experiment",
+            "content": layout_html("pcr"),
+            "protocol_content": "",
+        },
+        "cell_culture": {
+            "label": "Cell culture",
+            "description": "Cell line, observation, passaging, counts and treatments.",
+            "icon": "bi-virus",
+            "title": "Cell culture",
+            "entry_type": "experiment",
+            "content": layout_html("cell_culture"),
+            "protocol_content": "",
+        },
+        "meeting": {
+            "label": "Meeting notes",
+            "description": "Agenda, discussion, decisions and action items.",
+            "icon": "bi-people",
+            "title": "Meeting notes",
+            "entry_type": "meeting",
+            "content": layout_html("meeting"),
+            "protocol_content": "",
         },
         "sequencing_bioinformatics": {
             "label": "Sequencing / bioinformatics",
@@ -593,15 +599,7 @@ def _notebook_entry_templates():
             "icon": "bi-code-square",
             "title": "Sequencing / bioinformatics analysis",
             "entry_type": "analysis",
-            "content": _sectioned_notebook_content(
-                "Analysis objective",
-                "Dataset",
-                "Pipeline",
-                "Quality control",
-                "Results",
-                "Biological interpretation",
-                "Conclusion",
-            ),
+            "content": layout_html("sequencing_bioinformatics"),
             "protocol_content": (
                 "Input files and checksums\n\n"
                 "Software environment\n\n"
