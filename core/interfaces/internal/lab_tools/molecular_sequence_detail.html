@@ -9,7 +9,7 @@
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v1">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v3">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -322,6 +322,13 @@
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
                         <button type="button" role="menuitem" data-mwv-act="edit-sequence">Edit sequence text…</button>
                         <button type="button" role="menuitem" data-mwv-act="edit-annotations">Move or resize annotations…</button>
+{% else %}
+                        <button type="button" role="menuitem" data-mwv-act="edit-focus">Edit the sequence (click and type)</button>
+                        <button type="button" role="menuitem" data-mwv-act="edit-insert">Insert or replace with pasted text…</button>
+                        <button type="button" role="menuitem" data-mwv-act="edit-feature">Add an annotation from the selection</button>
+                        <button type="button" role="menuitem" data-mwv-act="edit-undo">Undo</button>
+                        <button type="button" role="menuitem" data-mwv-act="edit-redo">Redo</button>
+                        <hr>
 {% endif %}
                         <button type="button" role="menuitem" data-mwv-act="import">Import a sequence file…</button>
                         <hr>
@@ -856,8 +863,8 @@
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v1" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v2" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v2"
+<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v3" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v3"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

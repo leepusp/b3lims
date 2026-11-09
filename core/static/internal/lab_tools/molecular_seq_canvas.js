@@ -98,6 +98,8 @@
     const inner = el("div", "msc-inner");
     const canvas = el("canvas", "msc-canvas");
     const tip = el("div", "msc-tip");
+    const dialog = document.createElement("dialog");
+    const dialogText = document.createElement("textarea");
     const hint = el("div", "msc-hint", "Click to place the cursor · drag to select · type to edit · Ctrl + scroll to zoom");
 
     undoBtn.type = redoBtn.type = "button";
@@ -117,7 +119,19 @@
     viewport.append(inner);
     viewport.tabIndex = 0;
     tip.hidden = true;
-    host.append(bar, viewport, tip, hint);
+    dialog.className = "msc-dialog";
+    dialogText.rows = 7;
+    dialogText.placeholder = "Paste or type bases here. FASTA headers and spaces are ignored.";
+
+    const dialogTitle = el("strong", "msc-dialog-title", "Insert at the cursor");
+    const dialogApply = el("button", "msc-btn msc-btn-primary", "Insert");
+    const dialogCancel = el("button", "msc-btn", "Cancel");
+    const dialogRow = el("div", "msc-dialog-row");
+
+    dialogApply.type = dialogCancel.type = "button";
+    dialogRow.append(dialogCancel, dialogApply);
+    dialog.append(dialogTitle, dialogText, dialogRow);
+    host.append(bar, viewport, tip, hint, dialog);
 
     const ctx = canvas.getContext("2d");
 
@@ -571,6 +585,13 @@
         const unit = s.sequenceType === "protein" ? "aa" : "bp";
         const history = api() && api().history ? api().history() : {undo: 0, redo: 0};
 
+        if (Date.now() < st.noticeUntil) {
+            undoBtn.disabled = !s.canEdit || !history.undo;
+            redoBtn.disabled = !s.canEdit || !history.redo;
+
+            return;
+        }
+
         info.textContent = b > a
             ? "Selected " + (a + 1) + "–" + b + " · " + (b - a).toLocaleString() + " " + unit
             : "Cursor after " + st.caret.toLocaleString() + " of " + s.sequence.length.toLocaleString() + " " + unit;
@@ -995,6 +1016,54 @@
         event.stopPropagation();
     });
 
+    function openInsert() {
+        const s = snap();
+
+        if (!s || !s.canEdit) {
+            notice("This record is read only");
+
+            return;
+        }
+
+        const [a, b] = selectionBounds();
+
+        dialogTitle.textContent = b > a
+            ? "Replace the selected " + (b - a).toLocaleString() + " bases with"
+            : "Insert at the cursor (after base " + st.caret.toLocaleString() + ")";
+        dialogApply.textContent = b > a ? "Replace" : "Insert";
+        dialogText.value = "";
+
+        if (typeof dialog.showModal === "function") dialog.showModal();
+        else dialog.setAttribute("open", "");
+
+        dialogText.focus();
+    }
+
+    function closeInsert() {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+
+        viewport.focus({preventScroll: true});
+    }
+
+    dialogCancel.addEventListener("click", closeInsert);
+    dialogApply.addEventListener("click", () => {
+        const text = dialogText.value;
+
+        closeInsert();
+
+        if (text.trim()) typeText(text);
+    });
+
+    let noticeTimer = 0;
+
+    function notice(text) {
+        info.textContent = text;
+        st.noticeUntil = Date.now() + 2800;
+        window.clearTimeout(noticeTimer);
+        noticeTimer = window.setTimeout(schedule, 2800);
+    }
+
     undoBtn.addEventListener("click", () => {
         history("undo");
         viewport.focus({preventScroll: true});
@@ -1073,6 +1142,17 @@
                 schedule();
             }
         },
+        focus() {
+            viewport.focus({preventScroll: true});
+            notice(snap() && snap().canEdit
+                ? "Editing: click where you want to type, then type bases"
+                : "This record is read only");
+        },
+        openInsert,
+        notice,
+        undo: () => history("undo"),
+        redo: () => history("redo"),
+        hasSelection: () => selectionBounds()[1] > selectionBounds()[0],
         zoomIn: () => setCharWidth(st.charW * 1.25),
         zoomOut: () => setCharWidth(st.charW / 1.25),
         fit: () => setCharWidth(DEFAULT_CHAR),

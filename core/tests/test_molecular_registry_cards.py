@@ -95,6 +95,9 @@ class MapCanvasMountTests(TestCase):
         html = self._page("plasmid", "circular")
         self.assertIn("mw-canvas-record", html)
         self.assertNotIn("Edit sequence text", html)
+        self.assertIn("Edit the sequence (click and type)", html)
+        self.assertIn("Insert or replace with pasted text", html)
+        self.assertIn("Add an annotation from the selection", html)
         self.assertNotIn("Move or resize annotations", html)
         self.assertIn('class="mwv-more mwv-view" hidden', html)
 
