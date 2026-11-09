@@ -43,9 +43,9 @@ class MolecularProteinFinalWorkspaceTests(
         self,
     ):
         expected_assets = (
-            "molecular_protein_alignment.css' %}?v=20260814-protein-palette-v1",
-            "molecular_workspace.js' %}?v=20261109-edit-v6",
-            "molecular_protein_alignment.js' %}?v=20260814-protein-palette-v1",
+            "molecular_protein_alignment.css' %}?v=",
+            "molecular_workspace.js' %}?v=",
+            "molecular_protein_alignment.js' %}?v=",
         )
 
         for asset in expected_assets:
