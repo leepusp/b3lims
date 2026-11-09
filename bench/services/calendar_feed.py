@@ -19,7 +19,7 @@ from core.models import NotebookStep
 from core.models.events.model import Event
 from core.permissions.workspace import visible_workspace_events_for_user
 
-LAYERS = ("bookings", "steps", "samples")
+LAYERS = ("bookings", "steps", "workflow", "samples")
 MAX_RANGE = timedelta(days=100)
 SAMPLE_ROW_LIMIT = 5000
 SAMPLE_LIST_LIMIT = 40
@@ -102,6 +102,36 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
                     "url": reverse("notebook_entry", args=[step.entry_id]),
                     "editable": False,
                     "extendedProps": {"kind": "step", "entry": step.entry.title},
+                }
+            )
+
+    if "workflow" in layers:
+        from django.db.models import Q
+
+        from core.models.lab_tools.workflow import WorkflowStep
+        from core.services.workflow import visible_workflows
+
+        steps = (
+            WorkflowStep.objects.filter(
+                workflow__in=visible_workflows(user).exclude(status="archived"),
+                due_date__gte=start,
+                due_date__lt=end,
+            )
+            .exclude(status="done")
+            .filter(Q(assignee=user) | Q(assignee__isnull=True, workflow__owner=user))
+            .select_related("workflow")
+            .order_by("due_date")
+        )
+        for step in steps:
+            events.append(
+                {
+                    "id": f"workflow:{step.pk}",
+                    "title": f"Workflow: {step.title}",
+                    "start": step.due_date.isoformat(),
+                    "color": style["workflow"]["color"],
+                    "url": reverse("workflow_detail", args=[step.workflow_id]),
+                    "editable": False,
+                    "extendedProps": {"kind": "workflow_step", "workflow": step.workflow.name, "status": step.status},
                 }
             )
 

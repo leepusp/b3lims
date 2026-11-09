@@ -60,10 +60,3 @@ def find_cqb_by_institution(value):
 # Compatibility aliases for existing imports.
 LAB_CQB_REGISTRY = INSTITUTION_CQB_REGISTRY
 
-
-def get_lab_cqb_select_options():
-    return get_institution_cqb_select_options()
-
-
-def find_cqb_by_lab_name(value):
-    return find_cqb_by_institution(value)

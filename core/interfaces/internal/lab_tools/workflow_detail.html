@@ -1,0 +1,115 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}{{ workflow.name }} · Workflow · B3 LIMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261109-wf1">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" id="workflow-editor"
+     data-api-url="{% url 'workflow_api' workflow.pk %}"
+     data-lookup-url="{% url 'workflow_lookup_api' %}"
+     data-list-url="{% url 'workflow_list' %}"
+     data-can-edit="{{ can_edit|yesno:'1,0' }}"
+     data-is-owner="{{ is_owner|yesno:'1,0' }}">
+    {% csrf_token %}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a class="btn btn-sm btn-light" href="{% url 'workflow_list' %}" aria-label="All workflows"><i class="bi bi-arrow-left"></i></a>
+            <input class="form-control form-control-sm fw-semibold wf-name" id="wf-name" maxlength="200" aria-label="Workflow name" {% if not can_edit %}readonly{% endif %}>
+            <select class="form-select form-select-sm w-auto" id="wf-status" aria-label="Workflow status" {% if not can_edit %}disabled{% endif %}>
+                {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+            <span class="small text-muted" id="wf-summary"></span>
+        </div>
+        {% if can_edit %}
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-primary" id="wf-add"><i class="bi bi-plus-lg me-1"></i>Add step</button>
+            <button class="btn btn-sm btn-outline-secondary" id="wf-import" title="Bring the steps of an ELN entry in as linked, chained steps"><i class="bi bi-journal-arrow-down me-1"></i>Import ELN steps</button>
+            <button class="btn btn-sm btn-outline-secondary" id="wf-share" title="Who can edit this workflow"><i class="bi bi-people me-1"></i>Members</button>
+            {% if is_owner %}<button class="btn btn-sm btn-outline-danger" id="wf-delete"><i class="bi bi-trash me-1"></i>Delete</button>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="alert alert-danger py-1 small" id="wf-error" hidden></div>
+
+    <div class="row g-3">
+        <div class="col-xl-9">
+            <div class="wf-board" id="wf-board" tabindex="0" aria-label="Workflow canvas">
+                <svg class="wf-edges" id="wf-edges" aria-hidden="true"><defs><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6c757d"/></marker></defs></svg>
+                <div class="wf-nodes" id="wf-nodes"></div>
+                <div class="wf-empty" id="wf-empty" hidden>Add a step or import the steps of an ELN entry to start the flow.</div>
+            </div>
+            <div class="small text-muted mt-1">{% if can_edit %}Drag a step to move it. Use the dot on the right of a step, then click another step to connect them. Click a connection to remove it.{% else %}You can view this workflow but not edit it.{% endif %}</div>
+        </div>
+        <div class="col-xl-3">
+            <div class="card border-0 shadow-sm" id="wf-panel">
+                <div class="card-body">
+                    <h2 class="h6 mb-2" id="wf-panel-title">Step</h2>
+                    <div id="wf-panel-empty" class="small text-muted">Select a step to see and edit its details.</div>
+                    <form id="wf-form" hidden autocomplete="off">
+                        <label class="form-label small mb-1" for="wf-f-title">Title</label>
+                        <input class="form-control form-control-sm mb-2" id="wf-f-title" maxlength="200">
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><label class="form-label small mb-1" for="wf-f-status">Status</label>
+                                <select class="form-select form-select-sm" id="wf-f-status">{% for v, l in step_status_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+                            <div class="col-6"><label class="form-label small mb-1" for="wf-f-kind">Type</label>
+                                <select class="form-select form-select-sm" id="wf-f-kind">{% for v, l in kind_choices %}<option value="{{ v }}" {% if v != 'manual' %}disabled{% endif %}>{{ l }}{% if v != 'manual' %} (soon){% endif %}</option>{% endfor %}</select></div>
+                        </div>
+                        <label class="form-label small mb-1" for="wf-f-assignee">Owner</label>
+                        <select class="form-select form-select-sm mb-2" id="wf-f-assignee"><option value="">Unassigned</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.username }}</option>{% endfor %}</select>
+                        <label class="form-label small mb-1" for="wf-f-due">Due</label>
+                        <input type="datetime-local" class="form-control form-control-sm mb-2" id="wf-f-due">
+                        <label class="form-label small mb-1" for="wf-f-notes">Notes</label>
+                        <textarea class="form-control form-control-sm mb-2" id="wf-f-notes" rows="3"></textarea>
+
+                        <div class="wf-links">
+                            <div class="small fw-semibold mb-1">Linked to</div>
+                            <div class="wf-link" data-kind="eln"><span class="wf-link-label"></span><button type="button" class="btn btn-sm btn-link p-0 wf-link-set">Choose ELN entry</button></div>
+                            <div class="wf-link" data-kind="molecule"><span class="wf-link-label"></span><button type="button" class="btn btn-sm btn-link p-0 wf-link-set">Choose molecular record</button></div>
+                            <div class="wf-link" data-kind="sample"><span class="wf-link-label"></span><button type="button" class="btn btn-sm btn-link p-0 wf-link-set">Choose sample</button></div>
+                        </div>
+                        {% if can_edit %}
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-sm btn-primary" type="submit">Save step</button>
+                            <button class="btn btn-sm btn-outline-danger" type="button" id="wf-step-delete">Delete</button>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="wf-picker" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title h6" id="wf-picker-title">Choose</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <input class="form-control form-control-sm mb-2" id="wf-picker-q" placeholder="Search" aria-label="Search">
+                <div class="list-group" id="wf-picker-results"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-light" id="wf-picker-clear" type="button">Clear link</button></div>
+        </div></div>
+    </div>
+
+    <div class="modal fade" id="wf-members" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title h6">Members who can edit</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <div class="small text-muted mb-2">Owner: {{ workflow.owner.username }}. Members can edit steps; only the owner changes this list.</div>
+                <select class="form-select form-select-sm" id="wf-members-select" multiple size="8" {% if not is_owner %}disabled{% endif %}>
+                    {% for u in users %}{% if u.pk != workflow.owner_id %}<option value="{{ u.pk }}">{{ u.username }}</option>{% endif %}{% endfor %}
+                </select>
+            </div>
+            {% if is_owner %}<div class="modal-footer"><button class="btn btn-sm btn-primary" id="wf-members-save" type="button">Save</button></div>{% endif %}
+        </div></div>
+    </div>
+</div>
+{{ workflow_data|json_script:"wf-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf1"></script>
+{% endblock %}

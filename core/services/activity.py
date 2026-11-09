@@ -95,6 +95,12 @@ TRACKED = {
         "actor": lambda o: o.owner,
         "url": lambda o: "",
     },
+    "core.Workflow": {
+        "type": lambda o: "workflow",
+        "label": lambda o: o.name,
+        "actor": lambda o: o.owner,
+        "url": lambda o: _url("workflow_detail", o.pk),
+    },
     "bench.Booking": {
         "type": lambda o: "booking",
         "label": lambda o: o.title or f"Booking of {o.resource}",
@@ -190,6 +196,7 @@ ENTITY_GROUPS = [
     ("tool_chemical", "Chemical"),
     ("sample", "Sample"),
     ("jupyter_notebook", "Jupyter notebook"),
+    ("workflow", "Workflow"),
     ("booking", "Booking"),
 ]
 ENTITY_LABELS = dict(ENTITY_GROUPS)

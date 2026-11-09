@@ -35,10 +35,6 @@ def templates_for(user):
     ).distinct()
 
 
-def can_use(user, template):
-    return templates_for(user).filter(pk=template.pk).exists()
-
-
 def can_edit(user, template):
     if user.is_superuser or template.owner_id == user.pk:
         return True

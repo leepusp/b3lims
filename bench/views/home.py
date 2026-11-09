@@ -47,7 +47,7 @@ MODULES = (
         "title": "Workflows",
         "icon": "bi-diagram-3",
         "description": "From a Biobank sample to analysis, review and public data, with Jupyter and Galaxy steps.",
-        "url_name": None,
+        "url_name": "workflow_list",
         "step": "Steps 6.1 to 6.7",
     },
     {

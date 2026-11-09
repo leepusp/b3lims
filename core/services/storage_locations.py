@@ -467,25 +467,6 @@ def get_primary_storage_path(
     )
 
 
-def build_storage_path_text(
-    assignments,
-):
-    paths = []
-
-    for assignment in assignments:
-        try:
-            paths.append(
-                assignment.location.full_path
-            )
-        except Exception:
-            pass
-
-    return "; ".join(
-        paths
-    )
-
-
-
 def _validated_location_name(value):
     name = _safe_text(
         value
@@ -767,53 +748,3 @@ def set_storage_location_active(
 
     return location
 
-
-@transaction.atomic
-def assign_sample_to_storage_location(
-    *,
-    sample,
-    location,
-):
-    """
-    Set one existing active location as the Sample's canonical
-    physical location.
-
-    V1 intentionally replaces the current active assignment set.
-    The legacy Sample.storage_location and SampleStorageLevel
-    representations remain synchronized by the compatibility service.
-    """
-
-    from core.services.storage_writer_lock import acquire_storage_writer_lock
-    acquire_storage_writer_lock()
-
-    if not location.is_active:
-        raise ValidationError(
-            (
-                "Samples cannot be assigned "
-                "to an inactive storage location."
-            )
-        )
-
-    assign_sample_storage_from_text(
-        sample=sample,
-        storage_location_text=(
-            location.full_path
-        ),
-        replace_existing=True,
-        sync_legacy_field=True,
-    )
-
-    return (
-        sample.storage_assignments
-        .select_related(
-            "location"
-        )
-        .filter(
-            status="active"
-        )
-        .order_by(
-            "rank",
-            "id",
-        )
-        .first()
-    )

@@ -59,7 +59,7 @@
         select: (info) => openForm(info.start, info.allDay ? new Date(info.start.getTime() + 3600e3) : info.end),
         eventClick: (info) => {
             const kind = info.event.extendedProps.kind;
-            if (kind === "step") return;  // has a URL, FullCalendar follows it
+            if (kind === "step" || kind === "workflow_step") return;  // has a URL, FullCalendar follows it
             info.jsEvent.preventDefault(); openDetail(info.event);
         },
         eventDrop: (info) => moveBooking(info), eventResize: (info) => moveBooking(info),

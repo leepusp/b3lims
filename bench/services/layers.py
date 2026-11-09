@@ -10,6 +10,11 @@ BUILTIN = {
         "color": "#7c3aed",
         "description": "Unfinished steps with a deadline, from your own experiments.",
     },
+    "workflow": {
+        "label": "My workflow steps",
+        "color": "#d9480f",
+        "description": "Unfinished workflow steps with a due date that are yours or in workflows you own.",
+    },
     "samples": {
         "label": "Sample events",
         "color": "#198754",

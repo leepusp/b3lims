@@ -145,6 +145,7 @@ from core.views.internal.lab_tools import notebook_taxonomy as notebook_taxonomy
 from core.views.internal.lab_tools import notebook_templates as notebook_templates_views
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
+from core.views.internal.lab_tools import workflow as workflow_views
 
 # 9. QR CODE (PAGE)
 from core.views.internal.samples.views import (
@@ -492,6 +493,11 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/<int:entry_id>/entry-links/', notebook_composer_views.notebook_entry_links_api, name='notebook_entry_links_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/lookup/', notebook_composer_views.notebook_lookup_api, name='notebook_lookup_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/field-definitions/', notebook_composer_views.notebook_field_definitions_api, name='notebook_field_definitions_api'),
+    path('internal/lab-tools/workflows/', workflow_views.workflow_list, name='workflow_list'),
+    path('internal/lab-tools/workflows/create/', workflow_views.workflow_create, name='workflow_create'),
+    path('internal/lab-tools/workflows/lookup/', workflow_views.workflow_lookup_api, name='workflow_lookup_api'),
+    path('internal/lab-tools/workflows/<int:workflow_id>/', workflow_views.workflow_detail, name='workflow_detail'),
+    path('internal/lab-tools/workflows/<int:workflow_id>/api/', workflow_views.workflow_api, name='workflow_api'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/api/search-chemicals/', notebook_views.search_chemicals_api, name='search_chemicals_api'),
     path('internal/api/search-molecular-sequences/', notebook_views.search_molecular_sequences_api, name='search_molecular_sequences_api'),

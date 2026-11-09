@@ -58,6 +58,8 @@ from core.models.lab_tools.notebook_composer import (
     NotebookTag,
 )
 
+from core.models.lab_tools.workflow import Workflow, WorkflowEdge, WorkflowStep
+
 from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole
 from core.models.research_groups.model import ResearchGroup
