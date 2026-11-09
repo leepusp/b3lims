@@ -59,3 +59,13 @@
 .tw-pane .mwp-gel{font-size:.82rem}
 .tw-sep{width:1px;align-self:stretch;background:var(--tw-border);margin:0 .3rem}
 .tw-pane .mwd,.tw-pane .mwp-primers,.tw-pane .mwp-cloning{max-width:100%}
+
+.tw-chem-section{border-top:1px solid var(--tw-border);padding:.5rem 0}
+.tw-chem-section:first-child{border-top:0}
+.tw-chem-section h4{margin:0 0 .3rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--tw-muted)}
+.tw-chem-grid{display:flex;flex-wrap:wrap;gap:.8rem;align-items:flex-start;margin:.4rem 0}
+.tw-chem-grid .tw-table{flex:1 1 16rem}
+.tw-chem-svg{width:15rem;max-width:100%;height:auto;background:#fff;border:1px solid var(--tw-border);border-radius:.4rem}
+.tw-chip{display:inline-flex;align-items:center;gap:.2rem;font-size:.76rem;border:1px solid #c5ced8;border-radius:999px;padding:.15rem .55rem;background:#fff;cursor:pointer}
+.tw-chem-rx select{font-size:.78rem;border:1px solid #c5ced8;border-radius:.3rem;padding:.1rem}
+.tw-chem-rx td:nth-child(2) input{min-width:7rem}

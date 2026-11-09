@@ -8,7 +8,7 @@ const dir = path.join(__dirname, "../../static/internal/lab_tools");
 
 function load(file, hostId) {
     const host = {
-        append() {}, replaceChildren() {}, addEventListener() {}, style: {},
+        append() {}, replaceChildren() {}, addEventListener() {}, style: {}, dataset: {}, querySelectorAll: () => [],
     };
     const node = () => ({
         append() {}, replaceChildren() {}, addEventListener() {}, style: {}, classList: {add() {}, remove() {}, toggle() {}},
@@ -19,6 +19,7 @@ function load(file, hostId) {
         document: {
             getElementById: id => (id === hostId ? host : id === "tool-workbench" ? {dataset: {}} : null),
             createElement: node,
+            createTextNode: () => ({}),
             createElementNS: node,
             dispatchEvent() {},
             addEventListener() {},
@@ -45,6 +46,38 @@ assert.strictEqual(JSON.stringify(chem.parseFormula("Ca(OH)2")), JSON.stringify(
 assert.strictEqual(JSON.stringify(chem.parseFormula("CuSO4.5H2O")), JSON.stringify({Cu: 1, S: 1, O: 9, H: 10}));
 assert.strictEqual(chem.parseFormula("Xx2"), null);
 assert.strictEqual(chem.parseFormula("C6H12O6)"), null);
+
+// SMILES / MOL → formula
+function smilesFormula(text) {
+    const mol = chem.parseSmiles(text);
+
+    return mol ? chem.prettyFormula(chem.formulaOf(mol).counts) : null;
+}
+
+assert.strictEqual(smilesFormula("CC(=O)Oc1ccccc1C(=O)O"), "C9H8O4");
+assert.strictEqual(smilesFormula("CCO"), "C2H6O");
+assert.strictEqual(smilesFormula("c1ccccc1"), "C6H6");
+assert.strictEqual(smilesFormula("c1ccncc1"), "C5H5N");
+assert.strictEqual(smilesFormula("c1cc[nH]c1"), "C4H5N");
+assert.strictEqual(smilesFormula("CC(=O)[O-].[Na+]"), "C2H3NaO2");
+assert.strictEqual(smilesFormula("[NH4+]"), "H4N");
+assert.strictEqual(smilesFormula("O=C=O"), "CO2");
+assert.strictEqual(smilesFormula("c1ccc2ccccc2c1"), "C10H8");
+assert.strictEqual(smilesFormula("ClCCBr"), "C2H4BrCl");
+assert.strictEqual(smilesFormula("C1CC"), null);
+assert.strictEqual(smilesFormula("C(C"), null);
+assert.strictEqual(smilesFormula("Xyz"), null);
+
+const molText = [
+    "ethanol", "  test", "",
+    "  3  2  0  0  0  0  0  0  0  0999 V2000",
+    "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0",
+    "    1.2000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0",
+    "    2.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0",
+    "  1  2  1  0", "  2  3  1  0", "M  END", ""].join("\n");
+
+assert.strictEqual(chem.prettyFormula(chem.formulaOf(chem.parseMol(molText)).counts), "C2H6O");
+assert.strictEqual(chem.parseMol("nope"), null);
 
 const asm = load("tool_assembly_panel.js", "tw-assembly").BiobankAssembly;
 const A = "ATGGCTAGCTAGGATCCGATTACAGGCT";

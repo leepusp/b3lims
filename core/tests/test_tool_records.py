@@ -291,3 +291,15 @@ class RegistryDashboardToolsTests(TestCase):
 
         self.assertContains(response, "Gel A")
         self.assertNotContains(response, "Aspirin")
+
+
+class ChemicalWindowWiringTests(TestCase):
+    def test_chemical_pane_knows_the_stock_list_url(self):
+        user = get_user_model().objects.create_user("chemwire", password="x")
+        record = ToolRecord.objects.create(tool="chemical", name="Aspirin", owner=user)
+        self.client.force_login(user)
+
+        html = self.client.get(f"/internal/lab-tools/tools/{record.pk}/").content.decode()
+
+        self.assertIn('id="tw-chemical"', html)
+        self.assertIn('data-stock-url="/chemicals/"', html)
