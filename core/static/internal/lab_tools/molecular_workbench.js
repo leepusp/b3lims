@@ -539,6 +539,24 @@
             copy: () => press("mw-copy"),
             fasta: () => press("mw-export-fasta"),
             genbank: () => press("mw-export-genbank"),
+            "save-copy": async () => {
+                const workspace = api();
+
+                if (!workspace || !workspace.saveAsNewRecord) return;
+
+                const base = workspace.getSnapshot().name || "record";
+                const name = window.prompt("Name of the new record (a copy of what is on screen, with its annotations):", base + " copy");
+
+                if (!name) return;
+
+                const result = await workspace.saveAsNewRecord(name);
+
+                if (result.ok) {
+                    window.location.assign(result.url);
+                } else {
+                    window.alert(result.message);
+                }
+            },
             "image-svg": () => imageExport("svg"),
             "image-png": () => imageExport("png"),
         };

@@ -3499,6 +3499,7 @@
             removeFeature: removeFeatureAt,
             featureTypes,
             setName,
+            saveAsNewRecord,
             clearSelection,
             undo: () => stepHistory(editHistory.undo, editHistory.redo),
             redo: () => stepHistory(editHistory.redo, editHistory.undo),
@@ -3757,7 +3758,7 @@
             ));
         }
 
-        function exportGenbank() {
+        function genbankText() {
             const name = elements.name.value.trim()
                 || "MOLECULAR_ITEM";
             const sequence = currentSequence();
@@ -3829,10 +3830,71 @@
 
             lines.push("//");
 
+            return {
+                name,
+                text: `${lines.join("\n")}\n`,
+            };
+        }
+
+        function exportGenbank() {
+            const record = genbankText();
+
             downloadText(
-                `${sanitizeFilename(name)}.gb`,
-                `${lines.join("\n")}\n`
+                `${sanitizeFilename(record.name)}.gb`,
+                record.text
             );
+        }
+
+        /*
+         * Save what is on screen (sequence and annotations, saved or not) as a
+         * new registry record, through the same create form the registry uses.
+         * The original record is left as it is.
+         */
+        async function saveAsNewRecord(newName) {
+            const url = root.dataset.registryUrl;
+
+            if (!url) {
+                return {ok: false, message: "The registry address is missing."};
+            }
+
+            const type = currentType();
+            const record = genbankText();
+            const form = new FormData();
+            const name = String(newName || `${record.name} copy`).trim();
+
+            form.append("csrfmiddlewaretoken", csrfToken());
+            form.append("name", name);
+            form.append("sequence_type", type);
+            form.append("topology", currentTopology());
+            form.append("description", elements.description.value || "");
+            form.append("type_confirmation", "confirmed");
+
+            if (type === "protein" || type === "rna") {
+                form.append("sequence", currentSequence());
+            } else {
+                form.append("sequence", currentSequence());
+                form.append(
+                    "molecular_file",
+                    new File([record.text], `${sanitizeFilename(name)}.gb`, {type: "text/plain"})
+                );
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    body: form,
+                    credentials: "same-origin",
+                    headers: {"X-CSRFToken": csrfToken()},
+                });
+
+                if (response.redirected && /molecular-registry\/\d+\//.test(response.url)) {
+                    return {ok: true, url: response.url};
+                }
+
+                return {ok: false, message: "The registry did not accept the new record. Check the name and the sequence."};
+            } catch (error) {
+                return {ok: false, message: error.message};
+            }
         }
 
         function importedCompatibleTypes(

@@ -306,3 +306,18 @@ class CloningWindowWiringTests(TestCase):
         self.assertIn('id="mw-cloning"', source)
         self.assertIn("molecular_cloning_panel.js", source)
         self.assertIn('cloning: "mw-cloning"', (tools / "molecular_workbench.js").read_text())
+
+
+class SaveCopyAsNewRecordWiringTests(TestCase):
+    def test_workspace_can_save_what_is_on_screen_as_a_new_record(self):
+        from django.template.loader import get_template
+
+        tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+        workspace = (tools / "molecular_workspace.js").read_text()
+        source = get_template("internal/lab_tools/molecular_sequence_detail.html").template.source
+
+        self.assertIn("async function saveAsNewRecord(", workspace)
+        self.assertIn("saveAsNewRecord,", workspace)
+        self.assertIn('"save-copy"', (tools / "molecular_workbench.js").read_text())
+        self.assertIn('data-mwv-act="save-copy"', source)
+        self.assertIn("data-registry-url", source)
