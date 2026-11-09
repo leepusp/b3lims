@@ -146,6 +146,7 @@ from core.views.internal.lab_tools import notebook_templates as notebook_templat
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 from core.views.internal.lab_tools import workflow as workflow_views
+from core.views.internal.lab_tools import submissions as submission_views
 
 # 9. QR CODE (PAGE)
 from core.views.internal.samples.views import (
@@ -493,6 +494,11 @@ urlpatterns = [
     path('internal/lab-tools/notebook/api/<int:entry_id>/entry-links/', notebook_composer_views.notebook_entry_links_api, name='notebook_entry_links_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/lookup/', notebook_composer_views.notebook_lookup_api, name='notebook_lookup_api'),
     path('internal/lab-tools/notebook/api/<int:entry_id>/field-definitions/', notebook_composer_views.notebook_field_definitions_api, name='notebook_field_definitions_api'),
+    path('internal/lab-tools/submissions/', submission_views.submission_list, name='submission_list'),
+    path('internal/lab-tools/submissions/create/', submission_views.submission_create, name='submission_create'),
+    path('internal/lab-tools/submissions/lookup/', submission_views.submission_lookup_api, name='submission_lookup_api'),
+    path('internal/lab-tools/submissions/<int:package_id>/', submission_views.submission_detail, name='submission_detail'),
+    path('internal/lab-tools/submissions/<int:package_id>/api/', submission_views.submission_api, name='submission_api'),
     path('internal/lab-tools/workflows/', workflow_views.workflow_list, name='workflow_list'),
     path('internal/lab-tools/workflows/create/', workflow_views.workflow_create, name='workflow_create'),
     path('internal/lab-tools/workflows/lookup/', workflow_views.workflow_lookup_api, name='workflow_lookup_api'),

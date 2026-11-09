@@ -54,7 +54,7 @@ MODULES = (
         "title": "Data submissions",
         "icon": "bi-cloud-upload",
         "description": "RO-Crate packages for ENA, Zenodo and the Biobank public catalog.",
-        "url_name": None,
+        "url_name": "submission_list",
         "step": "Steps 5.2 and 6.6",
     },
 )

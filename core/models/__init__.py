@@ -59,6 +59,7 @@ from core.models.lab_tools.notebook_composer import (
 )
 
 from core.models.lab_tools.workflow import Workflow, WorkflowEdge, WorkflowStep
+from core.models.lab_tools.submission import SubmissionItem, SubmissionPackage
 
 from core.models.biobanks.biobank import Biobank
 from core.models.biobanks.biobank_user_role import BiobankUserRole

@@ -1,0 +1,100 @@
+{% extends "internal/common/base.html" %}
+{% load static %}
+
+{% block title %}{{ package.title }} · Data submission · B3 LIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" id="submission-editor"
+     data-api-url="{% url 'submission_api' package.pk %}"
+     data-lookup-url="{% url 'submission_lookup_api' %}"
+     data-list-url="{% url 'submission_list' %}">
+    {% csrf_token %}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a class="btn btn-sm btn-light" href="{% url 'submission_list' %}" aria-label="All packages"><i class="bi bi-arrow-left"></i></a>
+            <h1 class="h5 mb-0" id="sp-title-text"></h1>
+            <span class="badge" id="sp-status"></span>
+        </div>
+        <div class="d-flex gap-2 flex-wrap" id="sp-actions"></div>
+    </div>
+    <div class="alert alert-danger py-1 small" id="sp-error" hidden></div>
+    <div class="alert alert-info py-2 small" id="sp-note" hidden></div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm mb-3"><div class="card-body">
+                <h2 class="h6">Details</h2>
+                <form id="sp-form" autocomplete="off">
+                    <label class="form-label small mb-1" for="sp-title">Title</label>
+                    <input class="form-control form-control-sm mb-2" id="sp-title" maxlength="200">
+                    <label class="form-label small mb-1" for="sp-description">Description</label>
+                    <textarea class="form-control form-control-sm mb-2" id="sp-description" rows="3"></textarea>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-destination">Destination</label>
+                            <select class="form-select form-select-sm" id="sp-destination">{% for v, l in destinations %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-workflow">Workflow</label>
+                            <select class="form-select form-select-sm" id="sp-workflow"><option value="">None</option>{% for w in workflows %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}</select></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-license">License (URL)</label><input class="form-control form-control-sm" id="sp-license" placeholder="https://creativecommons.org/licenses/by/4.0/"></div>
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-authors">Authors</label><input class="form-control form-control-sm" id="sp-authors"></div>
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-keywords">Keywords</label><input class="form-control form-control-sm" id="sp-keywords"></div>
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-funding">Funding</label><input class="form-control form-control-sm" id="sp-funding"></div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" type="submit" id="sp-save">Save details</button>
+                </form>
+            </div></div>
+
+            <div class="card border-0 shadow-sm"><div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0">Records in this package</h2>
+                    <div class="btn-group btn-group-sm" id="sp-add-group">
+                        <button class="btn btn-outline-secondary" data-kind="sequence">+ Sequence</button>
+                        <button class="btn btn-outline-secondary" data-kind="structure">+ Structure</button>
+                        <button class="btn btn-outline-secondary" data-kind="sample">+ Sample</button>
+                        <button class="btn btn-outline-secondary" data-kind="entry">+ ELN entry</button>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush" id="sp-items"></ul>
+            </div></div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-3"><div class="card-body">
+                <h2 class="h6">Taxon</h2>
+                <div id="sp-taxon" class="small mb-2"></div>
+                <div id="sp-lineage" class="small text-muted mb-2"></div>
+                {% if not taxonomy_ready %}<div class="small text-warning">The local taxonomy index is not built yet. Run <code>manage.py build_taxonomy_index</code> to enable taxon search.</div>{% endif %}
+                <button class="btn btn-sm btn-outline-secondary" id="sp-taxon-set" type="button">Choose taxon</button>
+                <button class="btn btn-sm btn-link text-danger" id="sp-taxon-clear" type="button">Clear</button>
+            </div></div>
+            <div class="card border-0 shadow-sm" id="sp-published" hidden><div class="card-body">
+                <h2 class="h6">In the repository</h2>
+                <div class="small mb-1">Path: <code id="sp-path"></code></div>
+                <div class="small mb-2">Manifest SHA-256: <code id="sp-sha" class="text-break"></code></div>
+                <pre class="small bg-light p-2 rounded" id="sp-manifest" style="max-height:320px;overflow:auto"></pre>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="sp-picker" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title h6" id="sp-picker-title">Choose</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><input class="form-control form-control-sm mb-2" id="sp-picker-q" placeholder="Search" aria-label="Search"><div class="list-group" id="sp-picker-results"></div></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="sp-review" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title h6">Review this package</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><label class="form-label small" for="sp-review-note">Note (required to reject)</label><textarea class="form-control form-control-sm" id="sp-review-note" rows="3"></textarea></div>
+            <div class="modal-footer"><button class="btn btn-sm btn-danger" id="sp-reject" type="button">Reject</button><button class="btn btn-sm btn-success" id="sp-approve" type="button">Approve</button></div>
+        </div></div>
+    </div>
+</div>
+{{ data|json_script:"sp-data" }}
+{{ manifest|json_script:"sp-manifest-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261109-sp1"></script>
+{% endblock %}

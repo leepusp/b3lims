@@ -302,6 +302,10 @@ BIOBANK_JUPYTER_PARTITION = os.environ.get(
 )
 
 BIOBANK_JUPYTER_PARTITIONS = ("basic", "max50")
+
+# Internal data repository and the NCBI taxonomy dump it is linked to (DaVinci).
+BIOBANK_REPOSITORY_ROOT = os.environ.get("BIOBANK_REPOSITORY_ROOT", "/scratch/global/databases/biobank")
+BIOBANK_TAXONOMY_DIR = os.environ.get("BIOBANK_TAXONOMY_DIR", "/scratch/global/databases/taxonomy")
 BIOBANK_JUPYTER_NODES = ("n01", "gn01", "gn02", "gn03")
 BIOBANK_JUPYTER_PARTITION_MAX_HOURS = {
     "basic": 72,

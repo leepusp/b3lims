@@ -97,7 +97,7 @@ Other useful functions
 - [ ] Galaxy steps in a workflow
 - [ ] Review NoLabs (Apache-2.0; FastAPI microservices for ESMFold, DiffDock, RFdiffusion, ProteinMPNN, BLAST; Celery + Redis scheduler) as a source of model steps: call its microservice REST endpoints from a workflow step, store result as a Registry record (PDB to Protein structure); do not adopt its UI or workflow engine
 - [x] Workflow builder screen (canvas, side panel, import of ELN steps, members)
-- [ ] 5.2 and 6.6 Data submissions: RO-Crate packages for ENA, Zenodo and the public catalog
+- [x] 5.2 and 6.6 Data submissions (phase 1): packages with taxon, review (proposed, approved) and publication to the internal repository at /scratch/global/databases/biobank as manifest.json + RO-Crate
 - [ ] Submissions: ENA, NCBI, Zenodo
 - [ ] Hub cards for Workflows and Data submissions move from "Planned" to "Available" as each ships
 

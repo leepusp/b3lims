@@ -101,6 +101,12 @@ TRACKED = {
         "actor": lambda o: o.owner,
         "url": lambda o: _url("workflow_detail", o.pk),
     },
+    "core.SubmissionPackage": {
+        "type": lambda o: "submission",
+        "label": lambda o: o.title,
+        "actor": lambda o: o.owner,
+        "url": lambda o: _url("submission_detail", o.pk),
+    },
     "bench.Booking": {
         "type": lambda o: "booking",
         "label": lambda o: o.title or f"Booking of {o.resource}",
@@ -197,6 +203,7 @@ ENTITY_GROUPS = [
     ("sample", "Sample"),
     ("jupyter_notebook", "Jupyter notebook"),
     ("workflow", "Workflow"),
+    ("submission", "Data submission"),
     ("booking", "Booking"),
 ]
 ENTITY_LABELS = dict(ENTITY_GROUPS)

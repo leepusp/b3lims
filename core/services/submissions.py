@@ -1,0 +1,248 @@
+"""Submission packages: access rules, review flow and serialisation."""
+
+from __future__ import annotations
+
+import json
+
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
+
+from core.models.lab_tools.submission import SubmissionItem, SubmissionPackage
+from core.services import repository
+
+S = SubmissionPackage.Status
+MAX_TEXT = {"title": 200, "description": 5000, "review_note": 2000}
+METADATA_KEYS = ("license", "authors", "keywords", "funding")
+APPROVE_PERM = "core.approve_submission"
+
+
+def can_approve(user) -> bool:
+    return bool(user.is_superuser or user.has_perm(APPROVE_PERM))
+
+
+def is_owner(user, package) -> bool:
+    return user.is_superuser or package.owner_id == user.pk
+
+
+def visible_packages(user):
+    """Own packages; published ones are the lab's shared repository; approvers see the review queue."""
+    if user.is_superuser:
+        return SubmissionPackage.objects.all()
+
+    query = Q(owner=user) | Q(status=S.PUBLISHED)
+
+    if can_approve(user):
+        query |= Q(status__in=[S.PROPOSED, S.APPROVED, S.REJECTED])
+
+    return SubmissionPackage.objects.filter(query)
+
+
+def can_edit(user, package) -> bool:
+    return is_owner(user, package) and package.status in (S.DRAFT, S.REJECTED)
+
+
+def _text(value, field, required=False) -> str:
+    value = str(value or "").strip()
+
+    if required and not value:
+        raise ValidationError(f"{field.replace('_', ' ').capitalize()} is required.")
+    if len(value) > MAX_TEXT[field]:
+        raise ValidationError(f"{field.replace('_', ' ').capitalize()} is too long.")
+
+    return value
+
+
+def update_fields(package, data) -> None:
+    if "title" in data:
+        package.title = _text(data["title"], "title", required=True)
+    if "description" in data:
+        package.description = _text(data["description"], "description")
+    if "destination" in data:
+        if data["destination"] not in SubmissionPackage.Destination.values:
+            raise ValidationError("Invalid destination.")
+
+        package.destination = data["destination"]
+    if "metadata" in data:
+        raw = data["metadata"]
+
+        if not isinstance(raw, dict):
+            raise ValidationError("Invalid metadata.")
+
+        package.metadata = {k: str(raw[k]).strip()[:1000] for k in METADATA_KEYS if k in raw and str(raw[k]).strip()}
+    if "workflow" in data:
+        from core.services.workflow import visible_workflows
+
+        wf = data["workflow"]
+
+        package.workflow = visible_workflows(package.owner).filter(pk=wf).first() if wf else None
+
+        if wf and not package.workflow:
+            raise ValidationError("That workflow is not available.")
+    if "taxon_id" in data:
+        repository.set_taxon(package, data["taxon_id"])
+
+
+# --- items ---------------------------------------------------------------------
+
+
+def add_item(package, user, kind, ref) -> SubmissionItem:
+    if package.items.count() >= repository.MAX_ITEMS:
+        raise ValidationError(f"At most {repository.MAX_ITEMS} items per package.")
+
+    try:
+        ref = int(ref)
+    except (TypeError, ValueError):
+        raise ValidationError("Invalid item.")
+
+    item = SubmissionItem(package=package, kind=kind)
+
+    if kind == "sequence":
+        from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
+
+        obj = _visible_molecular_sequences_for_user(user).filter(pk=ref).first()
+        item.molecule, item.label = obj, (f"{obj.name} · {obj.get_sequence_type_display()}" if obj else "")
+    elif kind == "structure":
+        from core.models.lab_tools.notebook import MolecularStructure
+        from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
+
+        visible = _visible_molecular_sequences_for_user(user)
+        obj = MolecularStructure.objects.filter(pk=ref, molecule__in=visible).select_related("molecule").first()
+        item.structure, item.label = obj, (f"{obj.label or obj.original_filename} · {obj.molecule.name}" if obj else "")
+    elif kind == "sample":
+        from core.permissions.samples import visible_samples_for_user
+
+        obj = visible_samples_for_user(user).filter(pk=ref).first()
+        item.sample, item.label = obj, (obj.sample_id if obj else "")
+    elif kind == "entry":
+        from core.permissions.notebook import visible_notebook_entries_for_user
+
+        obj = visible_notebook_entries_for_user(user).filter(pk=ref).first()
+        item.entry, item.label = obj, (obj.title if obj else "")
+    else:
+        raise ValidationError("Invalid item type.")
+
+    if not obj:
+        raise ValidationError("That record is not available to you.")
+    if package.items.filter(**{kind if kind != "sequence" else "molecule": obj}).exists():
+        raise ValidationError("That record is already in the package.")
+
+    item.save()
+
+    return item
+
+
+# --- review flow ---------------------------------------------------------------
+
+
+def propose(package, user) -> None:
+    if not can_edit(user, package):
+        raise ValidationError("Only the owner can propose a draft or a rejected package.")
+    if not package.items.exists():
+        raise ValidationError("Add at least one record before proposing.")
+
+    package.status = S.PROPOSED
+    package.proposed_at = timezone.now()
+    package.review_note = ""
+    package.save(update_fields=["status", "proposed_at", "review_note", "updated_at"])
+
+
+def _reviewable(package, user) -> None:
+    if package.status != S.PROPOSED:
+        raise ValidationError("Only proposed packages can be reviewed.")
+    if not can_approve(user):
+        raise ValidationError("You are not allowed to approve submissions.")
+    if package.owner_id == user.pk and not user.is_superuser:
+        raise ValidationError("You cannot approve your own package.")
+
+
+def approve(package, user, note="") -> None:
+    _reviewable(package, user)
+
+    package.status = S.APPROVED
+    package.approved_by = user
+    package.approved_at = timezone.now()
+    package.review_note = _text(note, "review_note")
+    package.save(update_fields=["status", "approved_by", "approved_at", "review_note", "updated_at"])
+
+
+def reject(package, user, note) -> None:
+    _reviewable(package, user)
+
+    package.status = S.REJECTED
+    package.review_note = _text(note, "review_note", required=True)
+    package.save(update_fields=["status", "review_note", "updated_at"])
+
+
+def publish(package, user) -> str:
+    if not (is_owner(user, package) or can_approve(user)):
+        raise ValidationError("You cannot publish this package.")
+
+    return repository.publish_internal(package)
+
+
+# --- serialisation -------------------------------------------------------------
+
+
+def _url(name, pk) -> str:
+    try:
+        return reverse(name, args=[pk])
+    except NoReverseMatch:
+        return ""
+
+
+def serialize(package, user) -> dict:
+    items = []
+
+    for item in package.items.select_related("molecule", "structure", "sample", "entry"):
+        url = ""
+
+        if item.molecule_id:
+            url = _url("molecular_sequence_detail", item.molecule_id)
+        elif item.structure_id:
+            url = _url("molecular_sequence_detail", item.structure.molecule_id)
+        elif item.sample_id:
+            url = _url("sample_detail", item.sample_id)
+        elif item.entry_id:
+            url = _url("notebook_entry", item.entry_id)
+
+        items.append({"id": item.pk, "kind": item.kind, "kind_label": item.get_kind_display(), "label": item.label, "url": url})
+
+    return {
+        "id": package.pk,
+        "title": package.title,
+        "description": package.description,
+        "destination": package.destination,
+        "status": package.status,
+        "owner": package.owner.get_username(),
+        "workflow": package.workflow_id,
+        "taxon_id": package.taxon_id,
+        "taxon_name": package.taxon_name,
+        "taxonomy_version": package.taxonomy_version,
+        "lineage": package.lineage,
+        "metadata": package.metadata,
+        "review_note": package.review_note,
+        "approved_by": package.approved_by.get_username() if package.approved_by else "",
+        "approved_at": package.approved_at.isoformat(timespec="seconds") if package.approved_at else "",
+        "repository_path": package.repository_path,
+        "manifest_sha256": package.manifest_sha256,
+        "items": items,
+        "can_edit": can_edit(user, package),
+        "can_review": package.status == S.PROPOSED and can_approve(user) and (package.owner_id != user.pk or user.is_superuser),
+        "can_publish": package.status == S.APPROVED and (is_owner(user, package) or can_approve(user)),
+        "can_delete": is_owner(user, package) and package.status in (S.DRAFT, S.REJECTED),
+    }
+
+
+def manifest_json(package) -> str:
+    """The published manifest, when there is one on disk."""
+    if not package.repository_path:
+        return ""
+
+    path = repository.repository_root() / package.repository_path / "manifest.json"
+
+    try:
+        return json.dumps(json.loads(path.read_text(encoding="utf-8")), indent=2, ensure_ascii=False)
+    except (OSError, ValueError):
+        return ""

@@ -1,0 +1,66 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Data submissions · B3 LIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" id="submission-list">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-0">Data submissions</h1>
+            <div class="text-muted small">Package records with metadata and a taxon, get them approved, then publish to the internal repository (GenBank/SRA, wwPDB and Zenodo follow).</div>
+        </div>
+        <form method="post" action="{% url 'submission_create' %}" class="d-flex gap-2 flex-wrap">
+            {% csrf_token %}
+            <input class="form-control form-control-sm" name="title" placeholder="New package title" maxlength="200" aria-label="New package title">
+            <select class="form-select form-select-sm w-auto" name="destination" aria-label="Destination">
+                {% for value, label in destinations %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-sm btn-primary text-nowrap" type="submit"><i class="bi bi-plus-lg me-1"></i>Create</button>
+        </form>
+    </div>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link {% if tab == 'mine' %}active{% endif %}" href="?tab=mine">My packages</a></li>
+        {% if can_review %}<li class="nav-item"><a class="nav-link {% if tab == 'review' %}active{% endif %}" href="?tab=review">To review{% if review_count %} <span class="badge text-bg-warning">{{ review_count }}</span>{% endif %}</a></li>{% endif %}
+        <li class="nav-item"><a class="nav-link {% if tab == 'repository' %}active{% endif %}" href="?tab=repository">Internal repository</a></li>
+    </ul>
+
+    {% if tab == 'repository' %}
+    <form method="get" class="row g-2 mb-3">
+        <input type="hidden" name="tab" value="repository">
+        <div class="col-md-4"><input class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="Search by title" aria-label="Search by title"></div>
+        <div class="col-md-3"><input class="form-control form-control-sm" name="taxon" value="{{ taxon }}" placeholder="NCBI taxid (includes descendants)" aria-label="Taxon id"></div>
+        <div class="col-auto"><button class="btn btn-sm btn-primary" type="submit">Filter</button> <a class="btn btn-sm btn-light" href="?tab=repository">Clear</a></div>
+    </form>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th>Title</th><th>Status</th><th>Destination</th><th>Taxon</th><th>Owner</th><th>Updated</th></tr></thead>
+                <tbody>
+                {% for p in page %}
+                    <tr>
+                        <td><a href="{% url 'submission_detail' p.pk %}">{{ p.title }}</a></td>
+                        <td><span class="badge text-bg-{% if p.status == 'published' %}success{% elif p.status == 'approved' %}primary{% elif p.status == 'proposed' %}warning{% elif p.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ p.get_status_display }}</span></td>
+                        <td class="small">{{ p.get_destination_display }}</td>
+                        <td class="small">{% if p.taxon_name %}{{ p.taxon_name }} <span class="text-muted">({{ p.taxon_id }})</span>{% else %}—{% endif %}</td>
+                        <td class="small">{{ p.owner.username }}</td>
+                        <td class="small text-nowrap">{{ p.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Nothing here yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center mt-2 small">
+        <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        <span>{% if page.has_previous %}<a href="?tab={{ tab }}&q={{ q }}&taxon={{ taxon }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}
+              {% if page.has_next %} <a href="?tab={{ tab }}&q={{ q }}&taxon={{ taxon }}&page={{ page.next_page_number }}">Next</a>{% endif %}</span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
