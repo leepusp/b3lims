@@ -113,6 +113,9 @@ def start_run(step, user, resources=None):
     if not jupyter.RUN_ID_RE.fullmatch(run_id) or not job_id.isdigit():
         raise ValidationError("The runner returned an invalid answer.")
 
+    step.config = {**config, "run_resources": resources}
+    step.save(update_fields=["config"])
+
     run = WorkflowStepRun.objects.create(
         step=step, notebook=notebook, started_by=user, run_id=run_id, job_id=job_id, parameters=parameters
     )

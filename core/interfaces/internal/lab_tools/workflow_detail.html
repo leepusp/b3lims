@@ -74,11 +74,19 @@
                             <textarea class="form-control form-control-sm" id="wf-f-result" rows="2" placeholder="What came out of the run, and where it was saved"></textarea>
                             <div class="border-top mt-2 pt-2">
                                 <div class="small fw-semibold mb-1">Run unattended on DaVinci</div>
-                                <div class="d-flex gap-1 mb-1">
-                                    <input class="form-control form-control-sm" id="wf-run-cpus" type="number" min="1" max="128" value="2" title="CPU cores" aria-label="CPU cores">
-                                    <input class="form-control form-control-sm" id="wf-run-mem" type="number" min="1024" step="1024" value="4096" title="Memory (MB)" aria-label="Memory in MB">
-                                    <input class="form-control form-control-sm" id="wf-run-min" type="number" min="1" value="60" title="Time limit (minutes)" aria-label="Time limit in minutes">
+                                <div class="row g-1 mb-1">
+                                    <div class="col-6"><label class="form-label small mb-0" for="wf-run-partition">Partition</label>
+                                        <select class="form-select form-select-sm" id="wf-run-partition">{% for p in run_partitions %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select></div>
+                                    <div class="col-6"><label class="form-label small mb-0" for="wf-run-node">Compute node</label>
+                                        <select class="form-select form-select-sm" id="wf-run-node"><option value="auto">Automatic</option>{% for n in run_nodes %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+                                    <div class="col-4"><label class="form-label small mb-0" for="wf-run-cpus">CPU cores</label>
+                                        <input class="form-control form-control-sm" id="wf-run-cpus" type="number" min="1" max="128" value="2"></div>
+                                    <div class="col-4"><label class="form-label small mb-0" for="wf-run-mem">Memory (MB)</label>
+                                        <input class="form-control form-control-sm" id="wf-run-mem" type="number" min="1024" step="1024" value="4096"></div>
+                                    <div class="col-4"><label class="form-label small mb-0" for="wf-run-min">Time (min)</label>
+                                        <input class="form-control form-control-sm" id="wf-run-min" type="number" min="1" value="60"></div>
                                 </div>
+                                <div class="small text-muted mb-1">Basic: up to 72 h. Max50: up to 168 h.</div>
                                 <div class="d-flex gap-1 align-items-center">
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="wf-run-start">Run notebook</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="wf-run-refresh" hidden>Refresh</button>
@@ -136,5 +144,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf3"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf4"></script>
 {% endblock %}

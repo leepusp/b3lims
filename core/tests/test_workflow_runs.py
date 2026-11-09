@@ -153,3 +153,23 @@ class BrokerScriptTests(WorkflowBase):
             text = (DEPLOY / name).read_text()
 
             self.assertIn('--ro-bind "$REPOSITORY_ROOT" "$REPOSITORY_ROOT"', text)
+
+
+class WorkflowRunResourcesTests(WorkflowRunTests):
+    def test_partition_node_are_sent_and_remembered(self):
+        response, runner = self.start(resources={"partition": "max50", "node": "gn03", "cpus": 1, "memory_mb": 2048, "minutes": 10})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(runner.call_args.args[4:9], (1, 2048, 10, "max50", "gn03"))
+
+        step = next(s for s in response.json()["workflow"]["steps"] if s["id"] == self.step)
+
+        self.assertEqual(step["run_resources"]["partition"], "max50")
+        self.assertEqual(step["run_resources"]["node"], "gn03")
+
+    def test_time_limit_follows_the_partition(self):
+        with mock.patch(RUNNER) as runner:
+            too_long = self.run_api("run_step", step_id=self.step, resources={"partition": "basic", "minutes": 72 * 60 + 1})
+
+            self.assertEqual(too_long.status_code, 400)
+            runner.assert_not_called()

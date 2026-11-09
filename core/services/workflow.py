@@ -336,6 +336,7 @@ def _jupyter_info(step):
         "jupyter_url": url,
         "parameters": "\n".join(f"{k}={v}" for k, v in (config.get("parameters") or {}).items()),
         "result_note": config.get("result_note", ""),
+        "run_resources": config.get("run_resources") or {},
     }
 
 

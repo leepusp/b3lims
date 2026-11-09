@@ -195,6 +195,13 @@
         $("wf-jupyter").hidden = step.kind !== "jupyter";
         $("wf-f-params").value = step.parameters || "";
         $("wf-f-result").value = step.result_note || "";
+        const saved = step.run_resources || {};
+
+        $("wf-run-partition").value = saved.partition || "basic";
+        $("wf-run-node").value = saved.node || "auto";
+        $("wf-run-cpus").value = saved.cpus || 2;
+        $("wf-run-mem").value = saved.memory_mb || 4096;
+        $("wf-run-min").value = saved.minutes || 60;
         renderRun(step);
         $("wf-form").querySelectorAll("input,select,textarea").forEach((el) => { if (!canEdit) el.disabled = true; });
     }
@@ -219,7 +226,7 @@
     $("wf-run-start").addEventListener("click", () => {
         if (!selected) return;
         act({action: "run_step", step_id: selected, resources: {
-            cpus: $("wf-run-cpus").value, memory_mb: $("wf-run-mem").value, minutes: $("wf-run-min").value,
+            partition: $("wf-run-partition").value, node: $("wf-run-node").value, cpus: $("wf-run-cpus").value, memory_mb: $("wf-run-mem").value, minutes: $("wf-run-min").value,
         }});
     });
     $("wf-run-refresh").addEventListener("click", () => {

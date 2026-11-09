@@ -2,6 +2,7 @@
 
 import json
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -80,6 +81,8 @@ def workflow_detail(request, workflow_id):
         "status_choices": Workflow.Status.choices,
         "step_status_choices": WorkflowStep.Status.choices,
         "kind_choices": WorkflowStep.Kind.choices,
+        "run_partitions": getattr(settings, "BIOBANK_JUPYTER_PARTITIONS", ("basic", "max50")),
+        "run_nodes": getattr(settings, "BIOBANK_JUPYTER_NODES", ("n01", "gn01", "gn02", "gn03")),
         "users": get_user_model().objects.filter(is_active=True).order_by("username"),
     })
 
