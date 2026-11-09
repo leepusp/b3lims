@@ -5,7 +5,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261109-home-v1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261109-home-v2">
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_type_profiles.css' %}?v=20260808-molecular-type-profiles-v2-protein">
 
@@ -248,130 +248,65 @@
         </div>
 
         {% if molecules %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Topology</th>
-                            <th>Length</th>
-                            <th>Context</th>
-                            <th>Updated</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for molecule in molecules %}
-                            <tr data-molecular-record-type="{{ molecule.sequence_type }}">
-                                <td>
-                                    <div class="fw-semibold">
-                                        {{ molecule.name }}
+            <div class="mr-cards">
+                {% for molecule in molecules %}
+                    <article class="mr-card" data-molecular-record-type="{{ molecule.sequence_type }}">
+                        <div class="mr-card-top">
+                            <span class="mr-badge mr-badge-{{ molecule.sequence_type }}">{{ molecule.get_sequence_type_display }}</span>
+                            <span class="mr-card-date">{{ molecule.updated_at|date:"Y-m-d" }}</span>
+                        </div>
+                        <a class="mr-card-name stretched-link" href="{% url 'molecular_sequence_detail' molecule.id %}?from=registry">{{ molecule.name }}</a>
+                        <div class="mr-thumb mr-thumb-{{ molecule.card.preview_kind }}">
+                            {% if molecule.card.preview_kind == "primer" %}
+                                <code class="mr-primer">{{ molecule.card.primer_body }}<mark>{{ molecule.card.primer_clamp }}</mark></code>
+                            {% else %}
+                                {{ molecule.card.preview_html|safe }}
+                            {% endif %}
+                        </div>
+                        <div class="mr-stats">
+                            {% for value, unit in molecule.card.stats %}
+                                <span><b>{{ value }}</b> {{ unit }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="mtr-registry-flow"
+                             data-molecular-workspace-summary
+                             aria-label="Workspace capabilities"></div>
+                        {% with c=molecule.registry_context %}
+                            <div class="mr-card-context">
+                                {% if molecule.linked_sample %}
+                                    <div class="small">
+                                        <i class="bi bi-box-seam me-1"></i>
+                                        {% if c.sample_visible %}Sample {{ molecule.linked_sample.sample_id }}{% else %}{{ molecule.linked_sample.sample_id }}{% endif %}{% if c.place %} &middot; {{ c.place }}{% if c.place_position %} &rsaquo; {{ c.place_position }}{% endif %}{% endif %}
                                     </div>
-
-                                    {% if molecule.description %}
-                                        <div class="small text-muted text-truncate"
-                                             style="max-width: 28rem;">
-                                            {{ molecule.description }}
-                                        </div>
+                                {% else %}
+                                    <div class="small text-muted">Not linked to a Sample yet</div>
+                                {% endif %}
+                                <div class="mr-chips">
+                                    {% if c.entries %}<span class="badge text-bg-light border">{{ c.entries }} notebook entr{{ c.entries|pluralize:"y,ies" }}</span>{% endif %}
+                                    {% if c.alignments %}<span class="badge text-bg-light border">{{ c.alignments }} alignment{{ c.alignments|pluralize }}</span>{% endif %}
+                                    {% if c.structures %}<span class="badge text-bg-light border">{{ c.structures }} structure{{ c.structures|pluralize }}</span>{% endif %}
+                                    {% if molecule.duplicates %}
+                                        <span class="badge text-bg-warning"
+                                              title="Same sequence as: {% for did, dname in molecule.duplicates %}{{ dname }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                            Same sequence as {{ molecule.duplicates|length }} other{{ molecule.duplicates|length|pluralize }}
+                                        </span>
                                     {% endif %}
-                                </td>
-
-                                <td>
-                                    <span class="badge text-bg-primary">
-                                        {{ molecule.get_sequence_type_display }}
-                                    </span>
-
-                                    <div class="mtr-registry-flow"
-                                         data-molecular-workspace-summary
-                                         aria-label="Workspace capabilities"></div>
-                                </td>
-
-                                <td>
-                                    {{ molecule.get_topology_display }}
-                                </td>
-
-                                <td>
-                                    {{ molecule.length }}
-                                    {% if molecule.sequence_type == "protein" %}
-                                        aa
-                                    {% else %}
-                                        bp
-                                    {% endif %}
-                                </td>
-
-                                <td class="mr-context">
-                                    {% with c=molecule.registry_context %}
-                                        {% if molecule.source_entry %}
-                                            <div class="small">
-                                                <i class="bi bi-journal-bookmark me-1"></i>
-                                                {{ molecule.source_entry.title }}
-                                            </div>
-                                        {% endif %}
-                                        {% if molecule.linked_sample %}
-                                            <div class="small">
-                                                <i class="bi bi-box-seam me-1"></i>
-                                                {% if c.sample_visible %}
-                                                    <a href="{% url 'sample_detail' molecule.linked_sample_id %}">{{ molecule.linked_sample.sample_id }}</a>
-                                                {% else %}
-                                                    {{ molecule.linked_sample.sample_id }}
-                                                {% endif %}
-                                            </div>
-                                            {% if c.place %}
-                                                <div class="small text-muted">
-                                                    <i class="bi bi-geo-alt me-1"></i>
-                                                    <a href="{% url 'storage_workspace' %}?location={{ c.place_location_id }}">{{ c.place }}</a>{% if c.place_position %} · {{ c.place_position }}{% endif %}
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if not molecule.source_entry and not molecule.linked_sample %}
-                                            <span class="small text-muted">Not linked yet</span>
-                                        {% endif %}
-                                        <div class="mr-chips">
-                                            {% if c.features %}<span class="badge text-bg-light border">{{ c.features }} feature{{ c.features|pluralize }}</span>{% endif %}
-                                            {% if c.entries %}<span class="badge text-bg-light border">{{ c.entries }} ELN entr{{ c.entries|pluralize:"y,ies" }}</span>{% endif %}
-                                            {% if c.alignments %}<span class="badge text-bg-light border">{{ c.alignments }} alignment{{ c.alignments|pluralize }}</span>{% endif %}
-                                            {% if c.structures %}<span class="badge text-bg-light border">{{ c.structures }} structure{{ c.structures|pluralize }}</span>{% endif %}
-                                            {% if molecule.duplicates %}
-                                                <span class="badge text-bg-warning"
-                                                      title="Same sequence as: {% for did, dname in molecule.duplicates %}{{ dname }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-                                                    <i class="bi bi-copy"></i> identical to {{ molecule.duplicates|length }} other{{ molecule.duplicates|length|pluralize }}
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                    {% endwith %}
-                                </td>
-
-                                <td>
-                                    {{ molecule.updated_at|date:"Y-m-d H:i" }}
-                                </td>
-
-                                <td class="text-end">
-                                    <div class="d-inline-flex flex-wrap justify-content-end gap-2">
-                                        <a class="btn btn-sm btn-outline-primary"
-                                           href="{% url 'molecular_sequence_detail' molecule.id %}?from=registry">
-                                            <i class="bi bi-box-arrow-up-right me-1"></i>
-                                            Open
-                                        </a>
-
-                                        {% if molecule.can_delete_from_registry %}
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    data-delete-molecular-record
-                                                    data-record-name="{{ molecule.name }}"
-                                                    data-delete-url="{% url 'molecular_sequence_delete_api' molecule.id %}?from=registry"
-                                                    onclick="deleteMolecularRegistryRecord(this)">
-                                                <i class="bi bi-trash me-1"></i>
-                                                Delete
-                                            </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                </div>
+                            </div>
+                        {% endwith %}
+                        {% if molecule.can_delete_from_registry %}
+                            <button type="button"
+                                    class="btn btn-sm btn-link text-danger mr-card-delete"
+                                    data-delete-molecular-record
+                                    data-record-name="{{ molecule.name }}"
+                                    data-delete-url="{% url 'molecular_sequence_delete_api' molecule.id %}?from=registry"
+                                    onclick="deleteMolecularRegistryRecord(this)"
+                                    title="Delete this record">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        {% endif %}
+                    </article>
+                {% endfor %}
             </div>
         {% else %}
             <div class="card-body py-5 text-center">
@@ -398,6 +333,16 @@
                 <li><b>{{ unlinked_total }}</b> not linked to a Sample yet</li>
             </ul>
         </section>
+        {% if recent_records %}
+        <section class="mr-aside-card">
+            <h2 class="mr-aside-title">Recently updated</h2>
+            <ul class="mr-aside-list">
+                {% for r in recent_records %}
+                    <li class="d-flex justify-content-between gap-2"><a href="{% url 'molecular_sequence_detail' r.id %}?from=registry">{{ r.name }}</a><span class="text-muted">{{ r.updated_at|date:"M j" }}</span></li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
         <section class="mr-aside-card">
             <h2 class="mr-aside-title">Coming to the Registry</h2>
             <ul class="mr-aside-list is-muted">
@@ -488,7 +433,7 @@
 </script>
 
 
-<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v1" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v2" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v2" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

@@ -32,6 +32,7 @@ from core.models.lab_tools.notebook import (
 )
 from core.models.samples.sample import Sample
 from core.models.chemicals.chemical import Chemical
+from core.services.molecular_registry_cards import attach_cards
 from core.services.molecular_registry_overview import (
     attach_registry_context,
     duplicate_groups,
@@ -1277,6 +1278,8 @@ def molecular_registry_index(request):
         request.user, molecules, registry_universe
     )
 
+    attach_cards(molecules)
+
     for molecule in molecules:
         molecule.can_delete_from_registry = (
             _can_edit_molecular_sequence(
@@ -1300,6 +1303,16 @@ def molecular_registry_index(request):
                 _visible_molecular_sequences_for_user(request.user)
                 .filter(linked_sample__isnull=True)
                 .count()
+            ),
+            "recent_records": (
+                []
+                if query or active_type
+                else list(
+                    _visible_molecular_sequences_for_user(request.user)
+                    .select_related(None)
+                    .only("id", "name", "updated_at")
+                    .order_by("-updated_at", "-id")[:4]
+                )
             ),
             "registry_total": len(registry_universe),
             "duplicate_total": len(
