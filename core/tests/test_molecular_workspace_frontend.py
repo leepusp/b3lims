@@ -334,50 +334,8 @@ class MolecularWorkspaceFrontendTests(TestCase):
 
         stylesheet = (Path(__file__).resolve().parents[2] / 'core/static/internal/lab_tools/molecular_workspace.css').read_text()
 
-        self.assertIn(
-            "function initializeUnifiedWorkspace()",
-            workspace,
-        )
-        self.assertIn(
-            'root.classList.add("mw-unified-workspace")',
-            workspace,
-        )
-        self.assertIn(
-            'featureEditor.id = "mw-unified-feature-editor"',
-            workspace,
-        )
-        self.assertIn(
-            "featureEditor.appendChild(elements.featureForm)",
-            workspace,
-        )
-        self.assertIn(
-            'sequenceDetails.id = "mw-unified-sequence-details"',
-            workspace,
-        )
-        self.assertIn(
-            'labelMode.id = "mw-unified-label-mode"',
-            workspace,
-        )
-        self.assertIn(
-            '["selected", "Selected"]',
-            workspace,
-        )
-        self.assertIn(
-            "mw-unified-color-swatch",
-            workspace,
-        )
-        self.assertIn(
-            'event.target.closest(',
-            workspace,
-        )
-        self.assertIn(
-            '"[data-coordinate]"',
-            workspace,
-        )
-        self.assertNotIn(
-            "initializeUnifiedWorkspace();",
-            workspace,
-        )
+        # The old unified-layout initializer was removed as dead code.
+        self.assertNotIn("initializeUnifiedWorkspace", workspace)
         self.assertIn(
             "applyWorkspaceView(preferredView());",
             workspace,

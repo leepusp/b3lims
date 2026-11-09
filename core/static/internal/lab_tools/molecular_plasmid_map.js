@@ -840,17 +840,6 @@
         ];
     }
 
-    function restrictionLabelLimit(
-        detailMode,
-    ) {
-        return (
-            LABEL_LIMITS[
-                detailMode
-            ]
-            || LABEL_LIMITS.detailed
-        );
-    }
-
     ready(() => {
         const root = (
             document.getElementById(

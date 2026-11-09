@@ -58,16 +58,8 @@ class MolecularInteractiveAnnotationUxTests(
             self.workspace,
         )
 
-    def test_existing_unified_initializer_stays_disabled(self):
-        self.assertIn(
-            "function initializeUnifiedWorkspace()",
-            self.workspace,
-        )
-
-        self.assertNotIn(
-            "\n        initializeUnifiedWorkspace();\n",
-            self.workspace,
-        )
+    def test_dead_unified_initializer_is_gone(self):
+        self.assertNotIn("initializeUnifiedWorkspace", self.workspace)
 
     def test_major_panels_have_expand_support(self):
         self.assertIn(
