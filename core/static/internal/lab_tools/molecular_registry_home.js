@@ -118,7 +118,75 @@
         result.replaceChildren(...nodes);
     }
 
+    // Files that belong to an independent tool open that tool with the file.
+    const TOOL_FILES = [
+        {tool: "gel", label: "Gel", pattern: /\.(png|jpe?g|gif|webp|bmp)$/i},
+        {tool: "chemical", label: "Chemical", pattern: /\.(mol|sdf|smi|cdxml)$/i},
+    ];
+
+    function toolFor(file) {
+        return TOOL_FILES.find(entry => entry.pattern.test(file.name || "")) || null;
+    }
+
+    function renderTool(entry, file) {
+        const head = el("div", "mr-detect-head");
+        const actions = el("div", "mr-detect-actions");
+        const open = el("button", "btn btn-sm btn-primary", "Open in " + entry.label);
+        const dismiss = el("button", "btn btn-sm btn-outline-secondary", "Dismiss");
+        const base = (file.name || entry.label).replace(/\.[^.]+$/, "");
+
+        head.append(el("b", "", file.name), el("span", "badge text-bg-primary", entry.label));
+        open.type = dismiss.type = "button";
+        open.addEventListener("click", async () => {
+            open.disabled = true;
+            open.textContent = "Creating…";
+
+            const data = new FormData();
+
+            data.append("tool", entry.tool);
+            data.append("name", base);
+            data.append("file", file, file.name);
+            data.append("csrfmiddlewaretoken", csrf());
+
+            try {
+                const response = await fetch(form.dataset.toolCreateUrl, {
+                    method: "POST",
+                    body: data,
+                    credentials: "same-origin",
+                    headers: {"X-CSRFToken": csrf()},
+                });
+
+                if (response.redirected && /\/tools\/\d+\//.test(response.url)) {
+                    window.location.href = response.url;
+
+                    return;
+                }
+            } catch (error) {
+                // fall through to the message below
+            }
+
+            open.disabled = false;
+            open.textContent = "Open in " + entry.label;
+            showMessage("The " + entry.label + " could not be created from this file.");
+        });
+        dismiss.addEventListener("click", () => {
+            result.hidden = true;
+            result.replaceChildren();
+        });
+        actions.append(open, dismiss);
+        result.hidden = false;
+        result.replaceChildren(head, actions);
+    }
+
     async function inspect(file) {
+        const entry = toolFor(file);
+
+        if (entry) {
+            renderTool(entry, file);
+
+            return;
+        }
+
         showMessage("Reading " + file.name + "…");
 
         const data = new FormData();

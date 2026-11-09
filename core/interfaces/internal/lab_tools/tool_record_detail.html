@@ -5,7 +5,7 @@
 {% block content %}
 {% csrf_token %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v2">
 
 <div class="container-fluid py-4 tw-page"
      id="tool-workbench"
@@ -70,7 +70,7 @@
 {{ record.data|json_script:"tw-initial" }}
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v3"></script>
-<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v1"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v1"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v1"></script>
+<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v2"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v2"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v2"></script>
 {% endblock %}

@@ -314,3 +314,6 @@
         grid-column: auto;
     }
 }
+
+/* The creation-mode strip is only shown while a file is being imported. */
+.mri-import:not(:has(.mri-import-panel:not([hidden]))){display:none}

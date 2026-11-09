@@ -4,7 +4,7 @@
 {% block title %}Molecular Design & Registry{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_import.css' %}?v=20260808-registry-type-aware-import-u1-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_registry_hub.css' %}?v=20261109-home-v2">
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_type_profiles.css' %}?v=20260808-molecular-type-profiles-v2-protein">
@@ -54,6 +54,19 @@
             </div>
 
             <div class="card-body">
+    <section class="mr-intake" aria-label="Register from a file">
+        <div class="mr-drop" id="mr-home-drop" tabindex="0" role="button"
+             aria-label="Drop a file here or press Enter to choose one">
+            <strong>Drop a file here to start from it</strong>
+            <span>Sequence files (GenBank, FASTA, SnapGene, EMBL, APE) are checked
+                against the Registry for the same sequence. A gel photo opens a
+                Gel; a structure file (.mol, .sdf, .smi) opens a Chemical.</span>
+            <input type="file" id="mr-home-file" hidden
+                   accept=".dna,.gb,.gbk,.gbff,.genbank,.ape,.embl,.fa,.fasta,.fna,.ffn,.faa,.frn,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp,.mol,.sdf,.smi,.cdxml">
+        </div>
+        <div class="mr-detect" id="mr-home-result" hidden aria-live="polite"></div>
+    </section>
+
                 <div class="row g-3">
                     <div class="col-lg-6">
                         <label class="form-label"
@@ -165,19 +178,6 @@
 
     <div class="mr-home">
     <div class="mr-main">
-
-    <section class="mr-intake" aria-label="Register from a file">
-        <div class="mr-drop" id="mr-home-drop" tabindex="0" role="button"
-             aria-label="Drop a file here or press Enter to choose one">
-            <strong>Drop a file here to register it</strong>
-            <span>GenBank, FASTA, SnapGene (.dna), EMBL or APE. The record
-                type is detected and the Registry is checked for the same
-                sequence before anything is created.</span>
-            <input type="file" id="mr-home-file" hidden
-                   accept=".dna,.gb,.gbk,.gbff,.genbank,.ape,.embl,.fa,.fasta,.fna,.ffn,.faa,.frn,.txt">
-        </div>
-        <div class="mr-detect" id="mr-home-result" hidden aria-live="polite"></div>
-    </section>
 
     <div class="mr-hub row g-2 mb-3" aria-label="Registry by type">
         <div class="col-6 col-md-4 col-xl-3">
@@ -501,7 +501,7 @@
 </script>
 
 
-<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v3" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v4" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v3" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

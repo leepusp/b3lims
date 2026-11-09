@@ -341,6 +341,7 @@
 
         svg.setAttribute("viewBox", "0 0 " + width + " 46");
         svg.setAttribute("width", "100%");
+        svg.style.maxWidth = "640px";
         svg.setAttribute("role", "img");
         svg.setAttribute("aria-label", "Assembled parts in order");
         out.spans.forEach((span, index) => {

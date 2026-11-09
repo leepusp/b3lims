@@ -51,6 +51,23 @@ def get_tool_record(record_id, user):
     return record
 
 
+def file_problem(tool, uploaded):
+    """Return why an uploaded file does not fit this tool, or an empty string."""
+
+    suffix = Path(uploaded.name or "").suffix.lower()
+
+    if suffix not in TOOL_FILE_TYPES.get(tool, set()):
+        return (
+            "This tool does not accept that file type "
+            f"({suffix or 'no extension'})."
+        )
+
+    if uploaded.size > MAX_FILE_BYTES:
+        return "The file is larger than 25 MB."
+
+    return ""
+
+
 def _json_error(message, status=400):
     return JsonResponse({"status": "error", "message": message}, status=status)
 
@@ -71,6 +88,15 @@ def tool_record_create(request):
         messages.error(request, "Name is required.")
         return redirect("molecular_registry_index")
 
+    uploaded = request.FILES.get("file")
+
+    if uploaded is not None:
+        problem = file_problem(tool, uploaded)
+
+        if problem:
+            messages.error(request, problem)
+            return redirect("molecular_registry_index")
+
     record = ToolRecord.objects.create(
         tool=tool,
         name=name,
@@ -78,6 +104,14 @@ def tool_record_create(request):
         owner=request.user,
         data={},
     )
+
+    if uploaded is not None:
+        try:
+            record.original_filename = Path(uploaded.name).name[:255]
+            record.file.save(uploaded.name, uploaded, save=False)
+            record.save(update_fields=["file", "original_filename", "updated_at"])
+        except OSError:
+            messages.error(request, "The file could not be stored; the record was created without it.")
 
     return redirect("tool_record_detail", record_id=record.id)
 
@@ -199,16 +233,10 @@ def tool_record_file_api(request, record_id):
     if uploaded is None:
         return _json_error("Choose a file.")
 
-    suffix = Path(uploaded.name or "").suffix.lower()
+    problem = file_problem(record.tool, uploaded)
 
-    if suffix not in TOOL_FILE_TYPES.get(record.tool, set()):
-        return _json_error(
-            "This tool does not accept that file type "
-            f"({suffix or 'no extension'})."
-        )
-
-    if uploaded.size > MAX_FILE_BYTES:
-        return _json_error("The file is larger than 25 MB.", 413)
+    if problem:
+        return _json_error(problem, 413 if "25 MB" in problem else 400)
 
     old_name = record.file.name if record.file else ""
 

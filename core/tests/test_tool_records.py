@@ -138,6 +138,37 @@ class ToolRecordViewsTests(TestCase):
         self.assertEqual(record.original_filename, "gel.png")
         self.assertRegex(saved[0], rf"^users/tool-owner/tools/gel/{record.id}/[0-9a-f]{{32}}_gel.png$")
 
+    def test_create_can_start_from_a_dropped_file(self):
+        self.client.force_login(self.owner)
+        saved = []
+
+        def fake_save(self_storage, name, content):
+            saved.append(name)
+            return name
+
+        with patch.object(storage.UserHomeLabToolsStorage, "_save", fake_save), patch.object(
+            storage.UserHomeLabToolsStorage, "exists", lambda self_storage, name: False
+        ):
+            response = self.client.post(
+                reverse("tool_record_create"),
+                {"tool": "gel", "name": "dropped", "file": SimpleUploadedFile("dropped.png", b"\x89PNG")},
+            )
+
+        record = ToolRecord.objects.get(name="dropped")
+
+        self.assertRedirects(response, reverse("tool_record_detail", args=[record.id]), fetch_redirect_response=False)
+        self.assertEqual(record.original_filename, "dropped.png")
+        self.assertRegex(saved[0], rf"/tools/gel/{record.id}/")
+
+    def test_create_with_a_file_of_the_wrong_kind_creates_nothing(self):
+        self.client.force_login(self.owner)
+        self.client.post(
+            reverse("tool_record_create"),
+            {"tool": "gel", "name": "bad", "file": SimpleUploadedFile("x.mol", b"M  END")},
+        )
+
+        self.assertFalse(ToolRecord.objects.filter(name="bad").exists())
+
     def test_delete(self):
         record = self.make()
         self.client.force_login(self.owner)
@@ -161,7 +192,11 @@ class RegistryDashboardToolsTests(TestCase):
             self.assertContains(response, f"?type={value}")
 
         self.assertContains(response, "data-tool-create-url")
-        self.assertContains(response, 'id="mr-home-drop"')
+        # One file entry point, inside the New record form.
+        content = response.content.decode()
+        form_start = content.index('id="molecular-registry-create-form"')
+        self.assertGreater(content.index('id="mr-home-drop"'), form_start)
+        self.assertEqual(content.count('id="mr-home-drop"'), 1)
         self.assertContains(response, "New record")
 
     def test_tool_type_filter_lists_only_that_tool(self):
