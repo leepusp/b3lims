@@ -360,7 +360,83 @@
         root.addEventListener("biobank:molecular-workspace-change", schedule);
     }
 
+    /*
+     * Viewer bar: one layout switch and zoom buttons drive the existing
+     * viewer controls (kept inside "View options"), so there is a single
+     * source of truth and nothing else in the viewer has to change.
+     */
+    function bindViewerBar() {
+        const mode = document.getElementById("mw-seqviz-mode");
+        const zoom = document.getElementById("mw-seqviz-zoom");
+        const label = document.getElementById("mwv-zoom-label");
+        const buttons = root.querySelectorAll("[data-mwv-layout]");
+        const steps = root.querySelectorAll("[data-mwv-zoom]");
+
+        function sync() {
+            if (mode) {
+                buttons.forEach(button => {
+                    const on = button.dataset.mwvLayout === mode.value;
+
+                    button.classList.toggle("is-active", on);
+                    button.setAttribute("aria-pressed", String(on));
+                });
+            }
+
+            if (zoom && label) label.textContent = zoom.value + "%";
+        }
+
+        buttons.forEach(button => {
+            button.addEventListener("click", () => {
+                if (!mode) return;
+
+                mode.value = button.dataset.mwvLayout;
+                mode.dispatchEvent(new Event("change", {bubbles: true}));
+                sync();
+            });
+        });
+        steps.forEach(button => {
+            button.addEventListener("click", () => {
+                if (!zoom) return;
+
+                const step = button.dataset.mwvZoom;
+                const next = step === "fit"
+                    ? 50
+                    : Math.max(0, Math.min(100, Number(zoom.value) + Number(step)));
+
+                zoom.value = String(next);
+                zoom.dispatchEvent(new Event("input", {bubbles: true}));
+                sync();
+            });
+        });
+
+        [mode, zoom].forEach(control => {
+            if (control) {
+                control.addEventListener("change", sync);
+                control.addEventListener("input", sync);
+            }
+        });
+
+        const reset = document.getElementById("mw-seqviz-reset");
+
+        if (reset) reset.addEventListener("click", () => window.setTimeout(sync, 0));
+
+        // Close the options popover on an outside click or Escape.
+        const more = root.querySelector(".mwv-more");
+
+        if (more) {
+            document.addEventListener("click", event => {
+                if (more.open && !more.contains(event.target)) more.open = false;
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape" && more.open) more.open = false;
+            });
+        }
+
+        sync();
+    }
+
     load();
     bind();
+    bindViewerBar();
     applyLayout();
 })();

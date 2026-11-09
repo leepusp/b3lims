@@ -111,3 +111,23 @@ body.mw-focus .lims-main{margin-left:0}
 .mwd-empty,.mwd-note{margin:.25rem 0;font-size:.78rem;color:#566474}
 .mwd-action{align-self:flex-start;border:1px solid #c5ced8;background:#fff;border-radius:.45rem;padding:.35rem .8rem;font-size:.8rem;font-weight:600}
 .mwd-gel{width:100%;max-width:17rem;height:auto}
+
+/* Viewer bar: layout switch, zoom, View options popover */
+.mwv-header{align-items:center;flex-wrap:wrap;gap:.6rem;padding:.55rem .8rem}
+.mwv-quick{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;flex:1 1 auto}
+.mwv-seg{display:inline-flex;background:#F0F3F7;border-radius:9px;padding:3px;gap:2px}
+.mwv-seg-btn{border:0;background:transparent;border-radius:7px;padding:.4rem .9rem;font-size:.82rem;font-weight:600;color:#566474;min-height:38px;cursor:pointer}
+.mwv-seg-btn.is-active{background:#fff;color:#121C27;box-shadow:0 1px 2px rgba(18,28,39,.14)}
+.mwv-seg-btn:focus-visible,.mwv-zoom-btn:focus-visible,.mwv-fit-btn:focus-visible,.mwv-more>summary:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.mwv-zoom{display:inline-flex;align-items:center;gap:.35rem}
+.mwv-zoom-btn{width:38px;height:38px;border:1px solid #C5CED8;background:#fff;border-radius:8px;font-size:1.1rem;font-weight:600;color:#121C27;cursor:pointer;line-height:1}
+.mwv-fit-btn{height:38px;padding:0 .8rem;border:1px solid #C5CED8;background:#fff;border-radius:8px;font-size:.82rem;font-weight:600;color:#121C27;cursor:pointer}
+.mwv-zoom-btn:hover,.mwv-fit-btn:hover{background:#F4F6F8}
+.mwv-zoom-value{min-width:3rem;text-align:center;font-size:.82rem;font-weight:600;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.mwv-more{position:relative;margin-left:auto}
+.mwv-more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:38px;padding:0 .9rem;border:1px solid #C5CED8;border-radius:8px;background:#fff;font-size:.82rem;font-weight:600;color:#121C27}
+.mwv-more>summary::-webkit-details-marker{display:none}
+.mwv-more>summary::after{content:"▾";margin-left:.45rem;font-size:.75rem;color:#566474}
+.mwv-more[open]>summary{background:#E8F0FF;border-color:#1D4ED8;color:#1D4ED8}
+.mwv-more-panel{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:min(560px,92vw);background:#fff;border:1px solid #DDE3EA;border-radius:10px;box-shadow:0 12px 32px rgba(18,28,39,.18);padding:.8rem}
+.mwv-more-panel .mw-toolbar{justify-content:flex-start;max-width:none}
