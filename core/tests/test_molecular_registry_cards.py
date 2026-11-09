@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -88,6 +90,19 @@ class MapCanvasMountTests(TestCase):
             self.assertIn('id="msc"', html)
             self.assertIn("molecular_seq_canvas.js", html)
             self.assertIn("molecular_seq_canvas.css", html)
+
+    def test_nucleotide_records_do_not_expose_the_old_viewers(self):
+        html = self._page("plasmid", "circular")
+        self.assertIn("mw-canvas-record", html)
+        self.assertNotIn("Edit sequence text", html)
+        self.assertNotIn("Move or resize annotations", html)
+        self.assertIn('class="mwv-more mwv-view" hidden', html)
+
+        workbench = (
+            Path(__file__).resolve().parents[1]
+            / "static/internal/lab_tools/molecular_workbench.js"
+        ).read_text()
+        self.assertNotIn("classic map", workbench)
 
     def test_rna_and_protein_keep_their_own_views(self):
         for kind in ("rna", "protein"):

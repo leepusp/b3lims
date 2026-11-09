@@ -404,7 +404,6 @@
         const seqHost = document.getElementById("msc");
         const split = document.getElementById("mw-split");
         const seqApi = () => window.BiobankSeqCanvas || null;
-        let classic = false;
         let currentLayout = isRna ? "seq" : "both";
 
         function canvasOn() {
@@ -421,7 +420,7 @@
 
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
-            const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi() && !classic);
+            const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
             const mapWanted = usable && (currentLayout === "map" || currentLayout === "both");
             const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both");
 
@@ -459,19 +458,6 @@
             section("detailed", "Map options");
             section("linear", "Sequence options");
 
-            if (canvasHost) {
-                const classicRow = el("label", "mwv-opts mwv-classic");
-                const classicInput = document.createElement("input");
-
-                classicInput.type = "checkbox";
-                classicInput.addEventListener("change", () => {
-                    classic = classicInput.checked;
-                    applyCanvases();
-                    sync();
-                });
-                classicRow.append(classicInput, document.createTextNode(" Use the classic map (temporary)"));
-                panelBody.append(classicRow);
-            }
         }
 
         const engineOf = () => {
@@ -507,7 +493,7 @@
 
         function sync() {
             const engine = engineOf();
-            const layout = canvasHost && seqHost && !classic ? currentLayout : layoutOf(engine);
+            const layout = canvasHost && seqHost ? currentLayout : layoutOf(engine);
 
             layoutButtons.forEach(button => {
                 const on = button.dataset.mwvLayout === layout;
@@ -543,6 +529,13 @@
 
                 currentLayout = layout;
                 applyCanvases();
+
+                // Nucleotide records have no other renderer to switch to.
+                if (canvasHost && seqHost) {
+                    sync();
+
+                    return;
+                }
 
                 if (layout === "map") {
                     chooseEngine("detailed");
@@ -684,6 +677,12 @@
             "edit-sequence": () => setMode("data"),
             "edit-annotations": () => setMode("features"),
             import: () => {
+                if (canvasHost && seqHost) {
+                    press("mw-import-fasta");
+
+                    return;
+                }
+
                 setMode("data");
                 window.setTimeout(() => press("mw-import-fasta"), 120);
             },

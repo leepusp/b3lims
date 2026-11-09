@@ -9,7 +9,7 @@
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v1">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v2">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -48,7 +48,7 @@
 {% endif %}
 
 <div id="molecular-workspace"
-     class="mw-page{% if molecule.sequence_type == "protein" %} mw-protein-focused-workspace{% endif %}"
+     class="mw-page{% if molecule.sequence_type == "protein" %} mw-protein-focused-workspace{% endif %}{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} mw-canvas-record{% endif %}"
      data-sequence-type="{{ molecule.sequence_type }}"
      data-features-url="{% url 'molecular_sequence_features_api' molecule.id %}"
      data-restriction-sites-url="{% url 'molecular_sequence_restriction_sites_api' molecule.id %}"
@@ -319,8 +319,10 @@
                 <details class="mwv-more mwv-file">
                     <summary>Edit &amp; export</summary>
                     <div class="mwv-more-panel mwv-menu" role="menu">
+{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
                         <button type="button" role="menuitem" data-mwv-act="edit-sequence">Edit sequence text…</button>
                         <button type="button" role="menuitem" data-mwv-act="edit-annotations">Move or resize annotations…</button>
+{% endif %}
                         <button type="button" role="menuitem" data-mwv-act="import">Import a sequence file…</button>
                         <hr>
                         <button type="button" role="menuitem" data-mwv-act="copy">Copy sequence</button>
@@ -328,7 +330,7 @@
                         <button type="button" role="menuitem" data-mwv-act="genbank">Export GenBank</button>
                     </div>
                 </details>
-                <details class="mwv-more mwv-view">
+                <details class="mwv-more mwv-view"{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} hidden{% endif %}>
                     <summary>View options</summary>
                     <div class="mwv-more-panel">
             <div class="mw-toolbar mw-seqviz-controls">
@@ -854,8 +856,8 @@
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v1" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v1" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v1"
+<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v2" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v2"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

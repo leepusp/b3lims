@@ -20,3 +20,6 @@
 .msc-hint{font-size:.74rem;color:#6B7A8C}
 @media (max-width:1100px){.mw-split.is-both{flex-direction:column}.mw-split.is-both>.mmc{flex:1 1 auto}}
 .mw-split.is-both .mmc-selbar{display:none}
+.mw-canvas-record .mw-seqviz-shell,.mw-canvas-record .mw-sequence-card{display:none!important}
+.msc-find{width:15rem;max-width:100%;border:1px solid #C9D2DE;border-radius:.4rem;padding:.12rem .55rem;font-size:.82rem}
+.msc-found{color:#566474;font-size:.8rem;min-width:4.5rem}

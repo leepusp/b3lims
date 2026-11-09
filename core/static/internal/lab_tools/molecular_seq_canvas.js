@@ -62,6 +62,9 @@
         frame: 0,
         lastFeature: -2,
         focused: false,
+        query: "",
+        matches: [],
+        matchAt: -1,
     };
 
     const api = () => window.BiobankMolecularWorkspace || null;
@@ -88,6 +91,8 @@
     const compInput = document.createElement("input");
     const transLabel = el("label", "msc-check");
     const transInput = document.createElement("input");
+    const find = document.createElement("input");
+    const found = el("span", "msc-found");
     const info = el("span", "msc-info");
     const viewport = el("div", "msc-viewport");
     const inner = el("div", "msc-inner");
@@ -103,7 +108,11 @@
     transInput.checked = true;
     compLabel.append(compInput, document.createTextNode(" Complement"));
     transLabel.append(transInput, document.createTextNode(" Translations"));
-    bar.append(undoBtn, redoBtn, compLabel, transLabel, info);
+    find.type = "search";
+    find.className = "msc-find";
+    find.placeholder = "Find motif (Enter = next)";
+    find.setAttribute("aria-label", "Find a sequence motif on both strands");
+    bar.append(undoBtn, redoBtn, compLabel, transLabel, find, found, info);
     inner.append(canvas);
     viewport.append(inner);
     viewport.tabIndex = 0;
@@ -268,6 +277,80 @@
 
     const rowOfIndex = (layout, index) => layout.rows[clamp(Math.floor(index / layout.bpr), 0, layout.rows.length - 1)];
 
+    /* ---------- find ---------- */
+
+    const IUPAC = {A: "A", C: "C", G: "G", T: "T", U: "T", R: "[AG]", Y: "[CT]", K: "[GT]", M: "[AC]", S: "[CG]", W: "[AT]", B: "[CGT]", D: "[AGT]", H: "[ACT]", V: "[ACG]", N: "[ACGT]"};
+
+    function reverseComplement(text) {
+        return text.split("").reverse().map(base => COMPLEMENT[base] || base).join("");
+    }
+
+    function findMatches(sequence, motif, protein) {
+        const query = motif.toUpperCase().replace(/\s+/g, "");
+
+        if (!query) return [];
+
+        const out = [];
+        const scan = (text, strand) => {
+            const pattern = protein
+                ? text.replace(/[^A-Z*]/g, "")
+                : text.split("").map(base => IUPAC[base] || "").join("");
+
+            if (!pattern) return;
+
+            const regex = new RegExp("(?=(" + pattern + "))", "g");
+            let hit;
+
+            while ((hit = regex.exec(sequence)) !== null) {
+                out.push({a: hit.index, b: hit.index + hit[1].length, strand});
+                regex.lastIndex = hit.index + 1;
+            }
+        };
+
+        scan(query, "+");
+
+        if (!protein) {
+            const reverse = reverseComplement(query);
+
+            if (reverse !== query) scan(reverse, "-");
+        }
+
+        return out.sort((p, q) => p.a - q.a);
+    }
+
+    function refreshMatches() {
+        const s = snap();
+
+        st.matchedLength = s ? s.sequence.length : 0;
+        st.matches = s && st.query ? findMatches(s.sequence, st.query, s.sequenceType === "protein") : [];
+        st.matchAt = -1;
+        found.textContent = st.query
+            ? (st.matches.length ? st.matches.length.toLocaleString() + " match" + (st.matches.length === 1 ? "" : "es") : "No match")
+            : "";
+        schedule();
+    }
+
+    function gotoMatch(step) {
+        if (!st.matches.length) return;
+
+        const here = Math.min(st.selA, st.selB);
+        let next = st.matchAt >= 0 ? st.matchAt + step : st.matches.findIndex(m => m.a >= here + (step > 0 ? 1 : 0));
+
+        if (step < 0 && st.matchAt < 0) next = st.matches.length - 1;
+
+        next = ((next % st.matches.length) + st.matches.length) % st.matches.length;
+        st.matchAt = next;
+
+        const match = st.matches[next];
+
+        st.selA = match.a;
+        st.selB = st.caret = match.b;
+        publishNow();
+        reveal(match.a, "centre");
+        found.textContent = (next + 1) + " of " + st.matches.length.toLocaleString();
+        schedule();
+    }
+
     /* ---------- drawing ---------- */
 
     function selectedRanges(s) {
@@ -408,6 +491,19 @@
                     ctx.fillText(feature.name, (x0 + x1) / 2 - (forward ? 2 : -2), y0 + (LANE - 5) / 2 + 0.5);
                 }
             });
+
+            // motif matches
+            if (st.matches.length) {
+                st.matches.forEach((match, index) => {
+                    const from = Math.max(match.a, row.start);
+                    const to = Math.min(match.b, row.end);
+
+                    if (to > from) {
+                        ctx.fillStyle = index === st.matchAt ? "rgba(255,193,7,.75)" : "rgba(255,224,102,.55)";
+                        ctx.fillRect(x(from - row.start), oy + row.seqTop, (to - from) * charW, row.lineH - 2);
+                    }
+                });
+            }
 
             // sequence and complement
             ctx.font = fontPx + "px " + MONO;
@@ -874,6 +970,31 @@
         }
     });
 
+    let findTimer = 0;
+
+    find.addEventListener("input", () => {
+        st.query = find.value;
+        window.clearTimeout(findTimer);
+        findTimer = window.setTimeout(refreshMatches, 140);
+    });
+    find.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            window.clearTimeout(findTimer);
+
+            if (st.query && !st.matches.length) refreshMatches();
+
+            gotoMatch(event.shiftKey ? -1 : 1);
+        } else if (event.key === "Escape") {
+            find.value = "";
+            st.query = "";
+            refreshMatches();
+            viewport.focus({preventScroll: true});
+        }
+
+        event.stopPropagation();
+    });
+
     undoBtn.addEventListener("click", () => {
         history("undo");
         viewport.focus({preventScroll: true});
@@ -902,6 +1023,12 @@
         if (!s || !st.active) return;
 
         st.caret = clamp(st.caret, 0, s.sequence.length);
+
+        if (st.query && (detail.reason === "sequence-edit" || st.matchedLength !== s.sequence.length)) {
+            st.matchedLength = s.sequence.length;
+            window.clearTimeout(findTimer);
+            findTimer = window.setTimeout(refreshMatches, 200);
+        }
 
         if (!st.pending && !st.drag) {
             const sel = s.sequenceSelection;
