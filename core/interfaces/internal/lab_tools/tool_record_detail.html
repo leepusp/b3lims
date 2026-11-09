@@ -5,7 +5,7 @@
 {% block content %}
 {% csrf_token %}
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v3">
 
 <div class="container-fluid py-4 tw-page"
      id="tool-workbench"
@@ -28,6 +28,7 @@
         <input class="tw-name" id="tw-name" value="{{ record.name }}" maxlength="255" aria-label="Record name">
         <span class="tw-badge">{{ tool_label }}</span>
         <span class="tw-status" id="tw-status" aria-live="polite">Saved</span>
+        <button type="button" class="tw-btn is-primary" id="tw-save"><i class="bi bi-check2"></i> Save</button>
         <button type="button" class="tw-btn is-danger" id="tw-delete"><i class="bi bi-trash"></i> Delete</button>
     </div>
 
@@ -69,8 +70,8 @@
 
 {{ record.data|json_script:"tw-initial" }}
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"></script>
-<script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v3"></script>
-<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v2"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v2"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v2"></script>
+<script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
+<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v3"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v3"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v3"></script>
 {% endblock %}

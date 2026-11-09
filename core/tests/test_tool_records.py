@@ -45,6 +45,44 @@ class ToolRecordStorageLayoutTests(SimpleTestCase):
         self.assertIn('"$LAB_ROOT/tools"', source)
 
 
+class ToolRecordBrokerPolicyTests(SimpleTestCase):
+    """The app runs as `biobank` and reaches storage through the broker, so the
+    broker must know the per-tool folders too (and nothing broader)."""
+
+    @classmethod
+    def broker(cls):
+        import importlib.machinery
+        import importlib.util
+
+        path = str(ROOT / "deploy/sbin/biobank-user-storage-broker")
+        loader = importlib.machinery.SourceFileLoader("storage_broker_tools_test", path)
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+
+        return module
+
+    def test_directories(self):
+        broker = self.broker()
+
+        for ok in ("tools/gel", "tools/gel/2", "tools/assembly/10", "tools/chemical/3"):
+            self.assertTrue(broker.LAB_DIRECTORY_RE.fullmatch(ok), ok)
+
+        for bad in ("tools", "tools/other/2", "tools/gel/2/x", "tools/gel/x"):
+            self.assertFalse(broker.LAB_DIRECTORY_RE.fullmatch(bad), bad)
+
+    def test_files(self):
+        broker = self.broker()
+
+        self.assertTrue(broker.LAB_FILE_RE.fullmatch("tools/gel/2/abc_photo.png"))
+
+        for bad in ("tools/gel/2/sub/x.png", "tools/gel/x.png", "tools/other/2/x.png"):
+            self.assertFalse(broker.LAB_FILE_RE.fullmatch(bad), bad)
+
+    def test_layout_creates_the_tools_folder(self):
+        self.assertIn("biobank/lab_tools/tools", self.broker().BASE_LAYOUT)
+
+
 @override_settings(FORCE_SCRIPT_NAME=None)
 class ToolRecordViewsTests(TestCase):
     def setUp(self):
@@ -168,6 +206,25 @@ class ToolRecordViewsTests(TestCase):
         )
 
         self.assertFalse(ToolRecord.objects.filter(name="bad").exists())
+
+    def test_storage_failure_is_reported_with_its_reason(self):
+        record = self.make("gel")
+        url = reverse("tool_record_file_api", args=[record.id])
+        self.client.force_login(self.owner)
+
+        def boom(self_storage, name, content):
+            raise storage.LabToolsStorageError("runner said no")
+
+        with patch.object(storage.UserHomeLabToolsStorage, "_save", boom), patch.object(
+            storage.UserHomeLabToolsStorage, "exists", lambda self_storage, name: False
+        ):
+            response = self.client.post(url, {"file": SimpleUploadedFile("gel.png", b"\x89PNG")})
+
+        record.refresh_from_db()
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("runner said no", response.json()["message"])
+        self.assertFalse(record.file)
 
     def test_delete(self):
         record = self.make()

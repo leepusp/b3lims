@@ -1,6 +1,7 @@
 """Independent tool records: create, open, save state, file and delete."""
 
 import json
+import logging
 import mimetypes
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from core.models.lab_tools.tool_record import ToolRecord
+
+logger = logging.getLogger(__name__)
 
 MAX_STATE_BYTES = 4 * 1024 * 1024
 MAX_FILE_BYTES = 25 * 1024 * 1024
@@ -110,8 +113,12 @@ def tool_record_create(request):
             record.original_filename = Path(uploaded.name).name[:255]
             record.file.save(uploaded.name, uploaded, save=False)
             record.save(update_fields=["file", "original_filename", "updated_at"])
-        except OSError:
-            messages.error(request, "The file could not be stored; the record was created without it.")
+        except OSError as exc:
+            logger.exception("Tool record file could not be stored")
+            messages.error(
+                request,
+                f"The record was created, but its file could not be stored: {exc}",
+            )
 
     return redirect("tool_record_detail", record_id=record.id)
 
@@ -240,10 +247,15 @@ def tool_record_file_api(request, record_id):
 
     old_name = record.file.name if record.file else ""
 
-    with transaction.atomic():
-        record.original_filename = Path(uploaded.name).name[:255]
-        record.file.save(uploaded.name, uploaded, save=False)
-        record.save(update_fields=["file", "original_filename", "updated_at"])
+    try:
+        with transaction.atomic():
+            record.original_filename = Path(uploaded.name).name[:255]
+            record.file.save(uploaded.name, uploaded, save=False)
+            record.save(update_fields=["file", "original_filename", "updated_at"])
+    except OSError as exc:
+        logger.exception("Tool record file could not be stored")
+
+        return _json_error(f"The file could not be stored: {exc}", 500)
 
     if old_name and old_name != record.file.name:
         record.file.storage.delete(old_name)

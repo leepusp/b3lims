@@ -1322,6 +1322,10 @@
         loadUrl,
         loadFile,
         hasPhoto: () => !!S.source,
+        photoBlob: () => new Promise(resolve => {
+            if (!S.source) resolve(null);
+            else S.source.toBlob(blob => resolve(blob), "image/png");
+        }),
         setName: value => {
             nameOverride = String(value || "");
         },

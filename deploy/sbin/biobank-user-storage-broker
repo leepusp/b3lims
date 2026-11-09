@@ -44,6 +44,8 @@ LAB_DIRECTORY_RE = re.compile(
     r"|molecular/records/[0-9]+"
     r"|molecular/records/[0-9]+/alignments"
     r"|molecular/records/[0-9]+/structures"
+    r"|tools/(?:gel|assembly|chemical)"
+    r"|tools/(?:gel|assembly|chemical)/[0-9]+"
     r"|exports(?:/[A-Za-z0-9_.-]+)?"
     r"|tmp(?:/[A-Za-z0-9_.-]+)?"
     r")$"
@@ -57,6 +59,7 @@ LAB_FILE_RE = re.compile(
     r"|molecular/records/[0-9]+/[A-Za-z0-9_.-]+"
     r"|molecular/records/[0-9]+/alignments/[A-Za-z0-9_.-]+"
     r"|molecular/records/[0-9]+/structures/[A-Za-z0-9_.-]+"
+    r"|tools/(?:gel|assembly|chemical)/[0-9]+/[A-Za-z0-9_.-]+"
     r"|exports/[A-Za-z0-9_.-]+"
     r"|tmp/[A-Za-z0-9_.-]+"
     r")$"
@@ -83,6 +86,7 @@ BASE_LAYOUT = (
     "biobank/lab_tools/jupyter/jobs",
     "biobank/lab_tools/molecular",
     "biobank/lab_tools/molecular/records",
+    "biobank/lab_tools/tools",
     "biobank/lab_tools/exports",
     "biobank/lab_tools/tmp",
 )

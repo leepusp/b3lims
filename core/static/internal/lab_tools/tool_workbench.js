@@ -27,6 +27,7 @@
     let open = [];
     let lastSaved = "";
     let timer = 0;
+    let fileError = "";
     let hasFile = page.dataset.hasFile === "1";
     let filename = page.dataset.filename || "";
 
@@ -41,6 +42,21 @@
     function setStatus(text, isError) {
         statusEl.textContent = text;
         statusEl.classList.toggle("is-error", !!isError);
+    }
+
+    // A gel photo that is only in the browser is not part of the record yet.
+    function photoPending() {
+        return tool === "gel" && !hasFile && !!window.BiobankGel && window.BiobankGel.hasPhoto();
+    }
+
+    function savedStatus() {
+        if (fileError) {
+            setStatus("Saved, but the file was not stored: " + fileError, true);
+        } else if (photoPending()) {
+            setStatus("Saved, but the photo is not stored in the record yet. Press Save to store it.", true);
+        } else {
+            setStatus("Saved");
+        }
     }
 
     /* ---------- windows ---------- */
@@ -99,12 +115,16 @@
         return {data: collect(), name: nameInput.value, description: notes.value};
     }
 
-    async function save() {
+    async function save(force) {
         timer = 0;
 
         const body = JSON.stringify(payload());
 
-        if (body === lastSaved) return;
+        if (body === lastSaved && force !== true) {
+            savedStatus();
+
+            return;
+        }
 
         setStatus("Saving…");
 
@@ -123,7 +143,7 @@
             }
 
             lastSaved = body;
-            setStatus("Saved");
+            savedStatus();
         } catch (error) {
             setStatus(error.message, true);
         }
@@ -133,8 +153,20 @@
         if (timer) window.clearTimeout(timer);
 
         setStatus("Unsaved changes…");
-        timer = window.setTimeout(save, 1500);
+        timer = window.setTimeout(() => save(), 1500);
     }
+
+    document.getElementById("tw-save").addEventListener("click", async () => {
+        if (timer) window.clearTimeout(timer);
+
+        if (photoPending()) {
+            const blob = await window.BiobankGel.photoBlob();
+
+            if (blob) await uploadFile(new File([blob], (nameInput.value || "gel").replace(/[^A-Za-z0-9._-]+/g, "_") + ".png", {type: "image/png"}));
+        }
+
+        await save(true);
+    });
 
     ["biobank:gel-change", "biobank:assembly-change", "biobank:chemical-change"].forEach(name => {
         document.addEventListener(name, () => {
@@ -153,7 +185,7 @@
     /* ---------- file ---------- */
 
     function showFile() {
-        fileNameEl.textContent = hasFile ? filename : "";
+        fileNameEl.textContent = hasFile ? filename : fileError;
         removeBtn.hidden = !hasFile;
         openLink.hidden = !hasFile;
         openLink.href = page.dataset.fileUrl;
@@ -175,11 +207,16 @@
         const result = await response.json().catch(() => ({}));
 
         if (!response.ok || result.status !== "success") {
-            setStatus(result.message || "The file could not be stored.", true);
+            fileError = result.message || "The file could not be stored (server error " + response.status + ").";
+            setStatus(fileError, true);
+            fileNameEl.textContent = fileError;
+            fileNameEl.classList.add("tw-bad");
 
             return false;
         }
 
+        fileError = "";
+        fileNameEl.classList.remove("tw-bad");
         hasFile = true;
         filename = result.filename || file.name;
         showFile();
@@ -273,7 +310,7 @@
 
         initialised = true;
         lastSaved = JSON.stringify(payload());
-        setStatus("Saved");
+        savedStatus();
     }
 
     start();
