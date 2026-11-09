@@ -195,3 +195,15 @@ class MolecularStructureWindowTests(SimpleTestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class RegistryHomeLayoutTests(SimpleTestCase):
+    def test_home_has_no_coming_soon_card_and_uses_the_full_width(self):
+        registry = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/molecular_registry.html",
+        ).read_text(encoding="utf-8")
+        css = Path(STATIC, "molecular_registry_hub.css").read_text(encoding="utf-8")
+
+        self.assertNotIn("Coming to the Registry", registry)
+        self.assertIn(".mr-home{display:flex;flex-direction:column", css)

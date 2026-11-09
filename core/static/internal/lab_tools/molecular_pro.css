@@ -234,3 +234,13 @@
 .mwp-structure .mrp-stat{padding:.3rem .5rem}
 .mwp-structure .mrp-stat strong{font-size:.85rem}
 .mwp-structure .mrp-tabs{flex-wrap:wrap}
+
+/* ---- Use the full width: the inspector stays in view while the panels grow ---- */
+.mw-body>.mw-side{align-self:start;position:sticky;top:.75rem}
+.mw-page[data-sequence-type="rna"] .mw-tracks,
+.mw-page[data-sequence-type="protein"] .mw-tracks{display:none!important}
+.mw-protein-focused-workspace .mw-body,
+.mw-page[data-sequence-type="rna"] .mw-body{grid-template-columns:minmax(0,1fr) 17rem!important}
+.mw-page[data-sequence-type="rna"] .mw-body.is-inspector-hidden,
+.mw-protein-focused-workspace .mw-body.is-inspector-hidden{grid-template-columns:minmax(0,1fr)!important}
+@media (max-width:1199px){.mw-protein-focused-workspace .mw-body,.mw-page[data-sequence-type="rna"] .mw-body{grid-template-columns:minmax(0,1fr)!important}}
