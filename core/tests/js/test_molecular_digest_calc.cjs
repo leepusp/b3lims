@@ -57,4 +57,31 @@ assert.ok(calc.gelPosition(5000) < calc.gelPosition(500));
 assert.equal(calc.gelPosition(10000), 0);
 assert.equal(calc.gelPosition(1), 1);
 
+// Type IIS: BsaI GGTCTC(1/5) cuts outside its site, on either strand.
+const forwardIIS = calc.cutSites("A".repeat(4) + "GGTCTC" + "A".repeat(20), "BsaI", false);
+assert.equal(forwardIIS.length, 1);
+assert.equal(forwardIIS[0].strand, "+");
+assert.equal(forwardIIS[0].position, 4 + 7);
+assert.equal(forwardIIS[0].bottom, 4 + 11);
+assert.equal(forwardIIS[0].overhang, 4);
+
+const reverseIIS = calc.cutSites("A".repeat(16) + "GAGACC" + "A".repeat(10), "BsaI", false);
+assert.equal(reverseIIS.length, 1);
+assert.equal(reverseIIS[0].strand, "-");
+assert.equal(reverseIIS[0].position, 16 + 6 - 11);
+assert.equal(reverseIIS[0].bottom, 16 + 6 - 7);
+assert.equal(calc.byName("BsaI").typeIIS, true);
+assert.equal(calc.describeEnds(calc.byName("EcoRI")), "5' overhang 4");
+assert.equal(calc.describeEnds(calc.byName("KpnI")), "3' overhang 4");
+assert.equal(calc.describeEnds(calc.byName("EcoRV")), "blunt");
+
+// A palindromic enzyme is not counted twice.
+assert.equal(calc.cutSites("AAAGAATTCAAA", "EcoRI", false).length, 1);
+
+// A type IIS cut that would fall outside a linear molecule does not count.
+assert.equal(calc.cutSites("GGTCTCAAA", "BsaI", false).length, 0);
+
+// A circular type IIS cut wraps around the origin.
+assert.equal(calc.cutSites("GGTCTCA" + "A".repeat(3), "BsaI", true)[0].position, 7);
+
 console.log("molecular digest calc: OK");

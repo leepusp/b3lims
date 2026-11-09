@@ -85,7 +85,10 @@
 body.mw-focus .lims-sidebar,body.mw-focus .lims-topbar{display:none}
 body.mw-focus .lims-main{margin-left:0}
 .mw-page.is-digest .mw-view-switcher{display:none}
-.mw-main.is-digest>:not(#mw-digest){display:none!important}
+.mw-main.is-digest{display:flex;flex-direction:column;gap:.75rem}
+.mw-main.is-digest>:not(#mw-digest):not(.mw-seqviz-card){display:none!important}
+.mw-main.is-digest>.mw-seqviz-card{display:block!important;order:1}
+.mw-main.is-digest>#mw-digest{order:2}
 
 /* Digest mode. */
 .mwd{display:flex;flex-wrap:wrap;gap:.75rem;align-items:stretch}
@@ -155,3 +158,24 @@ body.mw-focus .lims-main{margin-left:0}
 .mwv-menu button{border:0;background:transparent;text-align:left;padding:.55rem .7rem;border-radius:7px;font-size:.85rem;font-weight:500;color:#121C27;min-height:40px;cursor:pointer}
 .mwv-menu button:hover,.mwv-menu button:focus-visible{background:#F0F3F7;outline:none}
 .mwv-menu hr{margin:.3rem 0;border:0;border-top:1px solid #E6EBF1}
+
+.mwd{display:grid;grid-template-columns:minmax(17rem,1.1fr) minmax(15rem,1fr) minmax(17rem,1.1fr);gap:.75rem;align-items:start}
+@media (max-width:1200px){.mwd{grid-template-columns:1fr}}
+.mwd-card{min-width:0}
+.mwd-gelcard{flex:none}
+.mwd-search{width:100%;border:1px solid #c5ced8;border-radius:.4rem;padding:.35rem .55rem;font-size:.82rem}
+.mwd-enzymes .mwd-select{align-self:flex-start}
+.mwd-list{max-height:22rem}
+.mwd-badge{font-size:.62rem;font-weight:700;color:#7048e8;background:#f3efff;border-radius:.3rem;padding:.05rem .3rem}
+.mwd-link{border:0;background:transparent;color:#1d4ed8;font-size:.78rem;text-align:left;padding:.3rem .4rem;cursor:pointer}
+.mwd-fraglist{display:flex;flex-direction:column;max-height:20rem;overflow:auto}
+.mwd-fragment.is-selected{background:#e7f0ff;box-shadow:inset 3px 0 0 #1d4ed8}
+.mwd-fragment.is-hover{background:#fff1c2}
+.mwd-exports{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}
+.mwd-exports[hidden]{display:none}
+.mwd-gelhost{position:relative}
+.mwd-gel{display:block;width:100%;height:auto;max-width:26rem}
+.mwd-band.is-hover rect:first-child{fill:#ffd43b}
+.mwd-geltip{position:absolute;z-index:3;pointer-events:none;background:#1b2733;color:#fff;font-size:.76rem;padding:.2rem .45rem;border-radius:.3rem;white-space:nowrap}
+.mwd-gelcard{position:relative}
+.mwd-gelcard .mwd-head{flex-wrap:wrap}

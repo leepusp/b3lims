@@ -7,8 +7,8 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v3">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v2">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_edit_strip.css' %}?v=20261109-strip-v1">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v4">
       <link rel="stylesheet"
@@ -329,6 +329,10 @@
                         <button type="button" role="menuitem" data-mwv-act="copy">Copy sequence</button>
                         <button type="button" role="menuitem" data-mwv-act="fasta">Export FASTA</button>
                         <button type="button" role="menuitem" data-mwv-act="genbank">Export GenBank</button>
+{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
+                        <button type="button" role="menuitem" data-mwv-act="image-svg">Export map image (SVG)</button>
+                        <button type="button" role="menuitem" data-mwv-act="image-png">Export map image (PNG)</button>
+{% endif %}
                     </div>
                 </details>
                 <details class="mwv-more mwv-view"{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} hidden{% endif %}>
@@ -855,12 +859,14 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_tracks.js' %}?v=20261108-orf-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
+<script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v3" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_digest.js' %}?v=20261109-digest-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v4" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v1" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v5" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v4"
+<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v6" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v6"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

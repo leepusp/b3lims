@@ -395,6 +395,8 @@
 
         ctx.textBaseline = "middle";
 
+        const digestSites = window.BiobankDigest ? window.BiobankDigest.sites() : [];
+
         for (let r = first; r < layout.rows.length; r += 1) {
             const row = layout.rows[r];
 
@@ -537,6 +539,55 @@
                 ctx.fillRect(cx - charW * 1.5 + 1, y0, charW * 3 - 2, TRANS - 3);
                 ctx.fillStyle = codon.aa === "*" ? "#B02A37" : "#1B2733";
                 ctx.fillText(codon.aa, cx, y0 + (TRANS - 3) / 2 + 0.5);
+            });
+
+            // restriction cuts picked in the Digest panel
+            digestSites.forEach(site => {
+                const top = site.position === 0 && s.topology === "circular" ? s.sequence.length : site.position;
+                const bottomPos = site.bottom === 0 && s.topology === "circular" ? s.sequence.length : site.bottom;
+                const tx = x(top - row.start);
+                const bx = x(bottomPos - row.start);
+                const topIn = top >= row.start && top <= row.end;
+                const bottomIn = bottomPos >= row.start && bottomPos <= row.end;
+
+                ctx.strokeStyle = site.color;
+                ctx.lineWidth = 2;
+
+                if (topIn) {
+                    ctx.beginPath();
+                    ctx.moveTo(tx, oy + 6 + RULER - 2);
+                    ctx.lineTo(tx, oy + row.seqTop + row.lineH - 1);
+                    ctx.stroke();
+                }
+
+                if (st.showComp && bottomIn) {
+                    ctx.beginPath();
+                    ctx.moveTo(bx, oy + row.compTop);
+                    ctx.lineTo(bx, oy + row.compTop + row.lineH - 2);
+                    ctx.stroke();
+
+                    if (topIn && tx !== bx) {
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(tx, oy + row.compTop - 0.5);
+                        ctx.lineTo(bx, oy + row.compTop - 0.5);
+                        ctx.stroke();
+                    }
+                }
+
+                if (topIn && top < row.end) {
+                    ctx.font = "600 10px system-ui, sans-serif";
+                    ctx.textAlign = "left";
+
+                    const label = site.enzyme + " " + (site.position || s.sequence.length).toLocaleString();
+                    const width = ctx.measureText(label).width + 8;
+
+                    ctx.fillStyle = "#fff";
+                    ctx.fillRect(tx + 1, oy + 6, width, 13);
+                    ctx.fillStyle = site.color;
+                    ctx.fillText(label, tx + 5, oy + 6 + 7);
+                    ctx.textAlign = "center";
+                }
             });
 
             // caret
@@ -942,6 +993,8 @@
 
     canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
+
+    document.addEventListener("biobank:digest-change", schedule);
 
     viewport.addEventListener("wheel", event => {
         if (!(event.ctrlKey || event.metaKey)) return;

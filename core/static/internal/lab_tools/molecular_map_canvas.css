@@ -33,3 +33,4 @@
 .mw-seqviz-card.is-canvas .mw-seqviz-shell{display:none}
 .mmc-centre-name.is-editable{cursor:text}.mmc-centre-name.is-editable:hover{fill:#1D4ED8;text-decoration:underline}
 .mmc-name-input{position:absolute;z-index:4;width:16.5rem;font:700 1.15rem/1.3 inherit;text-align:center;border:2px solid #1D4ED8;border-radius:.4rem;padding:.2rem .4rem;background:#fff;color:#1B2733;box-shadow:0 6px 20px rgba(27,39,51,.2)}
+.mmc-cut-label{font-size:13px;font-weight:600;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}.mmc-cut{pointer-events:auto}

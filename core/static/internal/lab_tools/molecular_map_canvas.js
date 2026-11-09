@@ -239,6 +239,69 @@
         }
     }
 
+    /* ---------- restriction cuts (from the digest panel) ---------- */
+
+    function cutSites() {
+        const digest = window.BiobankDigest;
+
+        return digest ? digest.sites() : [];
+    }
+
+    /* Assign each label the first row where it does not touch its neighbour. */
+    function stackLevels(items, gap, levels) {
+        const lastAt = [];
+
+        return items.map(item => {
+            let level = 0;
+
+            while (level < levels - 1 && lastAt[level] !== undefined && Math.abs(item.at - lastAt[level]) < gap) level += 1;
+
+            lastAt[level] = item.at;
+
+            return level;
+        });
+    }
+
+    function drawCircularCuts(g, sites, length, point, R) {
+        const unit = length / 1000;
+        const levels = stackLevels(sites.map(site => ({at: site.position})), Math.max(1, length * 0.04), 4);
+
+        sites.forEach((site, index) => {
+            const level = levels[index];
+            const [x1, y1] = point(site.position, R + 3);
+            const [x2, y2] = point(site.position, R - 16);
+            const [x3, y3] = point(site.position, R - 52 - level * 20);
+            const [lx, ly] = point(site.position, R - 64 - level * 20);
+            const group = svg("g", {class: "mmc-cut"});
+            const name = site.enzyme + " " + (site.position || length).toLocaleString();
+
+            group.append(svg("line", {x1, y1, x2, y2, stroke: site.color, "stroke-width": 3}));
+            group.append(svg("line", {x1: x2, y1: y2, x2: x3, y2: y3, stroke: site.color, "stroke-width": 1, opacity: 0.55}));
+            group.append(svg("text", {x: lx, y: ly, class: "mmc-cut-label", fill: site.color, "text-anchor": lx >= 0 ? "start" : "end", "dominant-baseline": "middle"}, [document.createTextNode(name)]));
+            group.append(svg("title", {}, [document.createTextNode(name + " · cuts after base " + (site.position || length) + (site.strand === "-" ? " (site on the bottom strand)" : ""))]));
+            g.append(group);
+        });
+
+        return unit;
+    }
+
+    function drawLinearCuts(g, sites, length, x, axisY, pad, width) {
+        const visible = sites.filter(site => x(site.position) >= pad - 4 && x(site.position) <= pad + width + 4);
+        const levels = stackLevels(visible.map(site => ({at: x(site.position)})), 70, 5);
+
+        visible.forEach((site, index) => {
+            const px = x(site.position);
+            const ty = axisY + 40 + levels[index] * 16;
+            const group = svg("g", {class: "mmc-cut"});
+            const name = site.enzyme + " " + (site.position || length).toLocaleString();
+
+            group.append(svg("line", {x1: px, x2: px, y1: axisY - 8, y2: ty - 6, stroke: site.color, "stroke-width": 2}));
+            group.append(svg("text", {x: px + 4, y: ty, class: "mmc-cut-label", fill: site.color, "text-anchor": "start"}, [document.createTextNode(name)]));
+            group.append(svg("title", {}, [document.createTextNode(name + " · cuts after base " + (site.position || length))]));
+            g.append(group);
+        });
+    }
+
     function drawLinear(s, size) {
         const length = s.sequence.length;
         const v = view(length);
@@ -274,6 +337,8 @@
         if (state.preview) {
             drawLinearSelection(g, state.preview, length, x, axisY, laneInfo.count * laneH + 40, "mmc-preview");
         }
+
+        drawLinearCuts(g, cutSites(), length, x, axisY, pad, width);
 
         const labelEnds = new Map();
         const ordered = s.features.map((feature, index) => ({feature, index}))
@@ -397,6 +462,7 @@
         });
 
         placeCircularLabels(g, labels, point, length, R + 26 + laneInfo.count * 20 + 26);
+        drawCircularCuts(g, cutSites(), length, point, R);
 
         g.append(svg("text", {x: 0, y: -10, class: "mmc-centre-name" + (s.canEdit ? " is-editable" : ""), "text-anchor": "middle"}, [
             svg("title", {}, [document.createTextNode(s.canEdit ? "Click to rename the record" : s.name || "")]),
@@ -439,6 +505,93 @@
                 g.append(group);
             });
         });
+    }
+
+    /* ---------- image export ---------- */
+
+    function mapStyles() {
+        let css = "";
+
+        try {
+            Array.from(document.styleSheets).forEach(sheet => {
+                Array.from(sheet.cssRules || []).forEach(rule => {
+                    if (rule.selectorText && /\.mmc-/.test(rule.selectorText) && !/stage|tip|bar|tool|btn/.test(rule.selectorText)) css += rule.cssText + "\n";
+                });
+            });
+        } catch (error) {
+            // Cross-origin sheets cannot be read; the image falls back to plain colours.
+        }
+
+        return css;
+    }
+
+    function imageSvg() {
+        const s = snap();
+
+        if (!s || !s.sequence.length) return null;
+
+        const saved = {zoom: state.zoom, tx: state.tx, ty: state.ty, centre: state.centre};
+        const circular = s.topology === "circular";
+
+        state.zoom = 1;
+        state.tx = 0;
+        state.ty = 0;
+        state.centre = 0.5;
+
+        const node = circular ? drawCircular(s, {w: 1100, h: 1100}) : drawLinear(s, {w: 1400, h: 520});
+
+        Object.assign(state, saved);
+        node.setAttribute("xmlns", NS);
+        node.removeAttribute("role");
+        node.prepend(svg("rect", {width: "100%", height: "100%", fill: "#ffffff"}));
+        node.prepend(svg("style", {}, [document.createTextNode(mapStyles() + ".mmc-cut-label{font:600 14px sans-serif}.mmc-label{font:13px sans-serif}")]));
+
+        return {node, w: Number(node.getAttribute("width")), h: Number(node.getAttribute("height"))};
+    }
+
+    function saveBlob(blob, name) {
+        const link = document.createElement("a");
+
+        link.href = URL.createObjectURL(blob);
+        link.download = name;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+    }
+
+    function downloadImage(kind, name) {
+        const image = imageSvg();
+
+        if (!image) return false;
+
+        const text = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(image.node);
+        const base = (name || "map").replace(/[^A-Za-z0-9._-]+/g, "_");
+
+        if (kind === "svg") {
+            saveBlob(new Blob([text], {type: "image/svg+xml"}), base + ".svg");
+
+            return true;
+        }
+
+        const picture = new Image();
+
+        picture.onload = () => {
+            const canvas = document.createElement("canvas");
+
+            canvas.width = image.w * 2;
+            canvas.height = image.h * 2;
+
+            const ctx = canvas.getContext("2d");
+
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(picture, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => blob && saveBlob(blob, base + ".png"), "image/png");
+        };
+        picture.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(text);
+
+        return true;
     }
 
     /* ---------- selection bar ---------- */
@@ -909,6 +1062,7 @@
     host.tabIndex = 0;
 
     root.addEventListener("biobank:molecular-workspace-change", schedule);
+    document.addEventListener("biobank:digest-change", schedule);
 
     if (window.ResizeObserver) {
         new ResizeObserver(schedule).observe(stage);
@@ -927,6 +1081,7 @@
         zoomOut: () => zoomBy(1 / 1.4),
         fit,
         zoomPercent: () => Math.round(state.zoom * 100),
+        downloadImage,
     };
 
     host.hidden = true;

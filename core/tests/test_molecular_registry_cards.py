@@ -118,3 +118,18 @@ class MapCanvasMountTests(TestCase):
             html = self._page(kind, "linear")
             self.assertNotIn('id="mmc"', html)
             self.assertNotIn('id="msc"', html)
+
+
+class DigestPanelWiringTests(TestCase):
+    def test_digest_panel_cuts_and_image_export_are_wired(self):
+        tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+        digest = (tools / "molecular_digest.js").read_text()
+        seq = (tools / "molecular_seq_canvas.js").read_text()
+        maps = (tools / "molecular_map_canvas.js").read_text()
+
+        self.assertIn("biobank:digest-change", digest)
+        self.assertIn("window.BiobankDigest", digest)
+        self.assertIn("BiobankDigest", seq)
+        self.assertIn("drawCircularCuts", maps)
+        self.assertIn("downloadImage", maps)
+        self.assertNotIn("renderDigest", (tools / "molecular_workbench.js").read_text())
