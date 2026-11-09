@@ -50,11 +50,11 @@
 
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
 <link rel="stylesheet"
-      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v1">
+      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v3">
 {% endif %}
 
 <div id="molecular-workspace"
-     class="mw-page{% if molecule.sequence_type == "protein" %} mw-protein-focused-workspace{% endif %}{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} mw-canvas-record{% endif %}"
+     class="mw-page{% if molecule.sequence_type == "protein" %} mw-protein-focused-workspace{% endif %} mw-canvas-record"
      data-sequence-type="{{ molecule.sequence_type }}"
      data-features-url="{% url 'molecular_sequence_features_api' molecule.id %}"
      data-restriction-sites-url="{% url 'molecular_sequence_restriction_sites_api' molecule.id %}"
@@ -305,17 +305,15 @@
             <h2 class="visually-hidden">Sequence viewer</h2>
             <div class="mwv-quick" role="toolbar" aria-label="Map layout and zoom">
                 <div class="mwv-seg" role="group" aria-label="Layout">
-{% if molecule.sequence_type == "rna" %}
-                    <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="seq" aria-pressed="true">Sequence</button>
-{% elif molecule.sequence_type == "primer" %}
+{% if molecule.sequence_type == "primer" %}
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
                     <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="primers" data-mwv-window="primers" data-mwv-fixed aria-pressed="true">Primers</button>
 {% else %}
                     <button type="button" class="mwv-seg-btn is-active" data-mwv-layout="both" aria-pressed="true">Map + sequence</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="map" aria-pressed="false">Map</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="seq" aria-pressed="false">Sequence</button>
-{% if molecule.sequence_type != "protein" %}
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="features" data-mwv-window="features" aria-pressed="false">Features</button>
+{% if molecule.sequence_type != "protein" and molecule.sequence_type != "rna" %}
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="orfs" data-mwv-window="orfs" aria-pressed="false">ORFs</button>
 {% endif %}
 {% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" %}
@@ -345,13 +343,11 @@
                         <button type="button" role="menuitem" data-mwv-act="fasta">Export FASTA</button>
                         <button type="button" role="menuitem" data-mwv-act="genbank">Export GenBank</button>
                         <button type="button" role="menuitem" data-mwv-act="save-copy">Save a copy as new record…</button>
-{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
                         <button type="button" role="menuitem" data-mwv-act="image-svg">Export map image (SVG)</button>
                         <button type="button" role="menuitem" data-mwv-act="image-png">Export map image (PNG)</button>
-{% endif %}
                     </div>
                 </details>
-                <details class="mwv-more mwv-view"{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} hidden{% endif %}>
+                <details class="mwv-more mwv-view" hidden>
                     <summary>View options</summary>
                     <div class="mwv-more-panel">
             <div class="mw-toolbar mw-seqviz-controls">
@@ -434,7 +430,6 @@
             </div>
         </div>
 
-{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
         <div class="mw-editstrip" id="mw-editstrip" role="toolbar" aria-label="Edit the record"></div>
         <div class="mw-split" id="mw-split">
             <div id="mmc" class="mmc" role="group" aria-label="Interactive map" hidden></div>
@@ -450,9 +445,10 @@
             <div id="mw-primers" class="mwp mwp-primers" role="group" aria-label="Primers and PCR" hidden></div>
 {% endif %}
             <div id="mw-features" class="mwp mwp-features" role="group" aria-label="Annotations" hidden></div>
+{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
             <div id="mw-orfs" class="mwp mwp-orfs" role="group" aria-label="Open reading frames" hidden></div>
-        </div>
 {% endif %}
+        </div>
 
         <div class="mw-seqviz-shell">
             <div id="mw-seqviz-viewer"
@@ -902,9 +898,9 @@
 <script src="{% static 'internal/lab_tools/molecular_orf_panel.js' %}?v=20261109-panes-v4"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v4" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v1" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v6" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v14"
+<script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v2" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v7" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v15"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
@@ -935,7 +931,7 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_protein_structure_sync.js' %}?v=20260817-universal-structure-sync-v2-ui-copy"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_alignment_pro.js' %}?v=20261109-pro-v1"
+<script src="{% static 'internal/lab_tools/molecular_alignment_pro.js' %}?v=20261109-pro-v2"
         defer></script>
 {% endif %}
 {% endblock %}

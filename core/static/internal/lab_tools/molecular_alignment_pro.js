@@ -33,6 +33,7 @@
     const state = {
         id: null, key: "", rows: [], len: 0, ref: 0, scheme: "clustal", width: "auto", showCons: true,
         showBar: true, motif: "", payload: null,
+        sel: null, base: 0, orig: null,
     };
 
     let shell = null;
@@ -67,7 +68,7 @@
         for (let i = 0; i < seq.length; i += 1) {
             if (!isGap(seq[i])) {
                 n += 1;
-                map[i] = n;
+                map[i] = n + state.base;
             } else {
                 map[i] = 0;
             }
@@ -290,6 +291,8 @@
             const tick = (c + 1) % 10 === 0;
             const cell = el("i", "mpro-c" + (tick ? " is-tick" : ""), tick ? String(c + 1) : "");
 
+            cell.dataset.c = String(c);
+            if (state.sel && c >= state.sel.a && c <= state.sel.b) cell.classList.add("is-colsel");
             rc.appendChild(cell);
         }
 
@@ -328,6 +331,7 @@
 
                 if (sel && pos && pos >= sel.start && pos <= sel.end) cell.classList.add("is-sel");
 
+                if (state.sel && c >= state.sel.a && c <= state.sel.b) cell.classList.add("is-colsel");
                 cell.dataset.c = String(c);
                 cell.dataset.r = String(ri);
                 seq.appendChild(cell);
@@ -411,16 +415,6 @@
         }
     }
 
-    function tile(label, value, hint) {
-        const t = el("div", "mrp-stat");
-
-        t.append(el("span", "", label), el("strong", "", String(value)));
-
-        if (hint) t.title = hint;
-
-        return t;
-    }
-
     function openExport(event, menu) {
         const fasta = state.rows.map(r => `>${r.name}\n${r.seq}\n`).join("");
         const consensus = `>consensus\n${metrics.consensus.join("").toUpperCase()}\n`;
@@ -477,6 +471,154 @@
         return wrap;
     }
 
+
+    // ---- column selection, trim, annotate ----------------------------------
+    function selectionInfo() {
+        if (!state.sel) return null;
+
+        const a = Math.min(state.sel.a, state.sel.b);
+        const b = Math.max(state.sel.a, state.sel.b);
+        const map = ungappedIndex(state.rows[state.ref].seq);
+        let lo = 0;
+        let hi = 0;
+
+        for (let c = a; c <= b; c += 1) {
+            if (map[c]) {
+                if (!lo) lo = map[c];
+                hi = map[c];
+            }
+        }
+
+        return {a, b, n: b - a + 1, lo, hi};
+    }
+
+    function paintColumns() {
+        if (!proRoot) return;
+
+        const a = state.sel ? Math.min(state.sel.a, state.sel.b) : -1;
+        const b = state.sel ? Math.max(state.sel.a, state.sel.b) : -2;
+
+        proRoot.querySelectorAll(".mpro-c[data-c]").forEach(n => {
+            const c = Number(n.dataset.c);
+            const on = c >= a && c <= b;
+
+            if (on !== n.classList.contains("is-colsel")) n.classList.toggle("is-colsel", on);
+        });
+    }
+
+    function trimTo(a, b) {
+        const ref = state.rows[state.ref].seq;
+        let before = 0;
+
+        for (let c = 0; c < a; c += 1) if (!isGap(ref[c])) before += 1;
+
+        state.base += before;
+        state.rows = state.rows.map(r => ({name: r.name, seq: r.seq.slice(a, b + 1)}));
+        state.len = b - a + 1;
+        state.sel = null;
+        render();
+    }
+
+    function restoreFull() {
+        if (!state.orig) return;
+
+        state.rows = state.orig.rows.map(r => ({...r}));
+        state.len = state.orig.len;
+        state.base = 0;
+        state.sel = null;
+        render();
+    }
+
+    function sliceFasta(a, b) {
+        return state.rows.map(r => `>${r.name}\n${r.seq.slice(a, b + 1)}\n`).join("");
+    }
+
+    function actionBar() {
+        const bar = el("div", "mpro-actions");
+        const info = selectionInfo();
+        const trimmed = Boolean(state.orig) && (state.len !== state.orig.len || state.base > 0);
+
+        bar.hidden = !info && !trimmed;
+
+        if (info) {
+            bar.appendChild(el("strong", "mpro-actions-title",
+                `Columns ${info.a + 1}–${info.b + 1} (${info.n})` + (info.lo ? ` · reference ${info.lo}–${info.hi}` : " · gaps in the reference")));
+
+            const api = window.BiobankMolecularWorkspace;
+            const small = (label, title, run, disabled) => {
+                const b = el("button", "mrp-btn mrp-btn-sm", label);
+
+                b.type = "button";
+                b.title = title;
+                b.disabled = Boolean(disabled);
+                b.addEventListener("click", run);
+                bar.appendChild(b);
+
+                return b;
+            };
+
+            small("Select in protein", "Select these reference residues in the sequence and the 3D structure", () => {
+                if (api && api.selectSequenceRange) api.selectSequenceRange(info.lo, info.hi);
+            }, !info.lo);
+
+            const name = document.createElement("input");
+
+            name.className = "mrp-select mpro-annot-name";
+            name.placeholder = "Annotation name";
+            name.value = `Alignment ${info.a + 1}-${info.b + 1}`;
+            name.setAttribute("aria-label", "Annotation name");
+
+            const types = document.createElement("select");
+
+            types.className = "mrp-select";
+            types.setAttribute("aria-label", "Annotation type");
+            (api && api.featureTypes ? api.featureTypes() : [{value: "custom", label: "Custom"}])
+                .forEach(t => types.appendChild(new Option(t.label, t.value)));
+            const preferred = [...types.options].find(o => /domain/i.test(o.textContent)) || [...types.options].find(o => o.value === "custom");
+
+            if (preferred) types.value = preferred.value;
+
+            const canEdit = Boolean(api && api.getSnapshot && api.getSnapshot().canEdit);
+
+            bar.append(name, types);
+
+            const add = small("Add annotation", "Create a feature on the reference residues of this selection", () => {
+                api.selectSequenceRange(info.lo, info.hi);
+
+                const made = api.createFeatureFromSelection({name: name.value.trim() || "Alignment region", type: types.value});
+
+                add.textContent = made === null ? "Cannot add here" : "Annotation added (unsaved)";
+            }, !info.lo || !canEdit);
+
+            small("Trim to selection", "Keep only these columns in the view and in the exports", () => trimTo(info.a, info.b));
+            small("Export selection", "Download the selected columns as aligned FASTA", () => download(`alignment_${info.a + 1}-${info.b + 1}.fasta`, sliceFasta(info.a, info.b)));
+            small("Clear", "Clear the column selection", () => {
+                state.sel = null;
+                paintColumns();
+                actionBar.refresh();
+            });
+        }
+
+        if (trimmed) {
+            const b = el("button", "mrp-btn mrp-btn-sm", "Restore full alignment");
+
+            b.type = "button";
+            b.addEventListener("click", restoreFull);
+            bar.appendChild(b);
+            bar.appendChild(el("span", "mpro-actions-note", `Showing ${state.len} of ${state.orig.len} columns`));
+        }
+
+        return bar;
+    }
+    actionBar.refresh = () => {
+        if (!proRoot) return;
+
+        const old = proRoot.querySelector(".mpro-actions");
+        const next = actionBar();
+
+        if (old) old.replaceWith(next);
+    };
+
     function render() {
         if (!proRoot || !state.rows.length) return;
 
@@ -484,16 +626,24 @@
         proRoot.replaceChildren();
 
         const refName = state.rows[state.ref].name;
-        const tiles = el("div", "mrp-stats");
+        const tiles = el("div", "mpro-summary");
+        const chip = (label, value, hint) => {
+            const c = el("span", "mpro-chip");
+
+            c.append(el("em", "", label), el("strong", "", String(value)));
+            if (hint) c.title = hint;
+
+            return c;
+        };
 
         tiles.append(
-            tile("Sequences", state.rows.length),
-            tile("Columns", state.len),
-            tile("Identical columns", `${metrics.fully} (${Math.round((metrics.fully / state.len) * 100)}%)`,
-                "Columns with the same residue in every sequence"),
-            tile("Mean identity", `${Math.round(metrics.meanIdentity * 100)}%`, `Against ${refName}`),
-            tile("Gaps", `${Math.round(metrics.gapFraction * 100)}%`),
-            tile("Reference", refName, "Click a sequence name to change it"),
+            chip("Sequences", state.rows.length),
+            chip("Columns", state.len),
+            chip("Identical", `${Math.round((metrics.fully / state.len) * 100)}%`,
+                `${metrics.fully} columns with the same residue in every sequence`),
+            chip("Mean identity", `${Math.round(metrics.meanIdentity * 100)}%`, `Against ${refName}`),
+            chip("Gaps", `${Math.round(metrics.gapFraction * 100)}%`),
+            chip("Reference", refName, "Click a sequence name to change it"),
         );
 
         const bar = el("div", "mpro-controls");
@@ -606,10 +756,48 @@
         table.append(el("summary", "", "Identity to reference (click a row to change the reference)"), tw);
 
         const view = el("div", "mpro-view");
-        const tip = el("div", "mrp-tip", "Click a residue to select it in the protein. Click a sequence name to make it the reference.");
+        const tip = el("div", "mrp-tip", "Click a residue to select it in the protein; drag across columns to select a region to annotate, trim or export. Click a sequence name to make it the reference.");
 
-        view.addEventListener("mouseover", ev => {
+        let dragStart = null;
+        let moved = false;
+        let frame = 0;
+
+        view.addEventListener("mousedown", ev => {
             const c = ev.target.closest(".mpro-c[data-c]");
+
+            if (!c || ev.button !== 0) return;
+
+            dragStart = Number(c.dataset.c);
+            moved = false;
+            ev.preventDefault();
+        });
+        view.addEventListener("mouseover", ev => {
+            if (dragStart === null) return;
+
+            const c = ev.target.closest(".mpro-c[data-c]");
+
+            if (!c) return;
+
+            const col = Number(c.dataset.c);
+
+            if (col !== dragStart) moved = true;
+
+            state.sel = {a: dragStart, b: col};
+            if (!frame) {
+                frame = requestAnimationFrame(() => {
+                    frame = 0;
+                    paintColumns();
+                });
+            }
+        });
+        document.addEventListener("mouseup", () => {
+            if (dragStart === null) return;
+
+            if (moved) actionBar.refresh();
+            dragStart = null;
+        });
+        view.addEventListener("mouseover", ev => {
+            const c = ev.target.closest(".mpro-c[data-c][data-r]");
 
             if (!c) return;
 
@@ -624,10 +812,22 @@
         view.addEventListener("click", ev => {
             const c = ev.target.closest(".mpro-c[data-c]");
 
-            if (c) selectRef(ungappedIndex(state.rows[state.ref].seq)[Number(c.dataset.c)]);
+            if (!c || moved) {
+                moved = false;
+
+                return;
+            }
+
+            const col = Number(c.dataset.c);
+
+            state.sel = {a: col, b: col};
+            paintColumns();
+            actionBar.refresh();
+
+            if (c.dataset.r !== undefined) selectRef(ungappedIndex(state.rows[state.ref].seq)[col]);
         });
 
-        proRoot.append(tiles, bar, tip, view, table);
+        proRoot.append(tiles, bar, tip, actionBar(), view, table);
         renderView(view);
     }
 
@@ -705,6 +905,9 @@
                 Math.max(0, payload.query_match && Number.isInteger(payload.query_match.index) ? payload.query_match.index : 0),
             );
             state.id = payload.id;
+            state.sel = null;
+            state.base = 0;
+            state.orig = {rows: state.rows.map(r => ({...r})), len: state.len};
 
             shell.classList.add("is-pro");
             shell.querySelectorAll(".mpro-root").forEach(n => n.remove());

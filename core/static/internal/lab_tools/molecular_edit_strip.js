@@ -200,7 +200,7 @@
 
         const history = api().history ? api().history() : {undo: 0, redo: 0};
         const editable = Boolean(t.canEdit);
-        const unit = t.s.sequenceType === "protein" ? "aa" : "bp";
+        const unit = t.s.sequenceType === "protein" ? "aa" : (t.s.sequenceType === "rna" ? "nt" : "bp");
 
         undoBtn.disabled = !editable || !history.undo;
         redoBtn.disabled = !editable || !history.redo;

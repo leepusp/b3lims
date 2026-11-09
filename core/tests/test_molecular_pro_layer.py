@@ -139,11 +139,22 @@ class MolecularUnifiedLayoutTests(SimpleTestCase):
         for token in ('["2d", "Structure"]', '["3d", "3D"]', "Edit pairs", "Save as new structure", "build3d"):
             self.assertIn(token, source)
 
-    def test_mode_and_layout_switches_are_hidden_for_rna_and_protein(self):
+    def test_map_and_sequence_layout_is_shared_and_modes_are_hidden(self):
         css = (STATIC / "molecular_pro.css").read_text(encoding="utf-8")
+        template = TEMPLATE.read_text(encoding="utf-8")
 
+        # The Map|Structure mode buttons are gone for RNA and Protein...
         self.assertIn('.mw-page[data-sequence-type="rna"] .mwb-modes', css)
-        self.assertIn('.mw-page[data-sequence-type="protein"] .mwv-seg', css)
+        # ...while the working layout switch (map + sequence / map / sequence) stays.
+        self.assertNotIn('.mwv-seg{display', css.replace(" ", ""))
+        self.assertIn('data-mwv-layout="both"', template)
+        self.assertIn("mw-canvas-record", template)
+
+    def test_protein_alignment_can_select_trim_and_annotate_columns(self):
+        source = (STATIC / "molecular_alignment_pro.js").read_text(encoding="utf-8")
+
+        for token in ("Trim to selection", "Add annotation", "Select in protein", "Export selection", "Restore full alignment"):
+            self.assertIn(token, source)
 
     def test_topology_is_not_asked_when_creating_a_record(self):
         registry = Path(

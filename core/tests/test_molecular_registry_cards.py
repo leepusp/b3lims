@@ -139,11 +139,16 @@ class MapCanvasMountTests(TestCase):
             self.assertNotIn('data-mwv-layout="orfs"', other)
             self.assertNotIn('id="mw-orfs"', other)
 
-    def test_rna_and_protein_keep_their_own_views(self):
+    def test_rna_and_protein_share_the_map_and_sequence_canvases(self):
+        # One layout for every sequence type: map + sequence side by side,
+        # the edit strip, and the Features window; only ORFs stay nucleotide-only.
         for kind in ("rna", "protein"):
             html = self._page(kind, "linear")
-            self.assertNotIn('id="mmc"', html)
-            self.assertNotIn('id="msc"', html)
+            self.assertIn('id="mmc"', html)
+            self.assertIn('id="msc"', html)
+            self.assertIn('id="mw-editstrip"', html)
+            self.assertIn('data-mwv-layout="both"', html)
+            self.assertIn('data-mwv-layout="features"', html)
 
 
 class DigestPanelWiringTests(TestCase):

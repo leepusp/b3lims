@@ -151,7 +151,7 @@
         const seqHost = document.getElementById("msc");
         const split = document.getElementById("mw-split");
         const seqApi = () => window.BiobankSeqCanvas || null;
-        let currentLayout = isRna ? "seq" : "both";
+        let currentLayout = "both";
 
         function canvasOn() {
             return Boolean(canvasHost && canvasApi() && canvasApi().active());
@@ -312,7 +312,7 @@
         function layoutOf(engine) {
             if (engine === "detailed") return "map";
             if (engine === "linear") return "seq";
-            return isRna ? "seq" : "both";
+            return "both";
         }
 
         function mapSvg() {
@@ -409,6 +409,8 @@
             primers: ["Primers", "Check primers and simulate a PCR"],
         };
         const DEFAULT_OPEN = {
+            protein: ["features"],
+            rna: ["features"],
             plasmid: ["features", "orfs", "digest", "cloning"],
             dna: ["features", "orfs", "digest"],
             insert: ["features", "orfs", "primers"],

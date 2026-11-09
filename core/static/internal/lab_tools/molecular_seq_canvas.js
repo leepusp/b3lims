@@ -101,6 +101,18 @@
     compInput.type = transInput.type = "checkbox";
     compInput.checked = true;
     transInput.checked = true;
+    // Protein and RNA records have no second strand to show.
+    const workspaceRoot = document.getElementById("molecular-workspace");
+
+    if (workspaceRoot && ["protein", "rna"].includes(workspaceRoot.dataset.sequenceType)) {
+        st.showComp = false;
+        st.showTrans = false;
+        compInput.checked = false;
+        transInput.checked = false;
+        compLabel.hidden = true;
+        transLabel.hidden = true;
+    }
+
     compLabel.append(compInput, document.createTextNode(" Complement"));
     transLabel.append(transInput, document.createTextNode(" Translations"));
     find.type = "search";
