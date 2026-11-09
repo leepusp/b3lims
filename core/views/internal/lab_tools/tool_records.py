@@ -11,6 +11,7 @@ from django.db import transaction
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from core.models.lab_tools.tool_record import ToolRecord
 
@@ -283,3 +284,10 @@ def tool_record_delete_api(request, record_id):
             "redirect_url": reverse("molecular_registry_index"),
         }
     )
+
+
+@login_required
+@xframe_options_sameorigin
+def ketcher_frame(request):
+    """Page that hosts the vendored Ketcher editor; embedded by the Chemical window."""
+    return render(request, "internal/lab_tools/ketcher_frame.html")

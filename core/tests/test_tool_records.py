@@ -303,3 +303,51 @@ class ChemicalWindowWiringTests(TestCase):
 
         self.assertIn('id="tw-chemical"', html)
         self.assertIn('data-stock-url="/chemicals/"', html)
+
+
+class KetcherVendorTests(TestCase):
+    def test_ketcher_is_vendored_and_checksummed(self):
+        import hashlib
+
+        base = Path(__file__).resolve().parents[1] / "static" / "vendor"
+        root = base / "ketcher" / "3.18.0"
+        user = get_user_model().objects.create_user("ketframe", password="x")
+        self.client.force_login(user)
+        response = self.client.get("/internal/lab-tools/ketcher/")
+        page = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("vendor/ketcher/3.18.0/", page)
+        self.assertIn("./static/js/main.", page)
+        self.assertNotEqual(response.headers.get("X-Frame-Options"), "DENY")
+        self.assertTrue((root / "static" / "js" / "main.e47c48ad.js").exists())
+        self.assertTrue((root / "LICENSE").exists())
+        sums = {}
+        for line in (base / "SHA256SUMS").read_text().splitlines():
+            digest, _, name = line.partition("  ")
+            sums[name.strip()] = digest
+        for path in root.rglob("*"):
+            if path.is_file():
+                key = "./ketcher/3.18.0/" + path.relative_to(root).as_posix()
+                self.assertEqual(sums.get(key), hashlib.sha256(path.read_bytes()).hexdigest(), key)
+
+    def test_stock_create_form_is_prefilled_from_query(self):
+        user = get_user_model().objects.create_user("stockpre", password="x")
+        self.client.force_login(user)
+
+        html = self.client.get("/chemicals/add/", {"name": "Ethanol", "formula": "C2H6O", "cas_number": "64-17-5", "hazard_notes": "Flammable"}).content.decode()
+
+        self.assertIn('value="Ethanol"', html)
+        self.assertIn('value="C2H6O"', html)
+        self.assertIn('value="64-17-5"', html)
+        self.assertIn("Flammable</textarea>", html)
+
+    def test_chemical_pane_links_ketcher_and_stock_add(self):
+        user = get_user_model().objects.create_user("ketlink", password="x")
+        record = ToolRecord.objects.create(tool="chemical", name="K", owner=user)
+        self.client.force_login(user)
+
+        html = self.client.get(f"/internal/lab-tools/tools/{record.pk}/").content.decode()
+
+        self.assertIn("/internal/lab-tools/ketcher/", html)
+        self.assertIn('data-stock-add-url="/chemicals/add/"', html)

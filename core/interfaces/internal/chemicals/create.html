@@ -86,17 +86,17 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Common Name *</label>
-                        <input type="text" name="name" class="form-control" placeholder="Ex: Ethanol 99%" required>
+                        <input type="text" name="name" class="form-control" placeholder="Ex: Ethanol 99%" value="{{ prefill.name }}" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Formula</label>
-                        <input type="text" name="formula" class="form-control" placeholder="C2H5OH">
+                        <input type="text" name="formula" class="form-control" placeholder="C2H5OH" value="{{ prefill.formula }}">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">CAS Number</label>
-                        <input type="text" name="cas_number" class="form-control" placeholder="64-17-5">
+                        <input type="text" name="cas_number" class="form-control" placeholder="64-17-5" value="{{ prefill.cas_number }}">
                     </div>
 
                     <div class="mb-3">
@@ -183,7 +183,7 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-muted">Hazard Notes / Warnings</label>
-                        <textarea name="hazard_notes" class="form-control" rows="3" placeholder="Ex: Flammable, corrosive, toxic if swallowed..."></textarea>
+                        <textarea name="hazard_notes" class="form-control" rows="3" placeholder="Ex: Flammable, corrosive, toxic if swallowed...">{{ prefill.hazard_notes }}</textarea>
                     </div>
 
                     <div class="form-check form-switch">

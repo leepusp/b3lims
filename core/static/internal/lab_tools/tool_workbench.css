@@ -69,3 +69,5 @@
 .tw-chip{display:inline-flex;align-items:center;gap:.2rem;font-size:.76rem;border:1px solid #c5ced8;border-radius:999px;padding:.15rem .55rem;background:#fff;cursor:pointer}
 .tw-chem-rx select{font-size:.78rem;border:1px solid #c5ced8;border-radius:.3rem;padding:.1rem}
 .tw-chem-rx td:nth-child(2) input{min-width:7rem}
+.tw-chem-ketcher{resize:vertical;overflow:hidden;height:600px;min-height:320px;border:1px solid var(--tw-border);border-radius:.4rem;margin:.3rem 0;background:#fff}
+.tw-chem-frame{width:100%;height:100%;border:0;display:block}

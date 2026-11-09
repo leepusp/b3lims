@@ -305,6 +305,11 @@ def chemical_create_view(request):
     ctx = base_context(request)
     ctx.update(_chemical_metadata_context())
     ctx["document_types"] = ChemicalFile.DOCUMENT_TYPES
+    # Prefill from a link (e.g. the Registry Chemical tool): text fields only.
+    ctx["prefill"] = {
+        key: (request.GET.get(key) or "").strip()[:255]
+        for key in ("name", "formula", "cas_number", "hazard_notes")
+    }
     return render(request, "internal/chemicals/create.html", ctx)
 
 @login_required

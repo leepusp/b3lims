@@ -74,7 +74,7 @@
         </section>
         <section class="tw-pane" data-tw-pane="chemical" hidden aria-label="Chemical">
             <div class="tw-pane-head"><h2 class="tw-pane-title">Chemical</h2><button type="button" class="tw-x" data-tw-close="chemical" aria-label="Close window">×</button></div>
-            <div id="tw-chemical" data-stock-url="{% url 'chemicals_list' %}"></div>
+            <div id="tw-chemical" data-stock-url="{% url 'chemicals_list' %}" data-stock-add-url="{% url 'chemical_add' %}" data-ketcher-url="{% url 'ketcher_frame' %}"></div>
         </section>
         <section class="tw-pane" data-tw-pane="notes" hidden aria-label="Notes">
             <div class="tw-pane-head"><h2 class="tw-pane-title">Notes</h2><button type="button" class="tw-x" data-tw-close="notes" aria-label="Close window">×</button></div>
@@ -114,7 +114,7 @@
 <script src="{% static 'internal/lab_tools/molecular_primer_panel.js' %}?v=20261109-primers-v2"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
 <script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v5"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v6"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v7"></script>
 <script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v5"></script>
 </div>
 {% endblock %}

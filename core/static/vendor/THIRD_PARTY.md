@@ -59,3 +59,16 @@ the vendored assets when the application is packaged or redistributed.
   `jspreadsheet-formula/2.0.2/LICENSE`
 - Distribution: browser bundles for spreadsheets with formulas inside ELN
   entries.
+
+### Ketcher standalone (3.18.0)
+
+- Project: https://github.com/epam/ketcher (EPAM Systems)
+- Source: GitHub release asset `ketcher-standalone-3.18.0.zip`
+  (sha256 `484e7f10a0e74808ae5f43f0e6448db6f4d884bdd2189aa271108474167a3e7e`)
+- License: Apache-2.0
+- Local license: `ketcher/3.18.0/LICENSE`, `ketcher/3.18.0/NOTICE`
+- Distribution: only the main entry (main bundle with the Indigo
+  WebAssembly engine inlined, two chunks, stylesheet) of the prebuilt
+  standalone app; the page itself is the Django template `ketcher_frame.html` and the popup, duo and closable entries are left out. Loaded in
+  an iframe by the Chemical window of Registry tool records; no network access
+  at run time.

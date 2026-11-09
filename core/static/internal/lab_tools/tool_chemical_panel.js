@@ -2,8 +2,8 @@
  * Chemical window: compound card (identifiers, structure, calculated properties,
  * hazards), SMILES / MOL reading, PubChem lookup, and a reaction stoichiometry
  * table. Everything is computed in the browser; PubChem is queried by the
- * browser only when the user asks. Structure drawing (Ketcher) edits the same
- * smiles / mol fields and arrives in a later release.
+ * browser only when the user asks. The Ketcher editor (vendored, loaded in an
+ * iframe) edits the same smiles / mol fields.
  */
 (function () {
     "use strict";
@@ -466,6 +466,12 @@
         document.dispatchEvent(new CustomEvent("biobank:chemical-change"));
     }
 
+    function recordName() {
+        const node = document.getElementById("tw-name");
+
+        return node && node.value ? node.value.trim() : "";
+    }
+
     // Best available composition: structure first, typed formula second.
     function current() {
         const mol = parseSmiles(S.smiles) || parseMol(S.mol);
@@ -507,6 +513,11 @@
             S[key] = node.value;
             renderResult();
             changed();
+
+            if (key === "smiles" || key === "mol") {
+                kSource = key;
+                pushIfOpen();
+            }
         });
 
         return node;
@@ -531,6 +542,12 @@
     const result = el("div", "tw-chem-result");
     const lookupBtn = el("button", "tw-btn is-primary", "Look up in PubChem");
     const stockLink = el("a", "tw-btn", "Find in Chemicals stock");
+    const addStock = el("a", "tw-btn", "Add to Chemicals stock");
+    const drawBtn = el("button", "tw-btn is-primary", "Draw / edit structure");
+    const svgBtn = el("button", "tw-btn", "Download SVG");
+    const kBox = el("div", "tw-chem-ketcher");
+    const kNote = el("p", "tw-note");
+    const csvBtn = el("button", "tw-btn", "Copy table (TSV)");
     const molFile = el("input");
     const molBtn = el("button", "tw-btn", "Load .mol / .sdf");
     const molDownload = el("button", "tw-btn", "Download .mol");
@@ -538,6 +555,8 @@
     const hazardBox = el("div", "tw-row");
     const reactionBox = el("div");
 
+    drawBtn.type = svgBtn.type = csvBtn.type = "button";
+    kBox.hidden = true;
     lookupBtn.type = molBtn.type = molDownload.type = copySmiles.type = "button";
     molFile.type = "file";
     molFile.accept = ".mol,.sdf,.txt";
@@ -545,6 +564,9 @@
     stockLink.target = "_blank";
     stockLink.rel = "noopener";
     stockLink.href = host.dataset.stockUrl || "#";
+    addStock.target = "_blank";
+    addStock.rel = "noopener";
+    addStock.href = host.dataset.stockAddUrl || "#";
 
     HAZARDS.forEach(([key, label]) => {
         const wrap = el("label", "tw-chip");
@@ -567,6 +589,46 @@
     function setStatus(text, cls) {
         status.textContent = text || "";
         status.className = "tw-note" + (cls ? " " + cls : "");
+    }
+
+    // GHS pictograms from PubChem PUG View → our hazard flags.
+    const GHS_MAP = {
+        flammable: "flammable", oxidizer: "oxidising", oxidising: "oxidising", explosive: "explosive", "exploding bomb": "explosive",
+        corrosive: "corrosive", toxic: "toxic", "skull and crossbones": "toxic", "health hazard": "health", irritant: "irritant",
+        "exclamation mark": "irritant", environment: "environment", "environmental hazard": "environment", "compressed gas": "gas", "gas cylinder": "gas",
+    };
+
+    async function importGhs(cid) {
+        const response = await fetch("https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/" + encodeURIComponent(cid) + "/JSON?heading=GHS+Classification");
+
+        if (!response.ok) return false;
+
+        const found = new Set(S.hazards.split(",").filter(Boolean));
+        const before = found.size;
+
+        (function walk(node) {
+            if (!node || typeof node !== "object") return;
+
+            if (Array.isArray(node)) {
+                node.forEach(walk);
+
+                return;
+            }
+
+            if (node.Name === "Pictogram(s)" && node.Value && node.Value.StringWithMarkup) {
+                node.Value.StringWithMarkup.forEach(item => (item.Markup || []).forEach(mark => {
+                    const key = GHS_MAP[String(mark.Extra || "").toLowerCase()];
+
+                    if (key) found.add(key);
+                }));
+            }
+
+            Object.keys(node).forEach(key => walk(node[key]));
+        }(await response.json()));
+
+        S.hazards = HAZARDS.map(h => h[0]).filter(k => found.has(k)).join(",");
+
+        return found.size > before;
     }
 
     async function pubchem() {
@@ -612,9 +674,16 @@
                 if (sdf.ok) S.mol = (await sdf.text()).split("$$$$")[0].replace(/^\s*\n/, "");
             } catch (error) { /* keep SMILES only */ }
 
+            let ghs = false;
+
+            try {
+                ghs = await importGhs(S.cid);
+            } catch (error) { /* hazards stay as they are */ }
+
             sync();
             changed();
-            setStatus("Filled from PubChem CID " + S.cid + ". Review before saving.", "tw-ok");
+            pushIfOpen();
+            setStatus("Filled from PubChem CID " + S.cid + (ghs ? ", including GHS pictograms" : "") + ". Review before saving.", "tw-ok");
         } catch (error) {
             setStatus(String(error && error.message ? error.message : error).replace(/^TypeError: /, "The browser could not reach PubChem: "), "tw-bad");
         } finally {
@@ -645,6 +714,7 @@
 
             sync();
             changed();
+            pushIfOpen();
             molFile.value = "";
         });
     });
@@ -667,6 +737,19 @@
         if (S.smiles.trim() && navigator.clipboard) navigator.clipboard.writeText(S.smiles.trim()).then(() => setStatus("SMILES copied.", "tw-ok"));
     });
     stockLink.addEventListener("click", () => { stockLink.href = stockHref(); });
+    addStock.addEventListener("click", () => {
+        const c = current();
+        const params = new URLSearchParams();
+        const labels = HAZARDS.filter(h => S.hazards.split(",").includes(h[0])).map(h => h[1]);
+
+        params.set("name", S.name.trim() || recordName());
+        params.set("formula", c ? prettyFormula(c.counts) : S.formula.trim());
+        params.set("cas_number", S.cas.trim());
+
+        if (labels.length) params.set("hazard_notes", labels.join(", "));
+
+        addStock.href = (host.dataset.stockAddUrl || "#") + "?" + params.toString();
+    });
 
     function row(label, value) {
         const tr = el("tr");
@@ -732,6 +815,159 @@
             }
         }
     }
+
+    // ---- Ketcher editor (vendored, same-origin iframe) --------------------
+    let kApi = null;
+    let kFrame = null;
+    let kMute = false;
+    let kPushTimer = null;
+    let kPullTimer = null;
+    let kSource = "";
+
+    function ketcherReady(frame) {
+        return new Promise((resolve, reject) => {
+            let tries = 0;
+            const timer = setInterval(() => {
+                const w = frame.contentWindow;
+
+                if (w && w.ketcher) {
+                    clearInterval(timer);
+                    resolve(w.ketcher);
+                } else if ((tries += 1) > 240) {
+                    clearInterval(timer);
+                    reject(new Error("The structure editor did not start."));
+                }
+            }, 150);
+        });
+    }
+
+    async function pushToKetcher() {
+        if (!kApi) return;
+
+        const source = kSource;
+        const text = source === "smiles" ? S.smiles.trim() : source === "mol" ? S.mol.trim() : (S.mol.trim() || S.smiles.trim());
+
+        kSource = "";
+        kMute = true;
+
+        try {
+            if (text) await kApi.setMolecule(text);
+            else if (kApi.editor && kApi.editor.clear) kApi.editor.clear();
+        } catch (error) {
+            kNote.textContent = "The editor could not read this structure: " + (error && error.message ? error.message : error);
+        }
+
+        setTimeout(() => { kMute = false; }, 600);
+
+        // The field the user typed stays as typed; the other one follows the drawing.
+        if (source && text) setTimeout(() => pullFromKetcher(source), 700);
+    }
+
+    function pushIfOpen() {
+        if (!kApi) return;
+
+        clearTimeout(kPushTimer);
+        kPushTimer = setTimeout(pushToKetcher, 400);
+    }
+
+    async function pullFromKetcher(keep) {
+        if (!kApi) return;
+
+        try {
+            const mol = await kApi.getMolfile();
+            const empty = /V2000/.test(mol) ? /^\s*0\s+0\s/.test((mol.split("\n")[3] || "")) : /"atoms":\s*\[\s*\]/.test(mol);
+
+            if (keep !== "mol") S.mol = empty ? "" : mol;
+            if (keep !== "smiles") S.smiles = empty ? "" : (await kApi.getSmiles());
+
+            if (!empty) {
+                try { S.inchikey = (await kApi.getInChIKey()) || S.inchikey; } catch (error) { /* optional */ }
+            }
+
+            nodes.mol.value = S.mol;
+            nodes.smiles.value = S.smiles;
+            nodes.inchikey.value = S.inchikey;
+            renderResult();
+            changed();
+        } catch (error) {
+            kNote.textContent = "Could not read the drawing: " + (error && error.message ? error.message : error);
+        }
+    }
+
+    async function toggleKetcher() {
+        if (!kBox.hidden) {
+            kBox.hidden = true;
+            drawBtn.textContent = "Draw / edit structure";
+
+            return;
+        }
+
+        kBox.hidden = false;
+        drawBtn.textContent = "Hide editor";
+
+        if (kFrame) {
+            pushToKetcher();
+
+            return;
+        }
+
+        const url = host.dataset.ketcherUrl;
+
+        if (!url) {
+            kNote.textContent = "The structure editor is not installed.";
+
+            return;
+        }
+
+        kNote.textContent = "Loading the structure editor (about 30 MB, cached after the first time)…";
+        kFrame = el("iframe", "tw-chem-frame");
+        kFrame.title = "Structure editor";
+        kFrame.src = url;
+        kBox.prepend(kFrame);
+
+        try {
+            kApi = await ketcherReady(kFrame);
+            await pushToKetcher();
+            kApi.editor.subscribe("change", () => {
+                if (kMute) return;
+
+                clearTimeout(kPullTimer);
+                kPullTimer = setTimeout(pullFromKetcher, 500);
+            });
+            kNote.textContent = "Draw here; SMILES, MOL block and the properties update as you draw. Save the record to keep it.";
+        } catch (error) {
+            kNote.textContent = String(error && error.message ? error.message : error);
+        }
+    }
+
+    drawBtn.addEventListener("click", toggleKetcher);
+    svgBtn.addEventListener("click", async () => {
+        if (!S.mol.trim() && !S.smiles.trim()) {
+            setStatus("Draw or paste a structure first.", "tw-warn");
+
+            return;
+        }
+
+        try {
+            let api = kApi;
+
+            if (!api) {
+                await toggleKetcher();
+                api = kApi;
+            }
+
+            const blob = await api.generateImage(S.mol.trim() || S.smiles.trim(), {outputFormat: "svg"});
+            const url = URL.createObjectURL(blob);
+            const a = el("a");
+
+            a.href = url;
+            a.download = (S.name.trim() || "structure").replace(/[^\w.-]+/g, "_") + ".svg";
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+            setStatus("Could not make the image: " + (error && error.message ? error.message : error), "tw-bad");
+        }
+    });
 
     // ---- reaction table ----------------------------------------------------
     const ROLES = ["reactant", "reagent", "solvent", "product"];
@@ -880,7 +1116,7 @@
         addCurrent.addEventListener("click", () => {
             const mw = molarMass();
 
-            S.reaction.push(newRow(S.name.trim() || S.formula.trim() || "compound", mw ? mw.toFixed(3) : ""));
+            S.reaction.push(newRow(S.name.trim() || recordName() || S.formula.trim() || "compound", mw ? mw.toFixed(3) : ""));
             renderReaction();
             changed();
         });
@@ -913,6 +1149,44 @@
 
     calcRow.append(field("Concentration (mM)", calc.conc), field("Volume (mL)", calc.vol), calc.out);
 
+    // C1·V1 = C2·V2
+    const dil = {c1: el("input"), c2: el("input"), v2: el("input"), out: el("span", "tw-mono")};
+
+    dil.c1.placeholder = "stock";
+    dil.c2.placeholder = "final";
+    dil.v2.placeholder = "final volume";
+    [dil.c1, dil.c2, dil.v2].forEach(node => node.addEventListener("input", () => {
+        const c1 = Number(dil.c1.value);
+        const c2 = Number(dil.c2.value);
+        const v2 = Number(dil.v2.value);
+
+        if (c1 > 0 && c2 > 0 && v2 > 0 && c2 <= c1) {
+            const v1 = c2 * v2 / c1;
+
+            dil.out.textContent = fmt(v1, 4) + " of stock + " + fmt(v2 - v1, 4) + " of diluent";
+        } else {
+            dil.out.textContent = c2 > c1 ? "final must not exceed stock" : "";
+        }
+    }));
+
+    const dilRow = el("div", "tw-row");
+
+    dilRow.append(field("Stock concentration", dil.c1), field("Final concentration (same unit)", dil.c2), field("Final volume", dil.v2), dil.out);
+
+    csvBtn.addEventListener("click", () => {
+        const lim = limitingRow();
+        const lines = [["role", "name", "MW", "equiv", "mmol", "mg", "limiting", "actual_mg", "yield_pct"].join("\t")];
+
+        S.reaction.forEach(r => {
+            const c = computeRow(r, lim);
+
+            lines.push([r.role, r.name, r.mw, r.eq, fmt(c.mmol, 4), fmt(c.mg, 3), lim === r ? "yes" : "", r.actual || "",
+                r.role === "product" && c.mg > 0 && Number(r.actual) > 0 ? fmt(Number(r.actual) / c.mg * 100, 1) : ""].join("\t"));
+        });
+
+        if (navigator.clipboard) navigator.clipboard.writeText(lines.join("\n")).then(() => setStatus("Reaction table copied (paste into a spreadsheet or the notebook).", "tw-ok"));
+    });
+
     function section(title, ...children) {
         const box = el("section", "tw-chem-section");
 
@@ -928,17 +1202,16 @@
 
     idRow.append(field("Name", nodes.name), field("CAS number", nodes.cas), field("PubChem CID", nodes.cid));
     ids.append(field("IUPAC name", nodes.iupac), field("InChIKey", nodes.inchikey));
-    smilesActions.append(lookupBtn, stockLink);
-    molActions.append(molBtn, molDownload, copySmiles, molFile);
+    smilesActions.append(lookupBtn, stockLink, addStock);
+    molActions.append(drawBtn, molBtn, molDownload, svgBtn, copySmiles, molFile);
 
     host.append(
         section("Compound", idRow, smilesActions, status, ids),
-        section("Structure", field("SMILES", nodes.smiles), field("MOL block", nodes.mol), molActions, field("Molecular formula (used when there is no structure)", nodes.formula), result),
+        section("Structure", kBox, kNote, field("SMILES", nodes.smiles), field("MOL block", nodes.mol), molActions, field("Molecular formula (used when there is no structure)", nodes.formula), result),
         section("Hazards", hazardBox, el("p", "tw-note", "Mark what applies and check the supplier's safety data sheet before use.")),
-        section("Solution calculator", calcRow),
-        section("Reaction stoichiometry", reactionBox),
+        section("Solution calculator", calcRow, el("p", "tw-note", "Dilution (C1·V1 = C2·V2):"), dilRow),
+        section("Reaction stoichiometry", reactionBox, csvBtn),
         section("Notes", field("", nodes.notes)),
-        el("p", "tw-note", "Structure drawing (Ketcher) is added in a later release and will edit the SMILES and MOL fields above."),
     );
 
     function sync() {

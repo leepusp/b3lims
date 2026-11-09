@@ -506,6 +506,7 @@ urlpatterns = [
     ),
     path('internal/lab-tools/molecular-registry/', notebook_views.molecular_registry_index, name='molecular_registry_index'),
     path('internal/lab-tools/molecular-registry/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
+    path('internal/lab-tools/ketcher/', tool_record_views.ketcher_frame, name='ketcher_frame'),
     path('internal/lab-tools/tools/create/', tool_record_views.tool_record_create, name='tool_record_create'),
     path('internal/lab-tools/tools/<int:record_id>/', tool_record_views.tool_record_detail, name='tool_record_detail'),
     path('internal/lab-tools/tools/<int:record_id>/state/', tool_record_views.tool_record_state_api, name='tool_record_state_api'),
