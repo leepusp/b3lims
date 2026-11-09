@@ -159,3 +159,30 @@ class DigestPanelWiringTests(TestCase):
         self.assertIn("drawCircularCuts", maps)
         self.assertIn("downloadImage", maps)
         self.assertNotIn("renderDigest", (tools / "molecular_workbench.js").read_text())
+
+
+class ViewerWindowsLayoutWiringTests(TestCase):
+    def setUp(self):
+        self.tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+
+    def test_gel_has_appearance_options_and_png_export(self):
+        digest = (self.tools / "molecular_digest.js").read_text()
+
+        for needle in ("THEMES", "ui.bright", "ui.thick", "ui.labels", "downloadGel", "ResizeObserver", "biobank.digest.gellook"):
+            self.assertIn(needle, digest)
+
+    def test_orf_window_draws_arrows_and_clusters(self):
+        orfs = (self.tools / "molecular_orf_panel.js").read_text()
+
+        for needle in ("function arrow(", "clustersOf", "renderClusters", "mwp-clusterhead"):
+            self.assertIn(needle, orfs)
+
+    def test_left_pane_can_be_map_sequence_or_hidden_and_resized(self):
+        bench = (self.tools / "molecular_workbench.js").read_text()
+        css = (self.tools / "molecular_seq_canvas.css").read_text()
+
+        for needle in ("paneLeft", "mw-divider", "mw-grip", "--mw-left", "biobank.viewer."):
+            self.assertIn(needle, bench)
+
+        self.assertIn(".mw-divbtn.is-active", css)
+        self.assertIn(".mw-split.is-leftless", css)

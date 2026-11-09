@@ -164,16 +164,102 @@
             return canvasOn() || seqOn();
         }
 
+        // What sits left of a window (Digest, Features, ORFs): the map, the sequence, or nothing.
+        const store = {
+            get(key, fallback) {
+                try {
+                    return window.localStorage.getItem("biobank.viewer." + key) || fallback;
+                } catch (error) {
+                    return fallback;
+                }
+            },
+            set(key, value) {
+                try {
+                    window.localStorage.setItem("biobank.viewer." + key, String(value));
+                } catch (error) {
+                    // Not persisted; fine.
+                }
+            },
+        };
+        let paneLeft = ["map", "seq", "none"].includes(store.get("left", "map")) ? store.get("left", "map") : "map";
+        let leftPct = Math.max(20, Math.min(65, Number(store.get("leftpct", "42")) || 42));
+        const divider = el("div", "mw-divider");
+        const grip = el("div", "mw-grip");
+        const dividerButtons = {};
+
+        divider.hidden = true;
+        divider.setAttribute("role", "separator");
+        divider.setAttribute("aria-orientation", "vertical");
+        grip.title = "Drag to resize, double-click to reset";
+        divider.append(grip);
+        [["map", "Map", "Show the map next to this window"], ["seq", "Sequence", "Show the sequence next to this window"], ["none", "Hide", "Give the whole width to this window"]].forEach(([key, label, title]) => {
+            const button = el("button", "mw-divbtn", label);
+
+            button.type = "button";
+            button.title = title;
+            button.addEventListener("click", () => {
+                paneLeft = key;
+                store.set("left", key);
+                applyCanvases();
+            });
+            dividerButtons[key] = button;
+            divider.append(button);
+        });
+
+        if (split && seqHost) seqHost.after(divider);
+
+        grip.addEventListener("pointerdown", event => {
+            const box = split.getBoundingClientRect();
+
+            grip.setPointerCapture(event.pointerId);
+            split.classList.add("is-resizing");
+
+            const move = moveEvent => {
+                leftPct = Math.max(20, Math.min(65, (moveEvent.clientX - box.left) / box.width * 100));
+                split.style.setProperty("--mw-left", leftPct.toFixed(1) + "%");
+            };
+            const stop = () => {
+                grip.removeEventListener("pointermove", move);
+                grip.removeEventListener("pointerup", stop);
+                grip.removeEventListener("pointercancel", stop);
+                split.classList.remove("is-resizing");
+                store.set("leftpct", leftPct.toFixed(1));
+            };
+
+            grip.addEventListener("pointermove", move);
+            grip.addEventListener("pointerup", stop);
+            grip.addEventListener("pointercancel", stop);
+        });
+        grip.addEventListener("dblclick", () => {
+            leftPct = 42;
+            split.style.setProperty("--mw-left", "42%");
+            store.set("leftpct", "42");
+        });
+
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
             const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
             const PANES = {digest: "mw-digest", features: "mw-features", orfs: "mw-orfs"};
-            const mapWanted = usable && (currentLayout === "map" || currentLayout === "both" || currentLayout in PANES);
-            const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both");
+            const inPane = usable && currentLayout in PANES;
+            const mapWanted = usable && (currentLayout === "map" || currentLayout === "both" || (inPane && paneLeft === "map"));
+            const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both" || (inPane && paneLeft === "seq"));
 
-            if (card) card.classList.toggle("is-canvas", mapWanted || seqWanted);
-            if (split) split.classList.toggle("is-both", mapWanted && seqWanted);
-            if (split) split.classList.toggle("is-pane", usable && currentLayout in PANES);
+            if (card) card.classList.toggle("is-canvas", mapWanted || seqWanted || inPane);
+            if (split) {
+                split.classList.toggle("is-both", mapWanted && seqWanted);
+                split.classList.toggle("is-pane", inPane);
+                split.classList.toggle("is-leftless", inPane && paneLeft === "none");
+                split.style.setProperty("--mw-left", leftPct.toFixed(1) + "%");
+            }
+
+            divider.hidden = !(usable && (inPane || (mapWanted && seqWanted)));
+            divider.classList.toggle("is-simple", !inPane);
+            Object.entries(dividerButtons).forEach(([key, button]) => {
+                button.hidden = !inPane;
+                button.classList.toggle("is-active", key === paneLeft);
+                button.setAttribute("aria-pressed", String(key === paneLeft));
+            });
+
             if (canvasApi()) canvasApi().setActive(mapWanted);
             if (seqApi()) seqApi().setActive(seqWanted);
 

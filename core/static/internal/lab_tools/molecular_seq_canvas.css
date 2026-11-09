@@ -1,10 +1,11 @@
-.mw-split{display:flex;gap:.6rem;align-items:stretch}
+.mw-split{display:flex;gap:.35rem;align-items:stretch}
 .mw-split>.mmc,.mw-split>.msc{flex:1 1 0;min-width:0}
 .mw-split>.mwp{flex:1 1 0;min-width:0;min-height:460px;height:calc(100vh - 460px);max-height:860px;overflow:auto;background:#fff;border:1px solid #DDE3EA;border-radius:.6rem;padding:.5rem}
-.mw-split.is-pane>.mmc{flex:0 0 42%}
+.mw-split.is-pane>.mmc,.mw-split.is-pane>.msc{flex:0 1 var(--mw-left,42%);min-width:14rem}
+.mw-split>.mwp{min-width:20rem}
 .mw-split.is-pane .mmc-selbar{display:none}
 .mw-split>.mwp[hidden]{display:none}
-.mw-split.is-both>.mmc{flex:0 0 40%}
+.mw-split.is-both>.mmc{flex:0 0 var(--mw-left,40%)}
 .mw-split>[hidden]{display:none}
 .msc{position:relative;display:flex;flex-direction:column;min-height:460px;height:calc(100vh - 460px);max-height:860px;background:#fff;border:1px solid #DDE3EA;border-radius:.6rem;padding:.5rem;gap:.4rem}
 .msc[hidden]{display:none}
@@ -27,3 +28,20 @@
 .mw-canvas-record .mw-seqviz-shell,.mw-canvas-record .mw-sequence-card{display:none!important}
 .msc-find{width:15rem;max-width:100%;border:1px solid #C9D2DE;border-radius:.4rem;padding:.12rem .55rem;font-size:.82rem}
 .msc-found{color:#566474;font-size:.8rem;min-width:4.5rem}
+
+.mw-divider{flex:0 0 1.6rem;display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.2rem 0;min-height:460px;height:calc(100vh - 460px);max-height:860px}
+.mw-divider[hidden]{display:none}
+.mw-grip{flex:1;width:.5rem;min-height:3rem;border-radius:.3rem;cursor:col-resize;touch-action:none;background:repeating-linear-gradient(to bottom,#c5ced8 0 3px,transparent 3px 7px) center/2px 100% no-repeat}
+.mw-grip:hover,.mw-split.is-resizing .mw-grip{background-color:#e7f0ff}
+.mw-split.is-resizing{user-select:none;cursor:col-resize}
+.mw-divbtn{writing-mode:vertical-rl;transform:rotate(180deg);border:1px solid #c5ced8;background:#fff;color:#2b3a4a;border-radius:.35rem;padding:.4rem .15rem;font-size:.72rem;font-weight:600;cursor:pointer}
+.mw-divbtn:hover{background:#eef2f8}
+.mw-divbtn.is-active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.mw-divbtn[hidden]{display:none}
+.mw-split.is-leftless>.mmc,.mw-split.is-leftless>.msc{display:none}
+.mw-split.is-leftless .mw-grip{display:none}
+@media (max-width:1100px){
+.mw-divider{flex:0 0 auto;flex-direction:row;min-height:0;height:auto;max-height:none;justify-content:center}
+.mw-grip{display:none}
+.mw-divbtn{writing-mode:horizontal-tb;transform:none;padding:.15rem .6rem}
+}

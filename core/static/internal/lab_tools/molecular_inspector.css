@@ -242,3 +242,21 @@ input.mwp-cell[type=number]{width:100%}
 .mwp-orfrange{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.76rem;width:9rem}
 .mwp-orfsize{color:#566474;font-size:.76rem}
 .mwd-gel{width:auto;max-width:100%;max-height:21rem;margin:0 auto}
+
+/* Gel: fills its card; appearance controls. */
+.mwd-gel{width:100%;max-width:none;max-height:none;height:auto;margin:0}
+.mwd-looks{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .8rem;margin:.1rem 0 .5rem;font-size:.76rem;color:#566474}
+.mwd-lookitem{display:inline-flex;align-items:center;gap:.3rem;margin:0}
+.mwd-lookitem .mwd-select{margin-left:0;font-size:.76rem}
+.mwd-range{width:5.5rem}
+@container (min-width:34rem){.mwd-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}}
+.mwp-cluster{fill:transparent;cursor:pointer}.mwp-cluster.is-multi{fill:rgba(250,176,5,.14);stroke:rgba(250,176,5,.55);stroke-width:1}
+.mwp-cluster:hover{fill:rgba(250,176,5,.28)}
+.mwp-key.is-cluster::before{background:rgba(250,176,5,.35);border:1px solid rgba(250,176,5,.8)}
+.mwp-clusterhead{display:flex;align-items:center;gap:.7rem;border:0;border-top:1px solid #eef1f5;background:#fafbfd;text-align:left;padding:.3rem .5rem;font-size:.78rem;color:#2b3a4a;cursor:pointer;margin-top:.2rem}
+.mwp-clusterhead:hover{background:#fff6dd}
+.mwp-orflist{max-height:none}
+.mwp-lanes{flex:none}
+.mwp-btn{white-space:nowrap}
+.mwp-orfrow{flex-wrap:wrap}
+.mwp-orfmain{min-width:11rem;flex-wrap:wrap;gap:.2rem .7rem}

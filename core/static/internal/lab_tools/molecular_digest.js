@@ -41,8 +41,24 @@
     const LIMIT = 80;
 
     const picked = [];
-    const ui = {query: "", filter: "unique", ladder: "1 kb", gel: "1%", all: false};
+    const THEMES = {
+        dark: {label: "Classic dark", bg: "#12202E", band: "#EAF2FA", ladder: "#C8D6E5", text: "#9FB3C8", well: "#0A141E", glow: "#9CC3F0"},
+        uv: {label: "Ethidium (UV orange)", bg: "#1B0F08", band: "#FFA24A", ladder: "#FFC98F", text: "#D9A877", well: "#0D0704", glow: "#FF7A18"},
+        sybr: {label: "SYBR green", bg: "#06140C", band: "#86FFA3", ladder: "#BDFFD0", text: "#8FCBA2", well: "#030B06", glow: "#2EE06A"},
+        blue: {label: "Blue light", bg: "#0A1626", band: "#7CCBFF", ladder: "#B5E1FF", text: "#86A9C8", well: "#050C16", glow: "#2E9BFF"},
+        light: {label: "Light (for printing)", bg: "#F6F8FB", band: "#1B2733", ladder: "#5C6B7C", text: "#2B3A4A", well: "#C5CED8", glow: "#1B2733"},
+    };
+    const SIZES = [["fill", "Fill the window"], ["compact", "Compact"], ["tall", "Tall"]];
+    const ui = {query: "", filter: "unique", ladder: "1 kb", gel: "1%", all: false, look: "dark", size: "fill", bright: 100, thick: 100, labels: false};
     let mode = "map";
+
+    try {
+        Object.assign(ui, JSON.parse(window.localStorage.getItem("biobank.digest.gellook") || "{}"));
+    } catch (error) {
+        // Storage can be blocked or hold something unreadable; defaults apply.
+    }
+
+    if (!THEMES[ui.look]) ui.look = "dark";
     let cache = {key: "", counts: [], sites: [], fragments: [], snapshot: null};
     let frame = 0;
 
@@ -174,8 +190,55 @@
 
     const gelHead = el("div", "mwd-head");
 
+    const looks = el("div", "mwd-looks");
+    const themeSelect = el("select", "mwd-select");
+    const sizeSelect = el("select", "mwd-select");
+    const brightInput = el("input", "mwd-range");
+    const thickInput = el("input", "mwd-range");
+    const labelsBox = el("input");
+    const gelPng = el("button", "mwd-link", "PNG");
+
+    Object.entries(THEMES).forEach(([value, theme]) => {
+        const option = el("option", "", theme.label);
+
+        option.value = value;
+        themeSelect.append(option);
+    });
+    SIZES.forEach(([value, label]) => {
+        const option = el("option", "", label);
+
+        option.value = value;
+        sizeSelect.append(option);
+    });
+    [[brightInput, 40, 200], [thickInput, 50, 200]].forEach(([input, min, max]) => {
+        input.type = "range";
+        input.min = String(min);
+        input.max = String(max);
+    });
+    labelsBox.type = "checkbox";
+    gelPng.type = "button";
+    gelPng.title = "Download the gel as an image";
+    themeSelect.setAttribute("aria-label", "Gel colours");
+    sizeSelect.setAttribute("aria-label", "Gel size");
+    brightInput.setAttribute("aria-label", "Band brightness");
+    thickInput.setAttribute("aria-label", "Band thickness");
+    themeSelect.value = ui.look;
+    sizeSelect.value = ui.size;
+    brightInput.value = String(ui.bright);
+    thickInput.value = String(ui.thick);
+    labelsBox.checked = ui.labels;
+
+    const labelled = (text, node) => {
+        const wrap = el("label", "mwd-lookitem");
+
+        wrap.append(el("span", "", text), node);
+
+        return wrap;
+    };
+
+    looks.append(labelled("Colours", themeSelect), labelled("Size", sizeSelect), labelled("Brightness", brightInput), labelled("Thickness", thickInput), labelled("Band sizes", labelsBox), gelPng);
     gelHead.append(el("span", "mwd-label", "Gel"), ladderSelect, percentSelect);
-    gelCard.append(gelHead, gelHost, el("p", "mwd-note", "Hover a band to see it, click it to select that fragment on the map and in the sequence."));
+    gelCard.append(gelHead, looks, gelHost, el("p", "mwd-note", "Hover a band to see it, click it to select that fragment on the map and in the sequence."));
     fragmentCard.append(fragmentList, exportRow);
     const grid = el("div", "mwd-grid");
 
@@ -456,35 +519,62 @@
         gelHost.querySelectorAll('[data-start="' + start + '"]').forEach(node => node.classList.toggle("is-hover", on));
     }
 
+    function gelHeight() {
+        if (ui.size === "compact") return 300;
+        if (ui.size === "tall") return 720;
+
+        const used = gelHost.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+
+        return Math.max(300, Math.min(760, (panel.clientHeight || 560) - used - 56));
+    }
+
+    let lastGel = null;
+
     function renderGel(state) {
+        lastGel = state;
+
+        const theme = THEMES[ui.look];
         const lanes = lanesFor(state);
-        const laneW = 52;
+        const width = Math.max(260, Math.round(gelHost.clientWidth || 360));
+        const height = gelHeight();
         const left = 44;
-        const width = left + lanes.length * laneW + 8;
-        const height = 300;
         const top = 38;
+        const laneW = Math.max(40, Math.min(120, (width - left - 10) / lanes.length));
+        const offset = left + Math.max(0, (width - left - 10 - laneW * lanes.length) / 2);
         const usable = height - top - 14;
         const [min, max] = GELS[ui.gel];
         const y = size => top + calc.gelPosition(size, min, max) * usable;
-        const node = svg("svg", {viewBox: "0 0 " + width + " " + height, class: "mwd-gel", role: "img", "aria-label": "Simulated agarose gel"});
+        const node = svg("svg", {viewBox: "0 0 " + width + " " + height, width, height, class: "mwd-gel", role: "img", "aria-label": "Simulated agarose gel", "font-family": "sans-serif"});
         const total = state.sequence ? state.sequence.length : 1;
+        const defs = svg("defs");
+        const blur = svg("filter", {id: "mwdGlow", x: "-30%", y: "-300%", width: "160%", height: "700%"});
+        const fontSize = Math.max(9, Math.min(13, laneW / 6));
 
-        node.append(svg("rect", {x: 0, y: 0, width, height, rx: 8, fill: "#12202E"}));
+        blur.append(svg("feGaussianBlur", {stdDeviation: 2.2}));
+        defs.append(blur);
+        node.append(defs, svg("rect", {x: 0, y: 0, width, height, rx: 8, fill: theme.bg}));
 
         lanes.forEach((lane, index) => {
-            const x = left + index * laneW;
+            const x = offset + index * laneW;
+            const bandW = laneW - Math.max(10, laneW * 0.22);
+            const bandX = x + (laneW - bandW) / 2;
 
-            node.append(svg("rect", {x: x + 4, y: top - 8, width: laneW - 12, height: 5, rx: 2, fill: "#0A141E"}));
-            node.append(svg("text", {x: x + laneW / 2 - 2, y: 18, "text-anchor": "middle", "font-size": 10, fill: "#9FB3C8"}, lane.label.length > 8 ? lane.label.slice(0, 7) + "…" : lane.label));
+            node.append(svg("rect", {x: bandX, y: top - 9, width: bandW, height: 5, rx: 2, fill: theme.well}));
+            node.append(svg("text", {x: x + laneW / 2, y: 20, "text-anchor": "middle", "font-size": fontSize + 1, fill: theme.text}, lane.label.length > 9 ? lane.label.slice(0, 8) + "…" : lane.label));
 
             lane.bands.forEach(band => {
                 const by = y(band.size);
                 const group = svg("g", {class: "mwd-band" + (lane.ladder ? " is-ladder" : "")});
-                const weight = lane.ladder ? 3 : Math.max(3, Math.min(7, 2 + band.size / total * 6 * band.count));
-                const rect = svg("rect", {x: x + 6, y: (by - weight / 2).toFixed(1), width: laneW - 16, height: weight, rx: 1.5, fill: lane.ladder ? "#C8D6E5" : "#EAF2FA", opacity: lane.ladder ? 0.8 : 0.95});
-                const hit = svg("rect", {x: x + 2, y: (by - 6).toFixed(1), width: laneW - 8, height: 12, fill: "transparent", style: "cursor:" + (lane.ladder ? "default" : "pointer")});
+                const mass = Math.min(1, band.size * band.count / total * 1.4);
+                const base = lane.ladder ? 3 : Math.max(3, Math.min(8, 2 + band.size / total * 6 * band.count));
+                const weight = Math.max(1.5, base * (ui.thick / 100) * Math.sqrt(height / 300));
+                const strength = Math.min(1, (lane.ladder ? 0.8 : 0.4 + 0.6 * mass) * ui.bright / 100);
+                const color = lane.ladder ? theme.ladder : theme.band;
+                const glow = svg("rect", {x: bandX, y: (by - weight / 2).toFixed(1), width: bandW, height: weight, rx: 2, fill: theme.glow, opacity: (strength * 0.55).toFixed(2), filter: "url(#mwdGlow)"});
+                const rect = svg("rect", {x: bandX, y: (by - weight / 2).toFixed(1), width: bandW, height: weight, rx: 1.5, fill: color, opacity: strength.toFixed(2)});
+                const hit = svg("rect", {x: x + 2, y: (by - 7).toFixed(1), width: laneW - 4, height: 14, fill: "transparent", style: "cursor:" + (lane.ladder ? "default" : "pointer")});
 
-                group.append(rect, hit);
+                group.append(glow, rect, hit);
 
                 if (band.fragment) group.dataset.start = band.fragment.start;
 
@@ -515,13 +605,55 @@
 
                 node.append(group);
 
+                if (ui.labels && !lane.ladder && laneW >= 56) {
+                    node.append(svg("text", {x: x + laneW / 2, y: (by - weight / 2 - 3).toFixed(1), "text-anchor": "middle", "font-size": Math.max(8, fontSize - 2), fill: theme.text}, band.size.toLocaleString("en-US")));
+                }
+
                 if (lane.ladder && index === 0) {
-                    node.append(svg("text", {x: x - 2, y: by + 3, "text-anchor": "end", "font-size": 8, fill: "#9FB3C8"}, band.size >= 1000 ? (band.size / 1000).toFixed(band.size % 1000 ? 1 : 0) + "k" : String(band.size)));
+                    node.append(svg("text", {x: x - 3, y: by + 3, "text-anchor": "end", "font-size": Math.max(8, fontSize - 1), fill: theme.text}, band.size >= 1000 ? (band.size / 1000).toFixed(band.size % 1000 ? 1 : 0) + "k" : String(band.size)));
                 }
             });
         });
 
         gelHost.replaceChildren(node, gelTip);
+    }
+
+    function saveLook() {
+        try {
+            window.localStorage.setItem("biobank.digest.gellook", JSON.stringify({look: ui.look, size: ui.size, bright: ui.bright, thick: ui.thick, labels: ui.labels}));
+        } catch (error) {
+            // Not persisted; fine.
+        }
+    }
+
+    function downloadGel() {
+        const source = gelHost.querySelector("svg");
+
+        if (!source) return;
+
+        const text = new XMLSerializer().serializeToString(source);
+        const image = new Image();
+        const url = URL.createObjectURL(new Blob([text], {type: "image/svg+xml"}));
+
+        image.onload = () => {
+            const canvas = document.createElement("canvas");
+            const scale = 2;
+
+            canvas.width = source.viewBox.baseVal.width * scale;
+            canvas.height = source.viewBox.baseVal.height * scale;
+            canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(blob => {
+                const link = document.createElement("a");
+
+                link.href = URL.createObjectURL(blob);
+                link.download = fileBase() + "_gel.png";
+                document.body.append(link);
+                link.click();
+                link.remove();
+            }, "image/png");
+        };
+        image.src = url;
     }
 
     /* ---------- orchestration ---------- */
@@ -570,7 +702,46 @@
         ui.gel = percentSelect.value;
         renderGel(compute());
     });
+    themeSelect.addEventListener("change", () => {
+        ui.look = themeSelect.value;
+        saveLook();
+        renderGel(compute());
+    });
+    sizeSelect.addEventListener("change", () => {
+        ui.size = sizeSelect.value;
+        saveLook();
+        renderGel(compute());
+    });
+    brightInput.addEventListener("input", () => {
+        ui.bright = Number(brightInput.value);
+        saveLook();
+        renderGel(compute());
+    });
+    thickInput.addEventListener("input", () => {
+        ui.thick = Number(thickInput.value);
+        saveLook();
+        renderGel(compute());
+    });
+    labelsBox.addEventListener("change", () => {
+        ui.labels = labelsBox.checked;
+        saveLook();
+        renderGel(compute());
+    });
+    gelPng.addEventListener("click", downloadGel);
     clearButton.addEventListener("click", () => window.BiobankDigest.clear());
+
+    if (window.ResizeObserver) {
+        let lastWidth = 0;
+
+        new ResizeObserver(() => {
+            const width = Math.round(gelHost.clientWidth);
+
+            if (mode === "digest" && width && Math.abs(width - lastWidth) > 3) {
+                lastWidth = width;
+                renderGel(compute());
+            }
+        }).observe(gelHost);
+    }
 
     document.addEventListener("biobank:viewer-layout", event => {
         mode = event.detail.layout === "digest" ? "digest" : "map";
