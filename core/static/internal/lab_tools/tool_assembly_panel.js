@@ -451,6 +451,13 @@
 
                 note.textContent = "Sequence copied.";
             }),
+            btn("Send to Sequence", "Use this assembly in the Sequence window (Digest, Primers, Cloning and Gel work on it)", () => {
+                if (!window.BiobankToolSequence) return;
+
+                window.BiobankToolSequence.set(document.getElementById("tw-name").value || "Assembly", out.seq, S.circular ? "circular" : "linear");
+                document.dispatchEvent(new CustomEvent("biobank:open-window", {detail: {key: "sequence"}}));
+                note.textContent = "Sent to the Sequence window.";
+            }),
             btn("Save to registry…", "Create a registry record from this assembly", () => saveToRegistry(out), "is-primary"),
         );
         outBox.append(actions);

@@ -77,3 +77,56 @@ out = asm.assemble();
 assert(out.junctions[1].ok && out.junctions[1].overlap >= 12 && !out.junctions[0].ok, JSON.stringify(out.junctions));
 
 console.log("tool panels ok");
+
+// ---- working sequence shim used by Digest / Primers / Cloning on tool pages ----
+{
+    const listeners = [];
+    const node = () => ({append() {}, replaceChildren() {}, addEventListener() {}, style: {}, classList: {add() {}, remove() {}, toggle() {}}, setAttribute() {}, value: "", dataset: {}, hidden: false});
+    const rootNode = Object.assign(node(), {dispatchEvent: event => listeners.push(event.type)});
+    const sandbox = {
+        window: {},
+        document: {
+            getElementById: id => (id === "molecular-workspace" ? rootNode : id === "tw-sequence" ? node() : id === "tool-workbench" ? {dataset: {}} : null),
+            createElement: node,
+            dispatchEvent() {},
+            addEventListener() {},
+        },
+        CustomEvent: function (type) {
+            this.type = type;
+        },
+    };
+
+    sandbox.window.window = sandbox.window;
+    vm.runInNewContext(fs.readFileSync(path.join(dir, "tool_sequence_window.js"), "utf8"), sandbox);
+
+    const ws = sandbox.window.BiobankMolecularWorkspace;
+    const seq = sandbox.window.BiobankToolSequence;
+
+    seq.set("vec", ">x\nAAAA CCCC\nGGGG TTTT", "circular");
+    let snap = ws.getSnapshot();
+
+    assert.strictEqual(snap.sequence, "AAAACCCCGGGGTTTT");
+    assert.strictEqual(snap.topology, "circular");
+    assert(listeners.indexOf("biobank:molecular-workspace-change") !== -1);
+
+    // 1-based inclusive selection; replaceRange takes 0-based slice positions.
+    ws.selectSequenceRange(5, 8);
+    snap = ws.getSnapshot();
+    assert.strictEqual(JSON.stringify(snap.sequenceSelection), JSON.stringify({start: 5, end: 8}));
+    assert(ws.createFeatureFromSelection({name: "mid", type: "custom"}));
+    ws.selectSequenceRange(13, 16);
+    ws.createFeatureFromSelection({name: "tail", type: "primer", strand: "-"});
+
+    // Replace the first four bases: later features move, none is lost, none crosses the edit.
+    assert(ws.replaceRange(0, 4, "GAATTCGAATTC"));
+    snap = ws.getSnapshot();
+    assert.strictEqual(snap.sequence, "GAATTCGAATTC" + "CCCCGGGGTTTT");
+    assert.strictEqual(snap.features.length, 2);
+    assert.strictEqual(snap.features[0].start, 5 + 8);
+    assert.strictEqual(snap.sequenceSelection, null);
+
+    // A feature crossing the edit is dropped.
+    ws.replaceRange(14, 18, "");
+    assert.strictEqual(ws.getSnapshot().features.length, 1);
+}
+console.log("sequence window ok");

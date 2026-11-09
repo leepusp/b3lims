@@ -1,14 +1,17 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
-{% block title %}{{ record.name }} · {{ tool_label }}{% endblock %}
+{% block title %}{{ record.name }} · {{ tool_label }}</div>
+{% endblock %}
 
 {% block content %}
 {% csrf_token %}
+<div id="molecular-workspace" data-sequence-type="dna">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v4">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v5">
 
 <div class="container-fluid py-4 tw-page"
      id="tool-workbench"
+     data-sequence-type="dna"
      data-tool="{{ record.tool }}"
      data-record-id="{{ record.id }}"
      data-state-url="{% url 'tool_record_state_api' record.id %}"
@@ -38,6 +41,11 @@
         <button type="button" class="tw-win" data-tw-toggle="assembly">Plasmid assembly</button>
         <button type="button" class="tw-win" data-tw-toggle="chemical">Chemical</button>
         <button type="button" class="tw-win" data-tw-toggle="notes">Notes</button>
+        <span class="tw-sep" aria-hidden="true"></span>
+        <button type="button" class="tw-win" data-tw-toggle="sequence" title="The sequence the Digest, Primers, Cloning and Gel windows work on">Sequence</button>
+        <button type="button" class="tw-win" data-tw-toggle="digest">Digest</button>
+        <button type="button" class="tw-win" data-tw-toggle="primers">Primers</button>
+        <button type="button" class="tw-win" data-tw-toggle="cloning">Cloning</button>
         <span class="tw-bar-label tw-layout-label">Layout</span>
         <span class="tw-seg" role="group" aria-label="Window layout">
             <button type="button" class="tw-win" data-tw-layout="split" title="Main window on the left, the others stacked on the right (drag the divider)">Split</button>
@@ -72,6 +80,24 @@
             <div class="tw-pane-head"><h2 class="tw-pane-title">Notes</h2><button type="button" class="tw-x" data-tw-close="notes" aria-label="Close window">×</button></div>
             <textarea id="tw-notes" class="form-control" rows="10" placeholder="Description, conditions, observations…">{{ record.description }}</textarea>
         </section>
+        <section class="tw-pane" data-tw-pane="sequence" hidden aria-label="Sequence">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Sequence</h2><button type="button" class="tw-x" data-tw-close="sequence" aria-label="Close window">×</button></div>
+            <div id="tw-sequence"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="digest" hidden aria-label="Digest">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Digest</h2><button type="button" class="tw-x" data-tw-close="digest" aria-label="Close window">×</button></div>
+            <div id="mw-digest" class="mwd mwp" role="group" aria-label="Restriction digest"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="primers" hidden aria-label="Primers">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Primers</h2><button type="button" class="tw-x" data-tw-close="primers" aria-label="Close window">×</button></div>
+            <div id="mw-primers" class="mwp mwp-primers" role="group" aria-label="Primers and PCR"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="cloning" hidden aria-label="Cloning">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Cloning</h2><button type="button" class="tw-x" data-tw-close="cloning" aria-label="Close window">×</button></div>
+            <div id="mw-cloning" class="mwp mwp-cloning" role="group" aria-label="Cloning"
+                 data-search-url="{% url 'search_molecular_sequences_api' %}"
+                 data-record-url="{% url 'molecular_sequence_data_api' 0 %}"></div>
+        </section>
         <div class="tw-empty" id="tw-none" hidden>No window open. Use the Windows bar to open one.</div>
       </div>
       <div class="tw-divider" id="tw-divider" role="separator" aria-orientation="vertical" aria-label="Resize the side column" tabindex="0" hidden></div>
@@ -80,9 +106,15 @@
 </div>
 
 {{ record.data|json_script:"tw-initial" }}
+<script src="{% static 'internal/lab_tools/molecular_inspector_calc.js' %}?v=20261108-orf-v1"></script>
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"></script>
+<script src="{% static 'internal/lab_tools/tool_sequence_window.js' %}?v=20261109-tools-v5"></script>
+<script src="{% static 'internal/lab_tools/molecular_digest.js' %}?v=20261109-digest-v7"></script>
+<script src="{% static 'internal/lab_tools/molecular_cloning_panel.js' %}?v=20261109-cloning-v1"></script>
+<script src="{% static 'internal/lab_tools/molecular_primer_panel.js' %}?v=20261109-primers-v2"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
-<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v4"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v4"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v4"></script>
+<script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v5"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v5"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v5"></script>
+</div>
 {% endblock %}

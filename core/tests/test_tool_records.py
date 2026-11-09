@@ -132,6 +132,22 @@ class ToolRecordViewsTests(TestCase):
         self.assertContains(response, 'id="tw-side"')
         self.assertContains(response, 'id="tw-tabs"')
 
+    def test_sequence_windows_are_available_in_every_tool(self):
+        self.client.force_login(self.owner)
+
+        for tool in ("gel", "assembly", "chemical"):
+            record = self.make(tool)
+            response = self.client.get(reverse("tool_record_detail", args=[record.id]))
+
+            for key in ("sequence", "digest", "primers", "cloning"):
+                self.assertContains(response, f'data-tw-toggle="{key}"')
+
+            for element in ("tw-sequence", "mw-digest", "mw-primers", "mw-cloning"):
+                self.assertContains(response, f'id="{element}"')
+
+            self.assertContains(response, 'id="molecular-workspace"')
+            self.assertContains(response, "tool_sequence_window.js")
+
     def test_only_the_owner_opens_a_record(self):
         record = self.make()
         url = reverse("tool_record_detail", args=[record.id])

@@ -12,7 +12,7 @@
     if (!page) return;
 
     const tool = page.dataset.tool;
-    const WINDOWS = ["gel", "assembly", "chemical", "notes"];
+    const WINDOWS = ["gel", "assembly", "chemical", "notes", "sequence", "digest", "primers", "cloning"];
     const statusEl = document.getElementById("tw-status");
     const nameInput = document.getElementById("tw-name");
     const notes = document.getElementById("tw-notes");
@@ -74,7 +74,7 @@
     const gridEl = document.getElementById("tw-grid");
     const tabsEl = document.getElementById("tw-tabs");
     const noneEl = document.getElementById("tw-none");
-    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: "Chemical", notes: "Notes"};
+    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: "Chemical", notes: "Notes", sequence: "Sequence", digest: "Digest", primers: "Primers", cloning: "Cloning"};
     const MODES = ["split", "stack", "tabs"];
 
     L.order = [tool].concat(WINDOWS.filter(key => key !== tool));
@@ -99,6 +99,12 @@
     function notifyLayout() {
         window.requestAnimationFrame(() => {
             if (window.BiobankGel && open.indexOf("gel") !== -1) window.BiobankGel.refresh();
+
+            // The sequence windows redraw on "viewer-layout"; the Digest window
+            // treats any other layout as "closed", so it is announced last.
+            ["primers", "cloning", "digest"].forEach(layout => {
+                if (!paneOf(layout).hidden) document.dispatchEvent(new CustomEvent("biobank:viewer-layout", {detail: {layout}}));
+            });
         });
     }
 
@@ -278,6 +284,10 @@
         render();
     }
 
+    // Other windows can ask for a window to be opened (e.g. "Send to Sequence").
+    document.addEventListener("biobank:open-window", event => {
+        if (WINDOWS.indexOf(event.detail.key) !== -1) toggle(event.detail.key, true);
+    });
     page.querySelectorAll("[data-tw-toggle]").forEach(node => {
         node.addEventListener("click", () => toggle(node.dataset.twToggle));
     });
@@ -289,6 +299,8 @@
 
     function collect() {
         const data = {windows: open.slice(), notes: notes.value, layout: JSON.parse(JSON.stringify(L))};
+
+        if (window.BiobankToolSequence) data.sequence = window.BiobankToolSequence.getState();
 
         if (window.BiobankGel) data.gel = window.BiobankGel.getState();
         if (window.BiobankAssembly) data.assembly = window.BiobankAssembly.getState();
@@ -354,7 +366,7 @@
         await save(true);
     });
 
-    ["biobank:gel-change", "biobank:assembly-change", "biobank:chemical-change"].forEach(name => {
+    ["biobank:gel-change", "biobank:assembly-change", "biobank:chemical-change", "biobank:sequence-state"].forEach(name => {
         document.addEventListener(name, () => {
             if (initialised) schedule();
         });
@@ -478,6 +490,7 @@
 
         applyLayoutState(stored.layout);
 
+        if (stored.sequence && window.BiobankToolSequence) window.BiobankToolSequence.setState(stored.sequence);
         if (stored.assembly && window.BiobankAssembly) window.BiobankAssembly.setState(stored.assembly);
         if (stored.chemical && window.BiobankChemical) window.BiobankChemical.setState(stored.chemical);
 

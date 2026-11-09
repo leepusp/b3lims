@@ -57,3 +57,5 @@
 .tw-results button:hover{background:#eef2f8}
 .tw-ok{color:#2b8a3e}.tw-warn{color:#b35c00}.tw-bad{color:#c92a2a}
 .tw-pane .mwp-gel{font-size:.82rem}
+.tw-sep{width:1px;align-self:stretch;background:var(--tw-border);margin:0 .3rem}
+.tw-pane .mwd,.tw-pane .mwp-primers,.tw-pane .mwp-cloning{max-width:100%}
