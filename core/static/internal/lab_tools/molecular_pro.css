@@ -259,5 +259,5 @@
 #mw-structure .mw-mol-stage{position:relative}
 #mw-structure .mw-mol-stage:not(.mw-mol-tools-open) .msp-layout-right{display:none!important}
 #mw-structure .mw-mol-stage:not(.mw-mol-tools-open) .msp-layout-main{right:0!important}
-.mw-mol-tools-btn{position:absolute;left:.5rem;top:.5rem;z-index:5;border:1px solid #cbd5e1;background:rgba(255,255,255,.92);border-radius:.35rem;padding:.1rem .55rem;font-size:.78rem;color:#334155}
+.mw-mol-tools-btn{position:absolute;right:3.2rem;top:.5rem;z-index:5;border:1px solid #cbd5e1;background:rgba(255,255,255,.92);border-radius:.35rem;padding:.1rem .55rem;font-size:.78rem;color:#334155}
 .mw-mol-tools-btn.is-on{background:#2563eb;border-color:#2563eb;color:#fff}

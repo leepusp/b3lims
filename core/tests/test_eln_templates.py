@@ -147,6 +147,7 @@ class ELNToolsPanelTests(TestCase):
         self.assertContains(response, "eln_tools_calc.js")
         self.assertContains(response, "eln_tools.js")
         self.assertContains(response, "eln_tools.css")
+        self.assertContains(response, "eln_elements.js")
 
     def test_calculator_logic_and_scripts_are_valid(self):
         import shutil
@@ -160,12 +161,13 @@ class ELNToolsPanelTests(TestCase):
             self.skipTest("node not available")
 
         base = Path(settings.BASE_DIR, "core")
-        for script in (
-            base / "tests/js/test_eln_tools_calc.cjs",
+        for script, marker in (
+            (base / "tests/js/test_eln_tools_calc.cjs", "eln calc ok"),
+            (base / "tests/js/test_eln_elements.cjs", "eln elements ok"),
         ):
             result = subprocess.run([node, str(script)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("eln calc ok", result.stdout)
+            self.assertIn(marker, result.stdout)
 
         check = subprocess.run(
             [node, "--check", str(base / "static/internal/lab_tools/eln_tools.js")],

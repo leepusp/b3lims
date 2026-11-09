@@ -471,6 +471,80 @@
         return root;
     }
 
+    function buildPeriodic() {
+        const root = el("div", "bxt-calc");
+        const E = window.BiobankElnElements;
+
+        if (!E) {
+            root.append(el("p", "bxt-hint", "Periodic table data is not loaded."));
+
+            return root;
+        }
+
+        const grid = el("div", "bxt-pt");
+        const detail = el("div", "bxt-out", "Click an element.");
+        const insertEl = el("button", "btn btn-sm btn-outline-primary", "Insert in notes");
+        let current = null;
+
+        insertEl.type = "button";
+        insertEl.hidden = true;
+        insertEl.addEventListener("click", () => current && insertIntoNotes(current.name, tableHtml(
+            ["Symbol", "Atomic number", "Atomic mass (g/mol)", "Category"],
+            [[current.symbol, current.z, current.radioactive ? `[${current.mass}]` : C.fmt(current.mass, 4), current.category]]
+        )));
+
+        E.list.forEach((e) => {
+            const cell = el("button", `bxt-el cat-${e.category}`);
+
+            cell.type = "button";
+            cell.style.gridRow = String(e.row);
+            cell.style.gridColumn = String(e.col);
+            cell.title = `${e.name} · ${e.mass}`;
+            cell.append(el("small", "", String(e.z)), el("b", "", e.symbol));
+            cell.addEventListener("click", () => {
+                current = e;
+                detail.textContent = `${e.name} (${e.symbol}) · Z ${e.z} · ${e.radioactive ? `[${e.mass}]` : C.fmt(e.mass, 4)} g/mol · ${e.category}`;
+                insertEl.hidden = false;
+            });
+            grid.append(cell);
+        });
+
+        const formula = input("Molar mass of a formula", {placeholder: "C6H12O6, Ca(OH)2, CuSO4·5H2O"});
+        const mass = el("div", "bxt-out");
+        const insertMass = el("button", "btn btn-sm btn-outline-primary", "Insert in notes");
+        let last = null;
+
+        insertMass.type = "button";
+        insertMass.hidden = true;
+        insertMass.addEventListener("click", () => last && insertIntoNotes("Molar mass", tableHtml(["Formula", "Molar mass (g/mol)"], [[formula.input.value.trim(), C.fmt(last, 4)]])));
+        formula.input.addEventListener("input", () => {
+            const r = E.molarMass(formula.input.value);
+
+            last = null;
+            insertMass.hidden = true;
+            mass.className = "bxt-out" + (r.error && formula.input.value.trim() ? " is-error" : "");
+
+            if (!formula.input.value.trim()) mass.textContent = "";
+            else if (r.error) mass.textContent = r.error;
+            else {
+                last = r.mass;
+                mass.textContent = `${C.fmt(r.mass, 4)} g/mol`;
+                insertMass.hidden = false;
+            }
+        });
+
+        const actions = el("div", "bxt-actions");
+
+        actions.append(insertEl);
+
+        const massActions = el("div", "bxt-actions");
+
+        massActions.append(insertMass);
+        root.append(grid, detail, actions, formula.wrap, mass, massActions);
+
+        return root;
+    }
+
     const TABS = [
         ["dilution", "Dilution", buildDilution],
         ["solution", "Molarity", buildSolution],
@@ -478,6 +552,7 @@
         ["mix", "Master mix", buildMasterMix],
         ["colony", "Colonies", buildColony],
         ["timers", "Timers", buildTimers],
+        ["periodic", "Periodic", buildPeriodic],
     ];
 
     let drawer = null;

@@ -22,3 +22,11 @@
 .bxt-timer-time{font-variant-numeric:tabular-nums;font-weight:600}
 .bxt-timer.is-done .bxt-timer-time{color:#dc2626}
 .bxt-timers{margin-bottom:.6rem}
+.bxt-pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px;margin-bottom:.6rem}
+.bxt-el{display:flex;flex-direction:column;align-items:center;justify-content:center;border:0;border-radius:3px;padding:1px 0;line-height:1.05;font-size:.7rem;background:#e5e7eb;min-height:1.9rem}
+.bxt-el small{font-size:.5rem;color:#475569}
+.bxt-el.cat-alkali{background:#fecaca}.bxt-el.cat-alkaline{background:#fed7aa}.bxt-el.cat-transition{background:#fde68a}
+.bxt-el.cat-post{background:#bbf7d0}.bxt-el.cat-metalloid{background:#a7f3d0}.bxt-el.cat-nonmetal{background:#bae6fd}
+.bxt-el.cat-halogen{background:#c7d2fe}.bxt-el.cat-noble{background:#e9d5ff}.bxt-el.cat-lanthanide{background:#fbcfe8}.bxt-el.cat-actinide{background:#f5d0fe}
+.bxt-el:hover{outline:2px solid #2563eb}
+.bxt-drawer{width:min(34rem,100vw)}
