@@ -539,6 +539,7 @@
     let vb2 = null;
     const cam = {yaw: 0.6, pitch: -0.35, zoom: 1, spin: false};
     let redraw3d = null;
+    let model3d = false;
 
     function activeDb() {
         if (!current) return "";
@@ -719,6 +720,13 @@
                 bar.appendChild(save);
             }
         } else {
+            if (window.BiobankRnaStructure3D) {
+                bar.appendChild(toolButton("3D structure (PDB)", "Back to the attached PDB / mmCIF structure", () => {
+                    model3d = false;
+                    renderView();
+                }));
+            }
+
             bar.appendChild(toolButton(cam.spin ? "Stop rotation" : "Rotate", "Toggle automatic rotation", () => {
                 cam.spin = !cam.spin;
                 renderView();
@@ -891,6 +899,23 @@
         wrap.append(s, hint);
 
         return wrap;
+    }
+
+    function draw3dReal(db, seq) {
+        const lib = window.BiobankRnaStructure3D;
+
+        if (!lib || model3d) return draw3d(db, seq);
+
+        const holder = el("div", "mrp-figure");
+
+        lib.mount(() => {
+            model3d = true;
+            renderView();
+        }).then(host => {
+            if (view === "3d" && !model3d && holder.isConnected) holder.appendChild(host);
+        });
+
+        return holder;
     }
 
     function draw3d(db, seq) {
@@ -1138,7 +1163,7 @@
         if (view === "2d") {
             ui.stage.appendChild(draw2d(db, safe ? seq : ""));
         } else if (view === "3d") {
-            ui.stage.appendChild(draw3d(db, safe ? seq : ""));
+            ui.stage.appendChild(draw3dReal(db, safe ? seq : ""));
         } else if (view === "arc") {
             const box = el("div", "mrp-scroll");
 
@@ -1349,8 +1374,12 @@
     });
 
     root.addEventListener("biobank:molecular-workspace-change", () => {
-        if (ui && view !== "forna") renderView();
-        if (ui && view === "forna") return;
+        if (!ui || view === "forna") return;
+
+        // The Mol* viewer follows the selection by itself; rebuilding it here would reset the camera.
+        if (view === "3d" && !model3d && window.BiobankRnaStructure3D) return;
+
+        renderView();
     });
 
     // One layout: the structure card is always shown under the sequence, so

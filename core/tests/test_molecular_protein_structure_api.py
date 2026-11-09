@@ -345,6 +345,26 @@ class MolecularProteinStructureApiTests(
             1,
         )
 
+    def test_rna_records_accept_tertiary_structures(self):
+        rna = MolecularSequence.objects.create(
+            name="RNA structure API QA",
+            sequence_type="rna",
+            topology="linear",
+            sequence="AUGCGC",
+            owner=self.user,
+        )
+
+        response = self.client.post(
+            self.url(rna),
+            {"file": upload("rna_model.pdb"), "label": "RNA model"},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(rna.structures.count(), 1)
+        self.assertEqual(
+            len(self.client.get(self.url(rna)).json()["structures"]), 1
+        )
+
     def test_nonprotein_upload_is_rejected(self):
         response = self.client.post(
             self.url(

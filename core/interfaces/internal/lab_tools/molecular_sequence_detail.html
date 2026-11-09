@@ -30,6 +30,8 @@
 {% if molecule.sequence_type == "rna" %}
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_rna_secondary_structure.css' %}?v=20260809-rna-workspace-r1d-v3">
+<link rel="stylesheet"
+      href="{% static 'internal/lab_tools/vendor/molstar-5.11.0.css' %}?v=5.11.0">
 {% endif %}
 {% if molecule.sequence_type == "protein" %}
 <link rel="stylesheet"
@@ -50,7 +52,7 @@
 
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
 <link rel="stylesheet"
-      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v6">
+      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v7">
 {% endif %}
 
 <div id="molecular-workspace"
@@ -919,7 +921,11 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_rna_layout.js' %}?v=20261109-layout-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_rna_pro.js' %}?v=20261109-pro-v2"
+<script src="{% static 'internal/lab_tools/vendor/molstar-5.11.0.js' %}?v=5.11.0"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_rna_structure3d.js' %}?v=20261109-rna3d-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_rna_pro.js' %}?v=20261109-pro-v3"
         defer></script>
 {% endif %}
 {% if molecule.sequence_type == "protein" %}

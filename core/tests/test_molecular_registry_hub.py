@@ -138,7 +138,8 @@ class MolecularRegistryHomeTests(TestCase):
 
         self.assertContains(response, 'id="mr-home-drop"')
         self.assertContains(response, "mr-hub-help")
-        self.assertContains(response, "Needs attention")
+        self.assertNotContains(response, "Needs attention")
+        self.assertNotContains(response, "Recently updated")
         self.assertContains(response, "Chemical")
         self.assertEqual(response.context["unlinked_total"], 1)
 

@@ -207,3 +207,24 @@ class RegistryHomeLayoutTests(SimpleTestCase):
 
         self.assertNotIn("Coming to the Registry", registry)
         self.assertIn(".mr-home{display:flex;flex-direction:column", css)
+
+
+class RnaRealStructureWiringTests(SimpleTestCase):
+    def test_rna_page_loads_molstar_and_the_3d_module(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        pro = (STATIC / "molecular_rna_pro.js").read_text(encoding="utf-8")
+
+        self.assertIn("molecular_rna_structure3d.js", template)
+        self.assertIn("BiobankRnaStructure3D", pro)
+        self.assertIn("draw3dReal", pro)
+        self.assertEqual(template.count("molstar-5.11.0.css"), 2)
+
+        node = shutil.which("node")
+
+        if node:
+            result = subprocess.run(
+                [node, "--check", str(STATIC / "molecular_rna_structure3d.js")],
+                capture_output=True, text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)

@@ -389,25 +389,6 @@
 
     </div>
 
-    <aside class="mr-aside" aria-label="Registry overview">
-        <section class="mr-aside-card">
-            <h2 class="mr-aside-title">Needs attention</h2>
-            <ul class="mr-aside-list">
-                <li><b>{{ duplicate_total }}</b> record{{ duplicate_total|pluralize }} sharing a sequence with another</li>
-                <li><b>{{ unlinked_total }}</b> not linked to a Sample yet</li>
-            </ul>
-        </section>
-        {% if recent_records %}
-        <section class="mr-aside-card">
-            <h2 class="mr-aside-title">Recently updated</h2>
-            <ul class="mr-aside-list">
-                {% for r in recent_records %}
-                    <li class="d-flex justify-content-between gap-2"><a href="{% url 'molecular_sequence_detail' r.id %}?from=registry">{{ r.name }}</a><span class="text-muted">{{ r.updated_at|date:"M j" }}</span></li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
-    </aside>
     </div>
 </div>
 <script>

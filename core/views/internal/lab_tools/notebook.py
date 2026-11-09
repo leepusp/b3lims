@@ -2273,13 +2273,13 @@ def molecular_sequence_structures_api(
         )
     )
 
-    if molecule.sequence_type != "protein":
+    if molecule.sequence_type not in {"protein", "rna"}:
         return JsonResponse(
             {
                 "status": "error",
                 "message": (
-                    "Protein structures are currently "
-                    "available only for Protein records."
+                    "Tertiary structures are currently "
+                    "available only for Protein and RNA records."
                 ),
             },
             status=400,
@@ -2505,7 +2505,7 @@ def molecular_sequence_structures_api(
                 "status": "error",
                 "message": (
                     "This exact structure file "
-                    "is already attached to the Protein record."
+                    "is already attached to the record."
                 ),
                 "structure": (
                     serialize_molecular_structure(

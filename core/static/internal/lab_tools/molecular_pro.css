@@ -244,3 +244,13 @@
 .mw-page[data-sequence-type="rna"] .mw-body.is-inspector-hidden,
 .mw-protein-focused-workspace .mw-body.is-inspector-hidden{grid-template-columns:minmax(0,1fr)!important}
 @media (max-width:1199px){.mw-protein-focused-workspace .mw-body,.mw-page[data-sequence-type="rna"] .mw-body{grid-template-columns:minmax(0,1fr)!important}}
+
+/* ---- RNA 3D structure (Mol*) ---- */
+.mrp3d{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;overflow:hidden}
+.mrp3d-stage{position:relative;height:min(600px,65vh);background:#111318}
+.mrp3d-empty{padding:2rem 1.25rem;text-align:center;color:var(--mp-mute)}
+.mrp3d-empty p{max-width:34rem;margin:.4rem auto 1rem}
+.mrp3d-numlabel{display:inline-flex;align-items:center;gap:.35rem;font-size:.76rem;color:var(--mp-mute)}
+.mrp3d-number{width:4.5rem}
+.mrp3d-status[data-kind="error"]{color:#b42318}
+.mrp3d .mrp-btn{text-decoration:none;display:inline-flex;align-items:center}
