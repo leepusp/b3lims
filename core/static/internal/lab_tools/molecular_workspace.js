@@ -3382,6 +3382,21 @@
             return true;
         }
 
+        function setName(value) {
+            const next = String(value || "").trim();
+
+            if (!canEdit || !next || next === elements.name.value.trim()) {
+                return false;
+            }
+
+            elements.name.value = next;
+            markDirty();
+            renderAll();
+            notifyWorkspaceChange("name", "name-edit");
+
+            return true;
+        }
+
         function stepHistory(from, to) {
             const snapshot = from.pop();
 
@@ -3404,6 +3419,7 @@
             refresh: renderAll,
             replaceRange,
             editFeature,
+            setName,
             clearSelection,
             undo: () => stepHistory(editHistory.undo, editHistory.redo),
             redo: () => stepHistory(editHistory.redo, editHistory.undo),

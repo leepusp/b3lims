@@ -398,7 +398,10 @@
 
         placeCircularLabels(g, labels, point, length, R + 26 + laneInfo.count * 20 + 26);
 
-        g.append(svg("text", {x: 0, y: -10, class: "mmc-centre-name", "text-anchor": "middle"}, [document.createTextNode(s.name || "")]));
+        g.append(svg("text", {x: 0, y: -10, class: "mmc-centre-name" + (s.canEdit ? " is-editable" : ""), "text-anchor": "middle"}, [
+            svg("title", {}, [document.createTextNode(s.canEdit ? "Click to rename the record" : s.name || "")]),
+            document.createTextNode(s.name || ""),
+        ]));
         g.append(svg("text", {x: 0, y: 24, class: "mmc-centre-sub", "text-anchor": "middle"}, [document.createTextNode(length.toLocaleString() + " bp")]));
 
         return out;
@@ -589,6 +592,43 @@
         return {start: drag.start + delta, end: drag.end + delta};
     }
 
+    /* Rename the record by clicking its name in the middle of the map. */
+    function editName(target, s) {
+        const box = target.getBoundingClientRect();
+        const host = stage.getBoundingClientRect();
+        const input = html("input", "mmc-name-input");
+        let done = false;
+
+        input.type = "text";
+        input.value = s.name || "";
+        input.setAttribute("aria-label", "Record name");
+        input.style.left = Math.max(4, box.left - host.left + box.width / 2 - 130) + "px";
+        input.style.top = box.top - host.top - 4 + "px";
+        stage.append(input);
+        input.focus();
+        input.select();
+
+        const finish = save => {
+            if (done) return;
+
+            done = true;
+
+            const value = input.value;
+
+            input.remove();
+
+            if (save && api()) api().setName(value);
+        };
+
+        input.addEventListener("keydown", event => {
+            event.stopPropagation();
+
+            if (event.key === "Enter") finish(true);
+            else if (event.key === "Escape") finish(false);
+        });
+        input.addEventListener("blur", () => finish(true));
+    }
+
     function onDown(event) {
         const s = snap();
 
@@ -596,6 +636,14 @@
 
         const circular = s.topology === "circular";
         const node = event.currentTarget;
+        const nameNode = event.target.closest ? event.target.closest(".mmc-centre-name") : null;
+
+        if (nameNode && s.canEdit) {
+            event.preventDefault();
+            editName(nameNode, s);
+
+            return;
+        }
 
         node.setPointerCapture(event.pointerId);
 
