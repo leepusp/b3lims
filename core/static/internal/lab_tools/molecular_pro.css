@@ -166,3 +166,35 @@
 .mpro-table summary{cursor:pointer;padding:.4rem 0;font-size:.82rem;font-weight:600}
 .mpro-table .is-ref{background:#eef4ff;font-weight:600}
 .mpro-holder{background:repeating-linear-gradient(#f4f6f8 0 18px,#fff 18px 20px)}
+
+/* ---- One unified layout for RNA / Protein (no Map|Structure mode, no layout switch) ---- */
+.mw-page[data-sequence-type="rna"] .mwb-modes,
+.mw-page[data-sequence-type="protein"] .mwb-modes,
+.mw-page[data-sequence-type="rna"] .mwv-seg,
+.mw-page[data-sequence-type="protein"] .mwv-seg,
+.mw-page[data-sequence-type="rna"] .mwv-zoom,
+.mw-page[data-sequence-type="protein"] .mwv-zoom,
+.mw-page[data-sequence-type="rna"] [data-mwb-rail="tracks"]{display:none!important}
+.mw-page[data-sequence-type="rna"] #mw-rna-secondary-structure[hidden]{display:block!important}
+
+/* ---- Interactive 2D / 3D structure figure ---- */
+.mrp-figure{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;overflow:hidden}
+.mrp-figtools{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;padding:.5rem .65rem;border-bottom:1px solid var(--mp-border);background:var(--mp-soft)}
+.mrp-btn-sm{min-height:32px;padding:0 .7rem;font-size:.78rem}
+.mrp-btn.is-on{background:var(--mp-blue);border-color:var(--mp-blue);color:#fff}
+.mrp-2d{display:block;width:100%;height:560px;cursor:grab;touch-action:none;background:#fff}
+.mrp-2d.is-grabbing{cursor:grabbing}
+.mrp-node{cursor:pointer}
+.mrp-node:hover circle{stroke:#111827;stroke-width:2}
+.mrp-pairline{cursor:pointer}
+.mrp-pairline:hover{stroke-width:4}
+.mrp-3d{display:block;width:100%;height:560px;cursor:grab;touch-action:none;background:radial-gradient(circle at 50% 40%,#fff,#eef2f7)}
+.mrp-figure-hint{padding:.4rem .75rem;font-size:.74rem;color:var(--mp-mute);border-top:1px solid var(--mp-border)}
+@media (max-width:700px){.mrp-2d,.mrp-3d{height:420px}}
+.mw-page[data-sequence-type="rna"] .mw-seqviz-shell,
+.mw-page[data-sequence-type="rna"] .mw-seqviz-viewer{min-height:0!important;height:240px!important}
+.mw-page[data-sequence-type="rna"] #mw-seqviz-mount,
+.mw-page[data-sequence-type="rna"] #mw-seqviz-mount .la-vz-seqviz,
+.mw-page[data-sequence-type="rna"] #mw-seqviz-mount .la-vz-viewer-container,
+.mw-page[data-sequence-type="rna"] #mw-seqviz-mount .la-vz-viewer-event-router,
+.mw-page[data-sequence-type="rna"] #mw-seqviz-mount .la-vz-linear-scroller{height:240px!important;min-height:0!important}

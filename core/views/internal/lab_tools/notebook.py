@@ -973,6 +973,12 @@ def molecular_registry_index(request):
                     "Invalid sequence type."
                 )
 
+            # The form no longer asks for topology: it follows the type.
+            if imported_record is None:
+                topology = (
+                    "circular" if sequence_type == "plasmid" else "linear"
+                )
+
             if topology not in valid_topologies:
                 raise MolecularSequenceInputError(
                     "Invalid topology."

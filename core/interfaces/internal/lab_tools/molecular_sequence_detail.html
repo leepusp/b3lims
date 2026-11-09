@@ -235,7 +235,7 @@
         <div class="mw-card-header">
             <div>
                 <h2>Record information</h2>
-                <p>Identity, molecule type, topology and description.</p>
+                <p>Identity, molecule type and description.</p>
             </div>
 
             {% if can_edit_molecule %}
@@ -274,7 +274,7 @@
 
             </label>
 
-            <label>
+            <label{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" or molecule.sequence_type == "primer" %} hidden{% endif %}>
                 <span>Topology</span>
                 <select id="mw-topology"
                         class="form-select form-select-sm"
@@ -911,7 +911,9 @@
 {% if molecule.sequence_type == "rna" %}
 <script src="{% static 'internal/lab_tools/molecular_rna_secondary_structure.js' %}?v=20260809-rna-workspace-r1d-v3"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_rna_pro.js' %}?v=20261109-pro-v1"
+<script src="{% static 'internal/lab_tools/molecular_rna_layout.js' %}?v=20261109-layout-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_rna_pro.js' %}?v=20261109-pro-v2"
         defer></script>
 {% endif %}
 {% if molecule.sequence_type == "protein" %}

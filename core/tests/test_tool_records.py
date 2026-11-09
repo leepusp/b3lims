@@ -272,9 +272,13 @@ class RegistryDashboardToolsTests(TestCase):
     def test_dashboard_offers_the_tools_as_types_and_one_file_entry(self):
         response = self.client.get(reverse("molecular_registry_index"))
 
-        for value in ("gel", "assembly", "chemical"):
+        for value in ("gel", "chemical"):
             self.assertContains(response, f'value="tool:{value}"')
             self.assertContains(response, f"?type={value}")
+
+        # Plasmid is a registry type; no separate "Plasmid assembly" entry.
+        self.assertNotContains(response, 'value="tool:assembly"')
+        self.assertNotContains(response, "Plasmid assembly")
 
         self.assertContains(response, "data-tool-create-url")
         # One file entry point, inside the New record form.

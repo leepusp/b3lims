@@ -43,11 +43,11 @@ class ToolRecord(models.Model):
         ("rnafold", "RNA workbench"),
         ("protein3d", "Protein workbench"),
     ]
-    # RNA and Protein are registry types (one item each). The two workbench
+    # Plasmid, RNA and Protein are registry types (one item each). The two workbench
     # tool types stay readable for records already created, but are no longer
     # offered when creating or filtering.
-    CREATABLE_TOOLS = ("gel", "assembly", "chemical")
-    CREATABLE_CHOICES = [TOOL_CHOICES[0], TOOL_CHOICES[1], TOOL_CHOICES[2]]
+    CREATABLE_TOOLS = ("gel", "chemical")
+    CREATABLE_CHOICES = [TOOL_CHOICES[0], TOOL_CHOICES[2]]
 
     tool = models.CharField(max_length=32, choices=TOOL_CHOICES)
     name = models.CharField(max_length=255)

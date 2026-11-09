@@ -3,7 +3,7 @@
  *
  * Sits on top of molecular_rna_secondary_structure.js (stored structures,
  * Forna drawing, upload). It adds what that module lacks:
- *   - view tabs: Forna | Arc | Circle | Dot-bracket | Pairs
+ *   - view tabs: Structure (2D, interactive) | 3D | Force layout | Arc | Circle | Dot-bracket | Pairs
  *   - statistics computed from the dot-bracket (pairs, stems, loops, GC/AU/GU)
  *   - structure comparison (shared / only-A / only-B base pairs)
  *   - export: SVG, CT, dot-bracket FASTA, pairs CSV
@@ -24,7 +24,7 @@
 
     let structures = [];
     let current = null;
-    let view = "forna";
+    let view = "2d";
     let compareId = "";
     let ui = null;
 
@@ -526,6 +526,577 @@
             + `“${other.name}” · similarity ${Math.round(jaccard * 100)}%`;
     }
 
+    // ---- interactive 2D / 3D ----------------------------------------------
+    const layoutLib = () => window.BiobankRnaLayout;
+    const SCHEMES = [["base", "Nucleotide"], ["pair", "Pair type"], ["position", "Position"], ["none", "None"]];
+    let scheme = "base";
+    let editDb = null;
+    let editFor = null;
+    let editMode = false;
+    let anchor = null;
+    let lastPick = null;
+    let hist = [];
+    let vb2 = null;
+    const cam = {yaw: 0.6, pitch: -0.35, zoom: 1, spin: false};
+    let redraw3d = null;
+
+    function activeDb() {
+        if (!current) return "";
+        if (editDb !== null && editFor === current.id) return editDb;
+
+        return String(current.structure || "");
+    }
+
+    function selection() {
+        const api = window.BiobankMolecularWorkspace;
+        const snap = api && api.getSnapshot && api.getSnapshot();
+        const r = snap && snap.sequenceSelection;
+
+        if (!r) return null;
+
+        const a = Number(r.start);
+        const b = Number(r.end);
+
+        return Number.isFinite(a) && Number.isFinite(b) ? [Math.min(a, b) - 1, Math.max(a, b) - 1] : null;
+    }
+
+    function fillFor(i, seq, partner, n) {
+        if (scheme === "pair") {
+            return partner[i] >= 0 ? COLORS[pairClass(seq[i], seq[partner[i]])] : "#cbd5e1";
+        }
+        if (scheme === "position") return `hsl(${Math.round((i / Math.max(n, 1)) * 300)},65%,62%)`;
+        if (scheme === "none") return "#e2e8f0";
+
+        return BASE[seq[i]] || "#94a3b8";
+    }
+
+    function pick(i, shift) {
+        if (shift && lastPick !== null) selectRange(Math.min(lastPick, i), Math.max(lastPick, i));
+        else selectRange(i, i);
+
+        lastPick = i;
+    }
+
+    function editClick(i, db) {
+        const lib = layoutLib();
+        const partner = lib.partnersOf(db, false);
+
+        if (partner[i] >= 0) {
+            hist.push(db);
+            editDb = lib.removePair(db, i);
+            editFor = current.id;
+            anchor = null;
+            renderView();
+
+            return;
+        }
+        if (anchor === null) {
+            anchor = i;
+            tip(`Position ${i + 1} chosen — click the nucleotide to pair it with.`);
+            renderView();
+
+            return;
+        }
+
+        const a = anchor;
+
+        anchor = null;
+
+        if (a === i || Math.abs(a - i) < 4) {
+            tip("A pair needs at least 3 nucleotides between its bases.");
+        } else if (partner[a] >= 0 || lib.crosses(db, a, i)) {
+            tip("That pair would cross an existing pair (pseudoknot) — not supported in the editor.");
+        } else {
+            hist.push(db);
+            editDb = lib.setPair(db, a, i);
+            editFor = current.id;
+        }
+
+        renderView();
+    }
+
+    async function saveEdited() {
+        const db = activeDb();
+        const seq = sequence();
+
+        if (!current || seq.length !== db.length) {
+            tip("Cannot save: sequence length differs from the structure.");
+
+            return;
+        }
+
+        const name = `${current.name || "Structure"} (edited)`;
+        const data = new FormData();
+
+        data.append("action", "save");
+        data.append("source_text", `>${name}\n${seq}\n${db}\n`);
+        data.append("name", name);
+        data.append("source_method", "Manual edit of base pairs");
+        data.append("source_note", "Edited in the interactive structure view");
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: "POST", credentials: "same-origin", body: data,
+                headers: {"X-CSRFToken": root.dataset.csrfToken || "", Accept: "application/json"},
+            });
+            const payload = await response.json();
+
+            if (!response.ok || payload.status === "error") {
+                tip(payload.message || "Could not save the edited structure.");
+
+                return;
+            }
+
+            editDb = null;
+            hist = [];
+            tip("Saved as a new structure. Reloading…");
+            setTimeout(() => window.location.reload(), 500);
+        } catch (error) {
+            tip("Could not save the edited structure.");
+        }
+    }
+
+    function toolButton(label, title, onClick, active) {
+        const b = el("button", "mrp-btn mrp-btn-sm" + (active ? " is-on" : ""), label);
+
+        b.type = "button";
+        b.title = title;
+        b.addEventListener("click", onClick);
+
+        return b;
+    }
+
+    function figureTools(kind) {
+        const bar = el("div", "mrp-figtools");
+        const sel = document.createElement("select");
+
+        sel.className = "mrp-select";
+        sel.setAttribute("aria-label", "Colour bases by");
+        SCHEMES.forEach(([k, label]) => sel.appendChild(new Option(`Colour: ${label}`, k)));
+        sel.value = scheme;
+        sel.addEventListener("change", () => {
+            scheme = sel.value;
+            renderView();
+        });
+        bar.appendChild(sel);
+
+        if (kind === "2d") {
+            bar.appendChild(toolButton("Fit", "Fit the whole structure", () => {
+                vb2 = null;
+                renderView();
+            }));
+            bar.appendChild(toolButton(editMode ? "Editing pairs ✓" : "Edit pairs",
+                "Click a paired base to remove its pair; click two free bases to add one", () => {
+                    editMode = !editMode;
+                    anchor = null;
+                    renderView();
+                }, editMode));
+
+            if (editMode) {
+                const undo = toolButton("Undo", "Undo last edit", () => {
+                    if (hist.length) {
+                        editDb = hist.pop();
+                        renderView();
+                    }
+                });
+
+                undo.disabled = !hist.length;
+                bar.appendChild(undo);
+
+                const reset = toolButton("Reset", "Discard edits", () => {
+                    editDb = null;
+                    hist = [];
+                    anchor = null;
+                    renderView();
+                });
+
+                reset.disabled = editDb === null;
+                bar.appendChild(reset);
+
+                const save = toolButton("Save as new structure", "Store the edited pairs as a new structure", saveEdited);
+
+                save.disabled = editDb === null;
+                bar.appendChild(save);
+            }
+        } else {
+            bar.appendChild(toolButton(cam.spin ? "Stop rotation" : "Rotate", "Toggle automatic rotation", () => {
+                cam.spin = !cam.spin;
+                renderView();
+            }, cam.spin));
+            bar.appendChild(toolButton("Reset view", "Reset the camera", () => {
+                Object.assign(cam, {yaw: 0.6, pitch: -0.35, zoom: 1});
+                if (redraw3d) redraw3d();
+            }));
+        }
+
+        return bar;
+    }
+
+    function draw2d(db, seq) {
+        const lib = layoutLib();
+        const wrap = el("div", "mrp-figure");
+
+        wrap.appendChild(figureTools("2d"));
+
+        if (!lib) {
+            wrap.appendChild(el("div", "mrp-empty", "Layout module not loaded."));
+
+            return wrap;
+        }
+
+        const n = db.length;
+        const lay = lib.layout(db, {loop: 1, pair: 1, rise: 1, closed: true});
+
+        if (lay.pos.some(p => !p)) {
+            wrap.appendChild(el("div", "mrp-empty", "This structure cannot be laid out; use the Arc or Circle view."));
+
+            return wrap;
+        }
+
+        const S = 24;
+        const R = 9;
+        const pos = lay.pos.map(p => [p[0] * S, p[1] * S]);
+        const b = lib.bounds(pos);
+        const pad = 44;
+        const full = {x: b.x0 - pad, y: b.y0 - pad, w: Math.max(b.x1 - b.x0 + 2 * pad, 120), h: Math.max(b.y1 - b.y0 + 2 * pad, 120)};
+
+        if (!vb2 || vb2.n !== n) vb2 = {...full, n};
+
+        const s = svg("svg", {class: "mrp-svg mrp-2d", role: "img", "aria-label": "RNA secondary structure drawing", preserveAspectRatio: "xMidYMid meet"});
+        const setVb = () => s.setAttribute("viewBox", `${vb2.x} ${vb2.y} ${vb2.w} ${vb2.h}`);
+        const partner = lay.partner;
+        const sel = selection();
+        const inSel = i => Boolean(sel) && i >= sel[0] && i <= sel[1];
+        const gBack = svg("g");
+        const gPairs = svg("g");
+        const gNodes = svg("g");
+        const gNums = svg("g");
+
+        for (let i = 0; i < n - 1; i += 1) {
+            gBack.appendChild(svg("line", {x1: pos[i][0], y1: pos[i][1], x2: pos[i + 1][0], y2: pos[i + 1][1], stroke: "#9aa5b1", "stroke-width": 2.2, "stroke-linecap": "round"}));
+        }
+
+        lib.pairsOf(db).forEach(([i, j, knot]) => {
+            if (!knot && !(pos[i] && pos[j])) return;
+
+            const line = svg("line", {
+                x1: pos[i][0], y1: pos[i][1], x2: pos[j][0], y2: pos[j][1],
+                stroke: knot ? "#9333ea" : "#3b82f6", "stroke-width": knot ? 1.6 : 2.2,
+                "stroke-dasharray": knot ? "4 3" : "", class: "mrp-pairline",
+            });
+
+            line.addEventListener("mouseenter", () => tip(`${seq[i] || "?"}${i + 1} – ${seq[j] || "?"}${j + 1} · ${pairClass(seq[i], seq[j])}${knot ? " · pseudoknot" : ""}`));
+            line.addEventListener("click", () => {
+                if (editMode) editClick(i, db);
+                else selectRange(i, j);
+            });
+            gPairs.appendChild(line);
+        });
+
+        for (let i = 0; i < n; i += 1) {
+            const [x, y] = pos[i];
+            const g = svg("g", {class: "mrp-node", "data-i": i});
+            const circle = svg("circle", {
+                cx: x, cy: y, r: R, fill: fillFor(i, seq, partner, n),
+                stroke: anchor === i ? "#dc2626" : (inSel(i) ? "#111827" : "#64748b"),
+                "stroke-width": anchor === i || inSel(i) ? 2.6 : 1,
+            });
+            const t = svg("text", {x, y: y + 3.2, "text-anchor": "middle", "font-size": 9.5, "font-weight": 600, fill: "#1f2937", "font-family": "IBM Plex Mono,monospace", "pointer-events": "none"});
+
+            t.textContent = seq[i] || "·";
+            g.append(circle, t);
+            g.addEventListener("mouseenter", () => tip(
+                `${seq[i] || "?"}${i + 1}` + (partner[i] >= 0 ? ` paired with ${seq[partner[i]] || "?"}${partner[i] + 1}` : " unpaired")
+            ));
+            g.addEventListener("click", event => {
+                if (editMode) editClick(i, db);
+                else pick(i, event.shiftKey);
+            });
+            gNodes.appendChild(g);
+
+            if ((i + 1) % 10 === 0 || i === 0) {
+                const prev = pos[Math.max(i - 1, 0)];
+                const next = pos[Math.min(i + 1, n - 1)];
+                let vx = x - (prev[0] + next[0]) / 2;
+                let vy = y - (prev[1] + next[1]) / 2;
+                const len = Math.hypot(vx, vy);
+
+                if (len < 0.5) {
+                    vx = 0;
+                    vy = -1;
+                } else {
+                    vx /= len;
+                    vy /= len;
+                }
+
+                gNums.appendChild(svg("line", {x1: x + vx * R, y1: y + vy * R, x2: x + vx * (R + 7), y2: y + vy * (R + 7), stroke: "#94a3b8", "stroke-width": 1}));
+
+                const label = svg("text", {x: x + vx * (R + 16), y: y + vy * (R + 16) + 3, "text-anchor": "middle", "font-size": 9, fill: "#64748b"});
+
+                label.textContent = String(i + 1);
+                gNums.appendChild(label);
+            }
+        }
+
+        s.append(gBack, gPairs, gNums, gNodes);
+        setVb();
+
+        const scaleOf = () => Math.max(vb2.w / (s.clientWidth || 800), vb2.h / (s.clientHeight || 520));
+        let drag = null;
+
+        s.addEventListener("pointerdown", event => {
+            if (event.target.closest(".mrp-node, .mrp-pairline")) return;
+
+            drag = {x: event.clientX, y: event.clientY};
+            s.setPointerCapture(event.pointerId);
+            s.classList.add("is-grabbing");
+        });
+        s.addEventListener("pointermove", event => {
+            if (!drag) return;
+
+            const k = scaleOf();
+
+            vb2.x -= (event.clientX - drag.x) * k;
+            vb2.y -= (event.clientY - drag.y) * k;
+            drag = {x: event.clientX, y: event.clientY};
+            setVb();
+        });
+        const end = () => {
+            drag = null;
+            s.classList.remove("is-grabbing");
+        };
+
+        s.addEventListener("pointerup", end);
+        s.addEventListener("pointercancel", end);
+        s.addEventListener("wheel", event => {
+            event.preventDefault();
+
+            const rect = s.getBoundingClientRect();
+            const k = scaleOf();
+            const mx = vb2.x + (event.clientX - rect.left - (rect.width - vb2.w / k) / 2) * k;
+            const my = vb2.y + (event.clientY - rect.top - (rect.height - vb2.h / k) / 2) * k;
+            const f = event.deltaY < 0 ? 0.88 : 1.14;
+
+            vb2.x = mx - (mx - vb2.x) * f;
+            vb2.y = my - (my - vb2.y) * f;
+            vb2.w *= f;
+            vb2.h *= f;
+            setVb();
+        }, {passive: false});
+
+        const hint = el("div", "mrp-figure-hint", editMode
+            ? "Edit mode: click a paired base to remove its pair, or two free bases to create one."
+            : "Drag to move · scroll to zoom · click a base (Shift for a range) to select it in the sequence.");
+
+        wrap.append(s, hint);
+
+        return wrap;
+    }
+
+    function draw3d(db, seq) {
+        const lib = layoutLib();
+        const wrap = el("div", "mrp-figure");
+
+        wrap.appendChild(figureTools("3d"));
+
+        if (!lib) {
+            wrap.appendChild(el("div", "mrp-empty", "Layout module not loaded."));
+
+            return wrap;
+        }
+
+        const n = db.length;
+        const model = lib.build3d(db);
+        const pts = model.pts;
+
+        if (pts.some(p => !p || p.some(v => !Number.isFinite(v)))) {
+            wrap.appendChild(el("div", "mrp-empty", "This structure cannot be modelled in 3D; use the Arc or Circle view."));
+
+            return wrap;
+        }
+
+        const c = [0, 1, 2].map(k => pts.reduce((a, p) => a + p[k], 0) / n);
+        const ext = Math.max(1, ...pts.map(p => Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2])));
+        const canvas = document.createElement("canvas");
+
+        canvas.className = "mrp-3d";
+        canvas.setAttribute("role", "img");
+        canvas.setAttribute("aria-label", "Illustrative 3D RNA model");
+        wrap.appendChild(canvas);
+        wrap.appendChild(el("div", "mrp-figure-hint",
+            "Illustrative model built from the base pairs (idealised A-form helices, flat loops), not a predicted tertiary structure. Drag to rotate · scroll to zoom · click a base to select it."));
+
+        const sel = selection();
+        let hits = [];
+
+        redraw3d = () => {
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.clientWidth || 800;
+            const h = canvas.clientHeight || 520;
+
+            if (canvas.width !== Math.round(w * dpr)) {
+                canvas.width = Math.round(w * dpr);
+                canvas.height = Math.round(h * dpr);
+            }
+
+            const ctx = canvas.getContext("2d");
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            const cy = Math.cos(cam.yaw);
+            const sy = Math.sin(cam.yaw);
+            const cp = Math.cos(cam.pitch);
+            const sp = Math.sin(cam.pitch);
+            const k = (Math.min(w, h) / (ext * 2.3)) * cam.zoom;
+            const P = pts.map(p => {
+                const x0 = p[0] - c[0];
+                const y0 = p[1] - c[1];
+                const z0 = p[2] - c[2];
+                const x1 = x0 * cy + z0 * sy;
+                const z1 = -x0 * sy + z0 * cy;
+                const y1 = y0 * cp - z1 * sp;
+                const z2 = y0 * sp + z1 * cp;
+
+                return {x: w / 2 + x1 * k, y: h / 2 + y1 * k, z: z2};
+            });
+            const items = [];
+
+            for (let i = 0; i < n - 1; i += 1) items.push({t: "bond", a: i, b: i + 1, z: (P[i].z + P[i + 1].z) / 2});
+            lib.pairsOf(db).forEach(([i, j, knot]) => {
+                if (!knot) items.push({t: "rung", a: i, b: j, z: (P[i].z + P[j].z) / 2});
+            });
+            for (let i = 0; i < n; i += 1) items.push({t: "nt", a: i, z: P[i].z});
+            items.sort((a, b) => a.z - b.z);
+            hits = [];
+
+            const depth = z => 0.62 + 0.38 * Math.max(-1, Math.min(1, z / ext));
+
+            items.forEach(it => {
+                if (it.t === "bond") {
+                    ctx.strokeStyle = "#7d8998";
+                    ctx.globalAlpha = depth(it.z);
+                    ctx.lineWidth = Math.max(1.5, 1.5 * k * 0.55);
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    ctx.moveTo(P[it.a].x, P[it.a].y);
+                    ctx.lineTo(P[it.b].x, P[it.b].y);
+                    ctx.stroke();
+                } else if (it.t === "rung") {
+                    ctx.strokeStyle = COLORS[pairClass(seq[it.a], seq[it.b])];
+                    ctx.globalAlpha = 0.55 * depth(it.z);
+                    ctx.lineWidth = Math.max(1, k * 0.7);
+                    ctx.beginPath();
+                    ctx.moveTo(P[it.a].x, P[it.a].y);
+                    ctx.lineTo(P[it.b].x, P[it.b].y);
+                    ctx.stroke();
+                } else {
+                    const i = it.a;
+                    const r = Math.max(3.2, 2.4 * k * (0.85 + 0.3 * depth(it.z)));
+                    const color = fillFor(i, seq, model.partner, n);
+                    const selected = Boolean(sel) && i >= sel[0] && i <= sel[1];
+
+                    ctx.globalAlpha = 1;
+
+                    if (n <= 1500) {
+                        const grad = ctx.createRadialGradient(P[i].x - r * 0.35, P[i].y - r * 0.4, r * 0.1, P[i].x, P[i].y, r);
+
+                        grad.addColorStop(0, "#ffffff");
+                        grad.addColorStop(0.35, color);
+                        grad.addColorStop(1, color);
+                        ctx.fillStyle = grad;
+                    } else ctx.fillStyle = color;
+
+                    ctx.beginPath();
+                    ctx.arc(P[i].x, P[i].y, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.lineWidth = selected ? 2.5 : 0.8;
+                    ctx.strokeStyle = selected ? "#111827" : "rgba(71,85,105,.7)";
+                    ctx.stroke();
+                    hits.push({i, x: P[i].x, y: P[i].y, r, z: it.z});
+                }
+            });
+            ctx.globalAlpha = 1;
+        };
+
+        let drag = null;
+        let moved = 0;
+
+        canvas.addEventListener("pointerdown", event => {
+            drag = {x: event.clientX, y: event.clientY};
+            moved = 0;
+            canvas.setPointerCapture(event.pointerId);
+        });
+        canvas.addEventListener("pointermove", event => {
+            if (!drag) return;
+
+            const dx = event.clientX - drag.x;
+            const dy = event.clientY - drag.y;
+
+            moved += Math.abs(dx) + Math.abs(dy);
+            cam.yaw += dx * 0.008;
+            cam.pitch = Math.max(-1.5, Math.min(1.5, cam.pitch + dy * 0.008));
+            drag = {x: event.clientX, y: event.clientY};
+            if (redraw3d) redraw3d();
+        });
+        canvas.addEventListener("pointerup", event => {
+            drag = null;
+
+            if (moved > 4) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            let best = null;
+
+            hits.forEach(h => {
+                const d = Math.hypot(h.x - x, h.y - y);
+
+                if (d <= h.r + 3 && (!best || h.z > best.z)) best = h;
+            });
+
+            if (best) pick(best.i, event.shiftKey);
+        });
+        canvas.addEventListener("pointermove", event => {
+            if (drag) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            let best = null;
+
+            hits.forEach(h => {
+                if (Math.hypot(h.x - x, h.y - y) <= h.r + 2 && (!best || h.z > best.z)) best = h;
+            });
+
+            if (best) {
+                const i = best.i;
+
+                tip(`${seq[i] || "?"}${i + 1}` + (model.partner[i] >= 0 ? ` paired with ${seq[model.partner[i]] || "?"}${model.partner[i] + 1}` : " unpaired"));
+            }
+        });
+        canvas.addEventListener("wheel", event => {
+            event.preventDefault();
+            cam.zoom = Math.max(0.3, Math.min(6, cam.zoom * (event.deltaY < 0 ? 1.12 : 0.89)));
+            if (redraw3d) redraw3d();
+        }, {passive: false});
+
+        const spin = () => {
+            if (!canvas.isConnected || !cam.spin) return;
+
+            cam.yaw += 0.01;
+            if (redraw3d) redraw3d();
+            requestAnimationFrame(spin);
+        };
+
+        requestAnimationFrame(() => {
+            if (redraw3d) redraw3d();
+            if (cam.spin) spin();
+        });
+
+        return wrap;
+    }
+
     function renderView() {
         if (!ui) return;
 
@@ -550,7 +1121,7 @@
         if (!current) return;
 
         const seq = sequence();
-        const db = String(current.structure || "");
+        const db = activeDb();
         const safe = seq.length === db.length;
 
         renderStats(db, seq);
@@ -564,7 +1135,11 @@
             "Sequence differs from the stored structure length; nucleotides may not match."
         );
 
-        if (view === "arc") {
+        if (view === "2d") {
+            ui.stage.appendChild(draw2d(db, safe ? seq : ""));
+        } else if (view === "3d") {
+            ui.stage.appendChild(draw3d(db, safe ? seq : ""));
+        } else if (view === "arc") {
             const box = el("div", "mrp-scroll");
 
             box.appendChild(drawArc(db, safe ? seq : ""));
@@ -583,7 +1158,7 @@
 
     function exportMenu(event) {
         const seq = sequence();
-        const db = current ? String(current.structure || "") : "";
+        const db = activeDb();
 
         if (!db) return;
 
@@ -594,7 +1169,7 @@
             ["Pairs CSV", () => download(`${name}_pairs.csv`, pairsCsv(db, seq), "text/csv")],
         ];
 
-        const svgNode = ui.stage.querySelector("svg");
+        const svgNode = ui.stage.querySelector("svg.mrp-svg");
 
         if (svgNode) {
             items.push(["SVG image", () => {
@@ -629,7 +1204,7 @@
         const tabsBox = el("div", "mrp-tabs");
         const tabs = [];
 
-        [["forna", "Structure"], ["arc", "Arc"], ["circle", "Circle"], ["dot", "Dot-bracket"], ["pairs", "Pairs"]]
+        [["2d", "Structure"], ["3d", "3D"], ["forna", "Force layout"], ["arc", "Arc"], ["circle", "Circle"], ["dot", "Dot-bracket"], ["pairs", "Pairs"]]
             .forEach(([key, label]) => {
                 const b = el("button", "mrp-tab" + (key === view ? " is-active" : ""), label);
 
@@ -775,5 +1350,15 @@
 
     root.addEventListener("biobank:molecular-workspace-change", () => {
         if (ui && view !== "forna") renderView();
+        if (ui && view === "forna") return;
     });
+
+    // One layout: the structure card is always shown under the sequence, so
+    // ask the stored-structure module to load without a view switch.
+    const boot = () => root.dispatchEvent(new CustomEvent("biobank:molecular-view-change", {
+        detail: {view: "secondary-structure", requestedView: "secondary-structure", unified: true},
+    }));
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 0));
+    else setTimeout(boot, 0);
 })();

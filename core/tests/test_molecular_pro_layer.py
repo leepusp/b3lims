@@ -106,3 +106,51 @@ class MolecularProLoopGuardTests(SimpleTestCase):
 
             self.assertIn("queued", source, name)
             self.assertIn("setTimeout", source, name)
+
+
+class MolecularUnifiedLayoutTests(SimpleTestCase):
+    """RNA/Protein use one layout; interactive 2D/3D structure; no topology field."""
+
+    def test_layout_module_is_loaded_before_the_rna_layer(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+
+        self.assertLess(
+            template.index("molecular_rna_layout.js"),
+            template.index("molecular_rna_pro.js"),
+        )
+
+    def test_layout_unit_tests_run_with_node(self):
+        node = shutil.which("node")
+
+        if not node:
+            self.skipTest("node is not installed")
+
+        script = Path(settings.BASE_DIR, "core/tests/js/test_rna_layout.cjs")
+        result = subprocess.run(
+            [node, str(script)], capture_output=True, text=True, timeout=60
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("rna layout ok", result.stdout)
+
+    def test_rna_layer_offers_2d_3d_and_pair_editing(self):
+        source = (STATIC / "molecular_rna_pro.js").read_text(encoding="utf-8")
+
+        for token in ('["2d", "Structure"]', '["3d", "3D"]', "Edit pairs", "Save as new structure", "build3d"):
+            self.assertIn(token, source)
+
+    def test_mode_and_layout_switches_are_hidden_for_rna_and_protein(self):
+        css = (STATIC / "molecular_pro.css").read_text(encoding="utf-8")
+
+        self.assertIn('.mw-page[data-sequence-type="rna"] .mwb-modes', css)
+        self.assertIn('.mw-page[data-sequence-type="protein"] .mwv-seg', css)
+
+    def test_topology_is_not_asked_when_creating_a_record(self):
+        registry = Path(
+            settings.BASE_DIR,
+            "core/interfaces/internal/lab_tools/molecular_registry.html",
+        ).read_text(encoding="utf-8")
+        start = registry.index('for="molecule-topology"')
+        block = registry[max(0, start - 200):start]
+
+        self.assertIn("hidden", block)
