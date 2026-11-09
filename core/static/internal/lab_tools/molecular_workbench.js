@@ -398,6 +398,21 @@
         const isRna = root.dataset.sequenceType === "rna";
         const sections = {};
         const adopted = {detailed: false, linear: false};
+        const card = root.querySelector(".mw-seqviz-card");
+        const canvasApi = () => window.BiobankMapCanvas || null;
+        const canvasHost = document.getElementById("mmc");
+        let classic = false;
+
+        function canvasOn() {
+            return Boolean(canvasHost && canvasApi() && canvasApi().active());
+        }
+
+        function setCanvas(on) {
+            const wanted = Boolean(on && canvasHost && canvasApi() && !classic);
+
+            if (card) card.classList.toggle("is-canvas", wanted);
+            if (canvasApi()) canvasApi().setActive(wanted);
+        }
 
         function section(name, title) {
             const box = el("div", "mwv-opts");
@@ -424,6 +439,20 @@
 
             section("detailed", "Map options");
             section("linear", "Sequence options");
+
+            if (canvasHost) {
+                const classicRow = el("label", "mwv-opts mwv-classic");
+                const classicInput = document.createElement("input");
+
+                classicInput.type = "checkbox";
+                classicInput.addEventListener("change", () => {
+                    classic = classicInput.checked;
+                    setCanvas(layoutOf(engineOf()) === "map");
+                    sync();
+                });
+                classicRow.append(classicInput, document.createTextNode(" Use the classic map (temporary)"));
+                panelBody.append(classicRow);
+            }
         }
 
         const engineOf = () => {
@@ -469,11 +498,15 @@
             });
 
             Object.entries(sections).forEach(([name, box]) => {
-                box.hidden = name !== engine;
+                box.hidden = name !== engine || (name === "detailed" && canvasOn());
             });
 
-            if (zoomGroup) zoomGroup.hidden = engine === "linear";
-            if (label) label.textContent = zoomText(engine) || "100%";
+            if (zoomGroup) zoomGroup.hidden = engine === "linear" && !canvasOn();
+            if (label) {
+                label.textContent = canvasOn()
+                    ? canvasApi().zoomPercent() + "%"
+                    : (zoomText(engine) || "100%");
+            }
         }
 
         function chooseEngine(name) {
@@ -486,6 +519,8 @@
         layoutButtons.forEach(button => {
             button.addEventListener("click", () => {
                 const layout = button.dataset.mwvLayout;
+
+                setCanvas(layout === "map");
 
                 if (layout === "map") {
                     chooseEngine("detailed");
@@ -507,7 +542,11 @@
                 const engine = engineOf();
                 const step = button.dataset.mwvZoom;
 
-                if (engine === "seqviz" && zoomRange) {
+                if (canvasOn()) {
+                    if (step === "fit") canvasApi().fit();
+                    else if (Number(step) > 0) canvasApi().zoomIn();
+                    else canvasApi().zoomOut();
+                } else if (engine === "seqviz" && zoomRange) {
                     const next = step === "fit"
                         ? 50
                         : Math.max(0, Math.min(100, Number(zoomRange.value) + Number(step)));
@@ -568,6 +607,8 @@
 
             sync();
         }, 200);
+
+        if (canvasHost) canvasHost.addEventListener("mmc:zoom", sync);
 
         const switcher = root.querySelector(".mpm-view-switcher");
 

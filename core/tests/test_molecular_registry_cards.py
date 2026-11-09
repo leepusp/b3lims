@@ -58,3 +58,30 @@ class CleanRecordNameTests(TestCase):
         self.assertEqual(clean_record_name("  pET-28a(+) "), "pET-28a(+)")
         self.assertEqual(clean_record_name(">simple desc"), "simple")
         self.assertEqual(clean_record_name(">"), "")
+
+
+class MapCanvasMountTests(TestCase):
+    def _page(self, sequence_type, topology):
+        user = get_user_model().objects.create_user(
+            f"canvas-{sequence_type}", password="x"
+        )
+        molecule = MolecularSequence.objects.create(
+            name="m", sequence_type=sequence_type, topology=topology,
+            sequence="ATGC" * 10 if sequence_type != "protein" else "MKTAYIAK",
+            owner=user,
+        )
+        self.client.force_login(user)
+
+        return self.client.get(
+            reverse("molecular_sequence_detail", args=[molecule.id])
+        ).content.decode()
+
+    def test_nucleotide_records_get_the_interactive_map(self):
+        for kind, topology in (("plasmid", "circular"), ("dna", "linear"), ("insert", "linear")):
+            html = self._page(kind, topology)
+            self.assertIn('id="mmc"', html)
+            self.assertIn("molecular_map_canvas.js", html)
+
+    def test_rna_and_protein_keep_their_own_views(self):
+        for kind in ("rna", "protein"):
+            self.assertNotIn('id="mmc"', self._page(kind, "linear"))

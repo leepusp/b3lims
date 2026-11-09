@@ -8,6 +8,7 @@
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-viewer-bar-v3">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v1">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -408,6 +409,10 @@
                 </details>
             </div>
         </div>
+
+{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %}
+        <div id="mmc" class="mmc" role="group" aria-label="Interactive map" hidden></div>
+{% endif %}
 
         <div class="mw-seqviz-shell">
             <div id="mw-seqviz-viewer"
@@ -844,7 +849,8 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-bench-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-viewer-bar-v3"
+<script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v1" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-canvas-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
