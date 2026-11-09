@@ -120,12 +120,17 @@ def add_item(package, user, kind, ref) -> SubmissionItem:
 
         obj = visible_notebook_entries_for_user(user).filter(pk=ref).first()
         item.entry, item.label = obj, (obj.title if obj else "")
+    elif kind == "notebook":
+        from core.services.jupyter_server import visible_notebooks_for_user
+
+        obj = visible_notebooks_for_user(user).filter(pk=ref).first()
+        item.jupyter_notebook, item.label = obj, (obj.title if obj else "")
     else:
         raise ValidationError("Invalid item type.")
 
     if not obj:
         raise ValidationError("That record is not available to you.")
-    if package.items.filter(**{kind if kind != "sequence" else "molecule": obj}).exists():
+    if package.items.filter(**{{"sequence": "molecule", "notebook": "jupyter_notebook"}.get(kind, kind): obj}).exists():
         raise ValidationError("That record is already in the package.")
 
     item.save()
@@ -227,7 +232,7 @@ def _url(name, pk) -> str:
 def serialize(package, user) -> dict:
     items = []
 
-    for item in package.items.select_related("molecule", "structure", "sample", "entry"):
+    for item in package.items.select_related("molecule", "structure", "sample", "entry", "jupyter_notebook"):
         url = ""
 
         if item.molecule_id:
@@ -238,6 +243,8 @@ def serialize(package, user) -> dict:
             url = _url("sample_detail", item.sample_id)
         elif item.entry_id:
             url = _url("notebook_entry", item.entry_id)
+        elif item.jupyter_notebook_id:
+            url = _url("jupyter_workspace", item.jupyter_notebook_id)
 
         items.append({"id": item.pk, "kind": item.kind, "kind_label": item.get_kind_display(), "label": item.label, "url": url})
 

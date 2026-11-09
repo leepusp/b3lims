@@ -28,7 +28,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from core.models.lab_tools.submission import SubmissionPackage
-from core.services import submission_adapters, taxonomy_local
+from core.services import b3repo, submission_adapters, taxonomy_local
 
 SCHEMA = "b3-lims-package/1"
 LICENSE_DEFAULT = "https://creativecommons.org/licenses/by/4.0/"
@@ -100,7 +100,7 @@ def collect_files(package: SubmissionPackage) -> tuple[dict[str, bytes], list[di
 
         return candidate
 
-    for item in package.items.select_related("molecule", "structure", "structure__molecule", "sample", "entry"):
+    for item in package.items.select_related("molecule", "structure", "structure__molecule", "sample", "entry", "jupyter_notebook"):
         info = {"kind": item.kind, "label": item.label, "files": []}
 
         if item.kind == "sequence" and item.molecule:
@@ -130,6 +130,12 @@ def collect_files(package: SubmissionPackage) -> tuple[dict[str, bytes], list[di
 
             files[path] = page.encode()
             info.update(record_id=e.pk, files=[path])
+        elif item.kind == "notebook" and item.jupyter_notebook:
+            nb = item.jupyter_notebook
+            path = unique(f"notebooks/{nb.pk}-{safe_name(nb.title, 'notebook')}.ipynb")
+
+            files[path] = (json.dumps(nb.notebook_json or {}, indent=1, ensure_ascii=False) + "\n").encode()
+            info.update(record_id=nb.pk, files=[path])
         else:
             info["warning"] = "the source record no longer exists"
 
@@ -334,7 +340,28 @@ def publish_package(package: SubmissionPackage) -> str:
     package.save(update_fields=["repository_path", "manifest_sha256", "published_at", "status", "updated_at"])
     _append_index(root, package, manifest)
 
+    try:
+        install_client()
+    except OSError:
+        pass
+
     return rel
+
+
+def install_client() -> Path:
+    """Copy b3repo.py to <repository>/lib so notebooks and Galaxy tools can import it."""
+    target_dir = repository_root() / "lib"
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    target = target_dir / "b3repo.py"
+    tmp = target.with_name(f".b3repo.py.{os.getpid()}.tmp")
+
+    shutil.copyfile(b3repo.__file__, tmp)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, target)
+
+    return target
 
 
 def _append_index(root: Path, package: SubmissionPackage, manifest: dict) -> None:

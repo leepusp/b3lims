@@ -149,6 +149,15 @@ def workflow_lookup_api(request):
         return JsonResponse({"results": composer.search_references("experiments", request.user, query)})
     if kind == "sample":
         return JsonResponse({"results": composer.search_references("items", request.user, query)})
+    if kind == "jupyter":
+        from core.services.jupyter_server import visible_notebooks_for_user
+
+        qs = visible_notebooks_for_user(request.user)
+
+        if query:
+            qs = qs.filter(title__icontains=query)
+
+        return JsonResponse({"results": [{"id": n.pk, "label": n.title} for n in qs.order_by("title")[:15]]})
     if kind == "molecule":
         from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
 

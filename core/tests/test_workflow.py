@@ -235,3 +235,46 @@ class WorkflowWiringTests(WorkflowBase):
         from core.models.activity import ActivityLog
 
         self.assertTrue(ActivityLog.objects.filter(entity_type="workflow", verb="created").exists())
+
+
+class WorkflowJupyterStepTests(WorkflowBase):
+    def setUp(self):
+        super().setUp()
+
+        from core.models.lab_tools.notebook import JupyterNotebook
+
+        self.mine = JupyterNotebook.objects.create(title="Align reads", owner=self.ana, notebook_json={"cells": []})
+        self.theirs = JupyterNotebook.objects.create(title="Private", owner=self.bia, notebook_json={"cells": []})
+
+    def test_a_step_links_a_notebook_with_parameters_and_a_result_note(self):
+        sid = self.add("Align", kind="jupyter", jupyter_notebook=self.mine.pk, parameters="taxid=1280\nmin_length = 200", result_note="Saved in /scratch/x")
+        step = self.client.get(reverse("workflow_detail", args=[self.workflow.pk])).context["workflow_data"]["steps"][0]
+
+        self.assertEqual(step["kind"], "jupyter")
+        self.assertEqual(step["jupyter_notebook"], self.mine.pk)
+        self.assertEqual(step["jupyter_label"], "Align reads")
+        self.assertTrue(step["jupyter_url"].endswith(f"/{self.mine.pk}/"))
+        self.assertEqual(step["parameters"], "taxid=1280\nmin_length=200")
+        self.assertEqual(step["result_note"], "Saved in /scratch/x")
+        self.assertEqual(WorkflowStep.objects.get(pk=sid).config["parameters"], {"taxid": "1280", "min_length": "200"})
+
+    def test_notebook_must_belong_to_the_user_and_parameters_are_validated(self):
+        sid = self.add("Align", kind="jupyter")
+
+        def update(**fields):
+            return self.api({"action": "update_step", "step_id": sid, "step": fields})
+
+        self.assertEqual(update(jupyter_notebook=self.theirs.pk).status_code, 400)
+        self.assertEqual(update(parameters="no equals sign").status_code, 400)
+        self.assertEqual(update(parameters="1bad=x").status_code, 400)
+        self.assertEqual(update(parameters="; rm -rf=x").status_code, 400)
+        self.assertEqual(update(parameters="\n".join(f"p{i}=v" for i in range(21))).status_code, 400)
+        self.assertEqual(update(parameters="k=" + "x" * 201).status_code, 400)
+        self.assertEqual(update(jupyter_notebook=self.mine.pk).status_code, 200)
+        self.assertEqual(update(jupyter_notebook=None).status_code, 200)
+        self.assertNotIn("notebook_id", WorkflowStep.objects.get(pk=sid).config)
+
+    def test_lookup_lists_only_own_notebooks(self):
+        results = self.client.get(reverse("workflow_lookup_api"), {"kind": "jupyter", "q": ""}).json()["results"]
+
+        self.assertEqual([r["label"] for r in results], ["Align reads"])

@@ -94,7 +94,8 @@
                 + (step.assignee_name ? "<span><i class='bi bi-person'></i> " + esc(step.assignee_name) + "</span>" : "") + dueHtml(step)
                 + (step.entry ? "<span title='ELN entry'><i class='bi bi-journal-bookmark'></i></span>" : "")
                 + (step.molecule ? "<span title='Molecular record'><i class='bi bi-bezier2'></i></span>" : "")
-                + (step.sample ? "<span title='Sample'><i class='bi bi-eyedropper'></i></span>" : "") + "</div>"
+                + (step.sample ? "<span title='Sample'><i class='bi bi-eyedropper'></i></span>" : "")
+                + (step.kind === "jupyter" ? "<span title='Jupyter notebook step'><i class='bi bi-code-square'></i></span>" : "") + "</div>"
                 + (canEdit ? "<button type='button' class='wf-port' aria-label='Connect from this step'></button>" : "");
             layer.appendChild(node);
         });
@@ -150,13 +151,21 @@
 
     // --- side panel -----------------------------------------------------------
 
+    const LINKS = {
+        eln: {id: "entry", label: "entry_label", url: "entry_url"},
+        molecule: {id: "molecule", label: "molecule_label", url: "molecule_url"},
+        sample: {id: "sample", label: "sample_label", url: "sample_url"},
+        jupyter: {id: "jupyter_notebook", label: "jupyter_label", url: "jupyter_url"},
+    };
+
     function setLink(kind, step) {
         const box = root.querySelector(".wf-link[data-kind='" + kind + "']");
         const label = box.querySelector(".wf-link-label");
         const id = draft[kind];
-        const text = kind === "eln" ? step.entry_label : kind === "molecule" ? step.molecule_label : step.sample_label;
-        const url = kind === "eln" ? step.entry_url : kind === "molecule" ? step.molecule_url : step.sample_url;
-        const unchanged = String(id || "") === String((kind === "eln" ? step.entry : kind === "molecule" ? step.molecule : step.sample) || "");
+        const map = LINKS[kind];
+        const text = step[map.label];
+        const url = step[map.url];
+        const unchanged = String(id || "") === String(step[map.id] || "");
 
         if (id && unchanged && url) label.innerHTML = "<a href='" + esc(url) + "'>" + esc(text) + "</a>";
         else if (id && unchanged) label.textContent = text;
@@ -181,10 +190,15 @@
         $("wf-f-assignee").value = step.assignee || "";
         $("wf-f-due").value = step.due_date || "";
         $("wf-f-notes").value = step.notes;
-        draft = {eln: step.entry, molecule: step.molecule, sample: step.sample};
-        ["eln", "molecule", "sample"].forEach((k) => setLink(k, step));
+        draft = {eln: step.entry, molecule: step.molecule, sample: step.sample, jupyter: step.jupyter_notebook};
+        ["eln", "molecule", "sample", "jupyter"].forEach((k) => setLink(k, step));
+        $("wf-jupyter").hidden = step.kind !== "jupyter";
+        $("wf-f-params").value = step.parameters || "";
+        $("wf-f-result").value = step.result_note || "";
         $("wf-form").querySelectorAll("input,select,textarea").forEach((el) => { if (!canEdit) el.disabled = true; });
     }
+
+    $("wf-f-kind").addEventListener("change", () => { $("wf-jupyter").hidden = $("wf-f-kind").value !== "jupyter"; });
 
     $("wf-form").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -197,6 +211,9 @@
                 title: $("wf-f-title").value, status: $("wf-f-status").value, kind: $("wf-f-kind").value,
                 assignee: $("wf-f-assignee").value || null, due_date: $("wf-f-due").value, notes: $("wf-f-notes").value,
                 entry: draft.eln || null, molecule: draft.molecule || null, sample: draft.sample || null,
+                jupyter_notebook: $("wf-f-kind").value === "jupyter" ? (draft.jupyter || null) : null,
+                parameters: $("wf-f-kind").value === "jupyter" ? $("wf-f-params").value : "",
+                result_note: $("wf-f-result").value,
             },
         });
     });
@@ -389,7 +406,7 @@
     root.querySelectorAll(".wf-link-set").forEach((button) => {
         button.addEventListener("click", () => {
             const kind = button.closest(".wf-link").dataset.kind;
-            const names = {eln: "Choose an ELN entry", molecule: "Choose a molecular record", sample: "Choose a sample"};
+            const names = {eln: "Choose an ELN entry", molecule: "Choose a molecular record", sample: "Choose a sample", jupyter: "Choose a Jupyter notebook"};
 
             openPicker(kind, (id, label) => {
                 draft[kind] = id;

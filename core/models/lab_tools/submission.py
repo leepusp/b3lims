@@ -71,6 +71,7 @@ class SubmissionItem(models.Model):
         STRUCTURE = "structure", "3D structure"
         SAMPLE = "sample", "Sample"
         ENTRY = "entry", "ELN entry"
+        NOTEBOOK = "notebook", "Jupyter notebook"
 
     package = models.ForeignKey(SubmissionPackage, on_delete=models.CASCADE, related_name="items")
     kind = models.CharField(max_length=10, choices=Kind.choices)
@@ -83,6 +84,9 @@ class SubmissionItem(models.Model):
     )
     sample = models.ForeignKey("core.Sample", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     entry = models.ForeignKey("core.NotebookEntry", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    jupyter_notebook = models.ForeignKey(
+        "core.JupyterNotebook", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

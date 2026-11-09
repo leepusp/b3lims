@@ -11,7 +11,7 @@
     const lookupUrl = root.dataset.lookupUrl;
     const csrf = () => (root.querySelector("input[name=csrfmiddlewaretoken]") || {}).value || "";
     const BADGE = {draft: "secondary", proposed: "warning", approved: "primary", published: "success", rejected: "danger"};
-    const KIND_NAMES = {sequence: "a sequence record", structure: "a 3D structure", sample: "a sample", entry: "an ELN entry", taxon: "a taxon"};
+    const KIND_NAMES = {sequence: "a sequence record", structure: "a 3D structure", sample: "a sample", entry: "an ELN entry", notebook: "a Jupyter notebook", taxon: "a taxon"};
 
     let pkg = JSON.parse($("sp-data").textContent);
     let manifest = JSON.parse($("sp-manifest-data").textContent);

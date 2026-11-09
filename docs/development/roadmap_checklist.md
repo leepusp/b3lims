@@ -93,7 +93,7 @@ Other useful functions
 
 - [ ] Map the workflow steps already announced on the Laboratory hub (6.1 to 6.7) and what exists today
 - [x] Workflow model (phase 1): steps with status, owner, due date and connections, linked to ELN entries, molecular records and samples; steps due show in the Calendar
-- [ ] 6.3 Run Jupyter notebooks inside workflows (Slurm job, inputs and outputs linked to the ELN entry)
+- [ ] 6.3 Run Jupyter notebooks inside workflows: steps can already link a notebook with parameters and a result note and notebooks can be package items (p81); unattended execution through the Slurm runner is still open
 - [ ] Galaxy steps in a workflow
 - [ ] Review NoLabs (Apache-2.0; FastAPI microservices for ESMFold, DiffDock, RFdiffusion, ProteinMPNN, BLAST; Celery + Redis scheduler) as a source of model steps: call its microservice REST endpoints from a workflow step, store result as a Registry record (PDB to Protein structure); do not adopt its UI or workflow engine
 - [x] Workflow builder screen (canvas, side panel, import of ELN steps, members)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -12,7 +14,9 @@ from core.models.lab_tools.workflow import Workflow, WorkflowEdge, WorkflowStep
 from core.services.notebook_composer import _parse_deadline
 
 MAX_STEPS = 200
-FIELD_LIMITS = {"title": 200, "notes": 5000, "name": 200, "description": 5000}
+FIELD_LIMITS = {"title": 200, "notes": 5000, "name": 200, "description": 5000, "result_note": 5000}
+PARAM_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,40}$")
+MAX_PARAMS = 20
 
 
 def visible_workflows(user):
@@ -93,6 +97,54 @@ def _link(value, resolver, user):
 # --- step operations ---------------------------------------------------------
 
 
+def _notebook_for(user, pk):
+    from core.services.jupyter_server import visible_notebooks_for_user
+
+    notebook = visible_notebooks_for_user(user).filter(pk=pk).first()
+
+    if not notebook:
+        raise ValidationError("That Jupyter notebook is not available.")
+
+    return notebook
+
+
+def parse_parameters(raw):
+    """``{"name": "value"}`` from a dict or from text with one ``name=value`` per line."""
+    if raw in (None, ""):
+        return {}
+
+    if isinstance(raw, str):
+        pairs = []
+
+        for line in raw.splitlines():
+            if line.strip():
+                key, sep, value = line.partition("=")
+
+                if not sep:
+                    raise ValidationError(f"Parameter line needs name=value: {line.strip()[:40]}")
+
+                pairs.append((key.strip(), value.strip()))
+    elif isinstance(raw, dict):
+        pairs = [(str(k).strip(), str(v).strip()) for k, v in raw.items()]
+    else:
+        raise ValidationError("Invalid parameters.")
+
+    if len(pairs) > MAX_PARAMS:
+        raise ValidationError(f"At most {MAX_PARAMS} parameters.")
+
+    result = {}
+
+    for key, value in pairs:
+        if not PARAM_KEY.match(key):
+            raise ValidationError(f"Invalid parameter name: {key[:40]}")
+        if len(value) > 200:
+            raise ValidationError(f"Parameter {key} is too long.")
+
+        result[key] = value
+
+    return result
+
+
 def apply_step_fields(step, user, data):
     """Copy the editable fields present in ``data`` onto ``step`` (not saved)."""
     if "title" in data:
@@ -121,6 +173,25 @@ def apply_step_fields(step, user, data):
         step.molecule = _link(data["molecule"], _molecule_for, user)
     if "sample" in data:
         step.sample = _link(data["sample"], _sample_for, user)
+    if any(k in data for k in ("jupyter_notebook", "parameters", "result_note")):
+        config = dict(step.config or {})
+
+        if "jupyter_notebook" in data:
+            raw = data["jupyter_notebook"]
+
+            if raw in (None, "", 0):
+                config.pop("notebook_id", None)
+            else:
+                try:
+                    config["notebook_id"] = _notebook_for(user, int(raw)).pk
+                except (TypeError, ValueError):
+                    raise ValidationError("Invalid notebook.")
+        if "parameters" in data:
+            config["parameters"] = parse_parameters(data["parameters"])
+        if "result_note" in data:
+            config["result_note"] = _text(data["result_note"], "result_note")
+
+        step.config = config
     if "x" in data:
         step.x = int(data["x"])
     if "y" in data:
@@ -246,8 +317,31 @@ def _url(name, pk):
         return ""
 
 
+def _jupyter_info(step):
+    config = step.config or {}
+    notebook_id = config.get("notebook_id")
+    label = url = ""
+
+    if notebook_id:
+        from core.models.lab_tools.notebook import JupyterNotebook
+
+        notebook = JupyterNotebook.objects.filter(pk=notebook_id).first()
+
+        label = notebook.title if notebook else "(removed notebook)"
+        url = _url("jupyter_workspace", notebook_id) if notebook else ""
+
+    return {
+        "jupyter_notebook": notebook_id,
+        "jupyter_label": label,
+        "jupyter_url": url,
+        "parameters": "\n".join(f"{k}={v}" for k, v in (config.get("parameters") or {}).items()),
+        "result_note": config.get("result_note", ""),
+    }
+
+
 def serialize_step(step):
     return {
+        **_jupyter_info(step),
         "id": step.pk,
         "title": step.title,
         "notes": step.notes,

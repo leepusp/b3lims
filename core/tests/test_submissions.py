@@ -465,3 +465,70 @@ class DestinationAdapterTests(SubmissionBase):
         with override_settings(BIOBANK_ZENODO_TOKEN="t"), mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
             with self.assertRaises(ValidationError):
                 adapters.upload_zenodo_draft(self.package, {"a.txt": b"x"})
+
+
+class NotebookItemAndClientTests(SubmissionBase):
+    def test_a_jupyter_notebook_is_exported_and_the_client_is_installed(self):
+        from core.models.lab_tools.notebook import JupyterNotebook
+
+        nb = JupyterNotebook.objects.create(title="Align reads", owner=self.ana, notebook_json={"cells": [], "nbformat": 4})
+        other = JupyterNotebook.objects.create(title="Private", owner=self.bia, notebook_json={})
+
+        self.assertEqual(self.api({"action": "add_item", "kind": "notebook", "ref": other.pk}).status_code, 400)
+        self.assertEqual(self.api({"action": "add_item", "kind": "notebook", "ref": nb.pk}).status_code, 200)
+        self.assertEqual(self.api({"action": "add_item", "kind": "notebook", "ref": nb.pk}).status_code, 400)
+        self.assertEqual(len(self.client.get(reverse("submission_lookup_api"), {"kind": "notebook"}).json()["results"]), 1)
+
+        self.build_index()
+        self.api({"action": "update", "taxon_id": "1280"})
+        self.api({"action": "propose"})
+        self.api({"action": "approve"}, user=self.boss)
+
+        self.assertEqual(self.api({"action": "publish"}, user=self.ana).status_code, 200)
+
+        self.package.refresh_from_db()
+
+        base = self.root / self.package.repository_path
+
+        self.assertEqual(json.loads((base / "notebooks" / f"{nb.pk}-Align_reads.ipynb").read_text())["nbformat"], 4)
+        self.assertTrue((self.root / "lib" / "b3repo.py").is_file())
+
+    def test_b3repo_reads_the_repository_without_django(self):
+        from core.services import b3repo
+
+        self.build_index()
+        self.api({"action": "update", "taxon_id": "1280"})
+        self.api({"action": "add_item", "kind": "sequence", "ref": self.seq.pk})
+        self.api({"action": "propose"})
+        self.api({"action": "approve"}, user=self.boss)
+        self.api({"action": "publish"}, user=self.ana)
+
+        found = b3repo.find(q="gfp", repository=self.root)
+
+        self.assertEqual([p["id"] for p in found], [self.package.pk])
+        self.assertEqual(len(b3repo.find(taxid=1239, repository=self.root)), 1)
+        self.assertEqual(b3repo.find(taxid=9999, repository=self.root), [])
+        self.assertEqual(b3repo.find(destination="genbank", repository=self.root), [])
+        self.assertEqual(b3repo.manifest(found[0], self.root)["taxon"]["ncbi_taxid"], "1280")
+        self.assertTrue(all(path.is_file() for path in b3repo.files(found[0], self.root)))
+        self.assertEqual([t["name"] for t in b3repo.lineage(1280, self.root)][-2:], ["Staphylococcus", "Staphylococcus aureus"])
+        self.assertEqual(b3repo.taxon(1279, self.root)["rank"], "genus")
+        self.assertEqual([t["taxid"] for t in b3repo.search_taxa("staph", repository=self.root)], [1279, 1280])
+        self.assertEqual(b3repo.packages(self.tmp / "empty"), [])
+
+        with self.assertRaises(FileNotFoundError):
+            b3repo.taxon(1, self.tmp / "empty")
+
+    def test_the_client_module_has_no_django_dependency_and_command_installs_it(self):
+        import ast
+
+        from core.services import b3repo
+
+        imported = {n.names[0].name.split(".")[0] for n in ast.walk(ast.parse(open(b3repo.__file__).read())) if isinstance(n, ast.Import)}
+        imported |= {n.module.split(".")[0] for n in ast.walk(ast.parse(open(b3repo.__file__).read())) if isinstance(n, ast.ImportFrom) and n.module}
+
+        self.assertFalse({"django", "core"} & imported)
+
+        call_command("install_repository_client", stdout=open("/dev/null", "w"))
+
+        self.assertTrue((self.root / "lib" / "b3repo.py").is_file())

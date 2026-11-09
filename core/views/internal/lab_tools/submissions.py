@@ -170,6 +170,15 @@ def submission_lookup_api(request):
         return JsonResponse({"results": composer.search_references("experiments", user, query)})
     if kind == "sample":
         return JsonResponse({"results": composer.search_references("items", user, query)})
+    if kind == "notebook":
+        from core.services.jupyter_server import visible_notebooks_for_user
+
+        qs = visible_notebooks_for_user(user)
+
+        if query:
+            qs = qs.filter(title__icontains=query)
+
+        return JsonResponse({"results": [{"id": n.pk, "label": n.title} for n in qs.order_by("title")[:15]]})
     if kind in ("sequence", "structure"):
         from core.models.lab_tools.notebook import MolecularStructure
         from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
