@@ -245,7 +245,7 @@ class MolecularWorkspaceSequenceSelectionSyncTests(
             (
                 "molecular_workspace.js' %}"
                 "?v=20261109-"
-                "edit-v4"
+                "edit-v5"
             ),
             self.detail,
         )

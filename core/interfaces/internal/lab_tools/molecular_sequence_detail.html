@@ -7,7 +7,7 @@
 
 <link rel="stylesheet"
       href="{% static 'internal/lab_tools/molecular_workspace.css' %}?v=20260810-final-ux-v2">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v5">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v6">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_edit_strip.css' %}?v=20261109-strip-v1">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v7">
@@ -313,6 +313,9 @@
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="digest" aria-pressed="false">Digest</button>
                     <button type="button" class="mwv-seg-btn" data-mwv-layout="gel" aria-pressed="false">Gel photo</button>
 {% endif %}
+{% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" or molecule.sequence_type == "primer" %}
+                    <button type="button" class="mwv-seg-btn" data-mwv-layout="primers" aria-pressed="false">Primers</button>
+{% endif %}
 {% endif %}
                 </div>
                 <div class="mwv-zoom" role="group" aria-label="Zoom">
@@ -430,6 +433,9 @@
 {% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" %}
             <div id="mw-digest" class="mwd mwp" role="group" aria-label="Restriction digest" hidden></div>
             <div id="mw-gel" class="mwp mwp-gel" role="group" aria-label="Gel photo reader" hidden></div>
+{% endif %}
+{% if molecule.sequence_type == "dna" or molecule.sequence_type == "plasmid" or molecule.sequence_type == "insert" or molecule.sequence_type == "primer" %}
+            <div id="mw-primers" class="mwp mwp-primers" role="group" aria-label="Primers and PCR" hidden></div>
 {% endif %}
             <div id="mw-features" class="mwp mwp-features" role="group" aria-label="Annotations" hidden></div>
             <div id="mw-orfs" class="mwp mwp-orfs" role="group" aria-label="Open reading frames" hidden></div>
@@ -845,7 +851,7 @@
 {% endif %}
 <script src="{% static 'internal/lab_tools/molecular_sequence_track.js' %}?v=20260817-structure-coverage-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20261109-edit-v4"
+<script src="{% static 'internal/lab_tools/molecular_workspace.js' %}?v=20261109-edit-v5"
         defer></script>
 {% if molecule.sequence_type != "protein" %}
 <script src="{% static 'internal/lab_tools/molecular_seqviz.js' %}?v=20260810-final-ux-v2"
@@ -871,9 +877,11 @@
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"
         defer></script>
-<script src="{% static 'internal/lab_tools/molecular_digest.js' %}?v=20261109-digest-v5"
+<script src="{% static 'internal/lab_tools/molecular_digest.js' %}?v=20261109-digest-v6"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v1"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_primer_panel.js' %}?v=20261109-primers-v1"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_features_panel.js' %}?v=20261109-panes-v3"
         defer></script>
@@ -882,7 +890,7 @@
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v4" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v1" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v6" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v10"
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v11"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>

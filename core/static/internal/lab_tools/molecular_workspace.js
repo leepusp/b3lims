@@ -3738,35 +3738,74 @@
             return location;
         }
 
+        // Internal feature types to the GenBank feature keys other programs expect.
+        const GENBANK_KEYS = {
+            promoter: "promoter", rbs: "RBS", cds: "CDS", terminator: "terminator",
+            ori: "rep_origin", antibiotic: "CDS", primer: "primer_bind",
+            domain: "misc_feature", utr: "misc_feature", custom: "misc_feature",
+        };
+
+        function genbankQualifier(key, value) {
+            const text = String(value).replaceAll('"', "'").replace(/\s+/g, " ").trim();
+            const indent = " ".repeat(21);
+            const chunks = text.match(/.{1,56}/g) || [""];
+
+            return chunks.map((chunk, index) => (
+                index === 0
+                    ? `${indent}/${key}="${chunk}${chunks.length === 1 ? '"' : ""}`
+                    : `${indent}${chunk}${index === chunks.length - 1 ? '"' : ""}`
+            ));
+        }
+
         function exportGenbank() {
             const name = elements.name.value.trim()
                 || "MOLECULAR_ITEM";
             const sequence = currentSequence();
-            const unit = currentType() === "protein"
-                ? "aa"
-                : "bp";
+            const type = currentType();
+            const unit = type === "protein" ? "aa" : "bp";
+            const molecule = type === "protein"
+                ? ""
+                : (type === "rna" ? "RNA" : "DNA");
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            const today = new Date();
+            const stamp = `${String(today.getDate()).padStart(2, "0")}-${months[today.getMonth()]}-${today.getFullYear()}`;
             const locusName = sanitizeFilename(name)
                 .slice(0, 16)
                 .padEnd(16, " ");
+            const topology = type === "protein" ? "linear" : currentTopology();
 
             const lines = [
-                `LOCUS       ${locusName} ${String(sequence.length).padStart(7)} ${unit}    ${currentTopology()}`,
-                `DEFINITION  ${elements.description.value || name}.`,
+                `LOCUS       ${locusName} ${String(sequence.length).padStart(11)} ${unit} ${"   "}${molecule.padEnd(6)}  ${topology.padEnd(8)} SYN ${stamp}`,
+                `DEFINITION  ${(elements.description.value || name).replace(/\s+/g, " ")}.`,
                 "FEATURES             Location/Qualifiers",
             ];
 
-            state.features.forEach(feature => {
-                lines.push(
-                    `     ${feature.type.padEnd(15)} ${genbankLocation(feature, sequence.length)}`
-                );
-                lines.push(
-                    `                     /label="${feature.name.replaceAll('"', "'")}"`
-                );
+            if (type !== "protein" && sequence.length) {
+                lines.push(`     source          1..${sequence.length}`);
+                lines.push(`${" ".repeat(21)}/mol_type="other DNA"`);
+            }
 
-                if (feature.notes) {
-                    lines.push(
-                        `                     /note="${feature.notes.replaceAll('"', "'")}"`
-                    );
+            state.features.forEach(feature => {
+                const key = GENBANK_KEYS[feature.type] || "misc_feature";
+
+                lines.push(
+                    `     ${key.padEnd(15)} ${genbankLocation(feature, sequence.length)}`
+                );
+                lines.push(...genbankQualifier("label", feature.name));
+
+                if (feature.type === "antibiotic") {
+                    lines.push(...genbankQualifier("note", `antibiotic marker${feature.notes ? "; " + feature.notes : ""}`));
+                } else if (feature.notes) {
+                    lines.push(...genbankQualifier("note", feature.notes));
+                } else if (key === "misc_feature" && feature.type !== "custom") {
+                    lines.push(...genbankQualifier("note", feature.type));
+                }
+
+                if (/^#[0-9a-f]{6}$/i.test(feature.color || "")) {
+                    lines.push(...genbankQualifier(
+                        feature.strand === "-" ? "ApEinfo_revcolor" : "ApEinfo_fwdcolor",
+                        feature.color
+                    ));
                 }
             });
 

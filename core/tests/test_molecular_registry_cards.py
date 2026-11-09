@@ -213,3 +213,30 @@ class GelPhotoWindowWiringTests(TestCase):
 
         self.assertIn("wraps", orfs)
         self.assertIn("sequence + sequence", orfs)
+
+
+class PrimerWindowAndGenbankExportTests(TestCase):
+    def setUp(self):
+        self.tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+
+    def test_primer_window_checks_primers_and_simulates_pcr(self):
+        primers = (self.tools / "molecular_primer_panel.js").read_text()
+
+        for needle in ("function findSites(", "function products(", "meltingTemperature", "window.BiobankPrimers", "hairpin", "longestComplement"):
+            self.assertIn(needle, primers)
+
+    def test_primer_window_is_wired_for_primer_and_dna_records(self):
+        from django.template.loader import get_template
+
+        source = get_template("internal/lab_tools/molecular_sequence_detail.html").template.source
+
+        self.assertIn('data-mwv-layout="primers"', source)
+        self.assertIn('id="mw-primers"', source)
+        self.assertIn("molecular_primer_panel.js", source)
+        self.assertIn('primers: "mw-primers"', (self.tools / "molecular_workbench.js").read_text())
+
+    def test_genbank_export_uses_standard_feature_keys_and_locus_columns(self):
+        workspace = (self.tools / "molecular_workspace.js").read_text()
+
+        for needle in ('ori: "rep_origin"', 'primer_bind', '"misc_feature"', "ApEinfo_fwdcolor", "padStart(11)", "mol_type"):
+            self.assertIn(needle, workspace)

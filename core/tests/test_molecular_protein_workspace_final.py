@@ -44,7 +44,7 @@ class MolecularProteinFinalWorkspaceTests(
     ):
         expected_assets = (
             "molecular_protein_alignment.css' %}?v=20260814-protein-palette-v1",
-            "molecular_workspace.js' %}?v=20261109-edit-v4",
+            "molecular_workspace.js' %}?v=20261109-edit-v5",
             "molecular_protein_alignment.js' %}?v=20260814-protein-palette-v1",
         )
 
