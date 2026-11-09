@@ -32,6 +32,19 @@
     const MAX_CHAR = 34;
     const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
     const BASE_COLOR = {A: "#2B8A3E", T: "#C92A2A", U: "#C92A2A", G: "#E67700", C: "#1971C2"};
+    // Amino acids by class, drawn with the same hues and the same style as the bases.
+    const AA_GROUPS = {
+        "#2B8A3E": "AVLIMC",   // hydrophobic
+        "#7048E8": "FWY",      // aromatic
+        "#0B7285": "STNQ",     // polar
+        "#1971C2": "KRH",      // positive
+        "#C92A2A": "DE",       // negative
+        "#E67700": "GP",       // special
+        "#B02A37": "*",        // stop
+    };
+    const RESIDUE_COLOR = {};
+
+    Object.keys(AA_GROUPS).forEach(color => AA_GROUPS[color].split("").forEach(aa => { RESIDUE_COLOR[aa] = color; }));
     const COMPLEMENT = {A: "T", T: "A", U: "A", G: "C", C: "G", R: "Y", Y: "R", K: "M", M: "K", B: "V", V: "B", D: "H", H: "D", S: "S", W: "W", N: "N"};
     const NUCLEOTIDE_KEYS = /^[ACGTUNRYKMSWBDHV]$/i;
     const CODONS = (() => {
@@ -50,6 +63,7 @@
         charW: DEFAULT_CHAR,
         showComp: true,
         showTrans: true,
+        showColors: true,
         caret: 0,
         selA: 0,
         selB: 0,
@@ -113,13 +127,20 @@
         transLabel.hidden = true;
     }
 
+    const colorLabel = el("label", "msc-check");
+    const colorInput = document.createElement("input");
+
+    colorInput.type = "checkbox";
+    colorInput.checked = true;
+    colorLabel.title = "Colour residues: bases for DNA and RNA, amino-acid classes for proteins";
+    colorLabel.append(colorInput, document.createTextNode(" Colors"));
     compLabel.append(compInput, document.createTextNode(" Complement"));
     transLabel.append(transInput, document.createTextNode(" Translations"));
     find.type = "search";
     find.className = "msc-find";
     find.placeholder = "Find motif (Enter = next)";
     find.setAttribute("aria-label", "Find a sequence motif on both strands");
-    bar.append(compLabel, transLabel, find, found);
+    bar.append(compLabel, transLabel, colorLabel, find, found);
     inner.append(canvas);
     viewport.append(inner);
     viewport.tabIndex = 0;
@@ -521,11 +542,14 @@
                 const base = s.sequence[i];
                 const cx = x(i - row.start) + charW / 2;
 
+                const palette = s.sequenceType === "protein" ? RESIDUE_COLOR : BASE_COLOR;
+                const tint = st.showColors ? palette[String(base).toUpperCase()] : "";
+
                 if (charW < 6.5) {
-                    ctx.fillStyle = BASE_COLOR[base] || "#868E96";
+                    ctx.fillStyle = tint || "#868E96";
                     ctx.fillRect(cx - charW / 2 + 0.5, oy + row.seqTop + 3, charW - 1, row.lineH - 8);
                 } else {
-                    ctx.fillStyle = s.sequenceType === "protein" ? "#1B2733" : (BASE_COLOR[base] || "#566474");
+                    ctx.fillStyle = tint || (st.showColors ? "#566474" : "#1B2733");
                     ctx.fillText(base, cx, oy + row.seqTop + row.lineH / 2);
                 }
 
@@ -1141,6 +1165,10 @@
     compInput.addEventListener("change", () => {
         st.showComp = compInput.checked;
         st.layoutKey = "";
+        schedule();
+    });
+    colorInput.addEventListener("change", () => {
+        st.showColors = colorInput.checked;
         schedule();
     });
     transInput.addEventListener("change", () => {

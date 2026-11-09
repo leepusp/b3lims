@@ -228,3 +228,16 @@ class RnaRealStructureWiringTests(SimpleTestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class SequenceColorStandardTests(SimpleTestCase):
+    def test_all_types_share_one_colour_control_and_palette_style(self):
+        canvas = (STATIC / "molecular_seq_canvas.js").read_text(encoding="utf-8")
+
+        self.assertIn("RESIDUE_COLOR", canvas)
+        self.assertIn("showColors", canvas)
+        self.assertIn('" Colors"', canvas)
+        # DNA/RNA bases and amino-acid classes use the same hues.
+        for hue in ("#2B8A3E", "#C92A2A", "#E67700", "#1971C2"):
+            self.assertGreaterEqual(canvas.count(hue), 2, hue)
+        self.assertIn('s.sequenceType === "protein" ? RESIDUE_COLOR : BASE_COLOR', canvas)
