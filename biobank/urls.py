@@ -504,6 +504,7 @@ urlpatterns = [
     path('internal/lab-tools/workflows/lookup/', workflow_views.workflow_lookup_api, name='workflow_lookup_api'),
     path('internal/lab-tools/workflows/<int:workflow_id>/', workflow_views.workflow_detail, name='workflow_detail'),
     path('internal/lab-tools/workflows/<int:workflow_id>/api/', workflow_views.workflow_api, name='workflow_api'),
+    path('internal/lab-tools/workflows/<int:workflow_id>/runs/<int:run_id>/figure/<int:index>.png', workflow_views.workflow_run_image, name='workflow_run_image'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/api/search-chemicals/', notebook_views.search_chemicals_api, name='search_chemicals_api'),
     path('internal/api/search-molecular-sequences/', notebook_views.search_molecular_sequences_api, name='search_molecular_sequences_api'),

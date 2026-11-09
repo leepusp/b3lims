@@ -66,9 +66,101 @@
         return data;
     }
 
+    // Redraw everything except the form fields, so typing is never interrupted.
+    function renderQuiet() {
+        renderHeader();
+        renderNodes();
+        renderEdges();
+
+        const step = selected ? stepById(selected) : null;
+
+        if (step) {
+            if (document.activeElement !== $("wf-f-status")) $("wf-f-status").value = step.status;
+
+            renderRun(step);
+        }
+    }
+
+    function setSaved(text) {
+        const el = $("wf-saved");
+
+        if (el) el.textContent = text;
+    }
+
+    function stepPayload() {
+        const jupyter = $("wf-f-kind").value === "jupyter";
+
+        return {
+            title: $("wf-f-title").value, status: $("wf-f-status").value, kind: $("wf-f-kind").value,
+            assignee: $("wf-f-assignee").value || null, due_date: $("wf-f-due").value, notes: $("wf-f-notes").value,
+            entry: draft.eln || null, molecule: draft.molecule || null, sample: draft.sample || null,
+            jupyter_notebook: jupyter ? (draft.jupyter || null) : null,
+            parameters: jupyter ? $("wf-f-params").value : "",
+            result_note: $("wf-f-result").value,
+        };
+    }
+
+    let saveTimer = null;
+    let saving = Promise.resolve(true);
+
+    // The payload is read now, so switching steps right after typing still saves the right one.
+    function saveNow() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+
+        if (!canEdit || !selected) return Promise.resolve(true);
+
+        const payload = {action: "update_step", step_id: selected, step: stepPayload()};
+
+        setSaved("Saving…");
+        saving = saving.then(async () => {
+            const data = await call(payload);
+
+            if (data && data.workflow) {
+                wf = data.workflow;
+                renderQuiet();
+                setSaved("Saved");
+
+                return true;
+            }
+
+            setSaved("Not saved");
+
+            return false;
+        });
+
+        return saving;
+    }
+
+    function scheduleSave() {
+        if (!canEdit || !selected) return;
+
+        setSaved("Editing…");
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveNow, 700);
+    }
+
     // --- canvas ---------------------------------------------------------------
 
     function stepById(id) { return wf.steps.find((s) => s.id === id); }
+
+    const THUMB_H = 96;
+
+    function thumbOf(step) { return step.run && step.run.images && step.run.images.length ? step.run.images[0] : ""; }
+    function nodeHeight(step) { return NODE_H + (thumbOf(step) ? THUMB_H : 0); }
+    function runBadge(step) {
+        const run = step.run;
+
+        if (!run) return "";
+
+        const label = {submitted: "Queued", running: "Running", completed: "Completed", failed: "Failed", cancelled: "Cancelled"}[run.state] || run.state;
+        const extra = [];
+
+        if (run.duration !== null && run.duration !== undefined) extra.push(run.duration + " s");
+        if (run.resources && run.resources.partition) extra.push(esc(run.resources.partition) + (run.resources.node && run.resources.node !== "auto" ? "/" + esc(run.resources.node) : ""));
+
+        return "<div class='wf-run wf-run-" + esc(run.state) + "'><span class='wf-run-pill'>" + label + "</span>" + (extra.length ? "<span>" + extra.join(" · ") + "</span>" : "") + "</div>";
+    }
 
     function dueHtml(step) {
         if (!step.due_date) return "";
@@ -90,7 +182,11 @@
             node.dataset.status = step.status;
             node.style.left = step.x + "px";
             node.style.top = step.y + "px";
-            node.innerHTML = "<div class='wf-node-title'>" + esc(step.title) + "</div><div class='wf-node-meta'><span>" + STATUS_LABEL[step.status] + "</span>"
+            node.dataset.kind = step.kind;
+            node.style.minHeight = nodeHeight(step) + "px";
+            node.innerHTML = "<div class='wf-node-title'>" + esc(step.title) + "</div>" + runBadge(step)
+                + (thumbOf(step) ? "<img class='wf-thumb' alt='Figure from the last run' src='" + esc(thumbOf(step)) + "'>" : "")
+                + "<div class='wf-node-meta'><span>" + STATUS_LABEL[step.status] + "</span>"
                 + (step.assignee_name ? "<span><i class='bi bi-person'></i> " + esc(step.assignee_name) + "</span>" : "") + dueHtml(step)
                 + (step.entry ? "<span title='ELN entry'><i class='bi bi-journal-bookmark'></i></span>" : "")
                 + (step.molecule ? "<span title='Molecular record'><i class='bi bi-bezier2'></i></span>" : "")
@@ -113,9 +209,9 @@
             if (!a || !b) return;
 
             const x1 = a.x + NODE_W;
-            const y1 = a.y + NODE_H / 2;
+            const y1 = a.y + nodeHeight(a) / 2;
             const x2 = b.x;
-            const y2 = b.y + NODE_H / 2;
+            const y2 = b.y + nodeHeight(b) / 2;
             const dx = Math.max(40, Math.abs(x2 - x1) / 2);
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
@@ -215,16 +311,20 @@
         if (run && run.error) parts.push(run.error);
 
         $("wf-run-state").textContent = parts.join(" · ");
-        $("wf-run-log").hidden = !(run && run.log_tail);
-        $("wf-run-log").textContent = run ? run.log_tail : "";
+        const text = run ? (run.output_text || (run.state === "failed" ? run.log_tail : "")) : "";
+
+        $("wf-run-log").hidden = !text;
+        $("wf-run-log").textContent = text;
+        $("wf-run-figs").innerHTML = run && run.images ? run.images.map((url) => "<a href='" + esc(url) + "' target='_blank' rel='noopener'><img class='wf-fig' alt='Figure' src='" + esc(url) + "'></a>").join("") : "";
         $("wf-run-start").hidden = !canEdit || active;
         $("wf-run-refresh").hidden = !active;
         $("wf-run-cancel").hidden = !canEdit || !active;
-        $("wf-run-start").disabled = !step.jupyter_notebook;
+        $("wf-run-start").disabled = !draft.jupyter;
     }
 
-    $("wf-run-start").addEventListener("click", () => {
-        if (!selected) return;
+    $("wf-run-start").addEventListener("click", async () => {
+        if (!selected || !(await saveNow())) return;
+
         act({action: "run_step", step_id: selected, resources: {
             partition: $("wf-run-partition").value, node: $("wf-run-node").value, cpus: $("wf-run-cpus").value, memory_mb: $("wf-run-mem").value, minutes: $("wf-run-min").value,
         }});
@@ -240,23 +340,9 @@
 
     $("wf-f-kind").addEventListener("change", () => { $("wf-jupyter").hidden = $("wf-f-kind").value !== "jupyter"; });
 
-    $("wf-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        if (!canEdit || !selected) return;
-
-        await act({
-            action: "update_step", step_id: selected,
-            step: {
-                title: $("wf-f-title").value, status: $("wf-f-status").value, kind: $("wf-f-kind").value,
-                assignee: $("wf-f-assignee").value || null, due_date: $("wf-f-due").value, notes: $("wf-f-notes").value,
-                entry: draft.eln || null, molecule: draft.molecule || null, sample: draft.sample || null,
-                jupyter_notebook: $("wf-f-kind").value === "jupyter" ? (draft.jupyter || null) : null,
-                parameters: $("wf-f-kind").value === "jupyter" ? $("wf-f-params").value : "",
-                result_note: $("wf-f-result").value,
-            },
-        });
-    });
+    $("wf-form").addEventListener("submit", (event) => { event.preventDefault(); saveNow(); });
+    $("wf-form").addEventListener("input", scheduleSave);
+    $("wf-form").addEventListener("change", scheduleSave);
 
     $("wf-step-delete").addEventListener("click", async () => {
         if (!selected || !window.confirm("Delete this step and its connections?")) return;
@@ -297,9 +383,12 @@
             return;
         }
 
+        if (saveTimer) saveNow();
+
         selected = id;
         board.querySelectorAll(".wf-node").forEach((n) => n.classList.toggle("selected", Number(n.dataset.id) === id));
         renderPanel();
+        setSaved("");
 
         if (!canEdit) return;
 
@@ -452,9 +541,27 @@
                 draft[kind] = id;
                 draft[kind + "_label"] = label;
                 setLink(kind, stepById(selected));
+                if (kind === "jupyter") $("wf-run-start").disabled = !draft.jupyter;
+                scheduleSave();
             }, names[kind]);
         });
     });
+
+    // Follow active runs without a Refresh click.
+    setInterval(async () => {
+        if (document.hidden || drag) return;
+
+        const active = wf.steps.filter((s) => s.run && (s.run.state === "submitted" || s.run.state === "running"));
+
+        for (const step of active) {
+            const data = await call({action: "refresh_run", run_id: step.run.id});
+
+            if (data && data.workflow) {
+                wf = data.workflow;
+                renderQuiet();
+            }
+        }
+    }, 6000);
 
     render();
 })();

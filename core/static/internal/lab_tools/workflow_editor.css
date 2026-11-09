@@ -21,3 +21,13 @@
 .wf-link { display: flex; justify-content: space-between; gap: .5rem; font-size: .8rem; margin-bottom: .25rem; }
 .wf-link-label a { text-decoration: none; }
 .wf-link-label.muted { color: #6c757d; }
+.wf-node[data-kind="jupyter"] { border-top: 3px solid #f37726; }
+.wf-run { display: flex; align-items: center; gap: .4rem; font-size: .7rem; color: #6c757d; margin-top: .25rem; }
+.wf-run-pill { font-weight: 600; padding: 0 .4rem; border-radius: 999px; background: #e9ecef; color: #495057; }
+.wf-run-running .wf-run-pill, .wf-run-submitted .wf-run-pill { background: #cfe2ff; color: #0a58ca; animation: wf-pulse 1.4s ease-in-out infinite; }
+.wf-run-completed .wf-run-pill { background: #d1e7dd; color: #146c43; }
+.wf-run-failed .wf-run-pill, .wf-run-cancelled .wf-run-pill { background: #f8d7da; color: #b02a37; }
+.wf-thumb { display: block; width: 100%; height: 96px; object-fit: cover; margin-top: .35rem; border-radius: 6px; border: 1px solid #e3e6ea; background: #fff; pointer-events: none; }
+.wf-fig { max-width: 100%; max-height: 140px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; }
+@keyframes wf-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .wf-run-pill { animation: none !important; } }

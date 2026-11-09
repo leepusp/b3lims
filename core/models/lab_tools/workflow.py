@@ -122,6 +122,8 @@ class WorkflowStepRun(models.Model):
     parameters = models.JSONField(default=dict, blank=True)
     result = models.JSONField(default=dict, blank=True)
     log_tail = models.TextField(blank=True, default="", db_default="")
+    # {"cells": [{"cell": 3, "text": "...", "images": ["<base64 png>"]}]}
+    outputs = models.JSONField(default=dict, blank=True)
     error = models.CharField(max_length=500, blank=True, default="", db_default="")
     created_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)

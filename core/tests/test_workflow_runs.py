@@ -148,6 +148,10 @@ class BrokerScriptTests(WorkflowBase):
         for action in ("run-start", "run-status", "run-cancel"):
             self.assertIn(f"{action})", text)
 
+    def test_broker_has_outputs_action_and_runner_collects_figures(self):
+        self.assertIn("run-outputs)", (DEPLOY / "sbin/biobank-jupyter-server-broker").read_text())
+        self.assertIn("image/png", (DEPLOY / "runtime/notebook_run.sh").read_text())
+
     def test_runner_script_mounts_repository_read_only(self):
         for name in ("runtime/notebook_run.sh", "runtime/notebook_server.sh"):
             text = (DEPLOY / name).read_text()
@@ -173,3 +177,72 @@ class WorkflowRunResourcesTests(WorkflowRunTests):
 
             self.assertEqual(too_long.status_code, 400)
             runner.assert_not_called()
+
+
+PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"x" * 20).decode()
+
+
+class WorkflowRunOutputsTests(WorkflowRunTests):
+    def finish_with_outputs(self, outputs):
+        self.start()
+
+        run = WorkflowStepRun.objects.get()
+        replies = [
+            {"status": "ok", "state": "COMPLETED", "result": {"status": "completed", "seconds": 3}, "log_tail": ""},
+            {"status": "ok", "outputs": outputs},
+        ]
+
+        with mock.patch(RUNNER, side_effect=replies) as runner:
+            response = self.run_api("refresh_run", run_id=run.pk)
+
+        self.assertEqual([c.args[0] for c in runner.call_args_list], ["run-status", "run-outputs"])
+        run.refresh_from_db()
+
+        return run, response
+
+    def test_outputs_are_stored_and_listed_on_the_step(self):
+        run, response = self.finish_with_outputs({"cells": [{"cell": 1, "text": "taxid = 1280", "images": [PNG]}]})
+        step = next(s for s in response.json()["workflow"]["steps"] if s["id"] == self.step)
+
+        self.assertEqual(run.outputs["cells"][0]["text"], "taxid = 1280")
+        self.assertEqual(step["run"]["output_text"], "taxid = 1280")
+        self.assertEqual(step["run"]["duration"], 3)
+        self.assertEqual(len(step["run"]["images"]), 1)
+
+    def test_figure_is_served_as_png_to_members_only(self):
+        run, response = self.finish_with_outputs({"cells": [{"cell": 1, "text": "", "images": [PNG]}]})
+        url = response.json()["workflow"]["steps"][0]["run"]["images"][0]
+        served = self.client.get(url)
+
+        self.assertEqual(served.status_code, 200)
+        self.assertEqual(served["Content-Type"], "image/png")
+        self.assertEqual(served["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(self.client.get(url.replace("/figure/0.png", "/figure/5.png")).status_code, 404)
+
+        self.client.force_login(self.bia)
+
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_data_that_is_not_a_png_is_never_served(self):
+        fake = base64.b64encode(b"<html>not a png</html>").decode()
+        run, response = self.finish_with_outputs({"cells": [{"cell": 1, "text": "", "images": [fake, "%%%"]}]})
+
+        self.assertEqual(self.client.get(response.json()["workflow"]["steps"][0]["run"]["images"][0]).status_code, 404)
+        self.assertEqual(self.client.get(response.json()["workflow"]["steps"][0]["run"]["images"][1]).status_code, 404)
+
+    def test_missing_outputs_do_not_break_the_refresh(self):
+        self.start()
+
+        run = WorkflowStepRun.objects.get()
+        replies = [
+            {"status": "ok", "state": "COMPLETED", "result": {"status": "completed"}, "log_tail": ""},
+            jupyter_server.JupyterNotebookError("gone"),
+        ]
+
+        with mock.patch(RUNNER, side_effect=replies):
+            self.assertEqual(self.run_api("refresh_run", run_id=run.pk).status_code, 200)
+
+        run.refresh_from_db()
+
+        self.assertEqual(run.state, "completed")
+        self.assertEqual(run.outputs, {})

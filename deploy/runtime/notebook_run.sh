@@ -63,7 +63,7 @@ test -f "$WORK_DIR/$NOTEBOOK_NAME" && test ! -L "$WORK_DIR/$NOTEBOOK_NAME" ||
 
 mkdir -p "$RUN_DIR/xdg-config" "$RUN_DIR/xdg-data" "$RUN_DIR/matplotlib" \
     "$RUN_DIR/cache" "$RUN_DIR/ipython" "$RUN_DIR/jupyter-runtime"
-rm -f -- "$RUN_DIR/result.json" "$RUN_DIR/executed.ipynb"
+rm -f -- "$RUN_DIR/result.json" "$RUN_DIR/executed.ipynb" "$RUN_DIR/outputs.json"
 
 # The repository is mounted read-only when it exists, so b3repo works in the notebook.
 REPOSITORY_ARGS=()
@@ -182,6 +182,54 @@ except Exception as exc:
     error = f"{type(exc).__name__}: {str(exc)[:400]}"
 
 executed = sum(1 for c in notebook.cells if c.cell_type == "code" and c.get("execution_count"))
+
+
+def collect_outputs(cells):
+    """Text and PNG figures of each code cell, small enough to show on a card."""
+    collected, images, image_chars = [], 0, 0
+
+    for index, cell in enumerate(cells):
+        if cell.cell_type != "code":
+            continue
+
+        text, pngs = [], []
+
+        for output in cell.get("outputs", []):
+            kind = output.get("output_type")
+            data = output.get("data", {})
+
+            if kind == "stream":
+                text.append(str(output.get("text", "")))
+            elif kind in ("execute_result", "display_data"):
+                if "text/plain" in data and "image/png" not in data:
+                    text.append(str(data["text/plain"]))
+
+                png = data.get("image/png")
+
+                if isinstance(png, str):
+                    png = png.replace("\n", "")
+
+                    if images < 6 and len(png) <= 400000 and image_chars + len(png) <= 1500000:
+                        pngs.append(png)
+                        images += 1
+                        image_chars += len(png)
+            elif kind == "error":
+                text.append(str(output.get("ename", "")) + ": " + str(output.get("evalue", "")))
+
+        if text or pngs:
+            collected.append({"cell": index, "text": "".join(text)[:1500], "images": pngs})
+
+        if len(collected) >= 30:
+            break
+
+    return {"cells": collected}
+
+
+try:
+    with open("/runtime/outputs.json", "w") as handle:
+        json.dump(collect_outputs(notebook.cells), handle)
+except Exception:
+    pass
 
 try:
     nbformat.write(notebook, "/runtime/executed.ipynb")

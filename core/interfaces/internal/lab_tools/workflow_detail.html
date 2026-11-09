@@ -4,7 +4,7 @@
 {% block title %}{{ workflow.name }} · Workflow · B3 LIMS{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261109-wf1">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261109-wf2">
 {% endblock %}
 
 {% block content %}
@@ -93,8 +93,9 @@
                                     <button type="button" class="btn btn-sm btn-outline-danger" id="wf-run-cancel" hidden>Cancel</button>
                                 </div>
                                 <div class="small mt-1" id="wf-run-state"></div>
+                                <div class="d-flex flex-wrap gap-1 mt-1" id="wf-run-figs"></div>
                                 <pre class="small bg-white border rounded p-1 mt-1 mb-0" id="wf-run-log" hidden style="max-height:8rem;overflow:auto"></pre>
-                                <div class="small text-muted">The saved notebook runs with the parameters above. Save the notebook in Jupyter first.</div>
+                                <div class="small text-muted">The notebook as last saved in Jupyter runs with the parameters above. Step changes are saved automatically.</div>
                             </div>
                             <div class="small text-muted mt-1">Open the notebook, run it there, and note the result here. In the notebook, <code>import b3repo</code> reads the repository and taxonomy.</div>
                         </div>
@@ -106,7 +107,8 @@
                         </div>
                         {% if can_edit %}
                         <div class="d-flex gap-2 mt-3">
-                            <button class="btn btn-sm btn-primary" type="submit">Save step</button>
+                            <button class="btn btn-sm btn-primary" type="submit">Save now</button>
+                            <span class="small text-muted align-self-center" id="wf-saved" aria-live="polite">Changes are saved automatically.</span>
                             <button class="btn btn-sm btn-outline-danger" type="button" id="wf-step-delete">Delete</button>
                         </div>
                         {% endif %}
@@ -144,5 +146,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf4"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf5"></script>
 {% endblock %}

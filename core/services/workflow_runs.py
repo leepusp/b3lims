@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 
 from django.conf import settings
@@ -52,8 +53,46 @@ def active_run(step):
     return step.runs.filter(state__in=ACTIVE).first()
 
 
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def run_images(run):
+    return [image for cell in (run.outputs or {}).get("cells", []) for image in cell.get("images", [])]
+
+
+def run_image_bytes(run, index):
+    """PNG bytes of figure ``index`` or None (checked again when served)."""
+    images = run_images(run)
+
+    if not 0 <= index < len(images):
+        return None
+
+    try:
+        data = base64.b64decode(images[index], validate=True)
+    except (binascii.Error, ValueError):
+        return None
+
+    return data if data.startswith(PNG_SIGNATURE) else None
+
+
+def _output_text(run):
+    text = "\n".join(c.get("text", "").strip() for c in (run.outputs or {}).get("cells", []) if c.get("text"))
+
+    return text[:3000]
+
+
 def serialize_run(run):
+    from django.urls import reverse
+
+    count = len(run_images(run))
+
     return {
+        "images": [
+            reverse("workflow_run_image", args=[run.step.workflow_id, run.pk, i]) for i in range(count)
+        ],
+        "output_text": _output_text(run),
+        "duration": (run.result or {}).get("seconds"),
+        "resources": (run.step.config or {}).get("run_resources") or {},
         "id": run.pk,
         "state": run.state,
         "job_id": run.job_id,
@@ -125,6 +164,17 @@ def start_run(step, user, resources=None):
     return run
 
 
+def _fetch_outputs(run, owner):
+    try:
+        response = jupyter._run_server_runner("run-outputs", run.notebook_id, owner, run.run_id, timeout=60)
+    except jupyter.JupyterNotebookError:
+        return {}
+
+    outputs = response.get("outputs")
+
+    return outputs if isinstance(outputs, dict) else {}
+
+
 def refresh_run(run):
     """Ask the broker for the state; finished runs update the step once."""
     if run.state not in ACTIVE or not run.notebook:
@@ -156,6 +206,7 @@ def refresh_run(run):
 
     if state not in ("submitted", "running"):
         run.finished_at = timezone.now()
+        run.outputs = _fetch_outputs(run, owner)
         _apply_step_status(run.step, state)
 
     run.save()

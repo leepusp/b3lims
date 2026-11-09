@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
@@ -151,6 +151,25 @@ def workflow_api(request, workflow_id):
     workflow.save(update_fields=["updated_at"])
 
     return JsonResponse({"status": "success", "workflow": service.serialize(workflow)})
+
+
+@login_required
+@require_GET
+def workflow_run_image(request, workflow_id, run_id, index):
+    from core.services import workflow_runs as runs
+
+    workflow = _visible_or_404(request.user, workflow_id)
+    run = get_object_or_404(runs.WorkflowStepRun, pk=run_id, step__workflow=workflow)
+    data = runs.run_image_bytes(run, index)
+
+    if data is None:
+        raise Http404("No such figure.")
+
+    response = HttpResponse(data, content_type="image/png")
+    response["Cache-Control"] = "private, max-age=3600"
+    response["X-Content-Type-Options"] = "nosniff"
+
+    return response
 
 
 @login_required

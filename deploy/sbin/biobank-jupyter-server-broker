@@ -934,6 +934,45 @@ print(json.dumps({
 PY
 }
 
+run_outputs() {
+    test "$#" -eq 3 || fail "run-outputs requires NOTEBOOK_ID USER RUN_ID."
+    local notebook_id="$1" username="$2" run_id="$3"
+    local run_dir
+
+    validate_numeric_id "Notebook ID" "$notebook_id"
+    validate_run_id "$run_id"
+    load_user "$username"
+    run_dir="$(session_directory "$notebook_id" "$run_id")"
+    test ! -L "$run_dir" || fail "Run directory may not be a symbolic link."
+    validate_session_owner "$run_dir"
+
+    # The job wrote outputs.json, so Python keeps only text and PNG data.
+    { read_user_file "$run_dir/outputs.json" 2>/dev/null | head -c 2200000 || true; } |
+        "$PYTHON" -c '
+import json
+import re
+import sys
+
+PNG = re.compile(r"^[A-Za-z0-9+/=]{1,400000}$")
+cells = []
+
+try:
+    loaded = json.loads(sys.stdin.read() or "{}")
+    for item in (loaded.get("cells") or [])[:30]:
+        images = [i for i in (item.get("images") or [])[:6] if isinstance(i, str) and PNG.match(i)]
+        text = item.get("text")
+        cells.append({
+            "cell": int(item.get("cell", 0)),
+            "text": text[:1500] if isinstance(text, str) else "",
+            "images": images,
+        })
+except (ValueError, TypeError, AttributeError):
+    cells = []
+
+print(json.dumps({"status": "ok", "outputs": {"cells": cells}}))
+'
+}
+
 run_cancel() {
     test "$#" -eq 3 || fail "run-cancel requires NOTEBOOK_ID USER RUN_ID."
     local notebook_id="$1" username="$2" run_id="$3"
@@ -1141,8 +1180,9 @@ case "$ACTION" in
     run-start) run_start "$@" ;;
     run-status) run_status "$@" ;;
     run-cancel) run_cancel "$@" ;;
+    run-outputs) run_outputs "$@" ;;
     server-stop) server_stop "$@" ;;
     session-cleanup) session_cleanup "$@" ;;
     workspace-delete) workspace_delete "$@" ;;
-    *) fail "Usage: $0 {server-start|server-status|server-stop|run-start|run-status|run-cancel|session-cleanup|workspace-delete} ..." ;;
+    *) fail "Usage: $0 {server-start|server-status|server-stop|run-start|run-status|run-cancel|run-outputs|session-cleanup|workspace-delete} ..." ;;
 esac
