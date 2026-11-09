@@ -41,7 +41,7 @@ class ToolRecordStorageLayoutTests(SimpleTestCase):
     def test_runner_only_manages_known_tool_folders(self):
         source = (ROOT / "deploy/sbin/biobank-user-storage").read_text(encoding="utf-8")
 
-        self.assertIn("tools/(gel|assembly|chemical)/[0-9]+/[A-Za-z0-9_.-]+", source)
+        self.assertIn("tools/(gel|assembly|chemical|rnafold|protein3d)/[0-9]+/[A-Za-z0-9_.-]+", source)
         self.assertIn('"$LAB_ROOT/tools"', source)
 
 
@@ -65,7 +65,7 @@ class ToolRecordBrokerPolicyTests(SimpleTestCase):
     def test_directories(self):
         broker = self.broker()
 
-        for ok in ("tools/gel", "tools/gel/2", "tools/assembly/10", "tools/chemical/3"):
+        for ok in ("tools/gel", "tools/gel/2", "tools/assembly/10", "tools/chemical/3", "tools/rnafold/4", "tools/protein3d/5"):
             self.assertTrue(broker.LAB_DIRECTORY_RE.fullmatch(ok), ok)
 
         for bad in ("tools", "tools/other/2", "tools/gel/2/x", "tools/gel/x"):
@@ -370,3 +370,60 @@ class ChemicalPanelLayoutTests(TestCase):
 
         other = self.client.get(f"/internal/lab-tools/tools/{gel.pk}/").content.decode()
         self.assertNotIn('data-tw-toggle="reaction"', other)
+
+
+class BioWorkbenchTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("bioowner", password="x")
+        self.client.force_login(self.user)
+
+    def test_new_tool_types_exist_and_open(self):
+        values = {value for value, _label in ToolRecord.TOOL_CHOICES}
+        self.assertTrue({"rnafold", "protein3d"} <= values)
+
+        rna = ToolRecord.objects.create(tool="rnafold", name="R", owner=self.user)
+        protein = ToolRecord.objects.create(tool="protein3d", name="P", owner=self.user)
+
+        rna_html = self.client.get(f"/internal/lab-tools/tools/{rna.pk}/").content.decode()
+        protein_html = self.client.get(f"/internal/lab-tools/tools/{protein.pk}/").content.decode()
+
+        for key in ("rnaprops", "fold", "translate"):
+            self.assertIn(f'data-tw-toggle="{key}"', rna_html)
+        for key in ("protprops", "struct3d", "translate"):
+            self.assertIn(f'data-tw-toggle="{key}"', protein_html)
+        self.assertNotIn('data-tw-toggle="digest"', rna_html)
+        self.assertNotIn('data-tw-toggle="digest"', protein_html)
+        self.assertIn("vendor/fornac-1.1.8.min.js", rna_html)
+        self.assertIn("vendor/molstar-5.11.0.js", protein_html)
+
+    def test_files_allowed_per_tool(self):
+        from core.views.internal.lab_tools.tool_records import TOOL_FILE_TYPES
+
+        self.assertIn(".pdb", TOOL_FILE_TYPES["protein3d"])
+        self.assertIn(".cif", TOOL_FILE_TYPES["protein3d"])
+        self.assertIn(".dbn", TOOL_FILE_TYPES["rnafold"])
+        self.assertNotIn(".pdb", TOOL_FILE_TYPES["rnafold"])
+
+    def test_state_round_trip_for_new_windows(self):
+        record = ToolRecord.objects.create(tool="rnafold", name="R", owner=self.user)
+        data = {
+            "windows": ["sequence", "fold"],
+            "sequence": {"name": "tRNA", "sequence": "GGGGAAACCCC", "topology": "linear"},
+            "rna": {"scope": "all", "structure": "((((...))))", "scheme": "structure"},
+        }
+
+        response = self.client.post(
+            f"/internal/lab-tools/tools/{record.pk}/state/",
+            data=json.dumps({"data": data}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        record.refresh_from_db()
+        self.assertEqual(record.data["rna"]["structure"], "((((...))))")
+
+    def test_dashboard_lists_the_new_types(self):
+        html = self.client.get("/internal/lab-tools/molecular-registry/").content.decode()
+
+        self.assertIn('value="tool:rnafold"', html)
+        self.assertIn('value="tool:protein3d"', html)

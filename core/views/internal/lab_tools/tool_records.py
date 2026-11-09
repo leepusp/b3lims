@@ -32,6 +32,10 @@ TOOL_FILE_TYPES = {
         ".mol", ".sdf", ".smi", ".txt", ".cdxml", ".png", ".jpg",
         ".jpeg", ".svg",
     },
+    "rnafold": {".fa", ".fasta", ".txt", ".gb", ".gbk", ".dbn", ".ct"},
+    "protein3d": {
+        ".pdb", ".ent", ".cif", ".mmcif", ".fa", ".fasta", ".txt",
+    },
 }
 INLINE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 

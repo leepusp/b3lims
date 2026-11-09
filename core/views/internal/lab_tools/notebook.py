@@ -1307,7 +1307,9 @@ def molecular_registry_index(request):
     tool_help = {
         "gel": "Gel photo, lanes, marker calibration and band sizes.",
         "assembly": "Build a plasmid from parts, without an open vector.",
-        "chemical": "Structure notes, SMILES/MOL, formula and mass.",
+        "chemical": "Structure editor (Ketcher), SMILES/MOL, properties, hazards and reactions.",
+        "rnafold": "RNA sequence, composition, secondary structure and translation.",
+        "protein3d": "Protein sequence, properties, 3D structure (Mol*) and translation.",
     }
     tool_cards = [
         (

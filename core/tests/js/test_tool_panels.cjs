@@ -164,3 +164,46 @@ console.log("tool panels ok");
     assert.strictEqual(ws.getSnapshot().features.length, 1);
 }
 console.log("sequence window ok");
+
+// ---- RNA / protein calculations ----
+const bio = require(path.join(dir, "tool_bio_calc.js"));
+const gfp = "MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTFSYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITHGMDELYK";
+const pr = bio.proteinReport(gfp, 7.4);
+
+assert.strictEqual(pr.length, 238);
+near(pr.mass / 1000, 26.886, 0.01);
+near(pr.pI, 5.99, 0.01);
+near(pr.charge, -7.1, 0.05);
+assert.strictEqual(pr.epsilon280, 22015);
+assert.strictEqual(bio.proteinReport("XXXX"), null);
+assert.strictEqual(bio.hydropathy("AAAAAAAAAAAA", 5)[0], null);
+near(bio.hydropathy("IIIIIIIIIII", 5)[5], 4.5, 1e-9);
+
+const rr = bio.rnaReport("GGGGAAAACCCCTTTT"); // T is read as U
+
+assert.strictEqual(rr.counts.U, 4);
+near(rr.gc, 50, 1e-9);
+assert.strictEqual(bio.reverseComplement("AUGC", true), "GCAU");
+assert.strictEqual(bio.translate("ATGGCTAGCTAA", 0), "MAS*");
+assert.strictEqual(bio.translate("AUGGCUAGCUAA", 0), "MAS*");
+assert.strictEqual(bio.findOrfs("ATGAAATTTGGGCCCTAA", 3)[0].protein, "MKFGP");
+assert.strictEqual(bio.findOrfs("TTAGGGCCCAAATTTCAT", 3)[0].strand, "-");
+
+const hp = bio.foldRna("GGGGAAACCCC");
+
+assert.strictEqual(hp.structure, "((((...))))");
+assert(hp.energy < 0);
+assert.strictEqual(bio.foldRna("AAAAAAAAAAAA").structure, ".".repeat(12));
+
+const trnaSeq = "GCGGAUUUAGCUCAGUUGGGAGAGCGCCAGACUGAAGAUCUGGAGGUCCUGUGUUCGAUCCACAGAAUUCGCACCA";
+const fold = bio.foldRna(trnaSeq);
+const parsedFold = bio.parseDotBracket(fold.structure, trnaSeq);
+
+assert(!parsedFold.error);
+assert(parsedFold.pairs.length >= 15);
+assert(parsedFold.pairs.every(([a, b]) => bio.pairType(trnaSeq[a], trnaSeq[b])), "predicted pairs must be A-U, G-C or G-U");
+assert(bio.parseDotBracket("((.", "AAA").error);
+assert(bio.parseDotBracket("(.", "AAA").error);
+assert(bio.parseDotBracket("x..", "AAA").error);
+assert.throws(() => bio.foldRna("A".repeat(bio.MAX_FOLD + 1)));
+console.log("bio calc ok");

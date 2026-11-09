@@ -40,6 +40,8 @@ class ToolRecord(models.Model):
         ("gel", "Gel"),
         ("assembly", "Plasmid assembly"),
         ("chemical", "Chemical"),
+        ("rnafold", "RNA workbench"),
+        ("protein3d", "Protein workbench"),
     ]
 
     tool = models.CharField(max_length=32, choices=TOOL_CHOICES)

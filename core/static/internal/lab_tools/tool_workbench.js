@@ -12,7 +12,7 @@
     if (!page) return;
 
     const tool = page.dataset.tool;
-    const WINDOWS = ["gel", "assembly", "chemical", "compound", "properties", "hazards", "reaction", "calc", "notes", "sequence", "digest", "primers", "cloning"];
+    const WINDOWS = ["gel", "assembly", "chemical", "compound", "properties", "hazards", "reaction", "calc", "rnaprops", "fold", "protprops", "struct3d", "translate", "notes", "sequence", "digest", "primers", "cloning"];
     const statusEl = document.getElementById("tw-status");
     const nameInput = document.getElementById("tw-name");
     const notes = document.getElementById("tw-notes");
@@ -74,10 +74,15 @@
     const gridEl = document.getElementById("tw-grid");
     const tabsEl = document.getElementById("tw-tabs");
     const noneEl = document.getElementById("tw-none");
-    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: tool === "chemical" ? "Structure" : "Chemical", compound: "Compound", properties: "Properties", hazards: "Hazards", reaction: "Reaction", calc: "Calculators", notes: "Notes", sequence: "Sequence", digest: "Digest", primers: "Primers", cloning: "Cloning"};
+    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: tool === "chemical" ? "Structure" : "Chemical", rnaprops: "Analysis", fold: "Structure", protprops: "Properties", struct3d: "Structure 3D", translate: "Translate", compound: "Compound", properties: "Properties", hazards: "Hazards", reaction: "Reaction", calc: "Calculators", notes: "Notes", sequence: "Sequence", digest: "Digest", primers: "Primers", cloning: "Cloning"};
     const MODES = ["split", "stack", "tabs"];
 
-    L.order = [tool].concat(WINDOWS.filter(key => key !== tool));
+    // The window a tool opens in the main column.
+    // The structure is what these workbenches are for, so it gets the big column.
+    const FIRST = {rnafold: ["fold", "sequence", "rnaprops"], protein3d: ["struct3d", "sequence", "protprops"]};
+    const MAIN_FIRST = FIRST[tool] || [tool];
+
+    L.order = MAIN_FIRST.concat(WINDOWS.filter(key => MAIN_FIRST.indexOf(key) === -1));
 
     function applyLayoutState(state) {
         if (!state || typeof state !== "object") return;
@@ -98,6 +103,8 @@
 
     function notifyLayout() {
         window.requestAnimationFrame(() => {
+            document.dispatchEvent(new CustomEvent("biobank:tool-layout"));
+
             if (window.BiobankGel && open.indexOf("gel") !== -1) window.BiobankGel.refresh();
 
             // The sequence windows redraw on "viewer-layout"; the Digest window
@@ -134,7 +141,10 @@
 
             pane.hidden = !isShown;
             pane.classList.toggle("is-collapsed", L.collapsed.indexOf(key) !== -1);
-            page.querySelector('[data-tw-toggle="' + key + '"]').classList.toggle("is-open", open.indexOf(key) !== -1);
+            const toggleBtn = page.querySelector('[data-tw-toggle="' + key + '"]');
+
+            // Not every tool offers a button for every window.
+            if (toggleBtn) toggleBtn.classList.toggle("is-open", open.indexOf(key) !== -1);
             updatePaneTools(pane, key, visible, shown);
         });
         mainKeys.forEach(key => mainEl.insertBefore(paneOf(key), noneEl));
@@ -305,6 +315,9 @@
         if (window.BiobankGel) data.gel = window.BiobankGel.getState();
         if (window.BiobankAssembly) data.assembly = window.BiobankAssembly.getState();
         if (window.BiobankChemical) data.chemical = window.BiobankChemical.getState();
+        if (window.BiobankRna) data.rna = window.BiobankRna.getState();
+        if (window.BiobankProtein) data.protein = window.BiobankProtein.getState();
+        if (window.BiobankTranslate) data.translate = window.BiobankTranslate.getState();
 
         return data;
     }
@@ -366,7 +379,7 @@
         await save(true);
     });
 
-    ["biobank:gel-change", "biobank:assembly-change", "biobank:chemical-change", "biobank:sequence-state"].forEach(name => {
+    ["biobank:gel-change", "biobank:assembly-change", "biobank:chemical-change", "biobank:sequence-state", "biobank:rna-change", "biobank:protein-change", "biobank:translate-change"].forEach(name => {
         document.addEventListener(name, () => {
             if (initialised) schedule();
         });
@@ -417,8 +430,10 @@
         fileNameEl.classList.remove("tw-bad");
         hasFile = true;
         filename = result.filename || file.name;
+        page.dataset.hasFile = "1";
         showFile();
         setStatus("Saved");
+        document.dispatchEvent(new CustomEvent("biobank:tool-file", {detail: {hasFile: true, filename}}));
 
         return true;
     }
@@ -457,7 +472,9 @@
         if (response.ok) {
             hasFile = false;
             filename = "";
+            page.dataset.hasFile = "0";
             showFile();
+            document.dispatchEvent(new CustomEvent("biobank:tool-file", {detail: {hasFile: false, filename: ""}}));
         }
     });
     // A photo loaded in the Gel window of a Gel record is kept with the record.
@@ -481,18 +498,26 @@
 
     /* ---------- start ---------- */
 
+    const DEFAULT_OPEN = {
+        chemical: ["chemical", "compound", "properties", "hazards", "reaction"],
+        rnafold: ["fold", "sequence", "rnaprops"],
+        protein3d: ["struct3d", "sequence", "protprops"],
+    };
     let initialised = false;
 
     async function start() {
         open = Array.isArray(stored.windows) && stored.windows.length
             ? stored.windows.filter(key => WINDOWS.indexOf(key) !== -1)
-            : (tool === "chemical" ? ["chemical", "compound", "properties", "hazards", "reaction"] : [tool]);
+            : (DEFAULT_OPEN[tool] || [tool]);
 
         applyLayoutState(stored.layout);
 
         if (stored.sequence && window.BiobankToolSequence) window.BiobankToolSequence.setState(stored.sequence);
         if (stored.assembly && window.BiobankAssembly) window.BiobankAssembly.setState(stored.assembly);
         if (stored.chemical && window.BiobankChemical) window.BiobankChemical.setState(stored.chemical);
+        if (stored.rna && window.BiobankRna) window.BiobankRna.setState(stored.rna);
+        if (stored.protein && window.BiobankProtein) window.BiobankProtein.setState(stored.protein);
+        if (stored.translate && window.BiobankTranslate) window.BiobankTranslate.setState(stored.translate);
 
         showFile();
         render();

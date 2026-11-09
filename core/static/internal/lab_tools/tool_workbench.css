@@ -77,3 +77,16 @@
 #tw-chem-reaction .tw-chem-rx{min-width:46rem}
 #tw-chem-props .tw-chem-grid{flex-direction:column}
 #tw-chem-props .tw-chem-svg{width:12rem}
+.tw-compbar{display:flex;height:1.4rem;border-radius:.3rem;overflow:hidden;margin:.4rem 0}
+.tw-compbar span{color:#fff;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;min-width:0}
+.tw-aabars{display:flex;gap:2px;align-items:flex-end;height:5.5rem;margin:.3rem 0 .6rem;padding:0 .2rem}
+.tw-aabar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;text-align:center}
+.tw-aabar span{background:#1d4ed8;border-radius:2px 2px 0 0;min-height:1px;display:block}
+.tw-aabar em{font-style:normal;font-size:.62rem;color:var(--tw-muted);margin-top:2px}
+.tw-plot-svg{width:100%;height:auto;max-height:11rem;background:#fff;border:1px solid var(--tw-border);border-radius:.4rem;cursor:crosshair}
+.tw-mol-mount{position:relative;width:100%;height:clamp(380px,60vh,640px);border:1px solid var(--tw-border);border-radius:.4rem;overflow:hidden;background:#111318;margin:.4rem 0}
+.tw-fold-canvas{width:100%;min-height:380px;height:clamp(380px,55vh,620px);border:1px solid var(--tw-border);border-radius:.4rem;margin:.4rem 0;background:#fff;overflow:hidden;position:relative}
+.tw-fold-mount{width:100%;height:100%}
+.tw-fold-mount svg{width:100%;height:100%}
+.tw-wrap{word-break:break-all;white-space:normal;font-size:.72rem}
+.tw-chem-subhead{margin:.7rem 0 .2rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--tw-muted)}

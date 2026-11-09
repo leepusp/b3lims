@@ -7,7 +7,7 @@
 {% csrf_token %}
 <div id="molecular-workspace" data-sequence-type="dna">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v5">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/tool_workbench.css' %}?v=20261109-tools-v10">
 
 <div class="container-fluid py-4 tw-page"
      id="tool-workbench"
@@ -37,6 +37,19 @@
 
     <div class="tw-bar" role="group" aria-label="Windows">
         <span class="tw-bar-label">Windows</span>
+        {% if record.tool == 'rnafold' %}
+        <button type="button" class="tw-win" data-tw-toggle="sequence" title="The RNA sequence the other windows work on">Sequence</button>
+        <button type="button" class="tw-win" data-tw-toggle="rnaprops">Analysis</button>
+        <button type="button" class="tw-win" data-tw-toggle="fold">Structure</button>
+        <button type="button" class="tw-win" data-tw-toggle="translate">Translate</button>
+        <button type="button" class="tw-win" data-tw-toggle="notes">Notes</button>
+        {% elif record.tool == 'protein3d' %}
+        <button type="button" class="tw-win" data-tw-toggle="sequence" title="The protein sequence the other windows work on">Sequence</button>
+        <button type="button" class="tw-win" data-tw-toggle="protprops">Properties</button>
+        <button type="button" class="tw-win" data-tw-toggle="struct3d">Structure 3D</button>
+        <button type="button" class="tw-win" data-tw-toggle="translate">Translate</button>
+        <button type="button" class="tw-win" data-tw-toggle="notes">Notes</button>
+        {% else %}
         <button type="button" class="tw-win" data-tw-toggle="gel">Gel</button>
         <button type="button" class="tw-win" data-tw-toggle="assembly">Plasmid assembly</button>
         <button type="button" class="tw-win" data-tw-toggle="chemical">{% if record.tool == 'chemical' %}Structure{% else %}Chemical{% endif %}</button>
@@ -53,6 +66,7 @@
         <button type="button" class="tw-win" data-tw-toggle="digest">Digest</button>
         <button type="button" class="tw-win" data-tw-toggle="primers">Primers</button>
         <button type="button" class="tw-win" data-tw-toggle="cloning">Cloning</button>
+        {% endif %}
         <span class="tw-bar-label tw-layout-label">Layout</span>
         <span class="tw-seg" role="group" aria-label="Window layout">
             <button type="button" class="tw-win" data-tw-layout="split" title="Main window on the left, the others stacked on the right (drag the divider)">Split</button>
@@ -103,6 +117,26 @@
             <div class="tw-pane-head"><h2 class="tw-pane-title">Calculators</h2><button type="button" class="tw-x" data-tw-close="calc" aria-label="Close window">×</button></div>
             <div id="tw-chem-calc"></div>
         </section>
+        <section class="tw-pane" data-tw-pane="rnaprops" hidden aria-label="Analysis">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Analysis</h2><button type="button" class="tw-x" data-tw-close="rnaprops" aria-label="Close window">×</button></div>
+            <div id="tw-rna-props"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="fold" hidden aria-label="Structure">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Structure</h2><button type="button" class="tw-x" data-tw-close="fold" aria-label="Close window">×</button></div>
+            <div id="tw-fold" data-fornac-url="{% static 'internal/lab_tools/vendor/fornac-1.1.8.min.js' %}?v=1.1.8"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="protprops" hidden aria-label="Properties">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Properties</h2><button type="button" class="tw-x" data-tw-close="protprops" aria-label="Close window">×</button></div>
+            <div id="tw-prot-props"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="struct3d" hidden aria-label="Structure 3D">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Structure 3D</h2><button type="button" class="tw-x" data-tw-close="struct3d" aria-label="Close window">×</button></div>
+            <div id="tw-struct3d" data-molstar-js="{% static 'internal/lab_tools/vendor/molstar-5.11.0.js' %}?v=5.11.0" data-molstar-css="{% static 'internal/lab_tools/vendor/molstar-5.11.0.css' %}?v=5.11.0"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="translate" hidden aria-label="Translate">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Translate</h2><button type="button" class="tw-x" data-tw-close="translate" aria-label="Close window">×</button></div>
+            <div id="tw-translate"></div>
+        </section>
         <section class="tw-pane" data-tw-pane="notes" hidden aria-label="Notes">
             <div class="tw-pane-head"><h2 class="tw-pane-title">Notes</h2><button type="button" class="tw-x" data-tw-close="notes" aria-label="Close window">×</button></div>
             <textarea id="tw-notes" class="form-control" rows="10" placeholder="Description, conditions, observations…">{{ record.description }}</textarea>
@@ -135,13 +169,17 @@
 {{ record.data|json_script:"tw-initial" }}
 <script src="{% static 'internal/lab_tools/molecular_inspector_calc.js' %}?v=20261108-orf-v1"></script>
 <script src="{% static 'internal/lab_tools/molecular_digest_calc.js' %}?v=20261109-digest-v1"></script>
-<script src="{% static 'internal/lab_tools/tool_sequence_window.js' %}?v=20261109-tools-v5"></script>
+<script src="{% static 'internal/lab_tools/tool_sequence_window.js' %}?v=20261109-tools-v10"></script>
 <script src="{% static 'internal/lab_tools/molecular_digest.js' %}?v=20261109-digest-v7"></script>
 <script src="{% static 'internal/lab_tools/molecular_cloning_panel.js' %}?v=20261109-cloning-v1"></script>
 <script src="{% static 'internal/lab_tools/molecular_primer_panel.js' %}?v=20261109-primers-v2"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
+<script src="{% static 'internal/lab_tools/tool_bio_calc.js' %}?v=20261109-bio-v1"></script>
+<script src="{% static 'internal/lab_tools/tool_rna_panel.js' %}?v=20261109-bio-v1"></script>
+<script src="{% static 'internal/lab_tools/tool_protein_panel.js' %}?v=20261109-bio-v1"></script>
+<script src="{% static 'internal/lab_tools/tool_translate_panel.js' %}?v=20261109-bio-v1"></script>
 <script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v5"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v8"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v8"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v10"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v10"></script>
 </div>
 {% endblock %}

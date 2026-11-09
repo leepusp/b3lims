@@ -17,8 +17,18 @@
     if (!root || !host || !page) return;
 
     const S = {name: "Working sequence", sequence: "", topology: "linear", selection: null, features: []};
+    // The sequence of an RNA workbench is RNA (U), of a Protein workbench amino acids; elsewhere DNA.
+    const KIND = page.dataset.tool === "rnafold" ? "rna" : page.dataset.tool === "protein3d" ? "protein" : "dna";
+    const UNIT = KIND === "protein" ? "aa" : KIND === "rna" ? "nt" : "bp";
+    const ACCEPT = {dna: ["dna", "plasmid", "insert", "primer", "other"], rna: ["rna", "dna", "insert"], protein: ["protein"]}[KIND];
 
-    const clean = text => String(text || "").replace(/^>.*$/gm, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+    const clean = text => {
+        const letters = String(text || "").replace(/^>.*$/gm, "").replace(/[^A-Za-z*]/g, "").toUpperCase();
+
+        if (KIND === "protein") return letters;
+
+        return KIND === "rna" ? letters.replace(/\*/g, "").replace(/T/g, "U") : letters.replace(/\*/g, "");
+    };
 
     function emit() {
         root.dispatchEvent(new CustomEvent("biobank:molecular-workspace-change", {bubbles: false}));
@@ -129,20 +139,22 @@
     });
     box.rows = 7;
     box.spellcheck = false;
-    box.placeholder = "Paste DNA here, or use the buttons below (FASTA headers and spaces are ignored)";
-    search.placeholder = "Search the registry (DNA, plasmid, insert)…";
+    box.placeholder = KIND === "protein"
+        ? "Paste the amino-acid sequence here (FASTA headers and spaces are ignored)"
+        : KIND === "rna" ? "Paste RNA here; T is read as U (FASTA headers and spaces are ignored)" : "Paste DNA here, or use the buttons below (FASTA headers and spaces are ignored)";
+    search.placeholder = KIND === "protein" ? "Search the registry (protein)…" : KIND === "rna" ? "Search the registry (RNA, DNA, insert)…" : "Search the registry (DNA, plasmid, insert)…";
     results.hidden = true;
 
     function gc(seq) {
-        const acgt = seq.replace(/[^ACGT]/g, "").length;
+        const acgt = seq.replace(/[^ACGTU]/g, "").length;
 
         return acgt ? Math.round((seq.split("").filter(base => base === "G" || base === "C").length / acgt) * 1000) / 10 : 0;
     }
 
     function showSelection() {
         sel.textContent = S.selection
-            ? "Selected " + S.selection.start.toLocaleString("en-US") + "–" + S.selection.end.toLocaleString("en-US") + " (" + (S.selection.end - S.selection.start + 1).toLocaleString("en-US") + " bp)."
-            : "Select a region in the box above to use it in Cloning, Primers or Digest.";
+            ? "Selected " + S.selection.start.toLocaleString("en-US") + "–" + S.selection.end.toLocaleString("en-US") + " (" + (S.selection.end - S.selection.start + 1).toLocaleString("en-US") + " " + UNIT + ")."
+            : KIND === "dna" ? "Select a region in the box above to use it in Cloning, Primers or Digest." : "Select a region in the box above; the analysis windows can work on the selection.";
     }
 
     function render() {
@@ -151,7 +163,7 @@
         nameInput.value = S.name;
         topology.value = S.topology;
         info.textContent = S.sequence
-            ? S.sequence.length.toLocaleString("en-US") + " bp · GC " + gc(S.sequence) + "% · " + S.topology + (S.features.length ? " · " + S.features.length + " feature" + (S.features.length === 1 ? "" : "s") : "")
+            ? S.sequence.length.toLocaleString("en-US") + " " + UNIT + (KIND === "protein" ? "" : " · GC " + gc(S.sequence) + "%") + (KIND === "dna" ? " · " + S.topology : "") + (S.features.length ? " · " + S.features.length + " feature" + (S.features.length === 1 ? "" : "s") : "")
             : "No sequence yet.";
         showSelection();
     }
@@ -249,7 +261,7 @@
             }
 
             const response = await fetch(page.dataset.searchUrl + "?q=" + encodeURIComponent(query), {credentials: "same-origin"});
-            const found = response.ok ? (await response.json()).results || [] : [];
+            const found = (response.ok ? (await response.json()).results || [] : []).filter(record => !record.sequence_type || ACCEPT.indexOf(record.sequence_type) !== -1);
 
             results.hidden = false;
 
@@ -281,7 +293,9 @@
         }, 250);
     });
 
-    host.append(field("Name", nameInput), field("Topology", topology), field("Sequence", box), info, sel, actions, field("Or load a registry record", search), results, note);
+    if (KIND !== "dna") useAssembly.hidden = true;
+
+    host.append(field("Name", nameInput), KIND === "dna" ? field("Topology", topology) : document.createComment("no topology"), field("Sequence", box), info, sel, actions, field("Or load a registry record", search), results, note);
 
     window.BiobankToolSequence = {
         getState: () => ({name: S.name, sequence: S.sequence, topology: S.topology}),
