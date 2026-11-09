@@ -31,6 +31,7 @@
         work: null, source: null, rot: 0, fine: 0, bright: 0, contrast: 0, invert: false, zoom: 1,
         lanes: [], bands: [], cal: [], calStep: 0, ladderName: "1 kb", ladderLane: null,
         mode: "lanes", sel: null, nextId: 1, sensitivity: 35, drag: null, hover: null,
+        sim: {wells: 10, lanes: []},
     };
     let frame = 0;
 
@@ -79,6 +80,7 @@
     const calBox = el("div", "mwg-card");
     const bandsBox = el("div", "mwg-card");
     const adjustBox = el("div", "mwg-card");
+    const simBox = el("div", "mwg-card");
     const modeButtons = {};
     const sliders = {};
 
@@ -174,7 +176,7 @@
     adjustBox.append(adjustRow);
 
     head.append(el("strong", "mwp-title", "Gel"), button("Photo…", "Open an image file", () => fileInput.click()), button("Simulated gel", "Draw a gel from the record and the enzymes picked in Digest", () => demoGel()), labelled("Marker", ladderSelect), toolbar, exportRow, fileInput);
-    side.append(lanesBox, calBox, bandsBox, adjustBox);
+    side.append(lanesBox, calBox, bandsBox, adjustBox, simBox);
     body.append(stage, side);
     pane.append(head, hint, body);
 
@@ -983,26 +985,45 @@
 
     /* ---------- demo gel ---------- */
 
+    // Simulated gel: wells start at the left edge; the marker is lane 1, the
+    // record and its digest (when a record is open) come next, then the lanes
+    // added by hand. The number of wells is adjustable.
     function demoGel() {
         const workspace = window.BiobankMolecularWorkspace;
-
-        if (!workspace) return;
-
-        const snapshot = workspace.getSnapshot();
+        const snapshot = workspace ? workspace.getSnapshot() : null;
         const digest = window.BiobankDigest;
-        const fragments = digest ? digest.fragments().map(fragment => fragment.length) : [];
-        const lanes = [{label: "M", bands: LADDERS["1 kb"]}, {label: "Uncut", bands: [snapshot.sequence.length]}];
+        const ladder = LADDERS[S.ladderName] || LADDERS["1 kb"];
+        const lanes = [{label: "M", bands: ladder, marker: true}];
 
-        if (fragments.length) lanes.push({label: digest.enzymes().join("+"), bands: fragments});
-        else lanes.push({label: "Pick enzymes in Digest", bands: []});
+        if (!snapshot && !S.sim.lanes.length) {
+            S.sim.lanes = [
+                {label: "Sample 1", bands: [3000, 1500, 500]},
+                {label: "Sample 2", bands: [2000, 800]},
+                {label: "Sample 3", bands: [4000, 1000, 250]},
+            ];
+            renderSim();
+        }
 
-        const width = 760;
+        if (snapshot) {
+            const fragments = digest ? digest.fragments().map(fragment => fragment.length) : [];
+
+            lanes.push({label: "Uncut", bands: [snapshot.sequence.length]});
+            lanes.push(fragments.length ? {label: digest.enzymes().join("+"), bands: fragments} : {label: "Digest", bands: []});
+        }
+
+        S.sim.lanes.forEach(lane => lanes.push({label: lane.label, bands: lane.bands}));
+
+        const wells = Math.max(S.sim.wells, lanes.length);
+        const pitch = 78;
+        const laneW = 66;
+        const width = Math.max(760, wells * pitch + 24);
         const height = 520;
         const canvas = newCanvas(width, height);
         const ctx = canvas.getContext("2d");
-        const laneW = 90;
-        const left = (width - lanes.length * (laneW + 18)) / 2;
-        const [min, max] = [250, 10000];
+        const sizes = lanes.reduce((all, lane) => all.concat(lane.bands), []);
+        const min = Math.max(20, Math.min.apply(null, sizes) * 0.7);
+        const max = Math.max.apply(null, sizes) * 1.15;
+        const top = Math.max.apply(null, sizes.concat([1]));
 
         ctx.fillStyle = "#101820";
         ctx.fillRect(0, 0, width, height);
@@ -1013,14 +1034,20 @@
             ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
         }
 
-        lanes.forEach((lane, index) => {
-            const x = left + index * (laneW + 18);
+        // Every well is drawn, used or not, starting at the left corner.
+        for (let index = 0; index < wells; index++) {
+            const x = 12 + index * pitch;
 
             ctx.fillStyle = "#070D12";
             ctx.fillRect(x + 6, 40, laneW - 12, 8);
+        }
+
+        lanes.forEach((lane, index) => {
+            const x = 12 + index * pitch;
+
             lane.bands.forEach(size => {
                 const y = 70 + calc.gelPosition(size, min, max) * (height - 110);
-                const strong = lane.label === "M" ? 0.7 : Math.min(1, 0.45 + size / snapshot.sequence.length * 0.7);
+                const strong = lane.marker ? 0.7 : Math.min(1, 0.45 + size / top * 0.5);
                 const gradient = ctx.createLinearGradient(0, y - 7, 0, y + 7);
 
                 gradient.addColorStop(0, "rgba(220,235,255,0)");
@@ -1031,11 +1058,78 @@
             });
         });
 
+        const sim = S.sim;
+
         loadBitmap(canvas);
-        S.ladderName = "1 kb";
-        ladderSelect.value = "1 kb";
-        hint.textContent = "Simulated gel drawn from this record. Mark the lanes (drag), calibrate on the marker, then read the bands.";
+        S.sim = sim;
+        S.ladderName = LADDERS[S.ladderName] ? S.ladderName : "1 kb";
+        ladderSelect.value = S.ladderName;
+        hint.textContent = "Simulated gel with " + wells + " wells. Mark the lanes (drag), calibrate on the marker, then read the bands.";
         redraw(false);
+    }
+
+    /* ---------- simulated gel designer ---------- */
+
+    function parseSizes(text) {
+        return String(text || "").split(/[\s,;]+/).map(Number).filter(value => value > 0 && value < 1000000);
+    }
+
+    function renderSim() {
+        const wells = el("input", "mwp-cell");
+        const rows = el("div");
+
+        wells.type = "number";
+        wells.min = "4";
+        wells.max = "30";
+        wells.value = String(S.sim.wells);
+        wells.addEventListener("change", () => {
+            S.sim.wells = Math.max(4, Math.min(30, Number(wells.value) || 10));
+            wells.value = String(S.sim.wells);
+        });
+        wells.addEventListener("keydown", event => event.stopPropagation());
+
+        S.sim.lanes.forEach((lane, index) => {
+            const row = el("div", "mwg-lane mwg-simrow");
+            const label = el("input", "mwp-cell");
+            const bands = el("input", "mwp-cell");
+            const remove = el("button", "mwp-icon", "✕");
+
+            label.value = lane.label;
+            label.placeholder = "Lane name";
+            bands.value = lane.bands.join(", ");
+            bands.placeholder = "Sizes in bp, e.g. 3000, 1200, 400";
+            label.addEventListener("change", () => {
+                lane.label = label.value.trim() || lane.label;
+            });
+            bands.addEventListener("change", () => {
+                lane.bands = parseSizes(bands.value);
+                bands.value = lane.bands.join(", ");
+            });
+            [label, bands].forEach(node => node.addEventListener("keydown", event => event.stopPropagation()));
+            remove.type = "button";
+            remove.title = "Remove this lane";
+            remove.addEventListener("click", () => {
+                S.sim.lanes.splice(index, 1);
+                renderSim();
+            });
+            row.append(label, bands, remove);
+            rows.append(row);
+        });
+
+        const add = button("+ Lane", "Add a lane with the band sizes you want to see", () => {
+            S.sim.lanes.push({label: "Sample " + (S.sim.lanes.length + 1), bands: []});
+            renderSim();
+        });
+        const draw = button("Draw gel", "Draw the simulated gel from the marker, the lanes below and the number of wells", () => demoGel(), "mwp-btn is-primary");
+        const actions = el("div", "mwg-exportrow");
+
+        actions.append(add, draw);
+        simBox.replaceChildren(
+            el("div", "mwg-cardtitle", "Simulated gel"),
+            labelled("Wells", wells),
+            rows,
+            actions,
+        );
     }
 
     /* ---------- export ---------- */
@@ -1165,7 +1259,7 @@
         if (!pane.hidden) redraw(false);
     });
 
-    const STATE_KEYS = ["rot", "fine", "bright", "contrast", "invert", "zoom", "lanes", "bands", "cal", "calStep", "ladderName", "ladderLane", "nextId", "sensitivity"];
+    const STATE_KEYS = ["rot", "fine", "bright", "contrast", "invert", "zoom", "lanes", "bands", "cal", "calStep", "ladderName", "ladderLane", "nextId", "sensitivity", "sim"];
 
     function getState() {
         const out = {};
@@ -1189,6 +1283,8 @@
         });
         invertBox.checked = !!S.invert;
         ladderSelect.value = S.ladderName;
+        if (!S.sim || !Array.isArray(S.sim.lanes)) S.sim = {wells: 10, lanes: []};
+        renderSim();
     }
 
     // Load a stored photo and then restore the marks made on it.
@@ -1245,6 +1341,7 @@
         readings: () => S.bands.map(band => Object.assign({}, readBand(band), {lane: (laneById(band.lane) || {}).name})),
     };
 
+    renderSim();
     setMode("lanes");
     redraw(true);
 }());

@@ -340,3 +340,5 @@ input.mwp-cell[type=number]{width:100%}
 .mwv-seg-btn[hidden]{display:none}
 .mwv-addwin>summary{white-space:nowrap}
 .mwv-addwin[hidden]{display:none}
+
+.mwg-simrow{grid-template-columns:6.5rem minmax(0,1fr) auto}
