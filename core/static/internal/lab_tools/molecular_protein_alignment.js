@@ -2206,9 +2206,15 @@
             "</select>",
         ].join("");
 
-        search.parentElement.insertBefore(
+        /*
+         * The palette control belongs to the toolbar, not inside the
+         * "Find" label (a label wrapping a select hijacks its clicks).
+         */
+        const host = search.closest("label") || search;
+
+        host.parentElement.insertBefore(
             wrapper,
-            search
+            host
         );
 
         const select = wrapper.querySelector(

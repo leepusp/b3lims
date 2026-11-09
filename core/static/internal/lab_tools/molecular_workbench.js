@@ -56,6 +56,7 @@
         document.body.classList.toggle("mw-focus", prefs.focus);
         body.classList.toggle("is-tracks-hidden", !prefs.tracks);
         body.classList.toggle("is-inspector-hidden", !prefs.inspector);
+        root.dataset.mwbMode = mode;
         main.classList.toggle("is-digest", mode === "digest");
         root.classList.toggle("is-digest", mode === "digest");
         root.classList.toggle("is-metadata-hidden", mode !== "features");

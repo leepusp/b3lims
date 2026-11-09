@@ -48,6 +48,11 @@
       href="{% static 'internal/lab_tools/molecular_protein_splitter.css' %}?v=20260817-protein-splitter-v3-expanded-sequence">
 {% endif %}
 
+{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
+<link rel="stylesheet"
+      href="{% static 'internal/lab_tools/molecular_pro.css' %}?v=20261109-pro-v1">
+{% endif %}
+
 <div id="molecular-workspace"
      class="mw-page{% if molecule.sequence_type == "protein" %} mw-protein-focused-workspace{% endif %}{% if molecule.sequence_type != "rna" and molecule.sequence_type != "protein" %} mw-canvas-record{% endif %}"
      data-sequence-type="{{ molecule.sequence_type }}"
@@ -899,16 +904,18 @@
 <script src="{% static 'internal/lab_tools/molecular_map_canvas.js' %}?v=20261109-canvas-v4" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_edit_strip.js' %}?v=20261109-strip-v1" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_seq_canvas.js' %}?v=20261109-seq-v6" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-seq-v13"
+<script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v14"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
 {% if molecule.sequence_type == "rna" %}
 <script src="{% static 'internal/lab_tools/molecular_rna_secondary_structure.js' %}?v=20260809-rna-workspace-r1d-v3"
         defer></script>
+<script src="{% static 'internal/lab_tools/molecular_rna_pro.js' %}?v=20261109-pro-v1"
+        defer></script>
 {% endif %}
 {% if molecule.sequence_type == "protein" %}
-<script src="{% static 'internal/lab_tools/molecular_protein_alignment.js' %}?v=20260814-protein-palette-v1"
+<script src="{% static 'internal/lab_tools/molecular_protein_alignment.js' %}?v=20261109-palette-fix-v2"
         defer></script>
 <script src="{% static 'internal/lab_tools/vendor/molstar-5.11.0.js' %}?v=5.11.0"
         defer></script>
@@ -925,6 +932,8 @@
 <script src="{% static 'internal/lab_tools/molecular_protein_splitter.js' %}?v=20260817-protein-splitter-v2-fullscreen"
         defer></script>
 <script src="{% static 'internal/lab_tools/molecular_protein_structure_sync.js' %}?v=20260817-universal-structure-sync-v2-ui-copy"
+        defer></script>
+<script src="{% static 'internal/lab_tools/molecular_alignment_pro.js' %}?v=20261109-pro-v1"
         defer></script>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,168 @@
+/* Molecular Registry — RNA / Protein workbench standardisation.
+   Loaded after the legacy stylesheets; shares tokens with the sequence views. */
+:root{--mp-border:#dfe4ea;--mp-soft:#f4f6f8;--mp-ink:#121c27;--mp-mute:#566474;--mp-blue:#1d4ed8}
+
+/* ---- Wide workspace: structure and protein pages use the whole width ---- */
+.mw-page[data-mwb-mode="structure"] .mw-body{grid-template-columns:minmax(0,1fr)!important}
+.mw-page[data-mwb-mode="structure"] .mw-tracks,
+.mw-page[data-mwb-mode="structure"] .mw-side,
+.mw-page[data-mwb-mode="structure"] .mw-metadata-card,
+.mw-page[data-mwb-mode="structure"] [data-mwb-rail]{display:none!important}
+.mw-protein-focused-workspace .mw-body{grid-template-columns:minmax(0,1fr) 19rem!important}
+.mw-protein-focused-workspace .mw-tracks,
+.mw-protein-focused-workspace [data-mwb-rail="tracks"]{display:none!important}
+@media (max-width:1399px){.mw-protein-focused-workspace .mw-body{grid-template-columns:minmax(0,1fr)!important}}
+
+/* ---- RNA structure card ---- */
+.mw-rna-secondary-view.mrss-card{margin-top:0;border-color:var(--mp-border);border-radius:.65rem}
+.mrss-header{padding:.9rem 1rem .5rem}
+.mrss-heading h2{font-size:1.05rem;margin:0}
+.mrss-heading p{font-size:.8rem;color:var(--mp-mute);margin:.15rem 0 0}
+.mrss-body{grid-template-columns:minmax(210px,250px) minmax(0,1fr);gap:0;padding:0}
+.mrss-sidebar{padding:.8rem;background:var(--mp-soft);border-right:1px solid var(--mp-border);border-radius:0 0 0 .65rem;min-height:30rem}
+.mrss-list-item{background:#fff}
+.mrss-main{padding:.8rem 1rem 1rem}
+.mrss-metadata{display:flex;flex-wrap:wrap;gap:.35rem .5rem;margin:0 0 .6rem}
+.mrss-metadata-item{display:inline-flex;align-items:baseline;gap:.35rem;padding:.2rem .55rem;border:1px solid var(--mp-border);border-radius:999px;background:#fff;font-size:.74rem}
+.mrss-metadata-item span{color:var(--mp-mute);text-transform:none;font-size:.72rem}
+.mrss-metadata-item strong{font-size:.76rem}
+.mrss-metadata-item:nth-child(3),.mrss-metadata-item:nth-child(4),.mrss-metadata-item:nth-child(5){display:none}
+.mrss-header-actions .mrss-status{display:none}
+.mrss-card[data-mrp-view]:not([data-mrp-view="forna"]) .mrss-control{display:none}
+.mrss-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.5rem;margin:.4rem 0}
+.mrss-viewer-shell{height:520px;min-height:360px;border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;overflow:hidden;position:relative}
+.mrss-forna-mount,.mrss-forna-mount>svg{width:100%!important;height:100%!important}
+.mrss-viewer-shell[hidden]{display:none}
+.mrss-structure-code-wrap[hidden]{display:none}
+
+/* ---- RNA pro layer ---- */
+.mrp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:0 0 .7rem}
+.mrp-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:#f0f3f7}
+.mrp-tab{border:0;background:transparent;border-radius:7px;padding:.38rem .85rem;font-size:.82rem;font-weight:600;color:var(--mp-mute);min-height:36px;cursor:pointer}
+.mrp-tab.is-active{background:#fff;color:var(--mp-ink);box-shadow:0 1px 2px rgba(18,28,39,.14)}
+.mrp-tab:focus-visible,.mrp-btn:focus-visible{outline:2px solid var(--mp-blue);outline-offset:2px}
+.mrp-compare{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--mp-mute)}
+.mrp-compare[hidden]{display:none}
+.mrp-select{border:1px solid #c5ced8;border-radius:.4rem;padding:.28rem .45rem;font-size:.8rem;background:#fff}
+.mrp-compare-info{font-size:.76rem;color:var(--mp-ink)}
+.mrp-export{position:relative;margin-left:auto}
+.mrp-btn{border:1px solid #c5ced8;background:#fff;border-radius:8px;min-height:36px;padding:0 .85rem;font-size:.82rem;font-weight:600;color:var(--mp-ink);cursor:pointer}
+.mrp-btn:disabled{opacity:.5;cursor:default}
+.mrp-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;min-width:11rem;background:#fff;border:1px solid #dde3ea;border-radius:10px;box-shadow:0 12px 32px rgba(18,28,39,.18);padding:.3rem}
+.mrp-menu[hidden]{display:none}
+.mrp-menu-item{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:.4rem;padding:.45rem .6rem;font-size:.82rem;cursor:pointer}
+.mrp-menu-item:hover{background:var(--mp-soft)}
+.mrp-panel{margin:0 0 .7rem}
+.mrp-panel[hidden]{display:none}
+.mrp-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:.45rem}
+.mrp-stat{display:flex;flex-direction:column;gap:.1rem;padding:.5rem .65rem;border:1px solid var(--mp-border);border-radius:.55rem;background:#fff}
+.mrp-stat span{font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:var(--mp-mute);font-weight:600}
+.mrp-stat strong{font-size:.95rem;font-variant-numeric:tabular-nums}
+.mrp-legend{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem}
+.mrp-chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--mp-mute);padding:.1rem .5rem;border:1px solid var(--mp-border);border-radius:999px;background:#fff}
+.mrp-chip i{display:inline-block;width:.6rem;height:.6rem;border-radius:50%}
+.mrp-stage{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;min-height:16rem;padding:.6rem}
+.mrp-stage[hidden]{display:none}
+.mrp-scroll{overflow-x:auto}
+.mrp-center{display:flex;justify-content:center}
+.mrp-svg{max-width:100%;height:auto}
+.mrp-arc{cursor:pointer}.mrp-arc:hover{stroke-width:3;opacity:1}
+.mrp-nt{cursor:pointer}.mrp-nt:hover{text-decoration:underline}
+.mrp-tip{min-height:1.3rem;margin:.35rem 0 .6rem;font-size:.76rem;color:var(--mp-mute)}
+.mrp-empty{padding:1rem;border:1px dashed var(--mp-border);border-radius:.55rem;color:var(--mp-mute);font-size:.85rem}
+.mrp-empty[hidden],.mrp-tip[hidden]{display:none}
+.mrp-db{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.82rem}
+.mrp-db-row{display:flex;gap:.8rem;margin-bottom:.7rem;align-items:flex-start}
+.mrp-db-num{width:3rem;text-align:right;color:#8896a6;font-size:.72rem;padding-top:.1rem}
+.mrp-db-block{display:flex;flex-direction:column}
+.mrp-db-seq,.mrp-db-str{display:flex}
+.mrp-db-nt,.mrp-db-ch{width:1.05rem;text-align:center;line-height:1.5}
+.mrp-db-nt{cursor:pointer;font-weight:600}.mrp-db-nt:hover{background:#e8f0ff}
+.mrp-db-ch{color:#b6c0cb}.mrp-db-ch.is-paired{color:#be185d;font-weight:700}
+.mrp-table-wrap{max-height:30rem;overflow:auto}
+.mrp-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.mrp-table th{position:sticky;top:0;background:var(--mp-soft);text-align:left;padding:.4rem .6rem;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--mp-mute)}
+.mrp-table td{padding:.35rem .6rem;border-top:1px solid #eef1f5;font-variant-numeric:tabular-nums}
+.mrp-table tbody tr{cursor:pointer}.mrp-table tbody tr:hover{background:#f0f5ff}
+
+/* ---- Protein overview ---- */
+.mw-protein-final-workspace .mw-seqviz-shell{padding:0}
+.mw-protein-overview-sequence .mw-card-header{display:block!important;padding:.8rem 1rem .5rem}
+.mw-protein-overview-sequence .mw-card-header h2{font-size:1.02rem;margin:0}
+.mw-protein-overview-sequence .mw-card-header p{margin:.15rem 0 .6rem;font-size:.78rem;color:var(--mp-mute);max-width:none}
+.mw-protein-overview-sequence .mw-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;width:100%}
+.mw-protein-overview-sequence .mw-search-label{display:inline-flex;align-items:center;gap:.4rem;margin:0}
+.mw-protein-overview-sequence .mw-search-label span{font-size:.72rem;font-weight:600;color:var(--mp-mute);text-transform:uppercase;letter-spacing:.04em}
+.mw-protein-overview-sequence .mw-search-label input{width:11rem}
+.mw-protein-palette-control{display:inline-flex;align-items:center;gap:.4rem;margin:0}
+.mw-protein-palette-label{font-size:.72rem;font-weight:600;color:var(--mp-mute);text-transform:uppercase;letter-spacing:.04em}
+.mw-protein-palette-select{border:1px solid #c5ced8;border-radius:.4rem;padding:.25rem .4rem;font-size:.8rem;background:#fff;height:auto!important}
+.mw-protein-overview-sequence .mw-toolbar .btn{min-height:32px}
+.mw-protein-overview-sequence .mw-sequence-editor{min-height:7rem}
+.mps-card .mw-card-header{padding:.8rem 1rem .4rem}
+.mps-card .mw-card-header h2{font-size:1.02rem;margin:0}
+.mps-card .mw-card-header p{font-size:.78rem;color:var(--mp-mute);margin:.15rem 0 0}
+.mps-body{padding:0 1rem 1rem}
+.mps-toolbar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.mps-toolbar #mps-structure-select{flex:1 1 100%}
+.mps-status,#mps-sync-status{font-size:.78rem!important;color:var(--mp-mute)}
+.mps-viewer-shell{min-height:26rem;border:1px solid var(--mp-border);border-radius:.6rem;overflow:hidden;background:#0f1722}
+.mps-empty{color:#aeb9c6;font-size:.85rem;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem}
+.mps-footer p{font-size:.72rem;color:var(--mp-mute)}
+.mps-toolbar button:disabled,.mps-toolbar a[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+
+/* ---- Alignment ---- */
+.mpa-card.mpa-card-embedded{border:0;border-radius:0;box-shadow:none}
+.mpa-header{padding:.8rem 1rem .5rem!important;align-items:flex-start;gap:1rem}
+.mpa-heading h2{font-size:1.02rem;margin:0}
+.mpa-heading p{font-size:.78rem;color:var(--mp-mute);margin:.15rem 0 0;max-width:none}
+.mpa-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.5rem}
+.mpa-body{display:block!important;padding:0!important}
+.mpa-sidebar{padding:.6rem 1rem;background:var(--mp-soft);border-top:1px solid var(--mp-border);border-bottom:1px solid var(--mp-border);min-height:0;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem}
+.mpa-sidebar .mpa-list-heading{display:flex;align-items:center;gap:.5rem;margin:0}
+.mpa-sidebar .mpa-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.mpa-sidebar .mpa-list-item{width:auto;min-width:12rem}
+.mpa-sidebar .mpa-empty{margin:0}
+.mpa-main{padding:.8rem 1rem 1rem;min-width:0}
+.mpa-list-item{background:#fff}
+.mpa-metadata{display:flex;flex-wrap:wrap;gap:.35rem .5rem;margin:0 0 .6rem}
+.mpa-metadata-item{display:inline-flex;align-items:baseline;gap:.35rem;padding:.2rem .55rem;border:1px solid var(--mp-border);border-radius:999px;background:#fff;font-size:.74rem}
+.mpa-metadata-item span{color:var(--mp-mute);font-size:.72rem}
+.mpa-toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:.4rem 0 .7rem}
+.mpa-viewer-shell.is-pro .mpa-text-msa,
+.mpa-viewer-shell.is-pro .mpa-viewer-empty{display:none!important}
+.mpa-viewer-shell{min-height:0;border:0;padding:0;background:transparent}
+.mpa-toolbar .mpa-control{display:none}
+.mpa-query-match{font-size:.78rem;color:var(--mp-mute)}
+
+.mpro-root{display:flex;flex-direction:column;gap:.65rem}
+.mpro-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .8rem}
+.mpro-field{display:inline-flex;align-items:center;gap:.4rem;margin:0;font-size:.72rem;font-weight:600;color:var(--mp-mute);text-transform:uppercase;letter-spacing:.04em}
+.mpro-check{display:inline-flex;align-items:center;gap:.3rem;margin:0;font-size:.8rem;color:var(--mp-ink)}
+.mpro-motif{width:12rem}.mpro-jump{width:8.5rem}
+.mpro-hit-info{font-size:.76rem;color:var(--mp-mute)}
+.mpro-controls .mrp-export{margin-left:auto}
+.mpro-view{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;padding:.5rem .6rem;overflow-x:auto;max-height:36rem;overflow-y:auto}
+.mpro-block{margin-bottom:.9rem}
+.mpro-line{display:flex;align-items:center;height:20px;white-space:nowrap}
+.mpro-name{flex:0 0 140px;width:140px;overflow:hidden;text-overflow:ellipsis;text-align:left;border:0;background:transparent;padding:0 .4rem 0 0;font-size:.74rem;font-weight:600;color:var(--mp-ink);cursor:pointer;position:sticky;left:0;z-index:2;background:#fff}
+.mpro-name.mpro-label{cursor:default;font-weight:500;color:var(--mp-mute)}
+.mpro-line.is-ref .mpro-name{color:var(--mp-blue)}
+.mpro-name:hover:not(.mpro-label){text-decoration:underline}
+.mpro-seq{display:inline-flex}
+.mpro-c{display:inline-block;width:11px;height:18px;line-height:18px;text-align:center;font:normal 600 11px "IBM Plex Mono",ui-monospace,monospace;font-style:normal;cursor:default;position:relative}
+.mpro-c.is-gap{color:#b6c0cb;font-weight:400}
+.mpro-c.is-hit{outline:2px solid #f59e0b;outline-offset:-2px;z-index:1}
+.mpro-c.is-sel{box-shadow:inset 0 -3px 0 #be185d}
+.mpro-c.is-flash{outline:2px solid #be185d;outline-offset:1px}
+.mpro-ruler .mpro-c{font-size:8px;color:#8896a6;font-weight:400;overflow:visible}
+.mpro-ruler .mpro-c.is-tick{border-right:1px solid #cbd5e1;text-align:right;direction:rtl}
+.mpro-barline .mpro-c{display:inline-flex;align-items:flex-end;height:18px}
+.mpro-barline .mpro-c b{display:block;width:8px;margin:0 auto}
+.mpro-consensus .mpro-c{color:var(--mp-mute)}
+.mpro-view .mpro-c[data-c]{cursor:pointer}
+.mpro-view .mpro-c[data-c]:hover{filter:brightness(.92);outline:1px solid #1d4ed8;outline-offset:-1px}
+.mpro-table{border:1px solid var(--mp-border);border-radius:.6rem;background:#fff;padding:.3rem .8rem}
+.mpro-table summary{cursor:pointer;padding:.4rem 0;font-size:.82rem;font-weight:600}
+.mpro-table .is-ref{background:#eef4ff;font-weight:600}
+.mpro-holder{background:repeating-linear-gradient(#f4f6f8 0 18px,#fff 18px 20px)}
