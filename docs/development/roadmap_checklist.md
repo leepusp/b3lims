@@ -80,6 +80,14 @@ Other useful functions
       (cloning, primers, description, sequence, data model, settings)
 - [ ] Implement the OpenCloning-style structures in the Registry
 - [ ] Clean up the old structures
+- [x] Record page shell: record bar, tracks rail, inspector, docked annotation editor, interactive ORF panel (p26, p27)
+- [ ] Workbench by function (design in the Registry canvas, boards 5 to 7): focus mode, Map / Digest / Primers modes, collapsible panels, one map + sequence view instead of separate viewers
+- [ ] Digest with gel simulation and fragment list (calculation in a small UMD module with Node tests)
+- [ ] Primer tools: Tm, dimers, binding sites across the Registry, PCR product to Insert record
+- [ ] Chemistry workbench: structure editor (Ketcher, Apache-2.0, embedded), SMILES/MOL import, calculated properties, reaction stoichiometry table linked to Chemicals stock (Block C 2.4)
+- [ ] ELN cards: embed a Registry record view (map, digest, primer, structure) in an entry, pinned to a version or live, opening the workbench on the same view
+- [ ] Bench calculators (dilution, buffer, molarity, master mix, gel marker, plate layout) as small pure-JS tools, inspired by Lablaps (closed product, ideas only; no code to reuse)
+- [ ] Decide OpenCloning route: library inside Django, adopt its JSON history, or embedded container
 
 ## Block E: workflows and submissions
 
@@ -87,6 +95,7 @@ Other useful functions
 - [ ] Workflow model: Biobank sample, then analysis, review and public data, as ordered steps with status
 - [ ] 6.3 Run Jupyter notebooks inside workflows (Slurm job, inputs and outputs linked to the ELN entry)
 - [ ] Galaxy steps in a workflow
+- [ ] Review NoLabs (Apache-2.0; FastAPI microservices for ESMFold, DiffDock, RFdiffusion, ProteinMPNN, BLAST; Celery + Redis scheduler) as a source of model steps: call its microservice REST endpoints from a workflow step, store result as a Registry record (PDB to Protein structure); do not adopt its UI or workflow engine
 - [ ] Workflow builder screen (steps, inputs, outputs, who reviews)
 - [ ] 5.2 and 6.6 Data submissions: RO-Crate packages for ENA, Zenodo and the public catalog
 - [ ] Submissions: ENA, NCBI, Zenodo
