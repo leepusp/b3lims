@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from core.context import base_context
-from core.models.lab_tools.workflow import Workflow, WorkflowStep
+from core.models.lab_tools.workflow import Workflow, WorkflowStep, WorkflowStepFile
 from core.services import notebook_composer as composer
 from core.services import workflow as service
 
@@ -42,8 +42,8 @@ def _visible_or_404(user, workflow_id):
 @login_required
 def workflow_list(request):
     qs = service.visible_workflows(request.user).select_related("owner").annotate(
-        step_total=Count("steps", distinct=True),
-        step_done=Count("steps", filter=Q(steps__status="done"), distinct=True),
+        step_total=Count("steps", filter=~Q(steps__kind="note"), distinct=True),
+        step_done=Count("steps", filter=Q(steps__status="done") & ~Q(steps__kind="note"), distinct=True),
     )
     status = request.GET.get("status") or ""
 
@@ -75,7 +75,7 @@ def workflow_detail(request, workflow_id):
 
     context.update({
         "workflow": workflow,
-        "workflow_data": service.serialize(workflow),
+        "workflow_data": service.serialize(workflow, request.user),
         "can_edit": service.can_edit(request.user, workflow),
         "is_owner": request.user.is_superuser or workflow.owner_id == request.user.pk,
         "status_choices": Workflow.Status.choices,
@@ -115,7 +115,7 @@ def workflow_api(request, workflow_id):
         elif action == "add_step":
             step = service.add_step(workflow, user, data.get("step") or {})
 
-            return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow)})
+            return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, request.user)})
         elif action == "update_step":
             step = get_object_or_404(workflow.steps, pk=data.get("step_id"))
 
@@ -141,6 +141,8 @@ def workflow_api(request, workflow_id):
                 )
 
                 runs.refresh_run(run) if action == "refresh_run" else runs.cancel_run(run)
+        elif action == "delete_file":
+            get_object_or_404(WorkflowStepFile, pk=data.get("file_id"), step__workflow=workflow).delete()
         elif action == "import_eln":
             service.import_eln_steps(workflow, user, int(data.get("entry") or 0))
         else:
@@ -150,7 +152,45 @@ def workflow_api(request, workflow_id):
 
     workflow.save(update_fields=["updated_at"])
 
-    return JsonResponse({"status": "success", "workflow": service.serialize(workflow)})
+    return JsonResponse({"status": "success", "workflow": service.serialize(workflow, request.user)})
+
+
+@login_required
+@require_POST
+def workflow_step_file_upload(request, workflow_id, step_id):
+    workflow = _visible_or_404(request.user, workflow_id)
+
+    if not service.can_edit(request.user, workflow):
+        return JsonResponse({"status": "error", "message": "You cannot edit this workflow."}, status=403)
+
+    step = get_object_or_404(workflow.steps, pk=step_id)
+    uploaded = request.FILES.get("file")
+
+    try:
+        if uploaded is None:
+            raise ValidationError("Choose an image to upload.")
+
+        service.add_step_file(step, request.user, uploaded)
+    except ValidationError as exc:
+        return _error(exc)
+
+    workflow.save(update_fields=["updated_at"])
+
+    return JsonResponse({"status": "success", "workflow": service.serialize(workflow, request.user)})
+
+
+@login_required
+@require_GET
+def workflow_step_file(request, workflow_id, file_id):
+    workflow = _visible_or_404(request.user, workflow_id)
+    file = get_object_or_404(WorkflowStepFile, pk=file_id, step__workflow=workflow)
+    response = HttpResponse(bytes(file.data), content_type=file.content_type)
+
+    response["Cache-Control"] = "private, max-age=3600"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
+
+    return response
 
 
 @login_required

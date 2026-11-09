@@ -75,6 +75,12 @@ def run_image_bytes(run, index):
     return data if data.startswith(PNG_SIGNATURE) else None
 
 
+def run_tables(run):
+    tables = [t for c in (run.outputs or {}).get("cells", []) for t in c.get("tables", [])]
+
+    return tables[:3]
+
+
 def _output_text(run):
     text = "\n".join(c.get("text", "").strip() for c in (run.outputs or {}).get("cells", []) if c.get("text"))
 
@@ -91,6 +97,7 @@ def serialize_run(run):
             reverse("workflow_run_image", args=[run.step.workflow_id, run.pk, i]) for i in range(count)
         ],
         "output_text": _output_text(run),
+        "tables": run_tables(run),
         "duration": (run.result or {}).get("seconds"),
         "resources": (run.step.config or {}).get("run_resources") or {},
         "id": run.pk,

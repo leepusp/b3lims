@@ -45,6 +45,7 @@ class WorkflowStep(models.Model):
         MANUAL = "manual", "Manual"
         JUPYTER = "jupyter", "Jupyter notebook"  # phase 2
         GALAXY = "galaxy", "Galaxy"  # phase 2
+        NOTE = "note", "Note"
 
     workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name="steps")
     title = models.CharField(max_length=200)
@@ -133,3 +134,23 @@ class WorkflowStepRun(models.Model):
 
     def __str__(self):
         return f"run {self.pk} of step {self.step_id}: {self.state}"
+
+
+class WorkflowStepFile(models.Model):
+    """A small image attached to a step (gel, blot, micrograph...). Content is checked on upload."""
+
+    step = models.ForeignKey(WorkflowStep, on_delete=models.CASCADE, related_name="files")
+    name = models.CharField(max_length=120)
+    content_type = models.CharField(max_length=40)
+    data = models.BinaryField()
+    size = models.PositiveIntegerField(default=0)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.step_id}: {self.name}"

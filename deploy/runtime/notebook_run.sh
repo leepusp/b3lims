@@ -129,6 +129,7 @@ import base64
 import json
 import os
 import re
+from html.parser import HTMLParser
 import sys
 import time
 
@@ -184,15 +185,57 @@ except Exception as exc:
 executed = sum(1 for c in notebook.cells if c.cell_type == "code" and c.get("execution_count"))
 
 
+class TableParser(HTMLParser):
+    """First <table> of an HTML output as rows of plain text (no markup survives)."""
+
+    def __init__(self):
+        super().__init__()
+        self.rows, self.row, self.cell, self.depth = [], None, None, 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table":
+            self.depth += 1
+        elif self.depth == 1 and tag == "tr":
+            self.row = []
+        elif self.depth == 1 and tag in ("td", "th") and self.row is not None:
+            self.cell = []
+
+    def handle_endtag(self, tag):
+        if tag == "table":
+            self.depth -= 1
+        elif self.depth == 1 and tag in ("td", "th") and self.cell is not None and self.row is not None:
+            self.row.append(" ".join("".join(self.cell).split())[:80])
+            self.cell = None
+        elif self.depth == 1 and tag == "tr" and self.row is not None:
+            if self.row:
+                self.rows.append(self.row[:12])
+            self.row = None
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell.append(data)
+
+
+def parse_table(html):
+    parser = TableParser()
+
+    try:
+        parser.feed(html[:400000])
+    except Exception:
+        return []
+
+    return parser.rows[:21]
+
+
 def collect_outputs(cells):
     """Text and PNG figures of each code cell, small enough to show on a card."""
-    collected, images, image_chars = [], 0, 0
+    collected, images, image_chars, table_count = [], 0, 0, 0
 
     for index, cell in enumerate(cells):
         if cell.cell_type != "code":
             continue
 
-        text, pngs = [], []
+        text, pngs, tables = [], [], []
 
         for output in cell.get("outputs", []):
             kind = output.get("output_type")
@@ -201,7 +244,12 @@ def collect_outputs(cells):
             if kind == "stream":
                 text.append(str(output.get("text", "")))
             elif kind in ("execute_result", "display_data"):
-                if "text/plain" in data and "image/png" not in data:
+                rows = parse_table(str(data["text/html"])) if "<table" in str(data.get("text/html", "")) else []
+
+                if rows and table_count < 6:
+                    tables.append(rows)
+                    table_count += 1
+                elif "text/plain" in data and "image/png" not in data:
                     text.append(str(data["text/plain"]))
 
                 png = data.get("image/png")
@@ -216,8 +264,8 @@ def collect_outputs(cells):
             elif kind == "error":
                 text.append(str(output.get("ename", "")) + ": " + str(output.get("evalue", "")))
 
-        if text or pngs:
-            collected.append({"cell": index, "text": "".join(text)[:1500], "images": pngs})
+        if text or pngs or tables:
+            collected.append({"cell": index, "text": "".join(text)[:1500], "images": pngs, "tables": tables})
 
         if len(collected) >= 30:
             break

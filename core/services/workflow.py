@@ -192,6 +192,10 @@ def apply_step_fields(step, user, data):
             config["result_note"] = _text(data["result_note"], "result_note")
 
         step.config = config
+    if step.kind == "note":
+        # An annotation is not work: no status, owner, deadline or links.
+        step.status, step.finished_at, step.assignee, step.due_date = "todo", None, None, None
+        step.entry = step.molecule = step.sample = None
     if "x" in data:
         step.x = int(data["x"])
     if "y" in data:
@@ -263,6 +267,8 @@ def add_edge(workflow, source_id, target_id):
 
     if source_id == target_id or len(steps) != 2:
         raise ValidationError("Connect two different steps of this workflow.")
+    if any(s.kind == "note" for s in steps.values()):
+        raise ValidationError("Notes are annotations and cannot be connected.")
     if _would_cycle(workflow, source_id, target_id):
         raise ValidationError("That connection would create a loop.")
 
@@ -315,6 +321,59 @@ def _url(name, pk):
         return reverse(name, args=[pk])
     except NoReverseMatch:
         return ""
+
+
+def _file_url(step, file):
+    try:
+        return reverse("workflow_step_file", args=[step.workflow_id, file.pk])
+    except NoReverseMatch:
+        return ""
+
+
+# --- attached images ---------------------------------------------------------
+
+IMAGE_SIGNATURES = (
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+)
+MAX_FILE_BYTES = 3 * 1024 * 1024
+MAX_FILES_PER_STEP = 8
+
+
+def sniff_image(data):
+    for signature, content_type in IMAGE_SIGNATURES:
+        if data.startswith(signature):
+            return content_type
+
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+
+    return ""
+
+
+def add_step_file(step, user, uploaded):
+    from core.models.lab_tools.workflow import WorkflowStepFile
+
+    if step.kind == "note":
+        raise ValidationError("Attach images to a work step, not to a note.")
+    if step.files.count() >= MAX_FILES_PER_STEP:
+        raise ValidationError(f"At most {MAX_FILES_PER_STEP} images per step.")
+    if uploaded.size > MAX_FILE_BYTES:
+        raise ValidationError("The image is larger than 3 MB.")
+
+    data = uploaded.read(MAX_FILE_BYTES + 1)
+    content_type = sniff_image(data)
+
+    if not content_type:
+        raise ValidationError("Only PNG, JPEG, GIF or WebP images are accepted.")
+
+    name = re.sub(r"[^A-Za-z0-9._ -]", "_", (uploaded.name or "image").rsplit("/", 1)[-1])[:120] or "image"
+
+    return WorkflowStepFile.objects.create(
+        step=step, name=name, content_type=content_type, data=data, size=len(data), uploaded_by=user
+    )
 
 
 def _jupyter_info(step):
@@ -372,16 +431,116 @@ def serialize_step(step):
         "sample_label": step.sample.sample_id if step.sample else "",
         "sample_url": _url("sample_detail", step.sample_id) if step.sample_id else "",
         "from_eln": bool(step.notebook_step_id),
+        "files": [
+            {"id": f.pk, "name": f.name, "url": _file_url(step, f)} for f in step.files.all()
+        ],
     }
 
 
-def serialize(workflow):
-    steps = workflow.steps.select_related("assignee", "entry", "molecule", "sample")
-    items = [serialize_step(s) for s in steps]
+def _previews(steps, user):
+    """Small summaries of the records a step links to, only for what ``user`` may see."""
+    previews = {}
+
+    if user is None:
+        return previews
+
+    from core.permissions.notebook import visible_notebook_entries_for_user
+    from core.permissions.samples import visible_samples_for_user
+    from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
+
+    molecule_ids = {s.molecule_id for s in steps if s.molecule_id}
+    sample_ids = {s.sample_id for s in steps if s.sample_id}
+    entry_ids = {s.entry_id for s in steps if s.entry_id}
+    molecules = {}
+
+    for molecule in _visible_molecular_sequences_for_user(user).filter(pk__in=molecule_ids).prefetch_related("features"):
+        molecules[molecule.pk] = {
+            "name": molecule.name,
+            "type": molecule.get_sequence_type_display(),
+            "topology": molecule.topology,
+            "length": molecule.length,
+            "gc": round(molecule.gc_content, 1) if molecule.gc_content is not None else None,
+            "features": [
+                {"s": f.start, "e": f.end, "c": f.color, "n": f.name[:40], "strand": f.strand}
+                for f in sorted(molecule.features.all(), key=lambda f: f.start)[:14]
+            ],
+        }
+
+    samples = {
+        s.pk: {"id": s.sample_id, "type": s.sample_type or "", "organism": s.organism_name or ""}
+        for s in visible_samples_for_user(user).filter(pk__in=sample_ids)
+    }
+    entries = {}
+
+    for entry in visible_notebook_entries_for_user(user).filter(pk__in=entry_ids).prefetch_related("steps"):
+        steps_all = list(entry.steps.all())
+
+        entries[entry.pk] = {
+            "title": entry.title,
+            "steps_total": len(steps_all),
+            "steps_done": sum(1 for s in steps_all if s.finished),
+        }
+
+    for step in steps:
+        found = {
+            "molecule": molecules.get(step.molecule_id),
+            "sample": samples.get(step.sample_id),
+            "entry": entries.get(step.entry_id),
+        }
+
+        previews[step.pk] = {k: v for k, v in found.items() if v}
+
+    return previews
+
+
+def _hide_unseen_links(item, user, notebooks=frozenset()):
+    """A linked record the viewer cannot open shows no name and no link."""
+    if user is None:
+        return item
+
+    if item["jupyter_notebook"] and item["jupyter_notebook"] not in notebooks:
+        item["jupyter_label"], item["jupyter_url"] = "Private notebook", ""
+
+    for kind in ("molecule", "sample", "entry"):
+        if item[kind] and kind not in item["preview"]:
+            item[f"{kind}_label"] = "Private record"
+            item[f"{kind}_url"] = ""
+
+    return item
+
+
+def _workflow_entry_label(workflow, user):
+    if not workflow.entry:
+        return ""
+    if user is None:
+        return workflow.entry.title
+
+    from core.permissions.notebook import visible_notebook_entries_for_user
+
+    visible = visible_notebook_entries_for_user(user).filter(pk=workflow.entry_id).exists()
+
+    return workflow.entry.title if visible else "Private record"
+
+
+def serialize(workflow, user=None):
+    steps = list(workflow.steps.select_related("assignee", "entry", "molecule", "sample").prefetch_related("files"))
+    previews = _previews(steps, user)
+    notebooks = frozenset()
+
+    if user is not None:
+        from core.services.jupyter_server import visible_notebooks_for_user
+
+        wanted = {(s.config or {}).get("notebook_id") for s in steps} - {None}
+        notebooks = frozenset(visible_notebooks_for_user(user).filter(pk__in=wanted).values_list("pk", flat=True))
+
+    items = [
+        _hide_unseen_links({**serialize_step(s), "preview": previews.get(s.pk, {})}, user, notebooks) for s in steps
+    ]
     counts = {"todo": 0, "doing": 0, "done": 0, "blocked": 0}
 
     for item in items:
-        counts[item["status"]] += 1
+        if item["kind"] != "note":
+            counts[item["status"]] += 1
 
     return {
         "id": workflow.pk,
@@ -390,7 +549,7 @@ def serialize(workflow):
         "status": workflow.status,
         "owner": workflow.owner.get_username(),
         "entry": workflow.entry_id,
-        "entry_label": workflow.entry.title if workflow.entry else "",
+        "entry_label": _workflow_entry_label(workflow, user),
         "members": [{"id": u.pk, "name": u.get_username()} for u in workflow.members.all()],
         "steps": items,
         "edges": [{"id": e.pk, "source": e.source_id, "target": e.target_id} for e in workflow.edges.all()],

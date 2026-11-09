@@ -961,10 +961,20 @@ try:
     for item in (loaded.get("cells") or [])[:30]:
         images = [i for i in (item.get("images") or [])[:6] if isinstance(i, str) and PNG.match(i)]
         text = item.get("text")
+        tables = []
+        for table in (item.get("tables") or [])[:6]:
+            rows = [
+                [str(cell)[:80] for cell in row[:12]]
+                for row in table[:21]
+                if isinstance(row, list)
+            ]
+            if rows:
+                tables.append(rows)
         cells.append({
             "cell": int(item.get("cell", 0)),
             "text": text[:1500] if isinstance(text, str) else "",
             "images": images,
+            "tables": tables,
         })
 except (ValueError, TypeError, AttributeError):
     cells = []

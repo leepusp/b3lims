@@ -78,6 +78,7 @@
             if (document.activeElement !== $("wf-f-status")) $("wf-f-status").value = step.status;
 
             renderRun(step);
+            renderFiles(step);
         }
     }
 
@@ -147,7 +148,12 @@
     const THUMB_H = 96;
 
     function thumbOf(step) { return step.run && step.run.images && step.run.images.length ? step.run.images[0] : ""; }
-    function nodeHeight(step) { return NODE_H + (thumbOf(step) ? THUMB_H : 0); }
+
+    function nodeHeight(step) {
+        const el = document.querySelector(".wf-node[data-id='" + step.id + "']");
+
+        return el ? el.offsetHeight : NODE_H;
+    }
     function runBadge(step) {
         const run = step.run;
 
@@ -170,27 +176,101 @@
         return "<span class='" + (late ? "overdue" : "") + "'><i class='bi bi-calendar-event'></i> " + esc(step.due_date.replace("T", " ")) + "</span>";
     }
 
+    function miniMap(m) {
+        const total = Math.max(1, m.length || 1);
+        const color = (f) => /^#[0-9a-fA-F]{3,8}$/.test(f.c) ? f.c : "#868e96";
+
+        if (m.topology === "circular") {
+            const R = 34, C = 44;
+            const point = (pos, r) => {
+                const angle = (pos / total) * 2 * Math.PI - Math.PI / 2;
+
+                return [C + r * Math.cos(angle), C + r * Math.sin(angle)];
+            };
+            const arcs = m.features.map((f) => {
+                const [x1, y1] = point(Math.max(0, f.s - 1), R);
+                const [x2, y2] = point(Math.min(total, f.e), R);
+                const large = (f.e - f.s) / total > 0.5 ? 1 : 0;
+
+                return "<path d='M" + x1.toFixed(1) + "," + y1.toFixed(1) + " A" + R + "," + R + " 0 " + large + " 1 " + x2.toFixed(1) + "," + y2.toFixed(1)
+                    + "' fill='none' stroke='" + color(f) + "' stroke-width='7'><title>" + esc(f.n) + "</title></path>";
+            }).join("");
+
+            return "<svg class='wf-map' viewBox='0 0 88 88' aria-hidden='true'><circle cx='" + C + "' cy='" + C + "' r='" + R + "' fill='none' stroke='#ced4da' stroke-width='2'/>" + arcs
+                + "<text x='" + C + "' y='" + (C + 3) + "' text-anchor='middle' font-size='9' fill='#495057'>" + esc(String(m.length)) + " bp</text></svg>";
+        }
+
+        const bars = m.features.map((f) => {
+            const x = (Math.max(0, f.s - 1) / total) * 176;
+            const w = Math.max(2, ((f.e - f.s + 1) / total) * 176);
+
+            return "<rect x='" + x.toFixed(1) + "' y='8' width='" + w.toFixed(1) + "' height='10' rx='2' fill='" + color(f) + "'><title>" + esc(f.n) + "</title></rect>";
+        }).join("");
+
+        return "<svg class='wf-map wf-map-line' viewBox='0 0 176 26' aria-hidden='true'><line x1='0' y1='13' x2='176' y2='13' stroke='#ced4da' stroke-width='2'/>" + bars + "</svg>";
+    }
+
+    function previewHtml(step) {
+        const p = step.preview || {};
+        const out = [];
+
+        if (p.molecule) {
+            const m = p.molecule;
+
+            out.push("<div class='wf-prev'><div class='wf-prev-title'><i class='bi bi-bezier2'></i> " + esc(m.name) + "</div><div class='wf-prev-sub'>" + esc(m.type) + " · "
+                + esc(m.topology) + " · " + esc(String(m.length)) + " bp" + (m.gc !== null ? " · GC " + m.gc + "%" : "") + "</div>" + (m.length ? miniMap(m) : "") + "</div>");
+        }
+        if (p.sample) out.push("<div class='wf-prev'><div class='wf-prev-title'><i class='bi bi-eyedropper'></i> " + esc(p.sample.id) + "</div><div class='wf-prev-sub'>" + esc([p.sample.type, p.sample.organism].filter(Boolean).join(" · ")) + "</div></div>");
+        if (p.entry) {
+            const e = p.entry;
+
+            out.push("<div class='wf-prev'><div class='wf-prev-title'><i class='bi bi-journal-bookmark'></i> " + esc(e.title) + "</div>"
+                + (e.steps_total ? "<div class='wf-prev-sub'>" + e.steps_done + " / " + e.steps_total + " ELN steps done</div>" : "") + "</div>");
+        }
+
+        return out.join("");
+    }
+
+    function tableHtml(step) {
+        const table = step.run && step.run.tables && step.run.tables[0];
+
+        if (!table || !table.length) return "";
+
+        const rows = table.slice(0, 4).map((row, i) => "<tr>" + row.slice(0, 4).map((cell) => (i === 0 ? "<th>" : "<td>") + esc(cell) + (i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("");
+
+        return "<div class='wf-table-wrap'><table class='wf-table'>" + rows + "</table>" + (table.length > 4 ? "<div class='wf-prev-sub'>+ " + (table.length - 4) + " more rows</div>" : "") + "</div>";
+    }
+
     function renderNodes() {
         const layer = $("wf-nodes");
 
         layer.innerHTML = "";
         wf.steps.forEach((step) => {
             const node = document.createElement("div");
+            const note = step.kind === "note";
 
-            node.className = "wf-node" + (step.id === selected ? " selected" : "");
+            node.className = "wf-node" + (note ? " wf-note" : "") + (step.id === selected ? " selected" : "");
             node.dataset.id = step.id;
-            node.dataset.status = step.status;
+            node.dataset.status = note ? "note" : step.status;
+            node.dataset.kind = step.kind;
             node.style.left = step.x + "px";
             node.style.top = step.y + "px";
-            node.dataset.kind = step.kind;
-            node.style.minHeight = nodeHeight(step) + "px";
-            node.innerHTML = "<div class='wf-node-title'>" + esc(step.title) + "</div>" + runBadge(step)
-                + (thumbOf(step) ? "<img class='wf-thumb' alt='Figure from the last run' src='" + esc(thumbOf(step)) + "'>" : "")
+
+            if (note) {
+                node.innerHTML = "<div class='wf-node-title'><i class='bi bi-sticky'></i> " + esc(step.title) + "</div>"
+                    + (step.notes ? "<div class='wf-note-text'>" + esc(step.notes.slice(0, 400)) + "</div>" : "");
+                layer.appendChild(node);
+
+                return;
+            }
+
+            const thumb = thumbOf(step) || (step.files && step.files.length ? step.files[0].url : "");
+
+                        node.innerHTML = "<div class='wf-node-title'>" + esc(step.title) + "</div>" + runBadge(step)
+                + (thumb ? "<img class='wf-thumb' alt='Figure' src='" + esc(thumb) + "'>" : "") + tableHtml(step) + previewHtml(step)
                 + "<div class='wf-node-meta'><span>" + STATUS_LABEL[step.status] + "</span>"
                 + (step.assignee_name ? "<span><i class='bi bi-person'></i> " + esc(step.assignee_name) + "</span>" : "") + dueHtml(step)
-                + (step.entry ? "<span title='ELN entry'><i class='bi bi-journal-bookmark'></i></span>" : "")
-                + (step.molecule ? "<span title='Molecular record'><i class='bi bi-bezier2'></i></span>" : "")
-                + (step.sample ? "<span title='Sample'><i class='bi bi-eyedropper'></i></span>" : "")
+                + (step.files && step.files.length ? "<span title='Attached images'><i class='bi bi-images'></i> " + step.files.length + "</span>" : "")
                 + (step.kind === "jupyter" ? "<span title='Jupyter notebook step'><i class='bi bi-code-square'></i></span>" : "") + "</div>"
                 + (canEdit ? "<button type='button' class='wf-port' aria-label='Connect from this step'></button>" : "");
             layer.appendChild(node);
@@ -272,6 +352,22 @@
         box.querySelector(".wf-link-set").hidden = !canEdit;
     }
 
+    function applyKindLayout(kind) {
+        const note = kind === "note";
+
+        root.querySelectorAll(".wf-work-only").forEach((el) => { el.hidden = note; });
+        $("wf-jupyter").hidden = kind !== "jupyter";
+        $("wf-f-notes-label").textContent = note ? "Annotation" : "Notes";
+        $("wf-f-notes").rows = note ? 8 : 3;
+    }
+
+    function renderFiles(step) {
+        const list = $("wf-files-list");
+
+        list.innerHTML = (step.files || []).map((f) => "<span class='wf-file'><a href='" + esc(f.url) + "' target='_blank' rel='noopener'><img class='wf-fig' alt='" + esc(f.name) + "' title='" + esc(f.name) + "' src='" + esc(f.url) + "'></a>"
+            + (canEdit ? "<button type='button' class='btn btn-sm btn-link text-danger p-0 wf-file-del' data-id='" + f.id + "' aria-label='Remove " + esc(f.name) + "'>Remove</button>" : "") + "</span>").join("");
+    }
+
     function renderPanel() {
         const step = selected ? stepById(selected) : null;
 
@@ -288,7 +384,8 @@
         $("wf-f-notes").value = step.notes;
         draft = {eln: step.entry, molecule: step.molecule, sample: step.sample, jupyter: step.jupyter_notebook};
         ["eln", "molecule", "sample", "jupyter"].forEach((k) => setLink(k, step));
-        $("wf-jupyter").hidden = step.kind !== "jupyter";
+        applyKindLayout(step.kind);
+        renderFiles(step);
         $("wf-f-params").value = step.parameters || "";
         $("wf-f-result").value = step.result_note || "";
         const saved = step.run_resources || {};
@@ -315,6 +412,8 @@
 
         $("wf-run-log").hidden = !text;
         $("wf-run-log").textContent = text;
+        $("wf-run-tables").innerHTML = (run && run.tables ? run.tables : []).map((table) => "<div class='wf-table-wrap'><table class='wf-table'>"
+            + table.map((row, i) => "<tr>" + row.map((cell) => (i === 0 ? "<th>" : "<td>") + esc(cell) + (i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table></div>").join("");
         $("wf-run-figs").innerHTML = run && run.images ? run.images.map((url) => "<a href='" + esc(url) + "' target='_blank' rel='noopener'><img class='wf-fig' alt='Figure' src='" + esc(url) + "'></a>").join("") : "";
         $("wf-run-start").hidden = !canEdit || active;
         $("wf-run-refresh").hidden = !active;
@@ -338,7 +437,44 @@
         if (run && window.confirm("Cancel this run?")) act({action: "cancel_run", run_id: run.id});
     });
 
-    $("wf-f-kind").addEventListener("change", () => { $("wf-jupyter").hidden = $("wf-f-kind").value !== "jupyter"; });
+    $("wf-f-kind").addEventListener("change", () => applyKindLayout($("wf-f-kind").value));
+
+    $("wf-files-list").addEventListener("click", async (event) => {
+        const button = event.target.closest(".wf-file-del");
+
+        if (!button || !canEdit || !window.confirm("Remove this image?")) return;
+
+        await act({action: "delete_file", file_id: Number(button.dataset.id)});
+    });
+
+    const fileInput = $("wf-file-input");
+
+    if (fileInput) {
+        fileInput.addEventListener("change", async () => {
+            const file = fileInput.files[0];
+
+            if (!file || !selected) return;
+
+            showError("");
+
+            const body = new FormData();
+
+            body.append("file", file);
+
+            const response = await fetch(apiUrl.replace(/api\/$/, "steps/" + selected + "/files/"), {method: "POST", headers: {"X-CSRFToken": csrf()}, body});
+            const data = await response.json().catch(() => ({status: "error", message: "Unexpected response."}));
+
+            fileInput.value = "";
+
+            if (data.status === "success") {
+                wf = data.workflow;
+                renderQuiet();
+                renderFiles(stepById(selected));
+            } else {
+                showError(data.message || "Could not upload the image.");
+            }
+        });
+    }
 
     $("wf-form").addEventListener("submit", (event) => { event.preventDefault(); saveNow(); });
     $("wf-form").addEventListener("input", scheduleSave);
@@ -441,14 +577,90 @@
         }
     });
 
+    // --- layout ---------------------------------------------------------------
+
+    function bottomY() {
+        return wf.steps.reduce((m, s) => Math.max(m, s.y + nodeHeight(s)), 0);
+    }
+
+    // Columns by depth in the flow, stacked with the real card heights; notes go to the right.
+    async function arrange() {
+        const work = wf.steps.filter((s) => s.kind !== "note");
+        const notes = wf.steps.filter((s) => s.kind === "note");
+        const incoming = {};
+        const level = {};
+
+        wf.edges.forEach((e) => { (incoming[e.target] = incoming[e.target] || []).push(e.source); });
+
+        const depth = (id, seen) => {
+            if (level[id] !== undefined) return level[id];
+            if (seen.has(id)) return 0;
+
+            seen.add(id);
+            level[id] = (incoming[id] || []).reduce((m, src) => Math.max(m, depth(src, seen) + 1), 0);
+
+            return level[id];
+        };
+
+        work.forEach((s) => depth(s.id, new Set()));
+
+        const columns = {};
+
+        work.forEach((s) => { (columns[level[s.id]] = columns[level[s.id]] || []).push(s); });
+
+        const positions = [];
+        const widest = Math.max(-1, ...Object.keys(columns).map(Number));
+
+        Object.keys(columns).forEach((key) => {
+            let y = 40;
+
+            columns[key].sort((a, b) => a.y - b.y).forEach((s) => {
+                s.x = 40 + Number(key) * 260;
+                s.y = y;
+                y += nodeHeight(s) + 24;
+                positions.push({id: s.id, x: s.x, y: s.y});
+            });
+        });
+
+        let noteY = 40;
+
+        notes.forEach((s) => {
+            s.x = 40 + (widest + 1) * 260;
+            s.y = noteY;
+            noteY += nodeHeight(s) + 24;
+            positions.push({id: s.id, x: s.x, y: s.y});
+        });
+
+        renderNodes();
+        renderEdges();
+
+        // Heights are real now: stack again with them.
+        let moved = false;
+
+        Object.keys(columns).forEach((key) => {
+            let y = 40;
+
+            columns[key].forEach((s) => {
+                const height = nodeHeight(s);
+
+                if (s.y !== y) { s.y = y; moved = true; }
+
+                y += height + 24;
+            });
+        });
+
+        if (moved) { renderNodes(); renderEdges(); }
+
+        await call({action: "move_steps", positions: wf.steps.map((s) => ({id: s.id, x: s.x, y: s.y}))});
+    }
+
     // --- header actions -------------------------------------------------------
 
     if (canEdit) {
         $("wf-name").addEventListener("change", () => act({action: "update", name: $("wf-name").value}));
         $("wf-status").addEventListener("change", () => act({action: "update", status: $("wf-status").value}));
         $("wf-add").addEventListener("click", async () => {
-            const maxY = wf.steps.reduce((m, s) => Math.max(m, s.y), 0);
-            const data = await act({action: "add_step", step: {title: "New step", x: 40, y: wf.steps.length ? maxY + 110 : 40}});
+            const data = await act({action: "add_step", step: {title: "New step", x: 40, y: wf.steps.length ? bottomY() + 24 : 40}});
 
             if (data && data.step_id) {
                 selected = data.step_id;
@@ -469,6 +681,17 @@
                 if (data) window.location.href = root.dataset.listUrl;
             });
         }
+
+        $("wf-arrange").addEventListener("click", arrange);
+        $("wf-add-note").addEventListener("click", async () => {
+            const data = await act({action: "add_step", step: {title: "Note", kind: "note", x: 40, y: wf.steps.length ? bottomY() + 24 : 40}});
+
+            if (data && data.step_id) {
+                selected = data.step_id;
+                render();
+                $("wf-f-notes").focus();
+            }
+        });
 
         $("wf-import").addEventListener("click", () => openPicker("eln", async (id) => {
             if (id) await act({action: "import_eln", entry: id});
