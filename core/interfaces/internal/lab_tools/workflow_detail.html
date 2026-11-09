@@ -72,6 +72,22 @@
                             <textarea class="form-control form-control-sm mb-2" id="wf-f-params" rows="3" spellcheck="false" placeholder="taxid=1280&#10;min_length=200"></textarea>
                             <label class="form-label small mb-1" for="wf-f-result">Result note</label>
                             <textarea class="form-control form-control-sm" id="wf-f-result" rows="2" placeholder="What came out of the run, and where it was saved"></textarea>
+                            <div class="border-top mt-2 pt-2">
+                                <div class="small fw-semibold mb-1">Run unattended on DaVinci</div>
+                                <div class="d-flex gap-1 mb-1">
+                                    <input class="form-control form-control-sm" id="wf-run-cpus" type="number" min="1" max="128" value="2" title="CPU cores" aria-label="CPU cores">
+                                    <input class="form-control form-control-sm" id="wf-run-mem" type="number" min="1024" step="1024" value="4096" title="Memory (MB)" aria-label="Memory in MB">
+                                    <input class="form-control form-control-sm" id="wf-run-min" type="number" min="1" value="60" title="Time limit (minutes)" aria-label="Time limit in minutes">
+                                </div>
+                                <div class="d-flex gap-1 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="wf-run-start">Run notebook</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="wf-run-refresh" hidden>Refresh</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="wf-run-cancel" hidden>Cancel</button>
+                                </div>
+                                <div class="small mt-1" id="wf-run-state"></div>
+                                <pre class="small bg-white border rounded p-1 mt-1 mb-0" id="wf-run-log" hidden style="max-height:8rem;overflow:auto"></pre>
+                                <div class="small text-muted">The saved notebook runs with the parameters above. Save the notebook in Jupyter first.</div>
+                            </div>
                             <div class="small text-muted mt-1">Open the notebook, run it there, and note the result here. In the notebook, <code>import b3repo</code> reads the repository and taxonomy.</div>
                         </div>
                         <div class="wf-links">
@@ -120,5 +136,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf2"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf3"></script>
 {% endblock %}

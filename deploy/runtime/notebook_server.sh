@@ -71,6 +71,19 @@ RUN_ID="${RUN_DIR#"$JOB_ROOT/"}"
 test ! -L "$WORK_DIR/$NOTEBOOK_NAME" ||
     fail "Notebook file may not be a symbolic link."
 
+# Read-only repository (b3repo) inside the sandbox when it exists.
+REPOSITORY_ROOT="/scratch/global/databases/biobank"
+REPOSITORY_ARGS=()
+if test -d "$REPOSITORY_ROOT"
+then
+    REPOSITORY_ARGS=(
+        --dir /scratch
+        --dir /scratch/global
+        --dir /scratch/global/databases
+        --ro-bind "$REPOSITORY_ROOT" "$REPOSITORY_ROOT"
+    )
+fi
+
 HOST="$(hostname -s)"
 PORT="$(
     "$PYTHON" - <<'PY'
@@ -198,6 +211,7 @@ trap cleanup EXIT TERM INT
     --dir /home/public/conda \
     --dir /home/public/conda/envs \
     --ro-bind "$ENV_ROOT" "$ENV_ROOT" \
+    "${REPOSITORY_ARGS[@]}" \
     --bind "$USER_HOME" "$USER_HOME" \
     --dir /workspace \
     --bind "$WORK_DIR" /workspace \

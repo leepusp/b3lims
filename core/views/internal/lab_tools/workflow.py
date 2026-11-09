@@ -126,6 +126,18 @@ def workflow_api(request, workflow_id):
             service.add_edge(workflow, int(data.get("source") or 0), int(data.get("target") or 0))
         elif action == "delete_edge":
             workflow.edges.filter(pk=data.get("edge_id")).delete()
+        elif action in ("run_step", "refresh_run", "cancel_run"):
+            from core.services import workflow_runs as runs
+
+            if action == "run_step":
+                runs.start_run(get_object_or_404(workflow.steps, pk=data.get("step_id")), user, data.get("resources"))
+            else:
+                run = get_object_or_404(
+                    runs.WorkflowStepRun.objects.select_related("step", "notebook__owner"),
+                    pk=data.get("run_id"), step__workflow=workflow,
+                )
+
+                runs.refresh_run(run) if action == "refresh_run" else runs.cancel_run(run)
         elif action == "import_eln":
             service.import_eln_steps(workflow, user, int(data.get("entry") or 0))
         else:

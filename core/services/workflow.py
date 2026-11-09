@@ -339,9 +339,18 @@ def _jupyter_info(step):
     }
 
 
+def _latest_run(step):
+    from core.services.workflow_runs import serialize_run
+
+    run = step.runs.select_related("started_by").first() if step.kind == "jupyter" else None
+
+    return {"run": serialize_run(run) if run else None}
+
+
 def serialize_step(step):
     return {
         **_jupyter_info(step),
+        **_latest_run(step),
         "id": step.pk,
         "title": step.title,
         "notes": step.notes,

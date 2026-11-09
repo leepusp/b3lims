@@ -97,3 +97,37 @@ class WorkflowEdge(models.Model):
 
     def __str__(self):
         return f"{self.source_id} -> {self.target_id}"
+
+
+class WorkflowStepRun(models.Model):
+    """One unattended execution of the notebook linked to a Jupyter step."""
+
+    class State(models.TextChoices):
+        SUBMITTED = "submitted", "Submitted"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    step = models.ForeignKey(WorkflowStep, on_delete=models.CASCADE, related_name="runs")
+    notebook = models.ForeignKey(
+        "core.JupyterNotebook", null=True, blank=True, on_delete=models.SET_NULL, related_name="workflow_runs"
+    )
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    state = models.CharField(max_length=12, choices=State.choices, default=State.SUBMITTED, db_default="submitted")
+    run_id = models.CharField(max_length=100, blank=True, default="", db_default="")
+    job_id = models.CharField(max_length=20, blank=True, default="", db_default="")
+    parameters = models.JSONField(default=dict, blank=True)
+    result = models.JSONField(default=dict, blank=True)
+    log_tail = models.TextField(blank=True, default="", db_default="")
+    error = models.CharField(max_length=500, blank=True, default="", db_default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"run {self.pk} of step {self.step_id}: {self.state}"

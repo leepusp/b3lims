@@ -195,8 +195,41 @@
         $("wf-jupyter").hidden = step.kind !== "jupyter";
         $("wf-f-params").value = step.parameters || "";
         $("wf-f-result").value = step.result_note || "";
+        renderRun(step);
         $("wf-form").querySelectorAll("input,select,textarea").forEach((el) => { if (!canEdit) el.disabled = true; });
     }
+
+    function renderRun(step) {
+        const run = step.run;
+        const active = !!run && (run.state === "submitted" || run.state === "running");
+        const parts = run ? [run.state + (run.job_id ? " · job " + run.job_id : ""), run.created_at] : ["No run yet"];
+
+        if (run && run.result && run.result.seconds !== undefined) parts.push(run.result.seconds + " s");
+        if (run && run.error) parts.push(run.error);
+
+        $("wf-run-state").textContent = parts.join(" · ");
+        $("wf-run-log").hidden = !(run && run.log_tail);
+        $("wf-run-log").textContent = run ? run.log_tail : "";
+        $("wf-run-start").hidden = !canEdit || active;
+        $("wf-run-refresh").hidden = !active;
+        $("wf-run-cancel").hidden = !canEdit || !active;
+        $("wf-run-start").disabled = !step.jupyter_notebook;
+    }
+
+    $("wf-run-start").addEventListener("click", () => {
+        if (!selected) return;
+        act({action: "run_step", step_id: selected, resources: {
+            cpus: $("wf-run-cpus").value, memory_mb: $("wf-run-mem").value, minutes: $("wf-run-min").value,
+        }});
+    });
+    $("wf-run-refresh").addEventListener("click", () => {
+        const run = stepById(selected).run;
+        if (run) act({action: "refresh_run", run_id: run.id});
+    });
+    $("wf-run-cancel").addEventListener("click", () => {
+        const run = stepById(selected).run;
+        if (run && window.confirm("Cancel this run?")) act({action: "cancel_run", run_id: run.id});
+    });
 
     $("wf-f-kind").addEventListener("change", () => { $("wf-jupyter").hidden = $("wf-f-kind").value !== "jupyter"; });
 
