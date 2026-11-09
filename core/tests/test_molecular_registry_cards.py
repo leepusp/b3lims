@@ -82,6 +82,15 @@ class MapCanvasMountTests(TestCase):
             self.assertIn('id="mmc"', html)
             self.assertIn("molecular_map_canvas.js", html)
 
+    def test_nucleotide_records_get_the_sequence_editor(self):
+        for kind, topology in (("plasmid", "circular"), ("dna", "linear"), ("insert", "linear")):
+            html = self._page(kind, topology)
+            self.assertIn('id="msc"', html)
+            self.assertIn("molecular_seq_canvas.js", html)
+            self.assertIn("molecular_seq_canvas.css", html)
+
     def test_rna_and_protein_keep_their_own_views(self):
         for kind in ("rna", "protein"):
-            self.assertNotIn('id="mmc"', self._page(kind, "linear"))
+            html = self._page(kind, "linear")
+            self.assertNotIn('id="mmc"', html)
+            self.assertNotIn('id="msc"', html)

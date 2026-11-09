@@ -244,8 +244,8 @@ class MolecularWorkspaceSequenceSelectionSyncTests(
         self.assertIn(
             (
                 "molecular_workspace.js' %}"
-                "?v=20260817-"
-                "sequence-selection-sync-v2"
+                "?v=20261109-"
+                "edit-v1"
             ),
             self.detail,
         )

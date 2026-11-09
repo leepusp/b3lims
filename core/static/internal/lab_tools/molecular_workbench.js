@@ -401,18 +401,37 @@
         const card = root.querySelector(".mw-seqviz-card");
         const canvasApi = () => window.BiobankMapCanvas || null;
         const canvasHost = document.getElementById("mmc");
+        const seqHost = document.getElementById("msc");
+        const split = document.getElementById("mw-split");
+        const seqApi = () => window.BiobankSeqCanvas || null;
         let classic = false;
+        let currentLayout = isRna ? "seq" : "both";
 
         function canvasOn() {
             return Boolean(canvasHost && canvasApi() && canvasApi().active());
         }
 
-        function setCanvas(on) {
-            const wanted = Boolean(on && canvasHost && canvasApi() && !classic);
-
-            if (card) card.classList.toggle("is-canvas", wanted);
-            if (canvasApi()) canvasApi().setActive(wanted);
+        function seqOn() {
+            return Boolean(seqHost && seqApi() && seqApi().active());
         }
+
+        function anyCanvas() {
+            return canvasOn() || seqOn();
+        }
+
+        // The layout decides which interactive canvases are shown.
+        function applyCanvases() {
+            const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi() && !classic);
+            const mapWanted = usable && (currentLayout === "map" || currentLayout === "both");
+            const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both");
+
+            if (card) card.classList.toggle("is-canvas", mapWanted || seqWanted);
+            if (split) split.classList.toggle("is-both", mapWanted && seqWanted);
+            if (canvasApi()) canvasApi().setActive(mapWanted);
+            if (seqApi()) seqApi().setActive(seqWanted);
+        }
+
+        const setCanvas = () => applyCanvases();
 
         function section(name, title) {
             const box = el("div", "mwv-opts");
@@ -447,7 +466,7 @@
                 classicInput.type = "checkbox";
                 classicInput.addEventListener("change", () => {
                     classic = classicInput.checked;
-                    setCanvas(layoutOf(engineOf()) === "map");
+                    applyCanvases();
                     sync();
                 });
                 classicRow.append(classicInput, document.createTextNode(" Use the classic map (temporary)"));
@@ -488,7 +507,7 @@
 
         function sync() {
             const engine = engineOf();
-            const layout = layoutOf(engine);
+            const layout = canvasHost && seqHost && !classic ? currentLayout : layoutOf(engine);
 
             layoutButtons.forEach(button => {
                 const on = button.dataset.mwvLayout === layout;
@@ -498,14 +517,16 @@
             });
 
             Object.entries(sections).forEach(([name, box]) => {
-                box.hidden = name !== engine || (name === "detailed" && canvasOn());
+                box.hidden = anyCanvas() || name !== engine;
             });
 
-            if (zoomGroup) zoomGroup.hidden = engine === "linear" && !canvasOn();
+            if (zoomGroup) zoomGroup.hidden = engine === "linear" && !anyCanvas();
             if (label) {
-                label.textContent = canvasOn()
-                    ? canvasApi().zoomPercent() + "%"
-                    : (zoomText(engine) || "100%");
+                label.textContent = seqOn()
+                    ? seqApi().zoomPercent() + "%"
+                    : canvasOn()
+                        ? canvasApi().zoomPercent() + "%"
+                        : (zoomText(engine) || "100%");
             }
         }
 
@@ -520,7 +541,8 @@
             button.addEventListener("click", () => {
                 const layout = button.dataset.mwvLayout;
 
-                setCanvas(layout === "map");
+                currentLayout = layout;
+                applyCanvases();
 
                 if (layout === "map") {
                     chooseEngine("detailed");
@@ -542,10 +564,12 @@
                 const engine = engineOf();
                 const step = button.dataset.mwvZoom;
 
-                if (canvasOn()) {
-                    if (step === "fit") canvasApi().fit();
-                    else if (Number(step) > 0) canvasApi().zoomIn();
-                    else canvasApi().zoomOut();
+                if (anyCanvas()) {
+                    const target = seqOn() ? seqApi() : canvasApi();
+
+                    if (step === "fit") target.fit();
+                    else if (Number(step) > 0) target.zoomIn();
+                    else target.zoomOut();
                 } else if (engine === "seqviz" && zoomRange) {
                     const next = step === "fit"
                         ? 50
@@ -609,6 +633,7 @@
         }, 200);
 
         if (canvasHost) canvasHost.addEventListener("mmc:zoom", sync);
+        if (seqHost) seqHost.addEventListener("msc:zoom", sync);
 
         const switcher = root.querySelector(".mpm-view-switcher");
 
@@ -679,6 +704,7 @@
             });
         });
 
+        applyCanvases();
         sync();
     }
 

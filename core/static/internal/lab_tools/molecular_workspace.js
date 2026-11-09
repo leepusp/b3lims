@@ -3207,12 +3207,134 @@
             },
         );
 
+        /*
+         * Sequence editing shared by every interactive view. Positions are
+         * 0-based and half-open (from <= i < to). Features follow the edit:
+         * those after it shift, those it crosses stretch or shrink and those
+         * it deletes completely are dropped. Every edit can be undone.
+         */
+        const editHistory = {undo: [], redo: []};
+
+        function editSnapshot() {
+            return {
+                sequence: currentSequence(),
+                features: state.features.map(feature => ({...feature})),
+            };
+        }
+
+        function mapFeatureForEdit(feature, from, to, insertLength) {
+            const delta = insertLength - (to - from);
+            const wraps = feature.start > feature.end;
+            const s = feature.start - 1;
+            const e = feature.end;
+            let nextStart;
+            let nextEnd;
+
+            if (s >= to) nextStart = s + delta;
+            else if (s <= from) nextStart = s;
+            else nextStart = from + insertLength;
+
+            if (e <= from) nextEnd = e;
+            else if (e >= to) nextEnd = e + delta;
+            else nextEnd = from;
+
+            if (!wraps && nextEnd <= nextStart) return null;
+
+            return {
+                ...feature,
+                start: Math.max(1, nextStart + 1),
+                end: Math.max(1, nextEnd),
+            };
+        }
+
+        function applyEditSnapshot(snapshot) {
+            elements.sequence.value = snapshot.sequence;
+            state.features = snapshot.features.map(feature => ({...feature}));
+            state.selectedFeature = -1;
+            state.sequenceSelection = null;
+            elements.featureForm.hidden = true;
+            markDirty();
+            renderAll();
+        }
+
+        function replaceRange(from, to, text, options = {}) {
+            if (!canEdit) {
+                return false;
+            }
+
+            const sequence = currentSequence();
+            const start = Math.max(0, Math.min(sequence.length, Math.min(from, to)));
+            const end = Math.max(0, Math.min(sequence.length, Math.max(from, to)));
+            const insert = cleanSequence(text);
+
+            if (start === end && !insert) {
+                return false;
+            }
+
+            editHistory.undo.push(editSnapshot());
+
+            if (editHistory.undo.length > 100) {
+                editHistory.undo.shift();
+            }
+
+            editHistory.redo.length = 0;
+
+            const nextFeatures = state.features
+                .map(feature => mapFeatureForEdit(feature, start, end, insert.length))
+                .filter(Boolean);
+
+            elements.sequence.value = (
+                sequence.slice(0, start) + insert + sequence.slice(end)
+            );
+            state.features = nextFeatures;
+            state.selectedFeature = -1;
+            state.sequenceSelection = null;
+            elements.featureForm.hidden = true;
+            markDirty();
+            renderAll();
+            notifyWorkspaceChange("sequence-edit", options.source || "workspace");
+
+            return insert.length;
+        }
+
+        function clearSelection() {
+            state.sequenceSelection = null;
+            state.selectedFeature = -1;
+            elements.featureForm.hidden = true;
+            renderFeatureList();
+            renderMap();
+            renderSequencePreview();
+            notifyWorkspaceChange("selection", "seqcanvas");
+        }
+
+        function stepHistory(from, to) {
+            const snapshot = from.pop();
+
+            if (!snapshot) {
+                return false;
+            }
+
+            to.push(editSnapshot());
+            applyEditSnapshot(snapshot);
+            notifyWorkspaceChange("sequence-edit", "history");
+
+            return true;
+        }
+
         window.BiobankMolecularWorkspace = {
             createFeatureFromSelection,
             getSnapshot: workspaceSnapshot,
             selectFeature,
             selectSequenceRange,
             refresh: renderAll,
+            replaceRange,
+            clearSelection,
+            undo: () => stepHistory(editHistory.undo, editHistory.redo),
+            redo: () => stepHistory(editHistory.redo, editHistory.undo),
+            history: () => ({
+                undo: editHistory.undo.length,
+                redo: editHistory.redo.length,
+            }),
         };
 
         function scheduleRender() {

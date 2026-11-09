@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -8,6 +9,11 @@ from django.utils import timezone
 from bench.models import BookableResource, Booking
 from bench.services.agenda import agenda
 from core.models import NotebookEntry, NotebookStep, ResearchGroup
+
+
+# The card looks at the rest of the week (to the next Monday), so these tests
+# run on a fixed Wednesday noon; with the real clock they failed on Sunday night.
+MIDWEEK = timezone.make_aware(datetime(2026, 11, 4, 12, 0))
 
 
 class AgendaCardTests(TestCase):
@@ -26,7 +32,7 @@ class AgendaCardTests(TestCase):
         )
 
     def test_only_own_active_bookings_in_the_week(self):
-        now = timezone.now()
+        now = MIDWEEK
         mine = self.book(self.ana, now + timedelta(minutes=30), title="Imaging")
         self.book(self.bob, now + timedelta(hours=3))
         self.book(self.ana, now + timedelta(days=30))
@@ -40,7 +46,7 @@ class AgendaCardTests(TestCase):
         self.assertEqual(mine.title, "Imaging")
 
     def test_overdue_step_is_listed_today(self):
-        now = timezone.now()
+        now = MIDWEEK
         entry = NotebookEntry.objects.create(title="Exp", author=self.ana)
         NotebookStep.objects.create(entry=entry, body="Order primers", deadline=now - timedelta(days=1))
         NotebookStep.objects.create(entry=entry, body="Done thing", deadline=now - timedelta(days=1), finished=True)
@@ -49,9 +55,12 @@ class AgendaCardTests(TestCase):
         self.assertTrue(result["today"][0]["overdue"])
 
     def test_dashboard_renders_the_card(self):
-        self.book(self.ana, timezone.now() + timedelta(minutes=20), title="Run")
+        self.book(self.ana, MIDWEEK + timedelta(minutes=20), title="Run")
         self.client.force_login(self.ana)
-        page = self.client.get(reverse("notebook_dashboard"))
+
+        with mock.patch("django.utils.timezone.now", return_value=MIDWEEK):
+            page = self.client.get(reverse("notebook_dashboard"))
+
         self.assertContains(page, "Today and this week")
         self.assertContains(page, "Microscope · Run")
 

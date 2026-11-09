@@ -170,7 +170,7 @@
     function canvasSize() {
         const rect = stage.getBoundingClientRect();
 
-        return {w: Math.max(480, rect.width), h: Math.max(320, rect.height)};
+        return {w: Math.max(300, rect.width), h: Math.max(320, rect.height)};
     }
 
     function coordinateAt(event, node, length, circular) {
