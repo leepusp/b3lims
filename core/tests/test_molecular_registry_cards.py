@@ -122,6 +122,23 @@ class MapCanvasMountTests(TestCase):
         for kind in ("rna", "protein"):
             self.assertNotIn('id="mw-digest"', self._page(kind, "linear"))
 
+    def test_features_and_orfs_are_windows_of_the_viewer(self):
+        html = self._page("plasmid", "circular")
+
+        for layout in ("features", "orfs", "digest"):
+            self.assertIn('data-mwv-layout="%s"' % layout, html)
+
+        for pane in ("mw-features", "mw-orfs", "mw-digest"):
+            self.assertLess(html.index('id="mw-split"'), html.index('id="%s"' % pane))
+
+        self.assertIn("molecular_features_panel.js", html)
+        self.assertIn("molecular_orf_panel.js", html)
+
+        for kind in ("rna", "protein"):
+            other = self._page(kind, "linear")
+            self.assertNotIn('data-mwv-layout="orfs"', other)
+            self.assertNotIn('id="mw-orfs"', other)
+
     def test_rna_and_protein_keep_their_own_views(self):
         for kind in ("rna", "protein"):
             html = self._page(kind, "linear")

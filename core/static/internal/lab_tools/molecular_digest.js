@@ -176,10 +176,50 @@
 
     gelHead.append(el("span", "mwd-label", "Gel"), ladderSelect, percentSelect);
     gelCard.append(gelHead, gelHost, el("p", "mwd-note", "Hover a band to see it, click it to select that fragment on the map and in the sequence."));
-    fragmentCard.append(fragmentTitle, fragmentList, exportRow);
+    fragmentCard.append(fragmentList, exportRow);
     const grid = el("div", "mwd-grid");
 
-    grid.append(enzymeCard, fragmentCard, gelCard);
+    function foldable(card, key, heading) {
+        const header = heading || card.querySelector(".mwd-head");
+        const button = el("button", "mwd-fold", "▾");
+        let open = true;
+
+        try {
+            open = window.localStorage.getItem("biobank.digest.fold." + key) !== "closed";
+        } catch (error) {
+            // Storage can be blocked; the card then starts open.
+        }
+
+        function apply() {
+            card.classList.toggle("is-collapsed", !open);
+            button.textContent = open ? "▾" : "▸";
+            button.setAttribute("aria-expanded", String(open));
+            button.title = open ? "Fold this section" : "Unfold this section";
+        }
+
+        button.type = "button";
+        button.addEventListener("click", () => {
+            open = !open;
+            apply();
+
+            try {
+                window.localStorage.setItem("biobank.digest.fold." + key, open ? "open" : "closed");
+            } catch (error) {
+                // Not persisted; fine.
+            }
+        });
+        header.append(button);
+        apply();
+    }
+
+    const fragmentHead = el("div", "mwd-head");
+
+    fragmentHead.append(fragmentTitle);
+    fragmentCard.prepend(fragmentHead);
+    foldable(enzymeCard, "enzymes");
+    foldable(fragmentCard, "fragments");
+    foldable(gelCard, "gel");
+    grid.append(gelCard, enzymeCard, fragmentCard);
     panel.replaceChildren(grid);
 
     /* ---------- enzymes ---------- */

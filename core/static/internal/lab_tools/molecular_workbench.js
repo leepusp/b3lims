@@ -167,18 +167,23 @@
         // The layout decides which interactive canvases are shown.
         function applyCanvases() {
             const usable = Boolean(canvasHost && seqHost && canvasApi() && seqApi());
-            const mapWanted = usable && ["map", "both", "digest"].includes(currentLayout);
+            const PANES = {digest: "mw-digest", features: "mw-features", orfs: "mw-orfs"};
+            const mapWanted = usable && (currentLayout === "map" || currentLayout === "both" || currentLayout in PANES);
             const seqWanted = usable && (currentLayout === "seq" || currentLayout === "both");
-            const digestPane = document.getElementById("mw-digest");
 
             if (card) card.classList.toggle("is-canvas", mapWanted || seqWanted);
             if (split) split.classList.toggle("is-both", mapWanted && seqWanted);
-            if (split) split.classList.toggle("is-digest", usable && currentLayout === "digest");
-            if (digestPane) digestPane.hidden = !(usable && currentLayout === "digest");
-
-            document.dispatchEvent(new CustomEvent("biobank:viewer-layout", {detail: {layout: currentLayout}}));
+            if (split) split.classList.toggle("is-pane", usable && currentLayout in PANES);
             if (canvasApi()) canvasApi().setActive(mapWanted);
             if (seqApi()) seqApi().setActive(seqWanted);
+
+            Object.entries(PANES).forEach(([layout, id]) => {
+                const pane = document.getElementById(id);
+
+                if (pane) pane.hidden = !(usable && currentLayout === layout);
+            });
+
+            document.dispatchEvent(new CustomEvent("biobank:viewer-layout", {detail: {layout: currentLayout}}));
         }
 
         const setCanvas = () => applyCanvases();

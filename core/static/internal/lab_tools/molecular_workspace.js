@@ -3382,6 +3382,82 @@
             return true;
         }
 
+        function pushHistory() {
+            editHistory.undo.push(editSnapshot());
+
+            if (editHistory.undo.length > 100) {
+                editHistory.undo.shift();
+            }
+
+            editHistory.redo.length = 0;
+        }
+
+        /* Change fields of one annotation (name, type, strand, start, end, color, notes). */
+        function updateFeature(index, patch, options = {}) {
+            const feature = state.features[index];
+
+            if (!canEdit || !feature || !patch) {
+                return false;
+            }
+
+            const length = currentSequence().length;
+            const next = {...feature};
+            const fields = ["name", "type", "strand", "start", "end", "color", "notes"];
+
+            fields.forEach(field => {
+                if (patch[field] !== undefined) {
+                    next[field] = patch[field];
+                }
+            });
+
+            next.name = String(next.name || "").trim() || feature.name;
+            next.start = Math.max(1, Math.min(length, Math.round(Number(next.start)) || feature.start));
+            next.end = Math.max(1, Math.min(length, Math.round(Number(next.end)) || feature.end));
+
+            if (patch.type !== undefined && patch.color === undefined) {
+                next.color = "";
+            }
+
+            const normalized = normalizeFeature(next, index);
+            const same = fields.every(field => normalized[field] === feature[field]);
+
+            if (same) {
+                return false;
+            }
+
+            pushHistory();
+            state.features[index] = normalized;
+            state.sequenceSelection = {start: normalized.start, end: normalized.end, featureIndex: index};
+            state.selectedFeature = index;
+            syncFeatureInputs(normalized);
+            markDirty();
+            renderAll();
+            notifyWorkspaceChange("sequence-edit", options.source || "workspace");
+
+            return true;
+        }
+
+        function removeFeatureAt(index, options = {}) {
+            if (!canEdit || !state.features[index]) {
+                return false;
+            }
+
+            pushHistory();
+            state.features.splice(index, 1);
+            state.selectedFeature = -1;
+            state.sequenceSelection = null;
+            elements.featureForm.hidden = true;
+            markDirty();
+            renderAll();
+            notifyWorkspaceChange("sequence-edit", options.source || "workspace");
+
+            return true;
+        }
+
+        function featureTypes() {
+            return Array.from(elements.featureType.options).map(option => ({value: option.value, label: option.textContent.trim()}));
+        }
+
         function setName(value) {
             const next = String(value || "").trim();
 
@@ -3419,6 +3495,9 @@
             refresh: renderAll,
             replaceRange,
             editFeature,
+            updateFeature,
+            removeFeature: removeFeatureAt,
+            featureTypes,
             setName,
             clearSelection,
             undo: () => stepHistory(editHistory.undo, editHistory.redo),

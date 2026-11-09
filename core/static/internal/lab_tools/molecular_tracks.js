@@ -250,6 +250,15 @@
                     onClick: () => workspace.selectFeature(index),
                 }));
             });
+        } else if (nucleotide && document.querySelector('[data-mwv-layout="orfs"]')) {
+            const open = el("button", "mwt-action", "Open the ORFs window");
+
+            open.type = "button";
+            open.addEventListener("click", () => document.querySelector('[data-mwv-layout="orfs"]').click());
+            list.append(
+                el("p", "mwt-empty", orfs.length + " ORFs of " + minAa + " aa or more. They are shown in full width, with the six reading frames, in the ORFs window."),
+                open
+            );
         } else {
             list.append(orfControls(), orfMap(orfs, snapshot.sequence.length, selection));
 
