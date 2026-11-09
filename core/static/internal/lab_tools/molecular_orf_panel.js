@@ -87,22 +87,76 @@
     pane.append(head, lanes, list, note);
 
     function protein(orf, sequence) {
-        const piece = calc.slice(sequence, orf.start, orf.end);
+        const piece = orf.wraps ? sequence.slice(orf.start - 1) + sequence.slice(0, orf.end) : calc.slice(sequence, orf.start, orf.end);
 
         return calc.translate(orf.strand === "-" ? calc.reverseComplement(piece) : piece, 0).replace(/\*$/, "");
     }
 
+    // On a circular record the sequence is scanned twice around, so ORFs that
+    // cross the origin are found; they are reported with start > end.
+    function scan(snapshot) {
+        const sequence = snapshot.sequence;
+        const length = sequence.length;
+
+        if (snapshot.topology !== "circular" || length < 90) {
+            return calc.findOrfs(sequence, ui.min, {strand: ui.strand}).map(orf => Object.assign(orf, {uStart: orf.start, uEnd: orf.end, wraps: false}));
+        }
+
+        const seen = new Set();
+        const result = [];
+
+        calc.findOrfs(sequence + sequence, ui.min, {strand: ui.strand}).forEach(orf => {
+            const size = orf.end - orf.start + 1;
+
+            if (orf.start > length || size > length) return;
+
+            const key = orf.strand + "|" + orf.start + "|" + size;
+
+            if (seen.has(key)) return;
+
+            seen.add(key);
+
+            const wraps = orf.end > length;
+
+            result.push({
+                start: orf.start, end: wraps ? orf.end - length : orf.end, aminoAcids: orf.aminoAcids,
+                frame: ((orf.start - 1) % 3) + 1, strand: orf.strand, wraps, uStart: orf.start, uEnd: orf.end,
+            });
+        });
+
+        return result.sort((a, b) => b.aminoAcids - a.aminoAcids);
+    }
+
     function compute(snapshot) {
-        const key = [snapshot.sequence.length, snapshot.sequence.slice(0, 48), snapshot.sequence.slice(-48), ui.min, ui.strand].join("|");
+        const key = [snapshot.topology, snapshot.sequence.length, snapshot.sequence.slice(0, 48), snapshot.sequence.slice(-48), ui.min, ui.strand].join("|");
 
         if (cache.key !== key || cache.sequence !== snapshot.sequence) {
-            cache = {key, sequence: snapshot.sequence, orfs: calc.findOrfs(snapshot.sequence, ui.min, {strand: ui.strand})};
+            cache = {key, sequence: snapshot.sequence, orfs: scan(snapshot)};
         }
 
         const orfs = cache.orfs.slice();
 
         return ui.sort === "position" ? orfs.sort((a, b) => a.start - b.start) : orfs;
     }
+
+    // One arrow, or two when the ORF runs over the origin.
+    function drawOrf(node, orf, x, y, h, length, className, tip, onClick) {
+        const pieces = orf.wraps ? [[orf.start, length, false], [1, orf.end, true]] : [[orf.start, orf.end, false]];
+
+        pieces.forEach(([from, to, second]) => {
+            const reverse = orf.strand === "-";
+            const bar = svg("path", {d: arrow(x(from), x(to), y, h, reverse, orf.wraps && (reverse ? !second : second) ? true : false), class: className});
+
+            bar.append(svg("title", {}, tip));
+            bar.addEventListener("click", onClick);
+            node.append(bar);
+        });
+    }
+
+    const orfClass = (orf, selection) => "mwp-orf" + (orf.strand === "-" ? " is-reverse" : "") + (isSelected(orf, selection) ? " is-selected" : "");
+    const orfTip = orf => orf.aminoAcids + " aa · " + orf.strand + orf.frame + " · " + orf.start.toLocaleString() + "–" + orf.end.toLocaleString() + (orf.wraps ? " (crosses the origin)" : "");
+    const orfBp = orf => orf.uEnd - orf.uStart + 1;
+    const wrapPos = (position, length) => ((position - 1) % length) + 1;
 
     function laneIndex(orf) {
         return (orf.strand === "-" ? 3 : 0) + orf.frame - 1;
@@ -119,9 +173,9 @@
     }
 
     // Arrow pointing along the strand; the head is at most a third of the bar.
-    function arrow(x1, x2, y, h, reverse) {
+    function arrow(x1, x2, y, h, reverse, flat) {
         const w = Math.max(3, x2 - x1);
-        const head = Math.min(w * 0.45, h * 0.9, 12);
+        const head = flat ? 0 : Math.min(w * 0.45, h * 0.9, 12);
         const mid = y + h / 2;
 
         if (reverse) {
@@ -133,7 +187,7 @@
 
     // ORFs that overlap on the forward-strand coordinates form one cluster.
     function clustersOf(orfs) {
-        const sorted = orfs.slice().sort((a, b) => a.start - b.start || b.end - a.end);
+        const sorted = orfs.slice().sort((a, b) => a.start - b.start || b.uEnd - a.uEnd);
         const groups = [];
 
         sorted.forEach(orf => {
@@ -141,9 +195,9 @@
 
             if (last && orf.start <= last.end) {
                 last.orfs.push(orf);
-                last.end = Math.max(last.end, orf.end);
+                last.end = Math.max(last.end, orf.uEnd);
             } else {
-                groups.push({start: orf.start, end: orf.end, orfs: [orf]});
+                groups.push({start: orf.start, end: orf.uEnd, orfs: [orf]});
             }
         });
 
@@ -162,7 +216,7 @@
                     rows.push(0);
                 }
 
-                rows[row] = orf.end;
+                rows[row] = orf.uEnd;
                 orf.row = row;
             });
             group.rows = rows.length;
@@ -198,27 +252,20 @@
         }
 
         groups.forEach(group => {
-            const shade = svg("rect", {x: x(group.start) - 2, y: top - 4, width: Math.max(6, x(group.end) - x(group.start) + 4), height: group.rows * rowH + 6, rx: 4, class: "mwp-cluster" + (group.orfs.length > 1 ? " is-multi" : "")});
+            const shade = svg("rect", {x: x(group.start) - 2, y: top - 4, width: Math.max(6, x(Math.min(group.end, length)) - x(group.start) + 4), height: group.rows * rowH + 6, rx: 4, class: "mwp-cluster" + (group.orfs.length > 1 ? " is-multi" : "")});
 
-            shade.append(svg("title", {}, "Cluster " + group.index + " · " + group.orfs.length + " ORF" + (group.orfs.length > 1 ? "s" : "") + " · " + group.start.toLocaleString() + "–" + group.end.toLocaleString()));
+            shade.append(svg("title", {}, "Cluster " + group.index + " · " + group.orfs.length + " ORF" + (group.orfs.length > 1 ? "s" : "") + " · " + group.start.toLocaleString() + "–" + wrapPos(group.end, length).toLocaleString()));
             shade.addEventListener("click", () => {
                 const workspace = api();
 
-                if (workspace) workspace.selectSequenceRange(group.start, group.end, {source: "orf-window"});
+                if (workspace) workspace.selectSequenceRange(group.start, wrapPos(group.end, length), {source: "orf-window"});
             });
             node.append(shade);
         });
 
         groups.forEach(group => {
             group.orfs.forEach(orf => {
-                const bar = svg("path", {
-                    d: arrow(x(orf.start), x(orf.end), top + orf.row * rowH, rowH - 5, orf.strand === "-"),
-                    class: "mwp-orf" + (orf.strand === "-" ? " is-reverse" : "") + (isSelected(orf, selection) ? " is-selected" : ""),
-                });
-
-                bar.append(svg("title", {}, orf.aminoAcids + " aa · " + orf.strand + orf.frame + " · " + orf.start.toLocaleString() + "–" + orf.end.toLocaleString()));
-                bar.addEventListener("click", () => selectOrf(orf));
-                node.append(bar);
+                drawOrf(node, orf, x, top + orf.row * rowH, rowH - 5, length, orfClass(orf, selection), orfTip(orf), () => selectOrf(orf));
             });
         });
 
@@ -269,14 +316,7 @@
 
         orfs.forEach(orf => {
             const y = top + laneIndex(orf) * laneH;
-            const bar = svg("path", {
-                d: arrow(x(orf.start), x(orf.end), y + 2, laneH - 7, orf.strand === "-"),
-                class: "mwp-orf" + (orf.strand === "-" ? " is-reverse" : "") + (isSelected(orf, selection) ? " is-selected" : ""),
-            });
-
-            bar.append(svg("title", {}, orf.aminoAcids + " aa · " + orf.strand + orf.frame + " · " + orf.start.toLocaleString() + "–" + orf.end.toLocaleString()));
-            bar.addEventListener("click", () => selectOrf(orf));
-            node.append(bar);
+            drawOrf(node, orf, x, y + 2, laneH - 7, length, orfClass(orf, selection), orfTip(orf), () => selectOrf(orf));
         });
 
         const legend = el("div", "mwp-legend");
@@ -296,8 +336,8 @@
         label.append(
             el("b", "", orf.aminoAcids + " aa"),
             el("span", "mwp-orftag" + (orf.strand === "-" ? " is-reverse" : ""), orf.strand + orf.frame),
-            el("span", "mwp-orfrange", orf.start.toLocaleString() + "–" + orf.end.toLocaleString()),
-            el("span", "mwp-orfsize", (orf.end - orf.start + 1).toLocaleString() + " bp")
+            el("span", "mwp-orfrange", orf.start.toLocaleString() + "–" + orf.end.toLocaleString() + (orf.wraps ? " ↻" : "")),
+            el("span", "mwp-orfsize", orfBp(orf).toLocaleString() + " bp")
         );
         label.addEventListener("click", () => selectOrf(orf));
         copy.addEventListener("click", () => {
@@ -342,11 +382,11 @@
                 header.append(
                     el("b", "", "Cluster " + group.index),
                     el("span", "", group.orfs.length + " ORF" + (group.orfs.length > 1 ? "s" : "")),
-                    el("span", "mwp-orfrange", group.start.toLocaleString() + "–" + group.end.toLocaleString()),
+                    el("span", "mwp-orfrange", group.start.toLocaleString() + "–" + wrapPos(group.end, snapshot.sequence.length).toLocaleString()),
                     el("span", "mwp-orfsize", "longest " + group.longest.aminoAcids + " aa")
                 );
                 header.addEventListener("click", () => {
-                    if (api()) api().selectSequenceRange(group.start, group.end, {source: "orf-window"});
+                    if (api()) api().selectSequenceRange(group.start, wrapPos(group.end, snapshot.sequence.length), {source: "orf-window"});
                 });
                 items.push(header);
                 group.orfs.slice().sort((a, b) => b.aminoAcids - a.aminoAcids).forEach(orf => items.push(row(orf, snapshot)));
@@ -372,7 +412,7 @@
             list.append(more);
         }
 
-        note.textContent = "An ORF runs from ATG to the first stop codon in its frame. Frames −1 to −3 are read on the reverse strand; coordinates are always on the forward strand. In the cluster view, ORFs that overlap are grouped (often a real gene and shorter ORFs on other frames); the longest one is usually the gene. ORFs that cross the origin of a circular record are not listed.";
+        note.textContent = "An ORF runs from ATG to the first stop codon in its frame. Frames −1 to −3 are read on the reverse strand; coordinates are always on the forward strand. In the cluster view, ORFs that overlap are grouped (often a real gene and shorter ORFs on other frames); the longest one is usually the gene. On a circular record ORFs that run over the origin are included (marked ↻, start greater than end).";
     }
 
     function schedule() {
@@ -411,7 +451,7 @@
         if (!workspace) return;
 
         const snapshot = workspace.getSnapshot();
-        const lines = ["start,end,strand,frame,amino_acids,length_bp"].concat(compute(snapshot).map(orf => [orf.start, orf.end, orf.strand, orf.frame, orf.aminoAcids, orf.end - orf.start + 1].join(",")));
+        const lines = ["start,end,strand,frame,amino_acids,length_bp"].concat(compute(snapshot).map(orf => [orf.start, orf.end, orf.strand, orf.frame, orf.aminoAcids, orfBp(orf)].join(",")));
 
         download(baseName(snapshot) + "_orfs.csv", "text/csv", lines.join("\n") + "\n");
     });

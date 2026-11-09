@@ -260,3 +260,38 @@ input.mwp-cell[type=number]{width:100%}
 .mwp-btn{white-space:nowrap}
 .mwp-orfrow{flex-wrap:wrap}
 .mwp-orfmain{min-width:11rem;flex-wrap:wrap;gap:.2rem .7rem}
+
+/* Gel window (photo reading). */
+.mwp-gel{display:flex;flex-direction:column;gap:.5rem}
+.mwp-gel[hidden]{display:none}
+.mwp-btn.is-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.mwp-btn.is-primary:hover:not(:disabled){background:#1a43b8}
+.mwp-btn.mwg-mode.is-active{background:#e7f0ff;border-color:#1d4ed8;color:#1d4ed8}
+.mwg-item{display:inline-flex;align-items:center;gap:.3rem;margin:0;font-size:.76rem;color:#566474}
+.mwg-tools{display:inline-flex;flex-wrap:wrap;gap:.3rem}
+.mwg-exportrow{display:flex;flex-wrap:wrap;gap:.35rem}
+.mwp-gel{container-type:inline-size}
+.mwg-body{flex:1;min-height:0;display:flex;gap:.6rem}
+.mwg-stage{position:relative;flex:1 1 0;min-width:0;overflow:auto;background:#1b2733;border-radius:.5rem;min-height:18rem}
+.mwg-stage.is-drop{outline:3px dashed #74c0fc;outline-offset:-6px}
+.mwg-holder{position:relative;margin:0 auto}
+.mwg-photo,.mwg-overlay{position:absolute;left:0;top:0;display:block}
+.mwg-overlay{touch-action:none;outline:none}
+.mwg-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;text-align:center;color:#c8d6e5;padding:1rem}
+.mwg-empty[hidden],.mwg-holder[hidden]{display:none}
+.mwg-emptytitle{font-size:1rem;font-weight:700;color:#fff;margin:0}
+.mwg-empty p{margin:0}
+.mwg-side{flex:0 0 17rem;min-width:0;display:flex;flex-direction:column;gap:.5rem;overflow:auto}
+.mwg-card{border:1px solid #dde3ea;border-radius:.5rem;padding:.45rem .55rem;display:flex;flex-direction:column;gap:.35rem;background:#fff}
+.mwg-cardtitle{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#566474}
+.mwg-muted{margin:0;color:#6b7a8c;font-size:.76rem}
+.mwg-next{margin:0;font-weight:700;color:#d9480f;font-size:.8rem}
+.mwg-hint{margin:0}
+.mwg-lane{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:.25rem;align-items:center;border-radius:.35rem;padding:.1rem .2rem}
+.mwg-lane.is-selected{background:#e7f0ff}
+.mwg-lane .mwp-select{max-width:7.5rem;font-size:.72rem;padding:.15rem .2rem}
+.mwg-lane .mwg-item span{font-size:.66rem}
+.mwg-range{width:100%}
+.mwg-tablewrap{max-height:14rem}
+.mwg-table th,.mwg-table td{padding:.15rem .3rem}
+@container (max-width:44rem){.mwg-body{flex-direction:column}.mwg-side{flex:none}.mwg-stage{min-height:20rem}}

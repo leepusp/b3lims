@@ -186,3 +186,30 @@ class ViewerWindowsLayoutWiringTests(TestCase):
 
         self.assertIn(".mw-divbtn.is-active", css)
         self.assertIn(".mw-split.is-leftless", css)
+
+
+class GelPhotoWindowWiringTests(TestCase):
+    def setUp(self):
+        self.tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+
+    def test_gel_photo_reader_has_calibration_detection_and_exports(self):
+        gel = (self.tools / "molecular_gel_panel.js").read_text()
+
+        for needle in ("function estimate(", "function detect(", "exportPng", "exportCsv", "window.BiobankGel", "Detect marker"):
+            self.assertIn(needle, gel)
+
+    def test_gel_window_is_a_viewer_layout_for_dna_records_only(self):
+        from django.template.loader import get_template
+
+        source = get_template("internal/lab_tools/molecular_sequence_detail.html").template.source
+
+        self.assertIn('data-mwv-layout="gel"', source)
+        self.assertIn('id="mw-gel"', source)
+        self.assertIn("molecular_gel_panel.js", source)
+        self.assertIn('gel: "mw-gel"', (self.tools / "molecular_workbench.js").read_text())
+
+    def test_orf_window_includes_orfs_over_the_origin(self):
+        orfs = (self.tools / "molecular_orf_panel.js").read_text()
+
+        self.assertIn("wraps", orfs)
+        self.assertIn("sequence + sequence", orfs)
