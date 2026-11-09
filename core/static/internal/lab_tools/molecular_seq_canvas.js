@@ -604,6 +604,50 @@
         return seg ? seg.f : -1;
     }
 
+    /* Where on an annotation the pointer is: its ends resize, its body moves. */
+    function gripAtPoint(layout, point, feature) {
+        const row = rowAt(layout, point.y);
+        const lane = Math.floor((point.y - row.y - row.laneTop) / LANE);
+        const seg = row.segs.find(item => item.lane === lane && item.f === feature && point.x >= LEFT + (item.a - row.start) * st.charW && point.x < LEFT + (item.b - row.start) * st.charW);
+
+        if (!seg) return "move";
+
+        const left = LEFT + (seg.a - row.start) * st.charW;
+        const right = LEFT + (seg.b - row.start) * st.charW;
+        const item = snap().features[feature];
+        const zone = Math.min(6, (right - left) / 3);
+
+        if (!item || item.start > item.end) return "move";
+
+        if (seg.a === item.start - 1 && point.x - left <= zone) return "start";
+        if (seg.b === item.end && right - point.x <= zone) return "end";
+
+        return "move";
+    }
+
+    function baseAt(layout, point) {
+        const row = rowAt(layout, point.y);
+        const offset = Math.floor((point.x - LEFT) / st.charW);
+
+        return row.start + clamp(offset, 0, row.end - row.start - 1);
+    }
+
+    function draggedRange(drag, base, length) {
+        if (drag.grip === "start") {
+            return {start: Math.min(base + 1, drag.end), end: drag.end};
+        }
+
+        if (drag.grip === "end") {
+            return {start: drag.start, end: Math.max(base + 1, drag.start)};
+        }
+
+        const low = Math.min(drag.start, drag.end);
+        const high = Math.max(drag.start, drag.end);
+        const delta = clamp(base - drag.base, 1 - low, length - high);
+
+        return {start: drag.start + delta, end: drag.end + delta};
+    }
+
     function reveal(index, mode) {
         const s = snap();
 
@@ -766,7 +810,18 @@
         viewport.focus({preventScroll: true});
 
         if (feature >= 0) {
-            st.drag = {kind: "feature", feature, x: event.clientX, y: event.clientY};
+            const item = s.features[feature];
+
+            st.drag = {kind: "feature", feature, x: event.clientX, y: event.clientY, moved: false, began: false};
+
+            if (s.canEdit && item) {
+                st.drag.grip = gripAtPoint(layout, point, feature);
+                st.drag.base = baseAt(layout, point);
+                st.drag.start = item.start;
+                st.drag.end = item.end;
+            }
+
+            canvas.setPointerCapture(event.pointerId);
         } else {
             const at = boundaryAt(layout, point);
 
@@ -806,9 +861,32 @@
             return;
         }
 
-        const feature = featureAt(layout, point);
+        if (st.drag && st.drag.kind === "feature") {
+            const drag = st.drag;
 
-        canvas.style.cursor = feature >= 0 ? "pointer" : "text";
+            if (drag.grip && api() && (drag.moved || Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 5)) {
+                if (!drag.began) {
+                    drag.began = true;
+                    api().selectFeature(drag.feature);
+                    api().editFeature("begin", drag.feature);
+                }
+
+                drag.moved = true;
+                drag.last = draggedRange(drag, baseAt(layout, point), s.sequence.length);
+                api().editFeature("move", drag.feature, drag.last.start, drag.last.end, {source: "seq-canvas"});
+                canvas.style.cursor = drag.grip === "move" ? "grabbing" : "ew-resize";
+
+                if (point.cy < 24) viewport.scrollTop -= 24;
+                else if (point.cy > viewport.clientHeight - 24) viewport.scrollTop += 24;
+            }
+
+            return;
+        }
+
+        const feature = featureAt(layout, point);
+        const grip = feature >= 0 && s.canEdit ? gripAtPoint(layout, point, feature) : null;
+
+        canvas.style.cursor = feature < 0 ? "text" : grip === "start" || grip === "end" ? "ew-resize" : grip === "move" ? "grab" : "pointer";
 
         if (feature !== st.hover) {
             st.hover = feature;
@@ -845,6 +923,12 @@
         if (!drag) return;
 
         if (drag.kind === "feature") {
+            if (drag.began && drag.last && api()) {
+                api().editFeature("end", drag.feature, drag.last.start, drag.last.end, {source: "seq-canvas"});
+
+                return;
+            }
+
             if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5 && api()) {
                 api().selectFeature(drag.feature);
             }

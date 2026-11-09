@@ -105,6 +105,14 @@ class MapCanvasMountTests(TestCase):
         ).read_text()
         self.assertNotIn("classic map", workbench)
 
+    def test_annotations_can_be_dragged_on_the_map_and_in_the_sequence(self):
+        tools = Path(__file__).resolve().parents[1] / "static/internal/lab_tools"
+
+        for name in ("molecular_workspace.js", "molecular_map_canvas.js", "molecular_seq_canvas.js"):
+            self.assertIn("editFeature", (tools / name).read_text(), name)
+
+        self.assertIn('"feature-edit"', (tools / "molecular_map_canvas.js").read_text())
+
     def test_rna_and_protein_keep_their_own_views(self):
         for kind in ("rna", "protein"):
             html = self._page(kind, "linear")

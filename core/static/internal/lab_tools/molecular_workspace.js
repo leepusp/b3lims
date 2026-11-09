@@ -3307,6 +3307,81 @@
             notifyWorkspaceChange("selection", "seqcanvas");
         }
 
+        /*
+         * Dragging an annotation on the map or in the sequence. begin / move /
+         * end bracket one gesture, which becomes a single undo step.
+         */
+        let featureGesture = null;
+
+        function editFeature(phase, index, start, end, options = {}) {
+            const feature = state.features[index];
+
+            if (!canEdit || !feature) {
+                return false;
+            }
+
+            const length = currentSequence().length;
+
+            if (phase === "begin") {
+                featureGesture = {
+                    snapshot: editSnapshot(),
+                    index,
+                    start: feature.start,
+                    end: feature.end,
+                };
+
+                return true;
+            }
+
+            if (!featureGesture || featureGesture.index !== index) {
+                return false;
+            }
+
+            if (phase === "cancel") {
+                feature.start = featureGesture.start;
+                feature.end = featureGesture.end;
+                featureGesture = null;
+                renderAll();
+                notifyWorkspaceChange("selection", options.source || "workspace");
+
+                return true;
+            }
+
+            const nextStart = Math.max(1, Math.min(length, Math.round(start)));
+            const nextEnd = Math.max(1, Math.min(length, Math.round(end)));
+
+            if (feature.start !== nextStart || feature.end !== nextEnd) {
+                feature.start = nextStart;
+                feature.end = nextEnd;
+                state.sequenceSelection = {start: nextStart, end: nextEnd, featureIndex: index};
+                syncFeatureInputs(feature);
+                markDirty();
+                renderFeatureList();
+                renderMap();
+                renderSequencePreview();
+                notifyWorkspaceChange("feature-drag", options.source || "workspace");
+            }
+
+            if (phase === "end") {
+                const changed = feature.start !== featureGesture.start || feature.end !== featureGesture.end;
+
+                if (changed) {
+                    editHistory.undo.push(featureGesture.snapshot);
+
+                    if (editHistory.undo.length > 100) {
+                        editHistory.undo.shift();
+                    }
+
+                    editHistory.redo.length = 0;
+                }
+
+                featureGesture = null;
+                notifyWorkspaceChange("sequence-edit", options.source || "workspace");
+            }
+
+            return true;
+        }
+
         function stepHistory(from, to) {
             const snapshot = from.pop();
 
@@ -3328,6 +3403,7 @@
             selectSequenceRange,
             refresh: renderAll,
             replaceRange,
+            editFeature,
             clearSelection,
             undo: () => stepHistory(editHistory.undo, editHistory.redo),
             redo: () => stepHistory(editHistory.redo, editHistory.undo),

@@ -525,6 +525,70 @@
         return target ? Number(target.dataset.index) : -1;
     }
 
+    /* ---------- dragging an annotation ---------- */
+
+    function wrapCoordinate(value, length) {
+        return ((Math.round(value) - 1) % length + length) % length + 1;
+    }
+
+    function featureLength(feature, length) {
+        return feature.start <= feature.end
+            ? feature.end - feature.start + 1
+            : length - feature.start + feature.end + 1;
+    }
+
+    function gap(a, b, length, circular) {
+        const d = Math.abs(a - b);
+
+        return circular ? Math.min(d, length - d) : d;
+    }
+
+    /* "start", "end" near the ends of the annotation, "move" along its body. */
+    function gripAt(feature, at, s) {
+        const length = s.sequence.length;
+        const circular = s.topology === "circular";
+        const span = circular ? length / state.zoom : view(length).span;
+        const tolerance = Math.min(Math.max(1, Math.round(span / 45)), Math.floor(featureLength(feature, length) / 3));
+
+        if (tolerance < 1) return "move";
+
+        const toStart = gap(at, feature.start, length, circular);
+        const toEnd = gap(at, feature.end, length, circular);
+
+        if (toStart > tolerance && toEnd > tolerance) return "move";
+
+        return toStart <= toEnd ? "start" : "end";
+    }
+
+    function draggedRange(drag, at, s) {
+        const length = s.sequence.length;
+        const circular = s.topology === "circular";
+
+        if (drag.grip === "start") {
+            return {start: circular ? at : Math.min(at, drag.end), end: drag.end};
+        }
+
+        if (drag.grip === "end") {
+            return {start: drag.start, end: circular ? at : Math.max(at, drag.start)};
+        }
+
+        let delta = at - drag.anchor;
+
+        if (circular) {
+            if (delta > length / 2) delta -= length;
+            if (delta < -length / 2) delta += length;
+
+            return {start: wrapCoordinate(drag.start + delta, length), end: wrapCoordinate(drag.end + delta, length)};
+        }
+
+        const low = Math.min(drag.start, drag.end);
+        const high = Math.max(drag.start, drag.end);
+
+        delta = Math.max(1 - low, Math.min(length - high, delta));
+
+        return {start: drag.start + delta, end: drag.end + delta};
+    }
+
     function onDown(event) {
         const s = snap();
 
@@ -539,7 +603,19 @@
             const index = state.tool === "select" ? featureIndexAt(event) : -1;
 
             if (index >= 0) {
-                state.drag = {kind: "click-feature", index};
+                const feature = s.features[index];
+
+                if (s.canEdit && feature) {
+                    const at = coordinateAt(event, node, s.sequence.length, circular);
+
+                    state.drag = {
+                        kind: "feature-edit", index, anchor: at, grip: gripAt(feature, at, s),
+                        start: feature.start, end: feature.end, moved: false, began: false,
+                    };
+                } else {
+                    state.drag = {kind: "click-feature", index};
+                }
+
                 return;
             }
 
@@ -564,11 +640,42 @@
 
         if (!s || !drag) {
             showTip(event, s);
+
+            if (s && state.tool === "select" && s.canEdit) {
+                const index = featureIndexAt(event);
+                const feature = index >= 0 ? s.features[index] : null;
+                const grip = feature
+                    ? gripAt(feature, coordinateAt(event, event.currentTarget, s.sequence.length, s.topology === "circular"), s)
+                    : null;
+
+                event.currentTarget.style.cursor = !feature ? "" : grip === "move" ? "grab" : "ew-resize";
+            }
+
             return;
         }
 
         const length = s.sequence.length;
         const circular = s.topology === "circular";
+
+        if (drag.kind === "feature-edit") {
+            const at = coordinateAt(event, event.currentTarget, length, circular);
+            const workspace = api();
+
+            if (!drag.moved && at === drag.anchor) return;
+
+            if (!drag.began) {
+                drag.began = true;
+                workspace.selectFeature(drag.index);
+                workspace.editFeature("begin", drag.index);
+            }
+
+            drag.moved = true;
+            drag.last = draggedRange(drag, at, s);
+            workspace.editFeature("move", drag.index, drag.last.start, drag.last.end, {source: "map-canvas"});
+            event.currentTarget.style.cursor = drag.grip === "move" ? "grabbing" : "ew-resize";
+
+            return;
+        }
 
         if (drag.kind === "range" || drag.kind === "zoom") {
             const at = coordinateAt(event, event.currentTarget, length, circular);
@@ -614,7 +721,13 @@
 
         state.preview = null;
 
-        if (drag.kind === "click-feature") {
+        if (drag.kind === "feature-edit") {
+            if (drag.began && drag.last) {
+                workspace.editFeature("end", drag.index, drag.last.start, drag.last.end, {source: "map-canvas"});
+            } else {
+                workspace.selectFeature(drag.index);
+            }
+        } else if (drag.kind === "click-feature") {
             workspace.selectFeature(drag.index);
         } else if (drag.kind === "range" && preview) {
             const single = preview.start === preview.end && !drag.moved;
