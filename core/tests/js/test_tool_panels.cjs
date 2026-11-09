@@ -24,6 +24,7 @@ function load(file, hostId) {
             dispatchEvent() {},
             addEventListener() {},
             querySelector: () => null,
+            querySelectorAll: () => [],
         },
         CustomEvent: function () {},
         navigator: {},

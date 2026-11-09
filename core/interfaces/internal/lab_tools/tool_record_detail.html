@@ -39,7 +39,14 @@
         <span class="tw-bar-label">Windows</span>
         <button type="button" class="tw-win" data-tw-toggle="gel">Gel</button>
         <button type="button" class="tw-win" data-tw-toggle="assembly">Plasmid assembly</button>
-        <button type="button" class="tw-win" data-tw-toggle="chemical">Chemical</button>
+        <button type="button" class="tw-win" data-tw-toggle="chemical">{% if record.tool == 'chemical' %}Structure{% else %}Chemical{% endif %}</button>
+        {% if record.tool == 'chemical' %}
+        <button type="button" class="tw-win" data-tw-toggle="compound">Compound</button>
+        <button type="button" class="tw-win" data-tw-toggle="properties">Properties</button>
+        <button type="button" class="tw-win" data-tw-toggle="hazards">Hazards</button>
+        <button type="button" class="tw-win" data-tw-toggle="reaction">Reaction</button>
+        <button type="button" class="tw-win" data-tw-toggle="calc">Calculators</button>
+        {% endif %}
         <button type="button" class="tw-win" data-tw-toggle="notes">Notes</button>
         <span class="tw-sep" aria-hidden="true"></span>
         <button type="button" class="tw-win" data-tw-toggle="sequence" title="The sequence the Digest, Primers, Cloning and Gel windows work on">Sequence</button>
@@ -73,8 +80,28 @@
             <div id="tw-assembly"></div>
         </section>
         <section class="tw-pane" data-tw-pane="chemical" hidden aria-label="Chemical">
-            <div class="tw-pane-head"><h2 class="tw-pane-title">Chemical</h2><button type="button" class="tw-x" data-tw-close="chemical" aria-label="Close window">×</button></div>
+            <div class="tw-pane-head"><h2 class="tw-pane-title">{% if record.tool == 'chemical' %}Structure{% else %}Chemical{% endif %}</h2><button type="button" class="tw-x" data-tw-close="chemical" aria-label="Close window">×</button></div>
             <div id="tw-chemical" data-stock-url="{% url 'chemicals_list' %}" data-stock-add-url="{% url 'chemical_add' %}" data-ketcher-url="{% url 'ketcher_frame' %}"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="compound" hidden aria-label="Compound">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Compound</h2><button type="button" class="tw-x" data-tw-close="compound" aria-label="Close window">×</button></div>
+            <div id="tw-chem-compound"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="properties" hidden aria-label="Properties">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Properties</h2><button type="button" class="tw-x" data-tw-close="properties" aria-label="Close window">×</button></div>
+            <div id="tw-chem-props"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="hazards" hidden aria-label="Hazards">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Hazards</h2><button type="button" class="tw-x" data-tw-close="hazards" aria-label="Close window">×</button></div>
+            <div id="tw-chem-hazards"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="reaction" hidden aria-label="Reaction">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Reaction</h2><button type="button" class="tw-x" data-tw-close="reaction" aria-label="Close window">×</button></div>
+            <div id="tw-chem-reaction"></div>
+        </section>
+        <section class="tw-pane" data-tw-pane="calc" hidden aria-label="Calculators">
+            <div class="tw-pane-head"><h2 class="tw-pane-title">Calculators</h2><button type="button" class="tw-x" data-tw-close="calc" aria-label="Close window">×</button></div>
+            <div id="tw-chem-calc"></div>
         </section>
         <section class="tw-pane" data-tw-pane="notes" hidden aria-label="Notes">
             <div class="tw-pane-head"><h2 class="tw-pane-title">Notes</h2><button type="button" class="tw-x" data-tw-close="notes" aria-label="Close window">×</button></div>
@@ -114,7 +141,7 @@
 <script src="{% static 'internal/lab_tools/molecular_primer_panel.js' %}?v=20261109-primers-v2"></script>
 <script src="{% static 'internal/lab_tools/molecular_gel_panel.js' %}?v=20261109-gel-v4"></script>
 <script src="{% static 'internal/lab_tools/tool_assembly_panel.js' %}?v=20261109-tools-v5"></script>
-<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v7"></script>
-<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v5"></script>
+<script src="{% static 'internal/lab_tools/tool_chemical_panel.js' %}?v=20261109-tools-v8"></script>
+<script src="{% static 'internal/lab_tools/tool_workbench.js' %}?v=20261109-tools-v8"></script>
 </div>
 {% endblock %}

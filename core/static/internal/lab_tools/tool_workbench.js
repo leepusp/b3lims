@@ -12,7 +12,7 @@
     if (!page) return;
 
     const tool = page.dataset.tool;
-    const WINDOWS = ["gel", "assembly", "chemical", "notes", "sequence", "digest", "primers", "cloning"];
+    const WINDOWS = ["gel", "assembly", "chemical", "compound", "properties", "hazards", "reaction", "calc", "notes", "sequence", "digest", "primers", "cloning"];
     const statusEl = document.getElementById("tw-status");
     const nameInput = document.getElementById("tw-name");
     const notes = document.getElementById("tw-notes");
@@ -74,7 +74,7 @@
     const gridEl = document.getElementById("tw-grid");
     const tabsEl = document.getElementById("tw-tabs");
     const noneEl = document.getElementById("tw-none");
-    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: "Chemical", notes: "Notes", sequence: "Sequence", digest: "Digest", primers: "Primers", cloning: "Cloning"};
+    const TITLES = {gel: "Gel", assembly: "Plasmid assembly", chemical: tool === "chemical" ? "Structure" : "Chemical", compound: "Compound", properties: "Properties", hazards: "Hazards", reaction: "Reaction", calc: "Calculators", notes: "Notes", sequence: "Sequence", digest: "Digest", primers: "Primers", cloning: "Cloning"};
     const MODES = ["split", "stack", "tabs"];
 
     L.order = [tool].concat(WINDOWS.filter(key => key !== tool));
@@ -486,7 +486,7 @@
     async function start() {
         open = Array.isArray(stored.windows) && stored.windows.length
             ? stored.windows.filter(key => WINDOWS.indexOf(key) !== -1)
-            : [tool];
+            : (tool === "chemical" ? ["chemical", "compound", "properties", "hazards", "reaction"] : [tool]);
 
         applyLayoutState(stored.layout);
 

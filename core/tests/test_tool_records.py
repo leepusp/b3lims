@@ -351,3 +351,22 @@ class KetcherVendorTests(TestCase):
 
         self.assertIn("/internal/lab-tools/ketcher/", html)
         self.assertIn('data-stock-add-url="/chemicals/add/"', html)
+
+
+class ChemicalPanelLayoutTests(TestCase):
+    def test_chemical_record_has_structure_and_side_windows(self):
+        user = get_user_model().objects.create_user("chempanel", password="x")
+        record = ToolRecord.objects.create(tool="chemical", name="P", owner=user)
+        gel = ToolRecord.objects.create(tool="gel", name="G", owner=user)
+        self.client.force_login(user)
+
+        html = self.client.get(f"/internal/lab-tools/tools/{record.pk}/").content.decode()
+
+        for key in ("compound", "properties", "hazards", "reaction", "calc"):
+            self.assertIn(f'data-tw-pane="{key}"', html)
+            self.assertIn(f'data-tw-toggle="{key}"', html)
+        for mount in ("tw-chem-compound", "tw-chem-props", "tw-chem-hazards", "tw-chem-reaction", "tw-chem-calc"):
+            self.assertIn(f'id="{mount}"', html)
+
+        other = self.client.get(f"/internal/lab-tools/tools/{gel.pk}/").content.decode()
+        self.assertNotIn('data-tw-toggle="reaction"', other)

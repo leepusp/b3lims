@@ -543,7 +543,6 @@
     const lookupBtn = el("button", "tw-btn is-primary", "Look up in PubChem");
     const stockLink = el("a", "tw-btn", "Find in Chemicals stock");
     const addStock = el("a", "tw-btn", "Add to Chemicals stock");
-    const drawBtn = el("button", "tw-btn is-primary", "Draw / edit structure");
     const svgBtn = el("button", "tw-btn", "Download SVG");
     const kBox = el("div", "tw-chem-ketcher");
     const kNote = el("p", "tw-note");
@@ -555,8 +554,7 @@
     const hazardBox = el("div", "tw-row");
     const reactionBox = el("div");
 
-    drawBtn.type = svgBtn.type = csvBtn.type = "button";
-    kBox.hidden = true;
+    svgBtn.type = csvBtn.type = "button";
     lookupBtn.type = molBtn.type = molDownload.type = copySmiles.type = "button";
     molFile.type = "file";
     molFile.accept = ".mol,.sdf,.txt";
@@ -671,7 +669,7 @@
             try {
                 const sdf = await fetch(base + "cid/" + S.cid + "/SDF");
 
-                if (sdf.ok) S.mol = (await sdf.text()).split("$$$$")[0].replace(/^\s*\n/, "");
+                if (sdf.ok) S.mol = (await sdf.text()).split("$$$$")[0];
             } catch (error) { /* keep SMILES only */ }
 
             let ghs = false;
@@ -845,7 +843,8 @@
         if (!kApi) return;
 
         const source = kSource;
-        const text = source === "smiles" ? S.smiles.trim() : source === "mol" ? S.mol.trim() : (S.mol.trim() || S.smiles.trim());
+        // A MOL block starts with a (possibly blank) title line: never trim it.
+        const text = source === "smiles" ? S.smiles.trim() : source === "mol" ? S.mol : (S.mol.trim() ? S.mol : S.smiles.trim());
 
         kSource = "";
         kMute = true;
@@ -894,22 +893,17 @@
         }
     }
 
-    async function toggleKetcher() {
-        if (!kBox.hidden) {
-            kBox.hidden = true;
-            drawBtn.textContent = "Draw / edit structure";
+    let kStarting = false;
 
-            return;
-        }
-
-        kBox.hidden = false;
-        drawBtn.textContent = "Hide editor";
-
+    // Starts the editor the first time the Structure window is on screen.
+    async function ensureKetcher() {
         if (kFrame) {
-            pushToKetcher();
+            if (kApi) pushToKetcher();
 
             return;
         }
+
+        if (kStarting) return;
 
         const url = host.dataset.ketcherUrl;
 
@@ -919,6 +913,7 @@
             return;
         }
 
+        kStarting = true;
         kNote.textContent = "Loading the structure editor (about 30 MB, cached after the first time)…";
         kFrame = el("iframe", "tw-chem-frame");
         kFrame.title = "Structure editor";
@@ -927,20 +922,54 @@
 
         try {
             kApi = await ketcherReady(kFrame);
-            await pushToKetcher();
+
+            // The editor object exists a moment before it accepts a structure:
+            // load it, check it took, and try again if not.
+            for (let attempt = 0; attempt < 8; attempt += 1) {
+                await new Promise(resolve => setTimeout(resolve, attempt ? 700 : 300));
+                await pushToKetcher();
+
+                if (!(S.mol.trim() || S.smiles.trim())) break;
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                let loaded = "";
+
+                try { loaded = await kApi.getSmiles(); } catch (error) { loaded = ""; }
+
+                if (loaded) break;
+            }
+
             kApi.editor.subscribe("change", () => {
                 if (kMute) return;
 
                 clearTimeout(kPullTimer);
                 kPullTimer = setTimeout(pullFromKetcher, 500);
             });
-            kNote.textContent = "Draw here; SMILES, MOL block and the properties update as you draw. Save the record to keep it.";
+            kNote.textContent = "Draw here: the properties, SMILES and MOL block follow. Save the record to keep it.";
         } catch (error) {
             kNote.textContent = String(error && error.message ? error.message : error);
+        } finally {
+            kStarting = false;
         }
     }
 
-    drawBtn.addEventListener("click", toggleKetcher);
+    function structureShown() {
+        const pane = host.closest ? host.closest("[data-tw-pane]") : null;
+
+        return !pane || !pane.hidden;
+    }
+
+    function watchStructure() {
+        const pane = host.closest ? host.closest("[data-tw-pane]") : null;
+
+        if (structureShown()) ensureKetcher();
+
+        if (pane && typeof MutationObserver !== "undefined") {
+            new MutationObserver(() => { if (!pane.hidden) ensureKetcher(); }).observe(pane, {attributes: true, attributeFilter: ["hidden"]});
+        }
+    }
+
     svgBtn.addEventListener("click", async () => {
         if (!S.mol.trim() && !S.smiles.trim()) {
             setStatus("Draw or paste a structure first.", "tw-warn");
@@ -952,11 +981,11 @@
             let api = kApi;
 
             if (!api) {
-                await toggleKetcher();
+                await ensureKetcher();
                 api = kApi;
             }
 
-            const blob = await api.generateImage(S.mol.trim() || S.smiles.trim(), {outputFormat: "svg"});
+            const blob = await api.generateImage(S.mol.trim() ? S.mol : S.smiles.trim(), {outputFormat: "svg"});
             const url = URL.createObjectURL(blob);
             const a = el("a");
 
@@ -1195,30 +1224,45 @@
         return box;
     }
 
+    // Each part goes to its own workbench window when the page has one; on a
+    // page without those windows everything stays in the single host.
+    const MOUNTS = {
+        compound: document.getElementById("tw-chem-compound"),
+        props: document.getElementById("tw-chem-props"),
+        hazards: document.getElementById("tw-chem-hazards"),
+        reaction: document.getElementById("tw-chem-reaction"),
+        calc: document.getElementById("tw-chem-calc"),
+    };
+
+    function mount(key, title, ...children) {
+        if (MOUNTS[key]) MOUNTS[key].append(...children);
+        else host.append(section(title, ...children));
+    }
+
     const idRow = el("div", "tw-row");
     const ids = el("div", "tw-row");
     const smilesActions = el("div", "tw-row");
     const molActions = el("div", "tw-row");
+    const textBox = el("details", "tw-chem-text");
 
     idRow.append(field("Name", nodes.name), field("CAS number", nodes.cas), field("PubChem CID", nodes.cid));
     ids.append(field("IUPAC name", nodes.iupac), field("InChIKey", nodes.inchikey));
     smilesActions.append(lookupBtn, stockLink, addStock);
-    molActions.append(drawBtn, molBtn, molDownload, svgBtn, copySmiles, molFile);
+    molActions.append(molBtn, molDownload, svgBtn, copySmiles, molFile);
+    textBox.append(el("summary", "", "SMILES and MOL block (text)"), field("SMILES", nodes.smiles), field("MOL block", nodes.mol));
 
-    host.append(
-        section("Compound", idRow, smilesActions, status, ids),
-        section("Structure", kBox, kNote, field("SMILES", nodes.smiles), field("MOL block", nodes.mol), molActions, field("Molecular formula (used when there is no structure)", nodes.formula), result),
-        section("Hazards", hazardBox, el("p", "tw-note", "Mark what applies and check the supplier's safety data sheet before use.")),
-        section("Solution calculator", calcRow, el("p", "tw-note", "Dilution (C1·V1 = C2·V2):"), dilRow),
-        section("Reaction stoichiometry", reactionBox, csvBtn),
-        section("Notes", field("", nodes.notes)),
-    );
+    host.append(molActions, kBox, kNote, textBox);
+    mount("compound", "Compound", idRow, smilesActions, status, ids, field("Molecular formula (used when there is no structure)", nodes.formula), field("Notes", nodes.notes));
+    mount("props", "Properties", result);
+    mount("hazards", "Hazards", hazardBox, el("p", "tw-note", "Mark what applies and check the supplier's safety data sheet before use."));
+    mount("calc", "Solution calculator", calcRow, el("p", "tw-note", "Dilution (C1·V1 = C2·V2):"), dilRow);
+    mount("reaction", "Reaction stoichiometry", reactionBox, csvBtn);
 
     function sync() {
         TEXT_KEYS.forEach(key => {
             if (nodes[key]) nodes[key].value = S[key];
         });
-        host.querySelectorAll("[data-hazard]").forEach(box => {
+        document.querySelectorAll("#tw-chem-hazards [data-hazard], #tw-chemical [data-hazard]").forEach(box => {
             box.checked = S.hazards.split(",").includes(box.dataset.hazard);
         });
         renderResult();
@@ -1249,5 +1293,7 @@
         prettyFormula,
     };
 
+
     sync();
+    watchStructure();
 }());
