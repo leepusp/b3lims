@@ -217,6 +217,12 @@
             </div>
         `;
 
+        // Files are registered from the drop zone on the front page (one place
+        // for file intake); this form creates blank records and tools.
+        const modeSwitch = section.querySelector(".mri-mode-switch");
+
+        if (modeSwitch) modeSwitch.hidden = true;
+
         cardBody.prepend(section);
 
         const modeButtons = [

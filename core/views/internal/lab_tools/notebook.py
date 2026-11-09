@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 
+from core.models.lab_tools.tool_record import ToolRecord
 from core.models.lab_tools.notebook import (
     MolecularSecondaryStructure,
     MolecularAlignment,
@@ -1266,12 +1267,57 @@ def molecular_registry_index(request):
             | Q(linked_sample__sample_id__icontains=query)
         ).distinct()
 
-    if active_type in valid_sequence_types:
+    tool_slugs = {value for value, _label in ToolRecord.TOOL_CHOICES}
+    active_tool = active_type if active_type in tool_slugs else ""
+
+    if active_tool:
+        molecules = molecules.none()
+        active_type = ""
+    elif active_type in valid_sequence_types:
         molecules = molecules.filter(
             sequence_type=active_type
         )
     else:
         active_type = ""
+
+    tool_universe = list(
+        ToolRecord.objects.filter(
+            owner=request.user
+        ).values_list("tool", flat=True)
+        if not request.user.is_superuser
+        else ToolRecord.objects.values_list("tool", flat=True)
+    )
+    tool_records = (
+        ToolRecord.objects.all()
+        if request.user.is_superuser
+        else ToolRecord.objects.filter(owner=request.user)
+    )
+
+    if active_tool:
+        tool_records = tool_records.filter(tool=active_tool)
+    elif active_type:
+        tool_records = tool_records.none()
+
+    if query:
+        tool_records = tool_records.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )
+
+    tool_records = list(tool_records.select_related("owner")[:60])
+    tool_help = {
+        "gel": "Gel photo, lanes, marker calibration and band sizes.",
+        "assembly": "Build a plasmid from parts, without an open vector.",
+        "chemical": "Structure notes, SMILES/MOL, formula and mass.",
+    }
+    tool_cards = [
+        (
+            value,
+            label,
+            tool_universe.count(value),
+            tool_help.get(value, ""),
+        )
+        for value, label in ToolRecord.TOOL_CHOICES
+    ]
 
     molecule_count = molecules.count()
     molecules = list(molecules)
@@ -1316,6 +1362,11 @@ def molecular_registry_index(request):
                 )
             ),
             "registry_total": len(registry_universe),
+            "tool_cards": tool_cards,
+            "tool_records": tool_records,
+            "tool_total": len(tool_universe),
+            "active_tool": active_tool,
+            "tool_choices": ToolRecord.TOOL_CHOICES,
             "duplicate_total": len(
                 duplicate_groups(registry_universe)
             ),

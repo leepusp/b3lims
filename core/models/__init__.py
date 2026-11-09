@@ -63,6 +63,7 @@ from core.models.biobanks.biobank_user_role import BiobankUserRole
 from core.models.research_groups.model import ResearchGroup
 from core.models.chemicals.chemical import Chemical, ChemicalFile, ChemicalStockMovement
 from core.models.lab_tools.notebook import JupyterKernelSession, JupyterNotebook
+from core.models.lab_tools.tool_record import ToolRecord
 from core.models.samples.access import SampleAccessGrant
 from core.models.access_grants import ResourceAccessGrant
 from .user_profile import UserProfile

@@ -135,6 +135,7 @@ from core.views.internal.keywords.views import (
 
 # 8. LAB TOOLS (NOTEBOOK, MOLECULAR, PLASMID)
 from core.views.internal.lab_tools import notebook as notebook_views
+from core.views.internal.lab_tools import tool_records as tool_record_views
 from core.views.internal.lab_tools import notebook_composer as notebook_composer_views
 from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
 from core.views.internal.lab_tools import notebook_collab as notebook_collab_views
@@ -505,6 +506,11 @@ urlpatterns = [
     ),
     path('internal/lab-tools/molecular-registry/', notebook_views.molecular_registry_index, name='molecular_registry_index'),
     path('internal/lab-tools/molecular-registry/<int:sequence_id>/', notebook_views.molecular_sequence_detail, name='molecular_sequence_detail'),
+    path('internal/lab-tools/tools/create/', tool_record_views.tool_record_create, name='tool_record_create'),
+    path('internal/lab-tools/tools/<int:record_id>/', tool_record_views.tool_record_detail, name='tool_record_detail'),
+    path('internal/lab-tools/tools/<int:record_id>/state/', tool_record_views.tool_record_state_api, name='tool_record_state_api'),
+    path('internal/lab-tools/tools/<int:record_id>/file/', tool_record_views.tool_record_file_api, name='tool_record_file_api'),
+    path('internal/lab-tools/tools/<int:record_id>/delete/', tool_record_views.tool_record_delete_api, name='tool_record_delete_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/update/', notebook_views.molecular_sequence_update_api, name='molecular_sequence_update_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/data/', notebook_views.molecular_sequence_data_api, name='molecular_sequence_data_api'),
     path('internal/lab-tools/molecular-registry/api/records/<int:sequence_id>/alignments/', notebook_views.molecular_sequence_alignments_api, name='molecular_sequence_alignments_api'),

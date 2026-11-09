@@ -172,4 +172,50 @@
 
         if (file) inspect(file);
     });
+
+    /* Independent tools (Gel, Plasmid assembly, Chemical, ...) are created from
+     * the same form: picking one of them hides the sequence fields and posts
+     * the form to the tool endpoint instead. */
+    (() => {
+        const select = document.getElementById("molecule-type");
+        const sequence = document.getElementById("molecule-sequence");
+        const toolUrl = form.dataset.toolCreateUrl;
+
+        if (!select || !toolUrl) return;
+
+        const originalAction = form.getAttribute("action") || "";
+        const seqOnly = form.querySelectorAll("[data-seq-only]");
+        const toolOnly = form.querySelectorAll("[data-tool-only]");
+        const hidden = document.createElement("input");
+
+        hidden.type = "hidden";
+        hidden.name = "tool";
+
+        function apply() {
+            const isTool = select.value.indexOf("tool:") === 0;
+
+            seqOnly.forEach(node => {
+                node.hidden = isTool;
+            });
+            toolOnly.forEach(node => {
+                node.hidden = !isTool;
+            });
+
+            if (sequence) sequence.required = !isTool;
+
+            if (isTool) {
+                hidden.value = select.value.slice(5);
+                form.append(hidden);
+                form.setAttribute("action", toolUrl);
+            } else {
+                hidden.remove();
+
+                if (originalAction) form.setAttribute("action", originalAction);
+                else form.removeAttribute("action");
+            }
+        }
+
+        select.addEventListener("change", apply);
+        apply();
+    })();
 })();

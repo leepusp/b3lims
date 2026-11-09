@@ -11,8 +11,8 @@
 (function () {
     "use strict";
 
-    const root = document.getElementById("molecular-workspace");
     const pane = document.getElementById("mw-gel");
+    const root = document.getElementById("molecular-workspace") || pane;
     const calc = window.BiobankDigestCalc;
 
     if (!root || !pane || !calc) {
@@ -212,6 +212,8 @@
     function loadFile(file) {
         if (!file || !/^image\//.test(file.type)) return;
 
+        document.dispatchEvent(new CustomEvent("biobank:gel-photo", {detail: {file}}));
+
         const url = URL.createObjectURL(file);
         const image = new Image();
 
@@ -318,6 +320,7 @@
 
         drawOverlay(overlay.getContext("2d"), Math.max(11, 13 / S.zoom), Math.max(1, 1.5 / S.zoom));
         updateSide();
+        document.dispatchEvent(new CustomEvent("biobank:gel-change"));
     }
 
     function layout() {
@@ -1047,7 +1050,11 @@
         link.remove();
     }
 
+    let nameOverride = "";
+
     function baseName() {
+        if (nameOverride) return nameOverride.replace(/[^A-Za-z0-9._-]+/g, "_");
+
         const workspace = window.BiobankMolecularWorkspace;
         const snapshot = workspace ? workspace.getSnapshot() : null;
 
@@ -1158,7 +1165,76 @@
         if (!pane.hidden) redraw(false);
     });
 
+    const STATE_KEYS = ["rot", "fine", "bright", "contrast", "invert", "zoom", "lanes", "bands", "cal", "calStep", "ladderName", "ladderLane", "nextId", "sensitivity"];
+
+    function getState() {
+        const out = {};
+
+        STATE_KEYS.forEach(key => {
+            out[key] = S[key];
+        });
+
+        return JSON.parse(JSON.stringify(out));
+    }
+
+    function applyState(state) {
+        if (!state || typeof state !== "object") return;
+
+        STATE_KEYS.forEach(key => {
+            if (state[key] !== undefined) S[key] = JSON.parse(JSON.stringify(state[key]));
+        });
+        if (!LADDERS[S.ladderName]) S.ladderName = "1 kb";
+        ["bright", "contrast", "fine", "zoom"].forEach(key => {
+            sliders[key].value = String(S[key]);
+        });
+        invertBox.checked = !!S.invert;
+        ladderSelect.value = S.ladderName;
+    }
+
+    // Load a stored photo and then restore the marks made on it.
+    function loadUrl(url, state) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+
+            image.onload = () => {
+                const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
+                const canvas = newCanvas(image.width * scale, image.height * scale);
+
+                canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+                S.source = canvas;
+                applyState(state);
+                rebuild();
+
+                if (!state || !state.zoom) fit();
+                else layout();
+
+                setMode("lanes");
+                resolve();
+            };
+            image.onerror = () => reject(new Error("The stored photo could not be read."));
+            image.src = url;
+        });
+    }
+
     window.BiobankGel = {
+        getState,
+        setState: state => {
+            applyState(state);
+            if (S.source) rebuild();
+            else redraw(false);
+        },
+        loadUrl,
+        loadFile,
+        hasPhoto: () => !!S.source,
+        setName: value => {
+            nameOverride = String(value || "");
+        },
+        refresh: () => {
+            setMode(S.mode);
+            updateSide();
+
+            if (S.work && S.zoom === 1) fit();
+        },
         state: () => ({lanes: S.lanes.length, bands: S.bands.length, calibrated: S.cal.length >= 2}),
         loadCanvas: canvas => loadBitmap(canvas),
         demo: demoGel,

@@ -34,7 +34,7 @@
                     data-bs-toggle="collapse"
                     data-bs-target="#new-molecular-record">
                 <i class="bi bi-plus-lg me-1"></i>
-                New molecular record
+                New record
             </button>
         </div>
     </div>
@@ -43,13 +43,14 @@
          id="new-molecular-record">
         <form method="post"
               id="molecular-registry-create-form"
+              data-tool-create-url="{% url 'tool_record_create' %}"
               class="card shadow-sm"
               enctype="multipart/form-data"
               data-import-preview-url="{% url 'molecular_registry_import_preview_api' %}">
             {% csrf_token %}
 
             <div class="card-header">
-                <strong>Create molecular record</strong>
+                <strong>Create record</strong>
             </div>
 
             <div class="card-body">
@@ -81,10 +82,15 @@
                                     {{ label }}
                                 </option>
                             {% endfor %}
+                            <optgroup label="Independent tools">
+                                {% for value, label in tool_choices %}
+                                    <option value="tool:{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </optgroup>
                         </select>
                     </div>
 
-                    <div class="col-md-6 col-lg-3">
+                    <div class="col-md-6 col-lg-3" data-seq-only>
                         <label class="form-label"
                                for="molecule-topology">
                             Topology
@@ -101,7 +107,7 @@
                         </select>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12" data-seq-only>
                         <label class="form-label"
                                for="molecule-sequence">
                             Sequence
@@ -115,6 +121,15 @@
                         <div class="form-text">
                             FASTA headers, spaces and line breaks are
                             normalized during registration.
+                        </div>
+                    </div>
+
+                    <div class="col-12" data-tool-only hidden>
+                        <div class="form-text">
+                            Independent tools open in their own workspace and do
+                            not need a sequence. Their files are stored in your
+                            <code>biobank</code> folder, in a folder named after
+                            the tool; windows of other tools can be opened inside.
                         </div>
                     </div>
 
@@ -187,13 +202,16 @@
                 </a>
             </div>
         {% endfor %}
-        <div class="col-6 col-md-4 col-xl-3">
-            <div class="mr-hub-card is-soon" aria-disabled="true">
-                <span class="mr-hub-count">&mdash;</span>
-                <span class="mr-hub-label">Chemical</span>
-                <span class="mr-hub-help">Structures, formula, mass and reaction tables. Coming soon.</span>
+        {% for value, label, count, help in tool_cards %}
+            <div class="col-6 col-md-4 col-xl-3">
+                <a class="mr-hub-card{% if active_tool == value %} is-active{% endif %}"
+                   href="?type={{ value }}">
+                    <span class="mr-hub-count">{{ count }}</span>
+                    <span class="mr-hub-label">{{ label }}</span>
+                    <span class="mr-hub-help">{{ help }}</span>
+                </a>
             </div>
-        </div>
+        {% endfor %}
     </div>
 
     <div class="card shadow-sm">
@@ -227,6 +245,14 @@
                                 {{ label }}
                             </option>
                         {% endfor %}
+                        <optgroup label="Independent tools">
+                            {% for value, label in tool_choices %}
+                                <option value="{{ value }}"
+                                        {% if active_tool == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
                 </div>
 
@@ -323,6 +349,48 @@
         {% endif %}
     </div>
 
+    {% if tool_records or active_tool %}
+    <div class="card shadow-sm mt-3" id="tool-records">
+        <div class="card-header d-flex justify-content-between">
+            <strong>Independent tools</strong>
+            <span class="badge text-bg-light border">{{ tool_records|length }}</span>
+        </div>
+        {% if tool_records %}
+            <div class="mr-cards">
+                {% for record in tool_records %}
+                    <article class="mr-card" data-tool-record-type="{{ record.tool }}">
+                        <div class="mr-card-top">
+                            <span class="mr-badge mr-badge-other">{{ record.get_tool_display }}</span>
+                            <span class="mr-card-date">{{ record.updated_at|date:"Y-m-d" }}</span>
+                        </div>
+                        <a class="mr-card-name stretched-link"
+                           href="{% url 'tool_record_detail' record.id %}">{{ record.name }}</a>
+                        {% if record.description %}
+                            <div class="small text-muted">{{ record.description|truncatechars:90 }}</div>
+                        {% endif %}
+                        {% if record.original_filename %}
+                            <div class="small"><i class="bi bi-paperclip"></i> {{ record.original_filename }}</div>
+                        {% endif %}
+                        <button type="button"
+                                class="btn btn-sm btn-link text-danger mr-card-delete"
+                                data-delete-tool-record
+                                data-record-name="{{ record.name }}"
+                                data-delete-url="{% url 'tool_record_delete_api' record.id %}"
+                                onclick="deleteMolecularRegistryRecord(this)"
+                                title="Delete this record">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card-body text-center text-muted py-4">
+                No records of this tool yet. Use “New record” and pick it as the type.
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     </div>
 
     <aside class="mr-aside" aria-label="Registry overview">
@@ -346,7 +414,7 @@
         <section class="mr-aside-card">
             <h2 class="mr-aside-title">Coming to the Registry</h2>
             <ul class="mr-aside-list is-muted">
-                <li>Chemical structures and reaction tables</li>
+                <li>Chemical structure drawing (Ketcher) and reaction tables</li>
                 <li>Primer designer and binding sites across records</li>
                 <li>Bench calculators (dilution, molarity, vector : insert)</li>
                 <li>Workflow steps for structure prediction and docking</li>
@@ -433,8 +501,8 @@
 </script>
 
 
-<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v2" defer></script>
-<script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v2" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_registry_home.js' %}?v=20261109-home-v3" defer></script>
+<script src="{% static 'internal/lab_tools/molecular_registry_import.js' %}?v=20260808-registry-type-aware-import-u1-v3" defer></script>
 <script src="{% static 'internal/lab_tools/molecular_type_profiles.js' %}?v=20260819-protein-profile-structure-ready-v1"
         defer></script>
 {% endblock %}

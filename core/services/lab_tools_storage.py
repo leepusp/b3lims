@@ -28,6 +28,7 @@ ALLOWED_AREAS = {
     "jupyter",
     "molecular",
     "tmp",
+    "tools",
 }
 
 
