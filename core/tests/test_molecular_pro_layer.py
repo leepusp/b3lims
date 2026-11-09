@@ -252,3 +252,25 @@ class MolstarToolsPanelTests(SimpleTestCase):
         self.assertIn("mw-mol-tools-open", window)
         self.assertIn(".msp-layout-right{display:none!important}", css)
         self.assertIn(".mw-mol-tools-btn", css)
+
+
+class PaneHeightControlTests(SimpleTestCase):
+    def test_height_control_is_wired_and_valid(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        css = (STATIC / "molecular_seq_canvas.css").read_text(encoding="utf-8")
+        script = (STATIC / "molecular_pane_height.js").read_text(encoding="utf-8")
+
+        self.assertIn("molecular_pane_height.js", template)
+        self.assertIn("--mw-pane-h", css)
+        self.assertIn(".mwv-height-btn", css)
+        self.assertIn("biobank.paneHeight", script)
+
+        node = shutil.which("node")
+
+        if node:
+            result = subprocess.run(
+                [node, "--check", str(STATIC / "molecular_pane_height.js")],
+                capture_output=True, text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)

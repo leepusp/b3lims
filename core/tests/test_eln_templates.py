@@ -174,3 +174,16 @@ class ELNToolsPanelTests(TestCase):
             capture_output=True, text=True,
         )
         self.assertEqual(check.returncode, 0, check.stderr)
+
+
+class ELNToolsDrawerControlsTests(TestCase):
+    def test_drawer_can_be_minimised_and_widened(self):
+        from pathlib import Path
+
+        script = Path(settings.BASE_DIR, "core/static/internal/lab_tools/eln_tools.js").read_text(encoding="utf-8")
+        css = Path(settings.BASE_DIR, "core/static/internal/lab_tools/eln_tools.css").read_text(encoding="utf-8")
+
+        self.assertIn("is-min", script)
+        self.assertIn("is-wide", script)
+        self.assertIn(".bxt-drawer.is-min", css)
+        self.assertIn(".bxt-drawer.is-wide", css)

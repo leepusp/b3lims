@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_inspector.css' %}?v=20261109-digest-v7">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_map_canvas.css' %}?v=20261109-canvas-v3">
 <link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_edit_strip.css' %}?v=20261109-strip-v1">
-<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v7">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/molecular_seq_canvas.css' %}?v=20261109-seq-v8">
       <link rel="stylesheet"
             href="{% static 'internal/lab_tools/molecular_sequence_track.css' %}?v=20260806-sequence-track">
 {% if molecule.sequence_type != "protein" %}
@@ -911,6 +911,8 @@
 <script src="{% static 'internal/lab_tools/molecular_workbench.js' %}?v=20261109-mode-v16"
         defer></script>
 {% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" %}
+<script src="{% static 'internal/lab_tools/molecular_pane_height.js' %}?v=20261109-height-v1"
+        defer></script>
 <script src="{% static 'internal/lab_tools/molecular_structure_window.js' %}?v=20261109-window-v3"
         defer></script>
 {% endif %}

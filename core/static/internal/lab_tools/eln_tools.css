@@ -30,3 +30,9 @@
 .bxt-el.cat-halogen{background:#c7d2fe}.bxt-el.cat-noble{background:#e9d5ff}.bxt-el.cat-lanthanide{background:#fbcfe8}.bxt-el.cat-actinide{background:#f5d0fe}
 .bxt-el:hover{outline:2px solid #2563eb}
 .bxt-drawer{width:min(34rem,100vw)}
+.bxt-head-controls{display:flex;align-items:center;gap:.4rem}
+.bxt-head-btn{border:1px solid #cbd5e1;background:#fff;border-radius:.3rem;width:1.8rem;height:1.8rem;line-height:1;color:#334155}
+.bxt-head-btn.is-on{background:#2563eb;border-color:#2563eb;color:#fff}
+.bxt-drawer.is-wide{width:min(64rem,100vw)}
+.bxt-drawer.is-min{bottom:auto}
+.bxt-drawer.is-min .bxt-tabs,.bxt-drawer.is-min .bxt-body{display:none}

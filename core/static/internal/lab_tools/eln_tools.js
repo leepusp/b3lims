@@ -567,10 +567,28 @@
         const body = el("div", "bxt-body");
         const built = {};
 
+        const minimize = el("button", "bxt-head-btn", "–");
+        const widen = el("button", "bxt-head-btn", "⤢");
+        const controls = el("div", "bxt-head-controls");
+
         close.type = "button";
         close.setAttribute("aria-label", "Close");
         close.addEventListener("click", () => drawer.classList.remove("is-open"));
-        head.append(el("strong", "", "Lab tools"), close);
+        minimize.type = widen.type = "button";
+        minimize.title = "Minimize to the title bar";
+        minimize.addEventListener("click", () => {
+            const min = drawer.classList.toggle("is-min");
+
+            minimize.textContent = min ? "▢" : "–";
+            minimize.title = min ? "Restore" : "Minimize to the title bar";
+        });
+        widen.title = "Make the panel larger";
+        widen.addEventListener("click", () => {
+            drawer.classList.toggle("is-wide");
+            widen.classList.toggle("is-on", drawer.classList.contains("is-wide"));
+        });
+        controls.append(widen, minimize, close);
+        head.append(el("strong", "", "Lab tools"), controls);
 
         function show(key) {
             tabs.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b.dataset.key === key));
