@@ -18,6 +18,7 @@
         <div class="d-flex gap-2 flex-wrap" id="sp-actions"></div>
     </div>
     <div class="alert alert-danger py-1 small" id="sp-error" hidden></div>
+    <div class="alert alert-info py-1 small" id="sp-info" role="status" hidden></div>
     <div class="alert alert-info py-2 small" id="sp-note" hidden></div>
 
     <div class="row g-3">
@@ -41,6 +42,27 @@
                         <div class="col-md-6"><label class="form-label small mb-1" for="sp-keywords">Keywords</label><input class="form-control form-control-sm" id="sp-keywords"></div>
                         <div class="col-md-6"><label class="form-label small mb-1" for="sp-funding">Funding</label><input class="form-control form-control-sm" id="sp-funding"></div>
                     </div>
+                    <fieldset class="border rounded p-2 mb-2" id="sp-sra" hidden>
+                        <legend class="small fw-semibold float-none w-auto px-1 mb-1">SRA (raw reads) &mdash; optional</legend>
+                        <div class="row g-2 mb-2">
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-bioproject">BioProject</label><input class="form-control form-control-sm" id="sp-bioproject" placeholder="PRJNA..."></div>
+                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-biosample">BioSample</label><input class="form-control form-control-sm" id="sp-biosample" placeholder="SAMN..."></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_strategy">Library strategy</label>
+                            <select class="form-select form-select-sm" id="sp-sra_strategy"><option value="">Choose…</option>{% for v in sra.strategy %}<option value="{{ v }}">{{ v }}</option>{% endfor %}</select></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_source">Library source</label>
+                            <select class="form-select form-select-sm" id="sp-sra_source"><option value="">Choose…</option>{% for v in sra.source %}<option value="{{ v }}">{{ v }}</option>{% endfor %}</select></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_selection">Library selection</label>
+                            <select class="form-select form-select-sm" id="sp-sra_selection"><option value="">Choose…</option>{% for v in sra.selection %}<option value="{{ v }}">{{ v }}</option>{% endfor %}</select></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_layout">Layout</label>
+                            <select class="form-select form-select-sm" id="sp-sra_layout"><option value="">Choose…</option>{% for v in sra.layout %}<option value="{{ v }}">{{ v }}</option>{% endfor %}</select></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_platform">Platform</label>
+                            <select class="form-select form-select-sm" id="sp-sra_platform"><option value="">Choose…</option>{% for v in sra.platform %}<option value="{{ v }}">{{ v }}</option>{% endfor %}</select></div>
+                        <div class="col-md-4"><label class="form-label small mb-1" for="sp-sra_instrument">Instrument model</label><input class="form-control form-control-sm" id="sp-sra_instrument" placeholder="Illumina NovaSeq 6000"></div>
+                        </div>
+                        <label class="form-label small mb-1" for="sp-sra_reads">Read files (one per line; R1/R2 or _1/_2 are paired automatically)</label>
+                        <textarea class="form-control form-control-sm" id="sp-sra_reads" rows="4" spellcheck="false" placeholder="sampleA_R1.fastq.gz&#10;sampleA_R2.fastq.gz"></textarea>
+                        <div class="small text-muted">The files are not stored here. This only builds the SRA metadata table.</div>
+                    </fieldset>
                     <button class="btn btn-sm btn-primary" type="submit" id="sp-save">Save details</button>
                 </form>
             </div></div>
@@ -106,5 +128,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261109-sp3"></script>
+<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261110-sp5"></script>
 {% endblock %}

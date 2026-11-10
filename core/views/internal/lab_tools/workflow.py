@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from core.context import base_context
+from core.models.lab_tools.submission import SubmissionPackage
 from core.models.lab_tools.workflow import Workflow, WorkflowStep, WorkflowStepFile
 from core.services import notebook_composer as composer
 from core.services import workflow as service
@@ -81,6 +82,7 @@ def workflow_detail(request, workflow_id):
         "status_choices": Workflow.Status.choices,
         "step_status_choices": WorkflowStep.Status.choices,
         "kind_choices": WorkflowStep.Kind.choices,
+        "submission_destinations": SubmissionPackage.Destination.choices,
         "run_partitions": getattr(settings, "BIOBANK_JUPYTER_PARTITIONS", ("basic", "max50")),
         "run_nodes": getattr(settings, "BIOBANK_JUPYTER_NODES", ("n01", "gn01", "gn02", "gn03")),
         "users": get_user_model().objects.filter(is_active=True).order_by("username"),
@@ -141,6 +143,12 @@ def workflow_api(request, workflow_id):
                 )
 
                 runs.refresh_run(run) if action == "refresh_run" else runs.cancel_run(run)
+        elif action == "create_submission":
+            step, _package = service.add_submission_step(
+                workflow, user, data.get("destination"), data.get("x") or 40, data.get("y") or 40
+            )
+
+            return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
         elif action == "delete_file":
             get_object_or_404(WorkflowStepFile, pk=data.get("file_id"), step__workflow=workflow).delete()
         elif action == "import_eln":

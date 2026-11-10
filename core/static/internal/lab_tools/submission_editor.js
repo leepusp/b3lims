@@ -32,8 +32,14 @@
         $("sp-error").hidden = !message;
     }
 
+    function showInfo(message) {
+        $("sp-info").textContent = message || "";
+        $("sp-info").hidden = !message;
+    }
+
     async function act(payload) {
         showError("");
+        showInfo("");
 
         const response = await fetch(apiUrl, {
             method: "POST",
@@ -53,6 +59,8 @@
             return data;
         }
 
+        if (data.related) showInfo("Added the sample and " + data.related + " related record" + (data.related === 1 ? "" : "s") + " (its molecular records and linked ELN entries).");
+
         pkg = data.package;
         manifest = data.manifest || "";
         render();
@@ -70,6 +78,12 @@
 
         return el;
     }
+
+    const META_KEYS = ["license", "authors", "keywords", "funding", "bioproject", "biosample", "sra_strategy", "sra_source", "sra_selection", "sra_layout", "sra_platform", "sra_instrument", "sra_reads"];
+
+    function showSra() { $("sp-sra").hidden = $("sp-destination").value !== "genbank"; }
+
+    $("sp-destination").addEventListener("change", showSra);
 
     function render() {
         $("sp-title-text").textContent = pkg.title;
@@ -92,8 +106,9 @@
             $("sp-title").value = pkg.title;
             $("sp-description").value = pkg.description;
             $("sp-destination").value = pkg.destination;
+            showSra();
             $("sp-workflow").value = pkg.workflow || "";
-            ["license", "authors", "keywords", "funding"].forEach((k) => { $("sp-" + k).value = (pkg.metadata || {})[k] || ""; });
+            META_KEYS.forEach((k) => { $("sp-" + k).value = (pkg.metadata || {})[k] || ""; });
         }
 
         form.querySelectorAll("input,select,textarea,button").forEach((el) => { el.disabled = !pkg.can_edit; });
@@ -151,7 +166,7 @@
         act({
             action: "update", title: $("sp-title").value, description: $("sp-description").value, destination: $("sp-destination").value,
             workflow: $("sp-workflow").value || null,
-            metadata: {license: $("sp-license").value, authors: $("sp-authors").value, keywords: $("sp-keywords").value, funding: $("sp-funding").value},
+            metadata: Object.fromEntries(META_KEYS.map((k) => [k, $("sp-" + k).value])),
         });
     });
 

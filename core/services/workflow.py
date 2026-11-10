@@ -153,6 +153,9 @@ def apply_step_fields(step, user, data):
         step.notes = _text(data["notes"], "notes")
     if "kind" in data:
         step.kind = _choice(data["kind"], WorkflowStep.Kind.choices, "kind")
+
+        if step.kind == "submission" and not (step.config or {}).get("package_id"):
+            raise ValidationError("Submission steps are created from the Submission package button.")
     if "status" in data:
         status = _choice(data["status"], WorkflowStep.Status.choices, "status")
 
@@ -216,6 +219,22 @@ def sync_notebook_step(step, user):
         nb.finished_at = timezone.now() if finished else None
         nb.finished_by = user if finished else None
         nb.save(update_fields=["finished", "finished_at", "finished_by"])
+
+
+def add_submission_step(workflow, user, destination, x=40, y=40):
+    """Create a draft submission package from the workflow and a step that points to it."""
+    from core.services import submissions
+
+    if workflow.steps.count() >= MAX_STEPS:
+        raise ValidationError(f"At most {MAX_STEPS} steps per workflow.")
+
+    package = submissions.create_from_workflow(workflow, user, destination)
+    step = WorkflowStep.objects.create(
+        workflow=workflow, title=f"Submission ({package.get_destination_display().split(' (')[0]})"[:200], kind="submission",
+        config={"package_id": package.pk}, x=int(x), y=int(y),
+    )
+
+    return step, package
 
 
 def add_step(workflow, user, data):
@@ -407,9 +426,36 @@ def _latest_run(step):
     return {"run": serialize_run(run) if run else None}
 
 
-def serialize_step(step):
+def _submission_info(step, user):
+    package_id = (step.config or {}).get("package_id") if step.kind == "submission" else None
+
+    if not package_id:
+        return {"submission": None}
+    if user is None:
+        return {"submission": {"id": package_id}}
+
+    from core.services import submissions
+
+    package = submissions.visible_packages(user).filter(pk=package_id).first()
+
+    if not package:
+        return {"submission": {"id": package_id, "hidden": True}}
+
+    return {"submission": {
+        "id": package.pk,
+        "title": package.title,
+        "status": package.status,
+        "status_label": package.get_status_display(),
+        "destination": package.get_destination_display().split(" (")[0],
+        "reference": package.external_reference,
+        "url": _url("submission_detail", package.pk),
+    }}
+
+
+def serialize_step(step, user=None):
     return {
         **_jupyter_info(step),
+        **_submission_info(step, user),
         **_latest_run(step),
         "id": step.pk,
         "title": step.title,
@@ -534,7 +580,7 @@ def serialize(workflow, user=None):
         notebooks = frozenset(visible_notebooks_for_user(user).filter(pk__in=wanted).values_list("pk", flat=True))
 
     items = [
-        _hide_unseen_links({**serialize_step(s), "preview": previews.get(s.pk, {})}, user, notebooks) for s in steps
+        _hide_unseen_links({**serialize_step(s, user), "preview": previews.get(s.pk, {})}, user, notebooks) for s in steps
     ]
     counts = {"todo": 0, "doing": 0, "done": 0, "blocked": 0}
 

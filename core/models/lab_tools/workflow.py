@@ -46,6 +46,7 @@ class WorkflowStep(models.Model):
         JUPYTER = "jupyter", "Jupyter notebook"  # phase 2
         GALAXY = "galaxy", "Galaxy"  # phase 2
         NOTE = "note", "Note"
+        SUBMISSION = "submission", "Data submission"
 
     workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name="steps")
     title = models.CharField(max_length=200)

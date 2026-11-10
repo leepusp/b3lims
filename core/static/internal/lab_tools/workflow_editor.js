@@ -214,6 +214,13 @@
         const p = step.preview || {};
         const out = [];
 
+        if (step.submission && !step.submission.hidden) {
+            const s = step.submission;
+
+            out.push("<div class='wf-prev'><div class='wf-prev-title'><i class='bi bi-cloud-upload'></i> " + esc(s.destination) + "</div><div class='wf-prev-sub'><span class='wf-sub wf-sub-" + esc(s.status) + "'>" + esc(s.status_label) + "</span>"
+                + (s.reference ? " " + esc(s.reference) : "") + "</div></div>");
+        }
+
         if (p.molecule) {
             const m = p.molecule;
 
@@ -357,8 +364,17 @@
 
         root.querySelectorAll(".wf-work-only").forEach((el) => { el.hidden = note; });
         $("wf-jupyter").hidden = kind !== "jupyter";
+        $("wf-submission").hidden = kind !== "submission";
         $("wf-f-notes-label").textContent = note ? "Annotation" : "Notes";
         $("wf-f-notes").rows = note ? 8 : 3;
+    }
+
+    function renderSubmission(step) {
+        const info = step.submission;
+
+        $("wf-submission-info").innerHTML = !info ? "" : info.hidden ? "A package you cannot open." : "<a href='" + esc(info.url) + "'>" + esc(info.title) + "</a><br>" + esc(info.destination)
+            + " &middot; " + esc(info.status_label) + (info.reference ? " &middot; " + esc(info.reference) : "")
+            + "<div class='text-muted'>Review, add details and submit from the package page.</div>";
     }
 
     function renderFiles(step) {
@@ -385,6 +401,7 @@
         draft = {eln: step.entry, molecule: step.molecule, sample: step.sample, jupyter: step.jupyter_notebook};
         ["eln", "molecule", "sample", "jupyter"].forEach((k) => setLink(k, step));
         applyKindLayout(step.kind);
+        renderSubmission(step);
         renderFiles(step);
         $("wf-f-params").value = step.parameters || "";
         $("wf-f-result").value = step.result_note || "";
@@ -683,6 +700,14 @@
         }
 
         $("wf-arrange").addEventListener("click", arrange);
+        document.querySelectorAll("[data-wf-submit]").forEach((button) => button.addEventListener("click", async () => {
+            const data = await act({action: "create_submission", destination: button.dataset.wfSubmit, x: 40, y: wf.steps.length ? bottomY() + 24 : 40});
+
+            if (data && data.step_id) {
+                selected = data.step_id;
+                render();
+            }
+        }));
         $("wf-add-note").addEventListener("click", async () => {
             const data = await act({action: "add_step", step: {title: "Note", kind: "note", x: 40, y: wf.steps.length ? bottomY() + 24 : 40}});
 

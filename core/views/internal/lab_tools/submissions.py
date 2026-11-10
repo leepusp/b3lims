@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from core.context import base_context
 from core.models.lab_tools.submission import SubmissionPackage
 from core.services import notebook_composer as composer
+from core.services import submission_adapters as adapters
 from core.services import submissions as service
 from core.services import taxonomy_local
 from core.services.workflow import visible_workflows
@@ -101,6 +102,10 @@ def submission_detail(request, package_id):
         "destinations": SubmissionPackage.Destination.choices,
         "taxonomy_ready": taxonomy_local.available(),
         "workflows": visible_workflows(package.owner).exclude(status="archived").order_by("name"),
+        "sra": {
+            "strategy": adapters.SRA_STRATEGY, "source": adapters.SRA_SOURCE, "selection": adapters.SRA_SELECTION,
+            "layout": adapters.SRA_LAYOUT, "platform": adapters.SRA_PLATFORM,
+        },
     })
 
     return render(request, "internal/lab_tools/submission_detail.html", context)
@@ -115,6 +120,7 @@ def submission_api(request, package_id):
     try:
         data = _payload(request)
         action = data.get("action")
+        related = 0
 
         if action in ("update", "add_item", "remove_item") and not service.can_edit(user, package):
             raise ValidationError("This package can no longer be edited.")
@@ -123,7 +129,14 @@ def submission_api(request, package_id):
             service.update_fields(package, data)
             package.save()
         elif action == "add_item":
-            service.add_item(package, user, data.get("kind"), data.get("ref"))
+            item = service.add_item(package, user, data.get("kind"), data.get("ref"))
+
+            if item.kind == "sample" and data.get("related", True):
+                related = service.add_sample_related(package, user, item.sample)
+
+                service.suggest_taxon(package)
+                package.save()
+
         elif action == "remove_item":
             get_object_or_404(package.items, pk=data.get("item_id")).delete()
         elif action == "propose":
@@ -152,7 +165,10 @@ def submission_api(request, package_id):
 
     package.refresh_from_db()
 
-    return JsonResponse({"status": "success", "package": service.serialize(package, user), "manifest": service.manifest_json(package)})
+    return JsonResponse({
+        "status": "success", "related": related, "package": service.serialize(package, user),
+        "manifest": service.manifest_json(package),
+    })
 
 
 @login_required

@@ -14,7 +14,11 @@ from core.services import repository, submission_adapters
 
 S = SubmissionPackage.Status
 MAX_TEXT = {"title": 200, "description": 5000, "review_note": 2000}
-METADATA_KEYS = ("license", "authors", "keywords", "funding")
+METADATA_KEYS = (
+    "license", "authors", "keywords", "funding", "bioproject", "biosample", "sra_strategy", "sra_source",
+    "sra_selection", "sra_layout", "sra_platform", "sra_instrument", "sra_reads",
+)
+METADATA_LIMITS = {"sra_reads": 6000}
 APPROVE_PERM = "core.approve_submission"
 
 
@@ -70,7 +74,9 @@ def update_fields(package, data) -> None:
         if not isinstance(raw, dict):
             raise ValidationError("Invalid metadata.")
 
-        package.metadata = {k: str(raw[k]).strip()[:1000] for k in METADATA_KEYS if k in raw and str(raw[k]).strip()}
+        package.metadata = {
+            k: str(raw[k]).strip()[: METADATA_LIMITS.get(k, 1000)] for k in METADATA_KEYS if k in raw and str(raw[k]).strip()
+        }
     if "workflow" in data:
         from core.services.workflow import visible_workflows
 
@@ -292,3 +298,101 @@ def manifest_json(package) -> str:
         return json.dumps(json.loads(path.read_text(encoding="utf-8")), indent=2, ensure_ascii=False)
     except (OSError, ValueError):
         return ""
+
+
+def add_sample_related(package, user, sample) -> int:
+    """Also add what hangs on a sample: its molecular records and the ELN entries linked to it.
+
+    Only records the user may see are added; duplicates and the item limit are skipped quietly.
+    Returns how many records were added.
+    """
+    from core.models.lab_tools.notebook import NotebookSampleLink
+    from core.permissions.notebook import visible_notebook_entries_for_user
+    from core.views.internal.lab_tools.notebook import _visible_molecular_sequences_for_user
+
+    added = 0
+    molecules = _visible_molecular_sequences_for_user(user).filter(linked_sample=sample).order_by("name")
+    entry_ids = NotebookSampleLink.objects.filter(entry__in=visible_notebook_entries_for_user(user), sample=sample)
+    entries = visible_notebook_entries_for_user(user).filter(pk__in=entry_ids.values("entry_id")).order_by("title")
+
+    for kind, queryset in (("sequence", molecules), ("entry", entries)):
+        for obj in queryset[:50]:
+            try:
+                add_item(package, user, kind, obj.pk)
+                added += 1
+            except ValidationError:
+                continue
+
+    return added
+
+
+def suggest_taxon(package) -> None:
+    """Set the taxon when every sample of the package names the same organism and the taxonomy knows it exactly."""
+    from core.services import taxonomy_local
+
+    if package.taxon_id or not taxonomy_local.available():
+        return
+
+    names = {
+        (i.sample.organism_name or "").strip().lower() for i in package.items.filter(kind="sample").select_related("sample")
+        if i.sample
+    } - {""}
+
+    if len(names) != 1:
+        return
+
+    name = names.pop()
+    exact = [r for r in taxonomy_local.search(name, limit=20) if r["name"].lower() == name]
+
+    if len(exact) == 1:
+        repository.set_taxon(package, exact[0]["taxid"])
+        package.save()
+
+
+def create_from_workflow(workflow, user, destination) -> SubmissionPackage:
+    """A draft package holding the records the workflow's steps point to (only those the user may see)."""
+    from core.services.workflow import can_edit as can_edit_workflow
+
+    if destination not in SubmissionPackage.Destination.values:
+        raise ValidationError("Invalid destination.")
+    if not can_edit_workflow(user, workflow):
+        raise ValidationError("You cannot edit this workflow.")
+
+    label = SubmissionPackage.Destination(destination).label.split(" (")[0]
+    package = SubmissionPackage.objects.create(
+        title=f"{workflow.name} - {label}"[:200], destination=destination, owner=user, workflow=workflow
+    )
+    wanted = []
+
+    if workflow.entry_id:
+        wanted.append(("entry", workflow.entry_id))
+
+    for step in workflow.steps.exclude(kind="note").order_by("y", "x", "id"):
+        if step.molecule_id:
+            wanted.append(("sequence", step.molecule_id))
+        if step.sample_id:
+            wanted.append(("sample", step.sample_id))
+        if step.entry_id:
+            wanted.append(("entry", step.entry_id))
+        if (step.config or {}).get("notebook_id"):
+            wanted.append(("notebook", step.config["notebook_id"]))
+
+    seen = set()
+
+    for kind, ref in wanted:
+        if (kind, ref) in seen:
+            continue
+
+        seen.add((kind, ref))
+
+        try:
+            item = add_item(package, user, kind, ref)
+        except ValidationError:
+            continue  # not visible to this user, or limit reached: leave it out
+
+        if kind == "sample":
+            add_sample_related(package, user, item.sample)
+
+    suggest_taxon(package)
+
+    return package

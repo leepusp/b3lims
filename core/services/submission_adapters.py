@@ -64,6 +64,10 @@ def validate(package) -> dict:
     if not package.items.exists():
         errors.append("Add at least one record.")
 
+    for item in _items(package, "sample"):
+        if item.sample and item.sample.is_embargoed and package.destination != D.INTERNAL:
+            warnings.append(f"Sample {item.sample.sample_id} is embargoed: confirm it may be released before submitting.")
+
     if package.destination == D.GENBANK:
         _validate_genbank(package, errors, warnings)
     elif package.destination == D.PDB:
@@ -77,9 +81,104 @@ def validate(package) -> dict:
     return {"errors": errors, "warnings": warnings}
 
 
+SRA_STRATEGY = (
+    "WGS", "WGA", "WXS", "RNA-Seq", "miRNA-Seq", "ncRNA-Seq", "AMPLICON", "ChIP-Seq", "ATAC-seq", "Bisulfite-Seq",
+    "Hi-C", "CLONE", "POOLCLONE", "OTHER",
+)
+SRA_SOURCE = ("GENOMIC", "TRANSCRIPTOMIC", "METAGENOMIC", "METATRANSCRIPTOMIC", "SYNTHETIC", "VIRAL RNA", "OTHER")
+SRA_SELECTION = ("RANDOM", "PCR", "RANDOM PCR", "cDNA", "ChIP", "Restriction Digest", "size fractionation", "other", "unspecified")
+SRA_LAYOUT = ("single", "paired")
+SRA_PLATFORM = ("ILLUMINA", "OXFORD_NANOPORE", "PACBIO_SMRT", "ION_TORRENT", "LS454", "BGISEQ", "DNBSEQ", "CAPILLARY")
+READ_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.(fastq|fq|bam|cram)(\.gz)?$")
+PAIR = re.compile(r"^(?P<stem>.+?)[._-](?:R)?(?P<n>[12])(?:[._-]001)?(?P<ext>\.(?:fastq|fq)(?:\.gz)?)$")
+# Feature types of the molecular registry -> INSDC feature keys (GenBank feature table).
+FEATURE_KEYS = {
+    "promoter": "promoter", "rbs": "RBS", "cds": "CDS", "terminator": "terminator", "ori": "rep_origin",
+    "antibiotic": "misc_feature", "primer": "primer_bind", "domain": "misc_feature", "utr": "misc_feature",
+    "custom": "misc_feature",
+}
+
+
+def _reads(package) -> list[str]:
+    return [line.strip() for line in str((package.metadata or {}).get("sra_reads", "")).splitlines() if line.strip()]
+
+
+def sra_libraries(package) -> list[dict]:
+    """Group the read files into libraries: R1/R2 (or _1/_2) of one stem make a paired library."""
+    groups: dict[str, dict] = {}
+
+    for name in _reads(package):
+        match = PAIR.match(name)
+
+        if match:
+            entry = groups.setdefault(match["stem"], {"id": match["stem"], "files": {}})
+            entry["files"][match["n"]] = name
+        else:
+            groups.setdefault(name.rsplit(".", 1)[0], {"id": name.rsplit(".", 1)[0], "files": {}})["files"]["1"] = name
+
+    libraries = []
+
+    for entry in groups.values():
+        files = [entry["files"][k] for k in sorted(entry["files"])]
+
+        libraries.append({"id": entry["id"], "files": files, "layout": "paired" if len(files) == 2 else "single"})
+
+    return libraries
+
+
+def _validate_sra(package, errors, warnings):
+    meta = package.metadata or {}
+
+    for key, allowed, label in (
+        ("sra_strategy", SRA_STRATEGY, "library strategy"), ("sra_source", SRA_SOURCE, "library source"),
+        ("sra_selection", SRA_SELECTION, "library selection"), ("sra_platform", SRA_PLATFORM, "platform"),
+    ):
+        if not meta.get(key):
+            errors.append(f"SRA needs the {label}.")
+        elif meta[key] not in allowed:
+            errors.append(f"SRA {label} must be one of: {', '.join(allowed)}.")
+
+    if not meta.get("sra_instrument"):
+        errors.append("SRA needs the instrument model (for example Illumina NovaSeq 6000).")
+
+    names = _reads(package)
+    bad = [n for n in names if not READ_FILE.match(n)]
+
+    if bad:
+        errors.append(f"Read file names must be fastq/fq/bam/cram (.gz allowed), no folders or spaces: {bad[0][:60]}")
+    if len(names) != len(set(names)):
+        errors.append("A read file is listed more than once.")
+
+    libraries = sra_libraries(package)
+    layout = meta.get("sra_layout")
+
+    if layout and layout not in SRA_LAYOUT:
+        errors.append("SRA layout must be single or paired.")
+    elif layout and any(lib["layout"] != layout for lib in libraries):
+        errors.append(f"Layout is {layout}, but the file names look like {'single' if layout == 'paired' else 'paired'} reads.")
+
+    if any(len(PAIR.findall(n)) and not any(len(lib["files"]) == 2 and n in lib["files"] for lib in libraries) for n in names):
+        warnings.append("Some read files look like one mate of a pair, but the other mate is not listed.")
+    if not meta.get("biosample"):
+        warnings.append("No BioSample accession: the portal will ask you to register the samples.")
+    if not meta.get("bioproject"):
+        warnings.append("No BioProject accession: the portal will ask you to create or choose one.")
+
+    warnings.append("The read files themselves are not stored here: upload them in the portal (or via FTP/Aspera).")
+
+
 def _validate_genbank(package, errors, warnings):
     sequences = [i for i in _items(package, "sequence") if i.molecule]
     nucleotide = [i for i in sequences if i.molecule.sequence_type in NUCLEOTIDE_TYPES]
+    reads_only = bool(_reads(package)) and not sequences
+
+    if reads_only:
+        _validate_sra(package, errors, warnings)
+
+        if not package.taxon_id:
+            errors.append("SRA needs the source organism: choose a taxon.")
+
+        return
 
     if sequences and not nucleotide:
         errors.append("GenBank takes nucleotide sequences; this package only has proteins.")
@@ -104,7 +203,19 @@ def _validate_genbank(package, errors, warnings):
     if len(sequences) != len(nucleotide):
         warnings.append("Protein records are left out of the GenBank files; they are annotated on the nucleotide record.")
 
-    warnings.append("Raw reads are not kept in the LIMS; submit them to SRA separately in the same Submission Portal.")
+    for item in nucleotide:
+        length = len("".join((item.molecule.sequence or "").split()))
+
+        for f in item.molecule.features.all():
+            if f.start < 1 or f.end > length or f.end < f.start:
+                warnings.append(f"{item.molecule.name}: feature {f.name} ({f.start}-{f.end}) does not fit the sequence and is left out of features.tbl.")
+            elif f.feature_type == "cds" and (f.end - f.start + 1) % 3:
+                warnings.append(f"{item.molecule.name}: CDS {f.name} is not a multiple of 3 nt; check it before submitting.")
+
+    if _reads(package):
+        _validate_sra(package, errors, warnings)
+    else:
+        warnings.append("Raw reads are not kept in the LIMS. To submit them to SRA too, list the file names under SRA reads.")
 
 
 def _validate_pdb(package, errors, warnings):
@@ -157,9 +268,97 @@ def destination_files(package) -> dict[str, bytes]:
     return {}
 
 
+def _tsv(value) -> str:
+    return " ".join(str(value or "").replace("\t", " ").split())
+
+
+def feature_table(seq_id, molecule) -> str:
+    """NCBI five-column feature table for one record; features that do not fit are skipped."""
+    length = len("".join((molecule.sequence or "").split()))
+    lines = [f">Feature {seq_id}"]
+
+    for f in molecule.features.all():
+        if f.start < 1 or f.end > length or f.end < f.start:
+            continue
+
+        key = FEATURE_KEYS.get(f.feature_type, "misc_feature")
+        first, last = (f.end, f.start) if f.strand == "-" else (f.start, f.end)
+        label = _tsv(f.name)[:120]
+
+        lines.append(f"{first}\t{last}\t{key}")
+
+        if key == "CDS":
+            lines.append(f"\t\t\tproduct\t{label}")
+            lines.append("\t\t\tcodon_start\t1")
+        elif key == "misc_feature":
+            prefix = {"antibiotic": "antibiotic marker: ", "domain": "domain: ", "utr": "UTR: "}.get(f.feature_type, "")
+
+            lines.append(f"\t\t\tnote\t{prefix}{label}")
+        elif key == "primer_bind":
+            lines.append(f"\t\t\tnote\t{label}")
+        else:
+            lines.append(f"\t\t\tnote\t{label}")
+
+    return "\n".join(lines) + "\n" if len(lines) > 1 else ""
+
+
+def _sra_files(package) -> dict[str, bytes]:
+    meta = package.metadata or {}
+    header = [
+        "bioproject_accession", "biosample_accession", "library_ID", "title", "library_strategy", "library_source",
+        "library_selection", "library_layout", "platform", "instrument_model", "design_description", "filetype",
+        "filename", "filename2",
+    ]
+    rows = ["\t".join(header)]
+
+    for lib in sra_libraries(package):
+        name = lib["files"][0].lower()
+        filetype = "bam" if name.endswith(".bam") else "cram" if name.endswith(".cram") else "fastq"
+
+        rows.append("\t".join(_tsv(v) for v in [
+            meta.get("bioproject", ""), meta.get("biosample", ""), lib["id"], f"{package.title} - {lib['id']}",
+            meta.get("sra_strategy", ""), meta.get("sra_source", ""), meta.get("sra_selection", ""), lib["layout"],
+            meta.get("sra_platform", ""), meta.get("sra_instrument", ""), package.description[:300], filetype,
+            lib["files"][0], lib["files"][1] if len(lib["files"]) > 1 else "",
+        ]))
+
+    samples = [i.sample for i in _items(package, "sample") if i.sample]
+    files = {}
+
+    if samples:
+        attributes = ["sample_name\torganism\tsample_type\tdescription\tkeywords\tlims_sample_id"]
+
+        for s in samples:
+            attributes.append("\t".join(_tsv(v) for v in [
+                s.sample_id, s.organism_name or package.taxon_name, s.sample_type, (s.scientific_notes or "")[:300],
+                ", ".join(k.value for k in s.keywords.all()[:10]), s.sample_id,
+            ]))
+
+        files["sra/biosample_attributes.tsv"] = ("\n".join(attributes) + "\n").encode()
+
+    readme = (
+        "SRA submission (NCBI Submission Portal)\n"
+        "========================================\n"
+        "1. Sign in at https://submit.ncbi.nlm.nih.gov/ and start an SRA submission.\n"
+        "2. Register the BioProject and BioSample(s) first if you have no accession yet, and put them in sra/sra_metadata.tsv.\n"
+        "   sra/biosample_attributes.tsv lists the LIMS samples of this package as a starting point. BioSample also asks for\n"
+        "   collection date and geographic location, which the LIMS does not hold: add them in the portal.\n"
+        "3. Upload sra/sra_metadata.tsv as the SRA metadata file (it follows the portal's template columns).\n"
+        "4. Upload the read files listed in the table (portal, FTP or Aspera). They are not stored in this package.\n"
+        "5. Check the files' md5 sums against what the sequencing facility gave you.\n"
+        "6. After NCBI replies, record the SRA accessions (SRR...) on the package page.\n"
+    )
+
+    files["sra/sra_metadata.tsv"] = ("\n".join(rows) + "\n").encode()
+    files["sra/README.txt"] = readme.encode()
+
+    return files
+
+
 def _genbank_files(package) -> dict[str, bytes]:
     used: set[str] = set()
     fasta, table = [], ["Sequence_ID\tOrganism\tdb_xref"]
+    features: list[str] = []
     organism = _organism(package)
 
     for item in _items(package, "sequence"):
@@ -179,6 +378,7 @@ def _genbank_files(package) -> dict[str, bytes]:
         seq = (m.sequence or "").upper().replace(" ", "").replace("U", "T") if m.sequence_type != "rna" else (m.sequence or "").upper().replace(" ", "")
 
         fasta.append(f">{seq_id} {mods.strip()}\n" + "\n".join(seq[i:i + 70] for i in range(0, len(seq), 70)))
+        features.append(feature_table(seq_id, m))
         table.append(f"{seq_id}\t{organism}\t" + (f"taxon:{package.taxon_id}" if package.taxon_id else ""))
 
     readme = (
@@ -187,16 +387,29 @@ def _genbank_files(package) -> dict[str, bytes]:
         "1. Sign in at https://submit.ncbi.nlm.nih.gov/ and start a GenBank submission (nucleotide sequences).\n"
         "2. Upload genbank/sequences.fsa. The organism and topology are already in each definition line.\n"
         "3. If the portal asks for a source table, use genbank/source_modifiers.tsv.\n"
+        "   If it asks for sequence annotation, upload genbank/features.tbl (the feature table made from the registry features).\n"
+        "   NCBI checks the table when you submit: CDS features must translate correctly, so review them first.\n"
         "4. Fill in the submitter, BioProject and BioSample in the portal.\n"
         "5. For raw reads, open the SRA flow in the same portal and upload them there; they are not stored here.\n"
         "6. After NCBI replies, record the accession on the package page.\n"
     )
 
-    return {
-        "genbank/sequences.fsa": ("\n".join(fasta) + "\n").encode(),
-        "genbank/source_modifiers.tsv": ("\n".join(table) + "\n").encode(),
-        "genbank/README.txt": readme.encode(),
-    }
+    files = {}
+
+    if fasta:
+        files = {
+            "genbank/sequences.fsa": ("\n".join(fasta) + "\n").encode(),
+            "genbank/source_modifiers.tsv": ("\n".join(table) + "\n").encode(),
+            "genbank/README.txt": readme.encode(),
+        }
+
+        if any(features):
+            files["genbank/features.tbl"] = "".join(features).encode()
+
+    if _reads(package):
+        files.update(_sra_files(package))
+
+    return files
 
 
 def _pdb_files(package) -> dict[str, bytes]:

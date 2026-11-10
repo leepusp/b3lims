@@ -4,7 +4,7 @@
 {% block title %}{{ workflow.name }} · Workflow · B3 LIMS{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261109-wf3">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261110-wf4">
 {% endblock %}
 
 {% block content %}
@@ -28,6 +28,10 @@
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-sm btn-primary" id="wf-add"><i class="bi bi-plus-lg me-1"></i>Add step</button>
                 <button class="btn btn-sm btn-outline-warning" type="button" id="wf-add-note"><i class="bi bi-sticky"></i> Add note</button>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Create a draft data-submission package from this workflow"><i class="bi bi-cloud-upload me-1"></i>Submission package</button>
+                    <ul class="dropdown-menu">{% for value, label in submission_destinations %}<li><button class="dropdown-item" type="button" data-wf-submit="{{ value }}">{{ label }}</button></li>{% endfor %}</ul>
+                </div>
             <button class="btn btn-sm btn-outline-secondary" type="button" id="wf-arrange" title="Lay the steps out in columns by flow order, without overlaps"><i class="bi bi-grid-3x2-gap me-1"></i>Arrange</button>
             <button class="btn btn-sm btn-outline-secondary" id="wf-import" title="Bring the steps of an ELN entry in as linked, chained steps"><i class="bi bi-journal-arrow-down me-1"></i>Import ELN steps</button>
             <button class="btn btn-sm btn-outline-secondary" id="wf-share" title="Who can edit this workflow"><i class="bi bi-people me-1"></i>Members</button>
@@ -58,7 +62,7 @@
                             <div class="col-6 wf-work-only"><label class="form-label small mb-1" for="wf-f-status">Status</label>
                                 <select class="form-select form-select-sm" id="wf-f-status">{% for v, l in step_status_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
                             <div class="col-6"><label class="form-label small mb-1" for="wf-f-kind">Type</label>
-                                <select class="form-select form-select-sm" id="wf-f-kind">{% for v, l in kind_choices %}<option value="{{ v }}" {% if v == 'galaxy' %}disabled{% endif %}>{{ l }}{% if v == 'galaxy' %} (soon){% endif %}</option>{% endfor %}</select></div>
+                                <select class="form-select form-select-sm" id="wf-f-kind">{% for v, l in kind_choices %}<option value="{{ v }}" {% if v == 'galaxy' or v == 'submission' %}disabled{% endif %}>{{ l }}{% if v == 'galaxy' %} (soon){% endif %}</option>{% endfor %}</select></div>
                         </div>
                         <div class="wf-work-only">
                         <label class="form-label small mb-1" for="wf-f-assignee">Owner</label>
@@ -110,6 +114,10 @@
                             <div class="wf-link" data-kind="molecule"><span class="wf-link-label"></span><button type="button" class="btn btn-sm btn-link p-0 wf-link-set">Choose molecular record</button></div>
                             <div class="wf-link" data-kind="sample"><span class="wf-link-label"></span><button type="button" class="btn btn-sm btn-link p-0 wf-link-set">Choose sample</button></div>
                         </div>
+                        <div class="border rounded p-2 mt-2 bg-light" id="wf-submission" hidden>
+                            <div class="small fw-semibold mb-1">Data submission</div>
+                            <div class="small" id="wf-submission-info"></div>
+                        </div>
                         <div class="wf-work-only mt-2" id="wf-files">
                             <div class="small fw-semibold mb-1">Images (gel, blot, microscopy)</div>
                             <div class="d-flex flex-wrap gap-1 mb-1" id="wf-files-list"></div>
@@ -157,5 +165,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261109-wf7"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261110-wf8"></script>
 {% endblock %}
