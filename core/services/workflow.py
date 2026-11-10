@@ -157,7 +157,7 @@ def apply_step_fields(step, user, data):
         step.kind = _choice(data["kind"], WorkflowStep.Kind.choices, "kind")
 
         if step.kind == "submission" and not (step.config or {}).get("package_id"):
-            raise ValidationError("Submission steps are created from the Submission package button.")
+            raise ValidationError("Submission steps are added from the Templates catalog (Single steps).")
     if "status" in data:
         status = _choice(data["status"], WorkflowStep.Status.choices, "status")
 

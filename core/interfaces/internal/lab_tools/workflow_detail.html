@@ -29,10 +29,6 @@
             <button class="btn btn-sm btn-primary" id="wf-add"><i class="bi bi-plus-lg me-1"></i>Add step</button>
                 <button class="btn btn-sm btn-outline-primary" type="button" id="wf-templates" title="Start from a ready-made network of steps"><i class="bi bi-diagram-3 me-1"></i>Templates</button>
                 <button class="btn btn-sm btn-outline-warning" type="button" id="wf-add-note"><i class="bi bi-sticky"></i> Add note</button>
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Create a draft data-submission package from this workflow"><i class="bi bi-cloud-upload me-1"></i>Submission package</button>
-                    <ul class="dropdown-menu">{% for value, label in submission_destinations %}<li><button class="dropdown-item" type="button" data-wf-submit="{{ value }}">{{ label }}</button></li>{% endfor %}</ul>
-                </div>
             <button class="btn btn-sm btn-outline-secondary" type="button" id="wf-arrange" title="Lay the steps out in columns by flow order, without overlaps"><i class="bi bi-grid-3x2-gap me-1"></i>Arrange</button>
             <button class="btn btn-sm btn-outline-secondary" id="wf-import" title="Bring the steps of an ELN entry in as linked, chained steps"><i class="bi bi-journal-arrow-down me-1"></i>Import ELN steps</button>
             <button class="btn btn-sm btn-outline-secondary" id="wf-share" title="Who can edit this workflow"><i class="bi bi-people me-1"></i>Members</button>
@@ -188,5 +184,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261110-wf11"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261110-wf12"></script>
 {% endblock %}

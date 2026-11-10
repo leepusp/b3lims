@@ -704,14 +704,6 @@
         }
 
         $("wf-arrange").addEventListener("click", arrange);
-        document.querySelectorAll("[data-wf-submit]").forEach((button) => button.addEventListener("click", async () => {
-            const data = await act({action: "create_submission", destination: button.dataset.wfSubmit, x: 40, y: wf.steps.length ? bottomY() + 24 : 40});
-
-            if (data && data.step_id) {
-                selected = data.step_id;
-                render();
-            }
-        }));
         const catalog = JSON.parse($("wf-templates-data").textContent);
         const picker = {tab: "workflows", category: "", query: ""};
         const HELP = {

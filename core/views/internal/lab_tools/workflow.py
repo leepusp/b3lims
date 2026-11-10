@@ -12,7 +12,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from core.context import base_context
-from core.models.lab_tools.submission import SubmissionPackage
 from core.models.lab_tools.workflow import Workflow, WorkflowStep, WorkflowStepFile
 from core.services import notebook_composer as composer
 from core.services import workflow as service
@@ -84,7 +83,6 @@ def workflow_detail(request, workflow_id):
         "step_status_choices": WorkflowStep.Status.choices,
         "kind_choices": WorkflowStep.Kind.choices,
         "templates": workflow_templates.catalog(),
-        "submission_destinations": SubmissionPackage.Destination.choices,
         "run_partitions": getattr(settings, "BIOBANK_JUPYTER_PARTITIONS", ("basic", "max50")),
         "run_nodes": getattr(settings, "BIOBANK_JUPYTER_NODES", ("n01", "gn01", "gn02", "gn03")),
         "users": get_user_model().objects.filter(is_active=True).order_by("username"),
