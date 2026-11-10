@@ -10,7 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from core.models.lab_tools.submission import SubmissionItem, SubmissionPackage
-from core.services import repository, submission_adapters
+from core.services import repository, submission_adapters, submission_guides
 
 S = SubmissionPackage.Status
 MAX_TEXT = {"title": 200, "description": 5000, "review_note": 2000}
@@ -236,6 +236,7 @@ def _url(name, pk) -> str:
 
 
 def serialize(package, user) -> dict:
+    validation = submission_adapters.validate(package)
     items = []
 
     for item in package.items.select_related("molecule", "structure", "sample", "entry", "jupyter_notebook"):
@@ -273,7 +274,8 @@ def serialize(package, user) -> dict:
         "repository_path": package.repository_path,
         "manifest_sha256": package.manifest_sha256,
         "external_reference": package.external_reference,
-        "validation": submission_adapters.validate(package),
+        "validation": validation,
+        "guide": submission_guides.guide(package, validation),
         "can_upload_zenodo": (
             package.status == S.PUBLISHED and package.destination == "zenodo" and not package.external_reference
             and submission_adapters.zenodo_configured() and (is_owner(user, package) or can_approve(user))

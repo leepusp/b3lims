@@ -374,6 +374,8 @@
 
         $("wf-submission-info").innerHTML = !info ? "" : info.hidden ? "A package you cannot open." : "<a href='" + esc(info.url) + "'>" + esc(info.title) + "</a><br>" + esc(info.destination)
             + " &middot; " + esc(info.status_label) + (info.reference ? " &middot; " + esc(info.reference) : "")
+            + "<div class='wf-flow'>" + (info.flow || []).map((n) => "<i class='" + esc(n.state) + "'>" + esc(n.title) + "</i>").join("") + "</div>"
+            + ((info.missing || []).length ? "<div class='text-danger'>Still needed: " + esc(info.missing.join(", ")) + "</div>" : "")
             + "<div class='text-muted'>Review, add details and submit from the package page.</div>";
     }
 
@@ -394,7 +396,9 @@
 
         $("wf-f-title").value = step.title;
         $("wf-f-status").value = step.status;
+        Array.from($("wf-f-kind").options).forEach((o) => { if (o.value === "submission") o.disabled = step.kind !== "submission"; });
         $("wf-f-kind").value = step.kind;
+        $("wf-f-kind").disabled = step.kind === "submission" || !canEdit;
         $("wf-f-assignee").value = step.assignee || "";
         $("wf-f-due").value = step.due_date || "";
         $("wf-f-notes").value = step.notes;
@@ -708,6 +712,23 @@
                 render();
             }
         }));
+        $("wf-templates").addEventListener("click", () => {
+            const catalog = JSON.parse($("wf-templates-data").textContent);
+            const groups = {};
+
+            catalog.forEach((t) => { (groups[t.category] = groups[t.category] || []).push(t); });
+            $("wf-templates-list").innerHTML = Object.keys(groups).map((cat) => "<h3 class='h6 mt-3'>" + esc(cat) + "</h3>" + groups[cat].map((t) =>
+                "<div class='border rounded p-2 mb-2'><div class='d-flex justify-content-between gap-2'><div><b>" + esc(t.name) + "</b> <span class='badge text-bg-light'>" + esc(t.engine) + "</span><div class='small text-muted'>" + esc(t.description) + "</div></div>"
+                + "<button type='button' class='btn btn-sm btn-primary align-self-start' data-template='" + esc(t.key) + "'>Use</button></div>"
+                + "<div class='wf-flow mt-2'>" + t.steps.map((s) => "<i>" + esc(s) + "</i>").join("") + "</div>"
+                + "<div class='small'><b>You will need:</b> " + esc(t.inputs.join(" · ")) + "</div></div>").join("")).join("");
+            $("wf-templates-list").querySelectorAll("[data-template]").forEach((b) => b.addEventListener("click", async () => {
+                const data = await act({action: "apply_template", template: b.dataset.template, x: 40, y: wf.steps.length ? bottomY() + 40 : 40});
+
+                if (data) bootstrap.Modal.getOrCreateInstance($("wf-templates-modal")).hide();
+            }));
+            bootstrap.Modal.getOrCreateInstance($("wf-templates-modal")).show();
+        });
         $("wf-add-note").addEventListener("click", async () => {
             const data = await act({action: "add_step", step: {title: "Note", kind: "note", x: 40, y: wf.steps.length ? bottomY() + 24 : 40}});
 

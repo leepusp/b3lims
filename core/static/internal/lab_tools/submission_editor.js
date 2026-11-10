@@ -32,6 +32,22 @@
         $("sp-error").hidden = !message;
     }
 
+    function renderGuide(g) {
+        if (!g) return;
+
+        $("sp-guide-summary").textContent = g.summary;
+        $("sp-flow").innerHTML = g.flow.map((n) => "<li class='sp-flow-step sp-" + esc(n.state) + "' title='" + esc(n.detail) + "'><b>" + esc(n.title) + "</b><span>" + esc(n.detail) + "</span></li>").join("");
+        $("sp-reqs").innerHTML = g.requirements.map((r) => {
+            const mark = r.met === true ? "<i class='bi bi-check-circle-fill text-success'></i>" : r.met === false ? (r.required ? "<i class='bi bi-x-circle-fill text-danger'></i>" : "<i class='bi bi-circle text-secondary'></i>") : "<i class='bi bi-box-arrow-up-right text-secondary'></i>";
+
+            return "<li class='mb-1'>" + mark + " <b>" + esc(r.title) + "</b><span class='badge text-bg-light ms-1'>" + esc(r.kind) + "</span><div class='text-muted ms-4'>" + esc(r.detail) + (r.met === null && r.kind === "file" ? " (done in the portal)" : "") + "</div></li>";
+        }).join("");
+        $("sp-outputs-box").hidden = !g.outputs.length;
+        $("sp-outputs").textContent = g.outputs.join(", ");
+        $("sp-portal").hidden = !g.portal;
+        if (g.portal) $("sp-portal").href = g.portal;
+    }
+
     function showInfo(message) {
         $("sp-info").textContent = message || "";
         $("sp-info").hidden = !message;
@@ -142,6 +158,8 @@
         if (pkg.can_publish) actions.appendChild(button(pkg.destination === "internal" ? "Publish to repository" : "Prepare files for upload", "btn-success", () => act({action: "publish"})));
         if (pkg.can_upload_zenodo) actions.appendChild(button("Create Zenodo draft", "btn-outline-success", () => { if (window.confirm("Create a draft on Zenodo with these files? It is not published until you publish it there.")) act({action: "upload_zenodo"}); }));
         if (pkg.can_delete) actions.appendChild(button("Delete", "btn-outline-danger", () => { if (window.confirm("Delete this package?")) act({action: "delete"}); }));
+
+        renderGuide(pkg.guide);
 
         const checks = $("sp-check-list");
         const problems = pkg.validation.errors.map((m) => ["text-danger", m]).concat(pkg.validation.warnings.map((m) => ["text-warning-emphasis", m]));

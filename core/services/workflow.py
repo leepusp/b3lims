@@ -151,7 +151,9 @@ def apply_step_fields(step, user, data):
         step.title = _text(data["title"], "title", required=True)
     if "notes" in data:
         step.notes = _text(data["notes"], "notes")
-    if "kind" in data:
+    if "kind" in data and step.kind == "submission" and step.pk:
+        pass  # a submission step stays one: it is tied to its package
+    elif "kind" in data:
         step.kind = _choice(data["kind"], WorkflowStep.Kind.choices, "kind")
 
         if step.kind == "submission" and not (step.config or {}).get("package_id"):
@@ -434,14 +436,18 @@ def _submission_info(step, user):
     if user is None:
         return {"submission": {"id": package_id}}
 
-    from core.services import submissions
+    from core.services import submission_guides, submissions
 
     package = submissions.visible_packages(user).filter(pk=package_id).first()
 
     if not package:
         return {"submission": {"id": package_id, "hidden": True}}
 
+    guide = submission_guides.guide(package)
+
     return {"submission": {
+        "flow": [{"title": n["title"], "state": n["state"]} for n in guide["flow"]],
+        "missing": [r["title"] for r in guide["requirements"] if r["required"] and r["met"] is False],
         "id": package.pk,
         "title": package.title,
         "status": package.status,

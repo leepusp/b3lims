@@ -16,6 +16,7 @@ from core.models.lab_tools.submission import SubmissionPackage
 from core.models.lab_tools.workflow import Workflow, WorkflowStep, WorkflowStepFile
 from core.services import notebook_composer as composer
 from core.services import workflow as service
+from core.services import workflow_templates
 
 
 def _payload(request):
@@ -82,6 +83,7 @@ def workflow_detail(request, workflow_id):
         "status_choices": Workflow.Status.choices,
         "step_status_choices": WorkflowStep.Status.choices,
         "kind_choices": WorkflowStep.Kind.choices,
+        "templates": workflow_templates.catalog(),
         "submission_destinations": SubmissionPackage.Destination.choices,
         "run_partitions": getattr(settings, "BIOBANK_JUPYTER_PARTITIONS", ("basic", "max50")),
         "run_nodes": getattr(settings, "BIOBANK_JUPYTER_NODES", ("n01", "gn01", "gn02", "gn03")),
@@ -149,6 +151,8 @@ def workflow_api(request, workflow_id):
             )
 
             return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
+        elif action == "apply_template":
+            workflow_templates.apply_template(workflow, user, data.get("template"), data.get("x") or 40, data.get("y") or 40)
         elif action == "delete_file":
             get_object_or_404(WorkflowStepFile, pk=data.get("file_id"), step__workflow=workflow).delete()
         elif action == "import_eln":
