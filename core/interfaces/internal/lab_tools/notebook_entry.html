@@ -67,6 +67,7 @@
                 <button type="button" class="bx-section" data-pane="relevant" role="tab">Relevant items <span class="bx-count" id="bx-count-relevant"></span></button>
                 <button type="button" class="bx-section" data-pane="files" role="tab">Files <span class="bx-count" id="bx-count-files"></span></button>
                 <button type="button" class="bx-section" data-pane="comments" role="tab">Comments <span class="bx-count" id="bx-count-comments"></span></button>
+                <button type="button" class="bx-section" data-pane="record" role="tab">Record <span class="bx-count" id="bx-count-record"></span></button>
             </nav>
             <div class="bx-actions">
                 <span class="bx-save" id="save-status">{% if can_edit %}Saved{% else %}<i class="bi bi-eye"></i> Read only{% endif %}</span>
@@ -260,6 +261,11 @@
                     <div id="bx-files"></div>
                 </section>
 
+                {# ================= RECORD: signatures and deviations ================= #}
+                <section class="bx-pane" data-pane="record">
+                    <div id="bx-trace"></div>
+                </section>
+
                 {# ================= COMMENTS ================= #}
                 <section class="bx-pane" data-pane="comments">
                     <div id="bx-comments"></div>
@@ -417,6 +423,7 @@
     window.csrfToken = "{{ csrf_token }}";
 </script>
 <script src="{% static 'internal/lab_tools/notebook_composer_v1.js' %}"></script>
+<script src="{% static 'internal/lab_tools/notebook_trace.js' %}?v=20261110-tr2"></script>
 <script src="{% static 'internal/lab_tools/eln_tools_calc.js' %}?v=20261109-tools-v1"></script>
 <script src="{% static 'internal/lab_tools/eln_elements.js' %}?v=20261109-tools-v3"></script>
 <script src="{% static 'internal/lab_tools/eln_tools.js' %}?v=20261109-tools-v3"></script>

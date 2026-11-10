@@ -49,6 +49,7 @@ from core.models.lab_tools.notebook_collab import (
     NotebookRevision,
     NotebookTodo,
 )
+from core.models.lab_tools.notebook_trace import NotebookDeviation, NotebookSignature
 from core.models.lab_tools.notebook_composer import (
     NotebookEntryLink,
     NotebookFavoriteTag,

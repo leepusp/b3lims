@@ -212,6 +212,7 @@ def notebook_entry(request, entry_id):
             "lookup": reverse("notebook_lookup_api", args=[entry.pk]),
             "revisions": reverse("notebook_revisions_api", args=[entry.pk]),
             "comments": reverse("notebook_comments_api", args=[entry.pk]),
+            "trace": reverse("notebook_trace_api", args=[entry.pk]),
             "sharing": reverse("notebook_sharing_api", args=[entry.pk]),
             "save_template": reverse("notebook_entry_save_template", args=[entry.pk]),
             "template_options": reverse("notebook_entry_template_options", args=[entry.pk]),

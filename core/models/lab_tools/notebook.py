@@ -209,6 +209,9 @@ class NotebookEntry(models.Model):
         related_name="core_notebook_entries",
     )
 
+    # Set while the author's signature is active: the entry is locked (see notebook_trace).
+    signed_at = models.DateTimeField(null=True, blank=True)
+
     # Trash: a removed entry keeps its data until it is deleted for good.
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     deleted_by = models.ForeignKey(
@@ -1199,6 +1202,13 @@ class JupyterNotebook(models.Model):
     notebook_json = models.JSONField(default=dict, blank=True)
     is_archived = models.BooleanField(default=False, db_index=True)
 
+    # Who may read it and make their own copy. Running it stays with the owner.
+    VISIBILITY_CHOICES = [
+        ("private", "Only me"),
+        ("shared", "People and groups I choose"),
+        ("lab", "Whole lab"),
+    ]
+    visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default="private", db_default="private")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

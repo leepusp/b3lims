@@ -140,7 +140,14 @@ def can_view_notebook_entry(user, entry) -> bool:
 
 
 def can_edit_notebook_entry(user, entry) -> bool:
-    """Change the content of an entry: author, superuser, or an edit/manage grant."""
+    """Change the content of an entry: author, superuser, or an edit/manage grant. A signed entry is locked."""
+    if entry is not None and entry.signed_at is not None:
+        return False
+
+    return can_edit_ignoring_signature(user, entry)
+
+
+def can_edit_ignoring_signature(user, entry) -> bool:
     if not user or not user.is_authenticated or entry is None:
         return False
 
@@ -171,4 +178,6 @@ def can_delete_notebook_entry(user, entry) -> bool:
     """
     if not user or not user.is_authenticated or entry is None:
         return False
+    if entry.signed_at is not None and entry.deleted_at is None:
+        return False  # amend the signature first
     return bool(user.is_superuser or entry.author_id == user.id)

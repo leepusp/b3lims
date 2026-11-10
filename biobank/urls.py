@@ -140,11 +140,13 @@ from core.views.internal.lab_tools import tool_records as tool_record_views
 from core.views.internal.lab_tools import notebook_composer as notebook_composer_views
 from core.views.internal.lab_tools import notebook_dashboard as notebook_dashboard_views
 from core.views.internal.lab_tools import notebook_collab as notebook_collab_views
+from core.views.internal.lab_tools import notebook_trace as notebook_trace_views
 from core.views.internal.lab_tools import notebook_sharing as notebook_sharing_views
 from core.views.internal.lab_tools import notebook_taxonomy as notebook_taxonomy_views
 from core.views.internal.lab_tools import notebook_templates as notebook_templates_views
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
+from core.views.internal.lab_tools import jupyter_sharing as jupyter_sharing_views
 from core.views.internal.lab_tools import workflow as workflow_views
 from core.views.internal.lab_tools import submissions as submission_views
 
@@ -471,6 +473,7 @@ urlpatterns = [
     path('internal/lab-tools/notebook/entry/<int:entry_id>/relevant/', notebook_entry_views.notebook_relevant_api, name='notebook_relevant_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/files/', notebook_entry_views.notebook_entry_files_api, name='notebook_entry_files_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/revisions/', notebook_collab_views.notebook_revisions_api, name='notebook_revisions_api'),
+    path('internal/lab-tools/notebook/entry/<int:entry_id>/trace/', notebook_trace_views.notebook_trace_api, name='notebook_trace_api'),
     path('internal/lab-tools/notebook/entry/<int:entry_id>/comments/', notebook_collab_views.notebook_comments_api, name='notebook_comments_api'),
     path('internal/lab-tools/notebook/templates/', notebook_templates_views.notebook_templates_page, name='notebook_templates'),
     path('internal/lab-tools/notebook/templates/api/', notebook_templates_views.notebook_templates_api, name='notebook_templates_api'),
@@ -597,6 +600,10 @@ urlpatterns = [
         jupyter_views.jupyter_index,
         name='jupyter_index',
     ),
+    path('internal/lab-tools/jupyter/from-template/', jupyter_sharing_views.jupyter_from_template, name='jupyter_from_template'),
+    path('internal/lab-tools/jupyter/shared/<int:notebook_id>/', jupyter_sharing_views.jupyter_shared_view, name='jupyter_shared'),
+    path('internal/lab-tools/jupyter/shared/<int:notebook_id>/copy/', jupyter_sharing_views.jupyter_copy, name='jupyter_copy'),
+    path('internal/lab-tools/jupyter/shared/<int:notebook_id>/sharing/', jupyter_sharing_views.jupyter_sharing_api, name='jupyter_sharing_api'),
     path(
         'internal/lab-tools/jupyter/launch/',
         jupyter_views.jupyter_launch,

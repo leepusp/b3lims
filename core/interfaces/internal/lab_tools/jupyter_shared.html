@@ -1,0 +1,31 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}{{ notebook.title }} · Jupyter notebook{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="small text-muted mb-1"><a href="{% url 'jupyter_index' %}">Jupyter</a> <span class="mx-1">/</span> Shared notebook</div>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h1 class="h4 mb-1"><i class="bi bi-code-square me-2"></i>{{ notebook.title }}</h1>
+            <div class="small text-muted">By {{ notebook.owner.get_username|default:"Unavailable" }} &middot; updated {{ notebook.updated_at|date:"Y-m-d H:i" }} &middot; read-only</div>
+            {% if notebook.description %}<p class="mt-2 mb-0">{{ notebook.description }}</p>{% endif %}
+        </div>
+        <form method="post" action="{% url 'jupyter_copy' notebook.id %}">
+            {% csrf_token %}
+            <button class="btn btn-primary" type="submit"><i class="bi bi-files me-1"></i>Use a copy</button>
+            <div class="small text-muted mt-1">Creates your own notebook to edit and run.</div>
+        </form>
+    </div>
+
+    {% for cell in cells %}
+        {% if cell.kind == "code" %}
+            <pre class="border rounded bg-light p-2 small" style="white-space:pre-wrap;overflow:auto">{{ cell.source }}</pre>
+        {% else %}
+            <div class="small mb-2" style="white-space:pre-wrap">{{ cell.source }}</div>
+        {% endif %}
+    {% empty %}
+        <p class="text-muted">This notebook is empty.</p>
+    {% endfor %}
+</div>
+{% endblock %}

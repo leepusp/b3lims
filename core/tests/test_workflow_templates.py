@@ -36,14 +36,35 @@ class TemplateTests(SubmissionBase):
                 self.assertEqual(wf.edges.count(), sum(len(s["after"]) for s in template["steps"]) + (1 if template.get("submission") else 0))
                 self.assertEqual(len({(s.x, s.y) for s in wf.steps.all()}), expected, "steps must not overlap")
 
-    def test_analysis_steps_carry_starter_parameters_and_instructions(self):
+    def test_analysis_steps_get_their_own_ready_notebook_and_parameters(self):
+        from core.models.lab_tools.notebook import JupyterNotebook
+
         self.post({"action": "apply_template", "template": "blast_search"})
 
-        blast = self.workflow.steps.get(title="Run BLAST")
+        step = self.workflow.steps.get(title="Filter and summarise hits")
+        notebook = JupyterNotebook.objects.get(pk=step.config["notebook_id"])
 
-        self.assertEqual(blast.kind, "jupyter")
-        self.assertEqual(blast.config["parameters"], {"db": "nt", "evalue": "1e-5"})
-        self.assertIn("database", blast.notes)
+        self.assertEqual(step.kind, "jupyter")
+        self.assertEqual(notebook.owner, self.ana)
+        self.assertEqual(notebook.notebook_json["metadata"]["biobank"]["template"], "blast_hits")
+        self.assertEqual(step.config["parameters"]["min_identity"], "90")
+        self.assertIn("hits_path", step.config["parameters"])
+        self.assertEqual(self.workflow.steps.get(title="Run BLAST").kind, "manual")
+
+    def test_failed_template_leaves_no_orphan_notebooks(self):
+        from core.models.lab_tools.notebook import JupyterNotebook
+        from core.services import workflow as service
+
+        before = JupyterNotebook.objects.count()
+        old = service.MAX_STEPS
+        service.MAX_STEPS = 3
+
+        try:
+            self.assertEqual(self.post({"action": "apply_template", "template": "genome_genbank"}).status_code, 400)
+        finally:
+            service.MAX_STEPS = old
+
+        self.assertEqual(JupyterNotebook.objects.count(), before)
 
     def test_submission_templates_create_the_package_and_link_it_to_the_flow(self):
         self.post({"action": "apply_template", "template": "reads_sra"})

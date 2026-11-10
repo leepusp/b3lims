@@ -285,11 +285,16 @@ def jupyter_index(request):
         .prefetch_related("sessions")
     )
 
+    from core.services import jupyter_sharing, jupyter_templates
+
     return render(
         request,
         "internal/lab_tools/jupyter_index.html",
         {
             "jupyter_notebooks": notebooks,
+            "shared_notebooks": jupyter_sharing.shared_with_user(request.user)[:100],
+            "notebook_templates": jupyter_templates.catalog(),
+            "sharing_visibilities": jupyter_sharing.VISIBILITIES,
         },
     )
 

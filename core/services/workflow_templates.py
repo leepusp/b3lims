@@ -6,47 +6,47 @@ Analysis steps are ``jupyter`` steps with starter parameters; choose or write th
 """
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from core.services import workflow as service
 
 
-def _s(ref, title, kind="manual", notes="", params="", after=()):
-    return {"ref": ref, "title": title, "kind": kind, "notes": notes, "parameters": params, "after": list(after)}
+def _s(ref, title, kind="manual", notes="", params="", after=(), notebook=""):
+    return {"ref": ref, "title": title, "kind": kind, "notes": notes, "parameters": params, "after": list(after), "notebook": notebook}
 
 
 TEMPLATES = [
     {
         "key": "plasmid_verification", "name": "Plasmid verification", "category": "Molecular biology", "engine": "jupyter",
         "description": "Check a construct against its reference with sequencing reads.",
-        "inputs": ["The reference plasmid (molecular record)", "Sequencing reads or consensus (FASTA/AB1)", "Minimum identity to accept"],
+        "inputs": ["The reference plasmid (FASTA)", "The sequencing consensus (FASTA)", "Minimum identity to accept"],
         "steps": [
-            _s("ref", "Reference construct", notes="Link the plasmid record that should have been built."),
-            _s("reads", "Sequencing data", notes="Attach or note where the reads/consensus are. Needed: FASTA or AB1 of every clone."),
-            _s("align", "Align reads to reference", "jupyter", "Notebook reads the reference and reads, aligns them and lists mismatches.", "min_identity=99", ["ref", "reads"]),
-            _s("review", "Review mismatches", notes="Decide per clone: accept, resequence or discard.", after=["align"]),
+            _s("ref", "Reference construct", notes="Link the plasmid record that should have been built, and export its FASTA."),
+            _s("reads", "Sequencing data", notes="Attach or note where the reads/consensus are. Needed: the consensus FASTA of every clone."),
+            _s("align", "Align consensus to reference", "jupyter", "Set reference_path and consensus_path to the FASTA files. Without them the notebook runs on demo data.", after=["ref", "reads"], notebook="plasmid_verification"),
+            _s("review", "Review differences", notes="Decide per clone: accept, resequence or discard.", after=["align"]),
             _s("log", "Record the result", notes="Write the outcome in the ELN entry of the cloning.", after=["review"]),
         ],
     },
     {
         "key": "blast_search", "name": "BLAST similarity search", "category": "Sequence analysis", "engine": "jupyter",
         "description": "Search a sequence against a database and keep the best hits.",
-        "inputs": ["Query sequence (molecular record)", "Database (for example nt, nr or a local one)", "E-value and identity thresholds"],
+        "inputs": ["Query sequence (FASTA)", "A BLAST database on the cluster", "E-value, identity and length thresholds"],
         "steps": [
             _s("query", "Query sequence", notes="Link the molecular record to search with."),
-            _s("blast", "Run BLAST", "jupyter", "Needs the query and a database available on the cluster.", "db=nt\nevalue=1e-5", ["query"]),
-            _s("filter", "Filter hits", "jupyter", "Keep hits by identity and coverage; write a table.", "min_identity=90\nmin_coverage=80", ["blast"]),
+            _s("blast", "Run BLAST", notes="On the cluster: blastn -query query.fasta -db <database> -outfmt 6 -out hits.tsv. Keep hits.tsv where the next step can read it.", after=["query"]),
+            _s("filter", "Filter and summarise hits", "jupyter", "Set hits_path to hits.tsv. Without it the notebook runs on demo hits.", after=["blast"], notebook="blast_hits"),
             _s("report", "Interpret", notes="Which organisms or genes are the best hits? What does it mean for the project?", after=["filter"]),
         ],
     },
     {
-        "key": "alignment_tree", "name": "Alignment and phylogenetic tree", "category": "Sequence analysis", "engine": "jupyter",
-        "description": "Align related sequences and draw a tree.",
-        "inputs": ["Three or more homologous sequences (records or FASTA)", "Alignment method and substitution model"],
+        "key": "alignment_tree", "name": "Compare sequences and draw a tree", "category": "Sequence analysis", "engine": "jupyter",
+        "description": "Pairwise identities of related sequences and a quick UPGMA tree.",
+        "inputs": ["Three or more homologous sequences in one FASTA file"],
         "steps": [
-            _s("seqs", "Collect sequences", notes="Link the records to compare; note the outgroup if any."),
-            _s("msa", "Multiple alignment", "jupyter", "Aligns the sequences and writes the alignment.", "method=mafft", ["seqs"]),
-            _s("tree", "Build the tree", "jupyter", "Builds and plots the tree from the alignment.", "model=GTR\nbootstrap=100", ["msa"]),
-            _s("read", "Read the tree", notes="Describe the clades and support values.", after=["tree"]),
+            _s("seqs", "Collect sequences", notes="Link the records to compare and gather them in one FASTA file; note the outgroup if any."),
+            _s("tree", "Identity matrix and tree", "jupyter", "Set fasta_path. For a formal phylogeny use a dedicated aligner and tree method.", after=["seqs"], notebook="alignment_tree"),
+            _s("read", "Read the tree", notes="Describe the clades and how close the sequences are.", after=["tree"]),
         ],
     },
     {
@@ -55,8 +55,7 @@ TEMPLATES = [
         "inputs": ["A table (rows = samples, columns = variables)", "Which column holds the group labels"],
         "steps": [
             _s("table", "Input table", notes="Where is the table? Describe columns and units."),
-            _s("qc", "Clean and normalise", "jupyter", "Remove empty rows, scale columns.", "group_column=group", ["table"]),
-            _s("pca", "PCA", "jupyter", "Principal components, variance explained and a scatter plot.", "components=2", ["qc"]),
+            _s("pca", "Clean, standardise and PCA", "jupyter", "Set input_path to the CSV/TSV and group_column to the label column.", after=["table"], notebook="pca_table"),
             _s("read", "Interpretation", notes="Which groups separate and which variables drive it?", after=["pca"]),
         ],
     },
@@ -66,18 +65,20 @@ TEMPLATES = [
         "inputs": ["Sample(s) and organism", "Raw reads (fastq) or an assembled sequence", "Annotation (genes/CDS) of the sequence", "Authors and BioProject, if any"],
         "steps": [
             _s("sample", "Sample and organism", notes="Link the sample; the organism sets the taxon of the package."),
-            _s("qc", "Read quality control", "jupyter", "Needs the fastq files; reports quality and length.", "min_quality=20", ["sample"]),
-            _s("asm", "Assembly", "jupyter", "Needs the filtered reads; writes the assembled sequence.", "min_length=200", ["qc"]),
-            _s("ann", "Annotation", notes="Mark genes and CDS on the molecular record (they become the feature table).", after=["asm"]),
+            _s("qc", "Read quality control", "jupyter", "Set fastq_path to the reads (plain or .gz).", after=["sample"], notebook="read_qc"),
+            _s("asm", "Assembly", notes="Assemble with your tool on the cluster and register the result as a molecular record (it goes into the package).", after=["qc"]),
+            _s("stats", "Sequence statistics", "jupyter", "Set fasta_path to the assembled sequence.", after=["asm"], notebook="sequence_stats"),
+            _s("ann", "Annotation", notes="Mark genes and CDS on the molecular record (they become the feature table).", after=["stats"]),
         ],
     },
     {
-        "key": "reads_sra", "name": "Raw reads to SRA", "category": "Data submission", "engine": "manual", "submission": "genbank",
+        "key": "reads_sra", "name": "Raw reads to SRA", "category": "Data submission", "engine": "jupyter", "submission": "genbank",
         "description": "Describe libraries and prepare the SRA metadata for sequencing runs.",
         "inputs": ["Samples (BioSample)", "Fastq/bam files, one or two per library", "Library strategy, source, selection, platform, instrument"],
         "steps": [
             _s("samples", "Samples", notes="Link every sample sequenced; the BioSample table is built from them."),
-            _s("lib", "Library description", notes="Strategy, source, selection, layout, platform and instrument go in the package details.", after=["samples"]),
+            _s("qc", "Read quality control", "jupyter", "Set fastq_path to one of the files to check its quality before submitting.", after=["samples"], notebook="read_qc"),
+            _s("lib", "Library description", notes="Strategy, source, selection, layout, platform and instrument go in the package details.", after=["qc"]),
             _s("files", "Read files", notes="List the file names in the package (R1/R2 are paired automatically). Upload the files in the portal.", after=["lib"]),
         ],
     },
@@ -137,6 +138,11 @@ def apply_template(workflow, user, key, x=40, y=40):
     if workflow.steps.count() + len(template["steps"]) + extra > service.MAX_STEPS:
         raise ValidationError(f"At most {service.MAX_STEPS} steps per workflow.")
 
+    with transaction.atomic():
+        return _build(workflow, user, template, extra, x, y)
+
+
+def _build(workflow, user, template, extra, x, y):
     level = _levels(template["steps"])
     row_in_level, created = {}, {}
 
@@ -148,8 +154,16 @@ def apply_template(workflow, user, key, x=40, y=40):
             "title": spec["title"], "kind": spec["kind"], "notes": spec["notes"], "x": int(x) + col * 260, "y": int(y) + row * 150,
         }
 
-        if spec["kind"] == "jupyter" and spec["parameters"]:
-            data["parameters"] = spec["parameters"]
+        if spec["kind"] == "jupyter":
+            from core.services import jupyter_templates
+
+            if spec["notebook"]:
+                notebook = jupyter_templates.create_notebook(user, spec["notebook"])
+                defaults = jupyter_templates.TEMPLATES[spec["notebook"]]["parameters"]
+                data["jupyter_notebook"] = notebook.pk
+                data["parameters"] = "\n".join(f"{k}={v}" for k, v in defaults.items())
+            elif spec["parameters"]:
+                data["parameters"] = spec["parameters"]
 
         created[spec["ref"]] = service.add_step(workflow, user, data)
 
