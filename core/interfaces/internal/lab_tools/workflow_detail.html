@@ -4,7 +4,7 @@
 {% block title %}{{ workflow.name }} · Workflow · B3 LIMS{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261110-wf5">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/workflow_editor.css' %}?v=20261110-wf6">
 {% endblock %}
 
 {% block content %}
@@ -149,11 +149,22 @@
         </div></div>
     </div>
 
-    <div class="modal fade" id="wf-templates-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="wf-templates-modal" tabindex="-1" aria-hidden="true" aria-labelledby="wf-templates-title">
         <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-            <div class="modal-header"><h2 class="modal-title h6">Start from a template</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-header flex-wrap gap-2">
+                <h2 class="modal-title h6 me-auto" id="wf-templates-title">Add from the catalog</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="w-100">
+                    <input type="search" class="form-control form-control-sm" id="wf-tpl-q" placeholder="Search by name, step, input or tool (BLAST, PCA, GenBank, reads...)" aria-label="Search the catalog" autocomplete="off">
+                    <ul class="nav nav-pills nav-sm mt-2 small" id="wf-tpl-tabs" role="tablist">
+                        <li class="nav-item"><button type="button" class="nav-link active py-1" data-tab="workflows">Workflows <span class="badge text-bg-light" id="wf-tpl-n-workflows"></span></button></li>
+                        <li class="nav-item"><button type="button" class="nav-link py-1" data-tab="blocks">Single steps <span class="badge text-bg-light" id="wf-tpl-n-blocks"></span></button></li>
+                    </ul>
+                    <div class="d-flex flex-wrap gap-1 mt-2" id="wf-tpl-cats" aria-label="Categories"></div>
+                </div>
+            </div>
             <div class="modal-body">
-                <p class="small text-muted">Adds a connected set of steps to this workflow. Each step says what it needs; edit anything afterwards.</p>
+                <p class="small text-muted mb-2" id="wf-tpl-help"></p>
                 <div id="wf-templates-list"></div>
             </div>
         </div></div>
@@ -177,5 +188,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261110-wf10"></script>
+<script src="{% static 'internal/lab_tools/workflow_editor.js' %}?v=20261110-wf11"></script>
 {% endblock %}

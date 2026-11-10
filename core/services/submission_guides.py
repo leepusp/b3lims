@@ -4,6 +4,8 @@ The checklist is advice built from the same rules as ``submission_adapters.valid
 Each requirement is ``met`` True/False, or None when it cannot be checked here (done in the portal).
 """
 
+import re
+
 from core.services import submission_adapters as adapters
 
 D = adapters.D
@@ -23,6 +25,51 @@ SUMMARY = {
     "coordinates and the description; experimental data and validation are added in the portal.",
     D.ZENODO: "Files and a description become a Zenodo record with a DOI. A draft can be created here when a token is configured.",
 }
+
+
+NCBI = "https://www.ncbi.nlm.nih.gov"
+# (kind label, pattern, url template) per destination; first match wins.
+REFERENCE_RULES = {
+    D.GENBANK: (
+        ("GenBank accession", r"(?:[A-Z]{1,2}\d{5,6}|[A-Z]{4,6}\d{8,10})(?:\.\d+)?", NCBI + "/nuccore/{}"),
+        ("SRA run", r"[SED]RR\d{5,}", NCBI + "/sra/{}"),
+        ("SRA experiment", r"[SED]RX\d{5,}", NCBI + "/sra/{}"),
+        ("BioProject", r"PRJ[NED][A-Z]\d+", NCBI + "/bioproject/{}"),
+        ("BioSample", r"SAM[NED][A-Z]?\d+", NCBI + "/biosample/{}"),
+    ),
+    D.PDB: (
+        ("PDB id", r"(?:pdb_0000)?(?=[0-9]*[A-Za-z])[0-9][A-Za-z0-9]{3}", "https://www.rcsb.org/structure/{}"),
+        ("EMDB map", r"EMD-\d{4,5}", "https://www.ebi.ac.uk/emdb/{}"),
+    ),
+    D.ZENODO: (
+        ("DOI", r"10\.5281/zenodo\.\d+", "https://doi.org/{}"),
+    ),
+}
+URL = re.compile(r"^https?://[^\s<>\"']{4,290}$")
+
+
+def references(package) -> list[dict]:
+    """The accessions/ids/DOIs typed as the reference of an external submission, recognised and linked.
+
+    ``package.external_reference`` may hold several, separated by spaces, commas or lines.
+    """
+    raw = package.external_reference or ""
+    found = []
+
+    for token in dict.fromkeys(t for t in re.split(r"[\s,;]+", raw) if t):
+        entry = {"text": token, "kind": "", "url": "", "valid": False}
+
+        for label, pattern, template in REFERENCE_RULES.get(package.destination, ()):
+            if re.fullmatch(pattern, token):
+                entry.update(kind=label, url=template.format(token), valid=True)
+                break
+        else:
+            if URL.match(token) and package.destination != D.INTERNAL:
+                entry.update(kind="Link", url=token, valid=True)
+
+        found.append(entry)
+
+    return found
 
 
 def _nucleotide(package):
@@ -113,7 +160,7 @@ def _flow(package, requirements, validation):
 
     if external:
         nodes.append({"key": "portal", "title": "Submit in the portal", "detail": "Upload the prepared files", "done": bool(package.external_reference)})
-        nodes.append({"key": "accession", "title": "Record the reference", "detail": "Accession, PDB id or DOI", "done": bool(package.external_reference)})
+        nodes.append({"key": "accession", "title": "Record the reference", "detail": "Accession, PDB id or DOI", "done": any(r["valid"] for r in references(package))})
 
     first_open = next((n for n in nodes if not n["done"]), None)
 
@@ -139,5 +186,6 @@ def guide(package, validation=None) -> dict:
         "requirements": requirements,
         "flow": _flow(package, requirements, validation),
         "outputs": outputs,
+        "references": references(package),
     }
 

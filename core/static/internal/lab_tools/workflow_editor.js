@@ -712,21 +712,71 @@
                 render();
             }
         }));
-        $("wf-templates").addEventListener("click", () => {
-            const catalog = JSON.parse($("wf-templates-data").textContent);
+        const catalog = JSON.parse($("wf-templates-data").textContent);
+        const picker = {tab: "workflows", category: "", query: ""};
+        const HELP = {
+            workflows: "Adds a connected set of steps. Each step says what it needs; edit anything afterwards.",
+            blocks: "Adds one step to the canvas. Analysis steps come with their own ready notebook.",
+        };
+
+        function pickerEntries() {
+            const words = picker.query.toLowerCase().split(/\s+/).filter(Boolean);
+
+            return catalog[picker.tab].filter((t) => {
+                const hay = [t.name, t.category, t.description, (t.steps || []).join(" "), (t.inputs || []).join(" "), t.engine || ""].join(" ").toLowerCase();
+
+                return (!picker.category || t.category === picker.category) && words.every((w) => hay.includes(w));
+            });
+        }
+
+        function renderPicker() {
+            const all = catalog[picker.tab];
+            const query = picker.query.toLowerCase().split(/\s+/).filter(Boolean);
+            const inText = (t) => query.every((w) => [t.name, t.category, t.description, (t.steps || []).join(" "), (t.inputs || []).join(" ")].join(" ").toLowerCase().includes(w));
+            const cats = Array.from(new Set(all.filter(inText).map((t) => t.category)));
+            const shown = pickerEntries();
+
+            $("wf-tpl-n-workflows").textContent = catalog.workflows.length;
+            $("wf-tpl-n-blocks").textContent = catalog.blocks.length;
+            $("wf-tpl-tabs").querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === picker.tab));
+            $("wf-tpl-help").textContent = HELP[picker.tab];
+            $("wf-tpl-cats").innerHTML = ["", ...cats].map((c) => "<button type='button' class='btn btn-sm " + (picker.category === c ? "btn-primary" : "btn-outline-secondary") + " py-0' data-cat='" + esc(c) + "'>" + (c ? esc(c) : "All") + "</button>").join("");
+            $("wf-tpl-cats").querySelectorAll("[data-cat]").forEach((b) => b.addEventListener("click", () => { picker.category = b.dataset.cat; renderPicker(); }));
+
+            if (!shown.length) {
+                $("wf-templates-list").innerHTML = "<div class='text-muted text-center py-4'>Nothing matches &ldquo;" + esc(picker.query) + "&rdquo;. Try another word, or clear the category.</div>";
+
+                return;
+            }
+
             const groups = {};
 
-            catalog.forEach((t) => { (groups[t.category] = groups[t.category] || []).push(t); });
-            $("wf-templates-list").innerHTML = Object.keys(groups).map((cat) => "<h3 class='h6 mt-3'>" + esc(cat) + "</h3>" + groups[cat].map((t) =>
-                "<div class='border rounded p-2 mb-2'><div class='d-flex justify-content-between gap-2'><div><b>" + esc(t.name) + "</b> <span class='badge text-bg-light'>" + esc(t.engine) + "</span><div class='small text-muted'>" + esc(t.description) + "</div></div>"
-                + "<button type='button' class='btn btn-sm btn-primary align-self-start' data-template='" + esc(t.key) + "'>Use</button></div>"
-                + "<div class='wf-flow mt-2'>" + t.steps.map((s) => "<i>" + esc(s) + "</i>").join("") + "</div>"
-                + "<div class='small'><b>You will need:</b> " + esc(t.inputs.join(" · ")) + "</div></div>").join("")).join("");
-            $("wf-templates-list").querySelectorAll("[data-template]").forEach((b) => b.addEventListener("click", async () => {
-                const data = await act({action: "apply_template", template: b.dataset.template, x: 40, y: wf.steps.length ? bottomY() + 40 : 40});
+            shown.forEach((t) => { (groups[t.category] = groups[t.category] || []).push(t); });
+            $("wf-templates-list").innerHTML = Object.keys(groups).map((cat) => "<h3 class='h6 mt-3'>" + esc(cat) + " <span class='text-muted fw-normal'>" + groups[cat].length + "</span></h3>" + groups[cat].map((t) =>
+                "<div class='border rounded p-2 mb-2'><div class='d-flex justify-content-between gap-2'><div><b>" + esc(t.name) + "</b>" + (t.engine ? " <span class='badge text-bg-light'>" + esc(t.engine) + "</span>" : "")
+                + "<div class='small text-muted'>" + esc(t.description) + "</div></div>"
+                + "<button type='button' class='btn btn-sm btn-primary align-self-start' data-pick='" + esc(t.key) + "'>Add</button></div>"
+                + (t.steps ? "<div class='wf-flow mt-2'>" + t.steps.map((s) => "<i>" + esc(s) + "</i>").join("") + "</div>" : "")
+                + (t.inputs ? "<div class='small'><b>You will need:</b> " + esc(t.inputs.join(" · ")) + "</div>" : "") + "</div>").join("")).join("");
+            $("wf-templates-list").querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", async () => {
+                const at = {x: 40, y: wf.steps.length ? bottomY() + 40 : 40};
+                const data = await act(picker.tab === "workflows" ? Object.assign({action: "apply_template", template: b.dataset.pick}, at) : Object.assign({action: "add_block", block: b.dataset.pick}, at));
 
-                if (data) bootstrap.Modal.getOrCreateInstance($("wf-templates-modal")).hide();
+                if (data) {
+                    if (data.step_id) { selected = data.step_id; render(); }
+                    bootstrap.Modal.getOrCreateInstance($("wf-templates-modal")).hide();
+                }
             }));
+        }
+
+        $("wf-tpl-q").addEventListener("input", () => { picker.query = $("wf-tpl-q").value; renderPicker(); });
+        $("wf-tpl-tabs").querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { picker.tab = b.dataset.tab; picker.category = ""; renderPicker(); }));
+        $("wf-templates-modal").addEventListener("shown.bs.modal", () => $("wf-tpl-q").focus());
+        $("wf-templates").addEventListener("click", () => {
+            picker.query = "";
+            picker.category = "";
+            $("wf-tpl-q").value = "";
+            renderPicker();
             bootstrap.Modal.getOrCreateInstance($("wf-templates-modal")).show();
         });
         $("wf-add-note").addEventListener("click", async () => {

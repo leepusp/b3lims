@@ -4,7 +4,7 @@
 {% block title %}{{ package.title }} · Data submission · B3 LIMS{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'internal/lab_tools/submission_editor.css' %}?v=20261110-sp5">
+<link rel="stylesheet" href="{% static 'internal/lab_tools/submission_editor.css' %}?v=20261110-sp6">
 <div class="container-fluid py-3" id="submission-editor"
      data-api-url="{% url 'submission_api' package.pk %}"
      data-lookup-url="{% url 'submission_lookup_api' %}"
@@ -97,6 +97,7 @@
                 <div class="small text-muted mb-2" id="sp-guide-summary"></div>
                 <ol class="sp-flow" id="sp-flow" aria-label="Submission steps"></ol>
                 <ul class="list-unstyled small mb-2" id="sp-reqs"></ul>
+                <div class="small mb-2" id="sp-refs-box" hidden>Reference: <span id="sp-refs"></span></div>
                 <div class="small" id="sp-outputs-box" hidden>Files prepared: <span id="sp-outputs" class="text-muted"></span></div>
                 <a class="small" id="sp-portal" target="_blank" rel="noopener" hidden>Open the submission portal</a>
             </div></div>
@@ -137,5 +138,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261110-sp5"></script>
+<script src="{% static 'internal/lab_tools/submission_editor.js' %}?v=20261110-sp6"></script>
 {% endblock %}

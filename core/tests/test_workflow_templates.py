@@ -98,7 +98,7 @@ class TemplateTests(SubmissionBase):
         self.assertEqual(self.workflow.steps.count(), 0)
 
     def test_the_picker_lists_every_template_with_inputs(self):
-        catalog = templates.catalog()
+        catalog = templates.catalog()["workflows"]
 
         self.assertEqual(len(catalog), len(templates.TEMPLATES))
         self.assertTrue(all(c["inputs"] and c["steps"] for c in catalog))
@@ -107,6 +107,40 @@ class TemplateTests(SubmissionBase):
 
         self.assertContains(page, "wf-templates-data")
         self.assertContains(page, "Assembled sequence to GenBank")
+        self.assertContains(page, 'id="wf-tpl-q"')  # the search box
+
+    def test_blocks_catalog_lists_tasks_notes_notebooks_and_every_destination(self):
+        blocks = {b["key"] for b in templates.catalog()["blocks"]}
+
+        self.assertTrue({"manual", "note", "notebook:read_qc", "notebook:pca_table", "submission:genbank", "submission:zenodo"} <= blocks)
+        self.assertEqual(len(blocks), len(templates.catalog()["blocks"]), "keys are unique")
+
+    def test_single_blocks_add_one_ready_step(self):
+        from core.models.lab_tools.notebook import JupyterNotebook
+
+        for key, kind in (("manual", "manual"), ("note", "note"), ("notebook:read_qc", "jupyter"), ("submission:pdb", "submission")):
+            with self.subTest(key):
+                r = self.post({"action": "add_block", "block": key, "x": 10, "y": 20})
+
+                self.assertEqual(r.status_code, 200, r.content)
+                step = self.workflow.steps.get(pk=r.json()["step_id"])
+
+                self.assertEqual((step.kind, step.x, step.y), (kind, 10, 20))
+
+        notebook = JupyterNotebook.objects.get(pk=self.workflow.steps.get(kind="jupyter").config["notebook_id"])
+
+        self.assertEqual((notebook.owner, notebook.notebook_json["metadata"]["biobank"]["template"]), (self.ana, "read_qc"))
+        self.assertEqual(self.workflow.steps.get(kind="jupyter").config["parameters"]["min_quality"], "20")
+        self.assertEqual(SubmissionPackage.objects.get(workflow=self.workflow).destination, "pdb")
+
+    def test_unknown_block_and_missing_edit_rights_are_refused(self):
+        self.assertEqual(self.post({"action": "add_block", "block": "notebook:nope"}).status_code, 400)
+        self.assertEqual(self.post({"action": "add_block", "block": "submission:ftp"}).status_code, 400)
+
+        self.client.force_login(self.bia)
+
+        self.assertIn(self.post({"action": "add_block", "block": "manual"}).status_code, (400, 403, 404))
+        self.assertEqual(self.workflow.steps.count(), 0)
 
 
 class SubmissionStepKindTests(SubmissionBase):
@@ -215,3 +249,50 @@ class GuideTests(SubmissionBase):
 
         self.assertIn("Submit in the portal", [n["title"] for n in info["flow"]])
         self.assertIn("Nucleotide sequence records", info["missing"])
+
+
+class ReferenceTests(SubmissionBase):
+    def refs(self, destination, text):
+        self.package.destination = destination
+        self.package.external_reference = text
+
+        return guides.references(self.package)
+
+    def test_genbank_accessions_runs_and_projects_are_recognised_and_linked(self):
+        found = {r["text"]: r for r in self.refs("genbank", "MN908947.3, SRR1234567 PRJNA123456\nSAMN0001234 bogus")}
+
+        self.assertEqual(found["MN908947.3"]["url"], "https://www.ncbi.nlm.nih.gov/nuccore/MN908947.3")
+        self.assertEqual(found["SRR1234567"]["kind"], "SRA run")
+        self.assertEqual(found["PRJNA123456"]["url"], "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA123456")
+        self.assertEqual(found["SAMN0001234"]["kind"], "BioSample")
+        self.assertFalse(found["bogus"]["valid"])
+
+    def test_pdb_ids_and_zenodo_dois(self):
+        pdb = {r["text"]: r for r in self.refs("pdb", "1ABC 2023 pdb_00001abc")}
+
+        self.assertEqual(pdb["1ABC"]["url"], "https://www.rcsb.org/structure/1ABC")
+        self.assertFalse(pdb["2023"]["valid"], "a bare number is not a PDB id")
+        self.assertTrue(pdb["pdb_00001abc"]["valid"])
+
+        doi = self.refs("zenodo", "10.5281/zenodo.123456")[0]
+
+        self.assertEqual(doi["url"], "https://doi.org/10.5281/zenodo.123456")
+
+    def test_links_are_accepted_for_external_destinations_only_and_no_script_urls(self):
+        self.assertTrue(self.refs("zenodo", "https://zenodo.org/deposit/1")[0]["valid"])
+        self.assertFalse(self.refs("internal", "https://example.org/x")[0]["valid"])
+        self.assertFalse(self.refs("zenodo", "javascript:alert(1)")[0]["valid"])
+
+    def test_recording_a_valid_reference_completes_the_flow(self):
+        self.package.destination = "genbank"
+        self.package.status = "published"
+        self.package.external_reference = "nonsense"
+        self.package.save()
+
+        self.assertNotEqual(guides.guide(self.package)["flow"][-1]["state"], "done")
+
+        self.package.external_reference = "MN908947.3"
+        self.package.save()
+
+        self.assertEqual(guides.guide(self.package)["flow"][-1]["state"], "done")
+        self.assertEqual(guides.guide(self.package)["references"][0]["kind"], "GenBank accession")

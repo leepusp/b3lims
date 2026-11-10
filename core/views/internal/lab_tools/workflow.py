@@ -151,6 +151,10 @@ def workflow_api(request, workflow_id):
             )
 
             return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
+        elif action == "add_block":
+            step = workflow_templates.add_block(workflow, user, data.get("block"), data.get("x") or 40, data.get("y") or 40)
+
+            return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
         elif action == "apply_template":
             workflow_templates.apply_template(workflow, user, data.get("template"), data.get("x") or 40, data.get("y") or 40)
         elif action == "delete_file":

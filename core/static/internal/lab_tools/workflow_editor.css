@@ -34,7 +34,8 @@
 .wf-node[data-kind="note"] { width: 220px; background: #fff8c5; border: 1px solid #e6d56a; border-left-width: 1px; border-top: 1px solid #e6d56a; box-shadow: 2px 3px 6px rgba(0,0,0,.12); }
 .wf-note-text { font-size: .76rem; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: .25rem; color: #4d4600; }
 .wf-prev { margin-top: .35rem; padding-top: .3rem; border-top: 1px dashed #dee2e6; }
-.wf-prev-title { font-size: .74rem; font-weight: 600; overflow-wrap: anywhere; }
+.wf-prev-title { display: flex; gap: .3rem; align-items: baseline; font-size: .74rem; font-weight: 600; overflow-wrap: anywhere; }
+.wf-prev-title > i { flex: none; }
 .wf-prev-sub { font-size: .68rem; color: #6c757d; }
 .wf-map { display: block; width: 88px; height: 88px; margin: .2rem auto 0; }
 .wf-map-line { width: 100%; height: 26px; }

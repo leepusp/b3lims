@@ -42,6 +42,10 @@
 
             return "<li class='mb-1'>" + mark + " <b>" + esc(r.title) + "</b><span class='badge text-bg-light ms-1'>" + esc(r.kind) + "</span><div class='text-muted ms-4'>" + esc(r.detail) + (r.met === null && r.kind === "file" ? " (done in the portal)" : "") + "</div></li>";
         }).join("");
+        $("sp-refs-box").hidden = !(g.references || []).length;
+        $("sp-refs").innerHTML = (g.references || []).map((r) => r.valid
+            ? "<a class='badge text-bg-success text-decoration-none me-1' target='_blank' rel='noopener' href='" + esc(r.url) + "'>" + esc(r.kind) + ": " + esc(r.text.length > 40 ? r.text.slice(0, 37) + "..." : r.text) + "</a>"
+            : "<span class='badge text-bg-warning me-1' title='Not recognised as an identifier of this destination'>" + esc(r.text) + " (not recognised)</span>").join("");
         $("sp-outputs-box").hidden = !g.outputs.length;
         $("sp-outputs").textContent = g.outputs.join(", ");
         $("sp-portal").hidden = !g.portal;

@@ -107,8 +107,7 @@ TEMPLATES = [
 BY_KEY = {t["key"]: t for t in TEMPLATES}
 
 
-def catalog() -> list[dict]:
-    """What the picker shows."""
+def _workflow_entries() -> list[dict]:
     return [
         {
             "key": t["key"], "name": t["name"], "category": t["category"], "description": t["description"],
@@ -116,6 +115,57 @@ def catalog() -> list[dict]:
         }
         for t in TEMPLATES
     ]
+
+
+def block_entries() -> list[dict]:
+    """Single steps that can be added on their own: a task, a note, one analysis notebook or one submission."""
+    from core.models.lab_tools.submission import SubmissionPackage
+    from core.services import jupyter_templates
+
+    blocks = [
+        {"key": "manual", "name": "Task", "category": "Basic", "description": "A step done by hand: assign it, give it a due date and link records."},
+        {"key": "note", "name": "Note", "category": "Basic", "description": "A free annotation on the canvas, with images and tables."},
+    ]
+    blocks += [
+        {"key": f"notebook:{key}", "name": t["title"], "category": f"Analysis: {t['category']}", "description": t["description"] + " Creates its own notebook."}
+        for key, t in jupyter_templates.TEMPLATES.items()
+    ]
+    blocks += [
+        {"key": f"submission:{value}", "name": f"Data submission: {label.split(' (')[0]}", "category": "Data submission",
+         "description": "A draft submission package for this destination, filled with what the workflow links."}
+        for value, label in SubmissionPackage.Destination.choices
+    ]
+
+    return blocks
+
+
+def catalog() -> dict:
+    """What the picker shows: whole workflows and single steps."""
+    return {"workflows": _workflow_entries(), "blocks": block_entries()}
+
+
+def add_block(workflow, user, key, x=40, y=40):
+    """Add one step from the catalog; returns the new step."""
+    from core.services import jupyter_templates
+
+    kind, _, ref = (key or "").partition(":")
+
+    if kind in ("manual", "note") and not ref:
+        return service.add_step(workflow, user, {"title": "Note" if kind == "note" else "New step", "kind": kind, "x": int(x), "y": int(y)})
+    if kind == "notebook" and ref in jupyter_templates.TEMPLATES:
+        template = jupyter_templates.TEMPLATES[ref]
+
+        with transaction.atomic():
+            notebook = jupyter_templates.create_notebook(user, ref)
+
+            return service.add_step(workflow, user, {
+                "title": template["title"], "kind": "jupyter", "jupyter_notebook": notebook.pk, "x": int(x), "y": int(y),
+                "parameters": "\n".join(f"{k}={v}" for k, v in template["parameters"].items()),
+            })
+    if kind == "submission":
+        return service.add_submission_step(workflow, user, ref, int(x), int(y))[0]
+
+    raise ValidationError("Unknown step.")
 
 
 def _levels(steps):
