@@ -504,6 +504,7 @@ urlpatterns = [
     path('internal/lab-tools/submissions/<int:package_id>/api/', submission_views.submission_api, name='submission_api'),
     path('internal/lab-tools/workflows/', workflow_views.workflow_list, name='workflow_list'),
     path('internal/lab-tools/workflows/create/', workflow_views.workflow_create, name='workflow_create'),
+    path('internal/lab-tools/workflows/galaxy-tools/', workflow_views.workflow_galaxy_tools_api, name='workflow_galaxy_tools_api'),
     path('internal/lab-tools/workflows/lookup/', workflow_views.workflow_lookup_api, name='workflow_lookup_api'),
     path('internal/lab-tools/workflows/<int:workflow_id>/', workflow_views.workflow_detail, name='workflow_detail'),
     path('internal/lab-tools/workflows/<int:workflow_id>/api/', workflow_views.workflow_api, name='workflow_api'),

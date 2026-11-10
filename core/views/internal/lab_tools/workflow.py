@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from core.context import base_context
 from core.models.lab_tools.workflow import Workflow, WorkflowStep, WorkflowStepFile
 from core.services import notebook_composer as composer
+from core.services import galaxy
 from core.services import workflow as service
 from core.services import workflow_templates
 
@@ -149,6 +150,15 @@ def workflow_api(request, workflow_id):
             )
 
             return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
+        elif action == "add_galaxy_step":
+            tool = galaxy.find_tool(str(data.get("tool_id") or ""))
+
+            if tool is None:
+                raise ValidationError("That Galaxy tool is not available.")
+
+            step = service.add_galaxy_step(workflow, user, tool, data.get("x") or 40, data.get("y") or 40)
+
+            return JsonResponse({"status": "success", "step_id": step.pk, "workflow": service.serialize(workflow, user)})
         elif action == "add_block":
             step = workflow_templates.add_block(workflow, user, data.get("block"), data.get("x") or 40, data.get("y") or 40)
 
@@ -259,3 +269,14 @@ def workflow_lookup_api(request):
         ]})
 
     raise Http404("Unknown lookup kind.")
+
+
+@login_required
+def workflow_galaxy_tools_api(request):
+    """The Galaxy tool catalog, read when the Galaxy tab of the catalog is opened."""
+    try:
+        tools = galaxy.tool_catalog(refresh=request.GET.get("refresh") == "1")
+    except galaxy.GalaxyUnavailable:
+        return JsonResponse({"status": "unavailable", "message": "Galaxy is not reachable from the LIMS right now.", "tools": []})
+
+    return JsonResponse({"status": "success", "tools": tools})

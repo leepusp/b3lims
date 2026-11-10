@@ -11,8 +11,11 @@ from django.db import transaction
 from core.services import workflow as service
 
 
-def _s(ref, title, kind="manual", notes="", params="", after=(), notebook=""):
-    return {"ref": ref, "title": title, "kind": kind, "notes": notes, "parameters": params, "after": list(after), "notebook": notebook}
+def _s(ref, title, kind="manual", notes="", params="", after=(), notebook="", galaxy=""):
+    return {"ref": ref, "title": title, "kind": kind, "notes": notes, "parameters": params, "after": list(after), "notebook": notebook, "galaxy": galaxy}
+
+
+TS = "toolshed.g2.bx.psu.edu/repos/"
 
 
 TEMPLATES = [
@@ -80,6 +83,43 @@ TEMPLATES = [
             _s("qc", "Read quality control", "jupyter", "Set fastq_path to one of the files to check its quality before submitting.", after=["samples"], notebook="read_qc"),
             _s("lib", "Library description", notes="Strategy, source, selection, layout, platform and instrument go in the package details.", after=["qc"]),
             _s("files", "Read files", notes="List the file names in the package (R1/R2 are paired automatically). Upload the files in the portal.", after=["lib"]),
+        ],
+    },
+    {
+        "key": "galaxy_genome_annotation", "name": "Reads to annotated genome (Galaxy)", "category": "Galaxy", "engine": "galaxy", "submission": "genbank",
+        "description": "Quality control, trimming, assembly check and Bakta annotation with the lab's Galaxy tools, then a GenBank package.",
+        "inputs": ["Raw reads (fastq) available to Galaxy", "An assembler of your choice for the assembly step", "Sample and organism"],
+        "steps": [
+            _s("sample", "Sample and organism", notes="Link the sample; the organism sets the taxon of the package."),
+            _s("qc", "FastQC", "galaxy", "Run in Galaxy on your reads; note the verdict in the result note.", after=["sample"], galaxy=TS + "devteam/fastqc/fastqc"),
+            _s("trim", "Trimmomatic", "galaxy", "Trim adapters and low-quality ends.", after=["qc"], galaxy=TS + "pjbriggs/trimmomatic/trimmomatic"),
+            _s("asm", "Assembly", notes="Assemble with the tool you prefer on the cluster, and register the result as a molecular record.", after=["trim"]),
+            _s("quast", "QUAST", "galaxy", "Assembly statistics: N50, total length, contigs.", after=["asm"], galaxy=TS + "iuc/quast/quast"),
+            _s("bakta", "Bakta", "galaxy", "Annotate the assembly; bring the annotation back to the molecular record.", after=["quast"], galaxy="davinci_bakta"),
+        ],
+    },
+    {
+        "key": "galaxy_align_tree", "name": "Align and build a tree (Galaxy)", "category": "Galaxy", "engine": "galaxy",
+        "description": "MAFFT alignment, trimAl trimming and an IQ-TREE maximum-likelihood tree.",
+        "inputs": ["Homologous sequences in one FASTA file, uploaded to Galaxy"],
+        "steps": [
+            _s("seqs", "Collect sequences", notes="Gather the sequences in one FASTA file and upload it to Galaxy."),
+            _s("mafft", "MAFFT", "galaxy", "Multiple alignment.", after=["seqs"], galaxy=TS + "rnateam/mafft/rbc_mafft"),
+            _s("trimal", "trimAl", "galaxy", "Remove poorly aligned columns.", after=["mafft"], galaxy=TS + "iuc/trimal/trimal"),
+            _s("iqtree", "IQ-TREE", "galaxy", "Maximum-likelihood tree with bootstrap support.", after=["trimal"], galaxy=TS + "iuc/iqtree/iqtree"),
+            _s("read", "Read the tree", notes="Describe the clades and support values.", after=["iqtree"]),
+        ],
+    },
+    {
+        "key": "galaxy_map_variants", "name": "Map reads and call variants (Galaxy)", "category": "Galaxy", "engine": "galaxy",
+        "description": "Quality control, BWA-MEM mapping and FreeBayes variant calling.",
+        "inputs": ["Reads (fastq)", "A reference genome in FASTA", "Samples and organism"],
+        "steps": [
+            _s("sample", "Sample and reference", notes="Link the sample and the reference molecular record."),
+            _s("qc", "FastQC", "galaxy", "Check the reads first.", after=["sample"], galaxy=TS + "devteam/fastqc/fastqc"),
+            _s("map", "BWA-MEM", "galaxy", "Map the reads to the reference.", after=["qc"], galaxy=TS + "devteam/bwa/bwa_mem"),
+            _s("call", "FreeBayes", "galaxy", "Call variants from the mapping.", after=["map"], galaxy=TS + "devteam/freebayes/freebayes"),
+            _s("read", "Review the variants", notes="Filter and interpret; note the ones that matter.", after=["call"]),
         ],
     },
     {
@@ -204,6 +244,20 @@ def _build(workflow, user, template, extra, x, y):
             "title": spec["title"], "kind": spec["kind"], "notes": spec["notes"], "x": int(x) + col * 260, "y": int(y) + row * 150,
         }
 
+        if spec["kind"] == "galaxy":
+            from core.services import galaxy
+
+            tool = galaxy.resolve_tool(spec["galaxy"])
+
+            if tool:
+                step = service.add_galaxy_step(workflow, user, tool, data["x"], data["y"])
+                step.title, step.notes = spec["title"], spec["notes"]
+                step.save(update_fields=["title", "notes"])
+                created[spec["ref"]] = step
+                continue
+
+            data["kind"] = "manual"
+            data["notes"] = f"{spec['notes']} (Galaxy tool: {spec['galaxy'].rsplit('/', 1)[-1]}; it was not found in the Galaxy catalog just now, so this is a plain step.)"
         if spec["kind"] == "jupyter":
             from core.services import jupyter_templates
 

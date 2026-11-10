@@ -97,7 +97,8 @@
             entry: draft.eln || null, molecule: draft.molecule || null, sample: draft.sample || null,
             jupyter_notebook: jupyter ? (draft.jupyter || null) : null,
             parameters: jupyter ? $("wf-f-params").value : "",
-            result_note: $("wf-f-result").value,
+            result_note: $("wf-f-kind").value === "galaxy" ? $("wf-g-result").value : $("wf-f-result").value,
+            galaxy_url: $("wf-f-galaxy-url").value,
         };
     }
 
@@ -214,6 +215,10 @@
         const p = step.preview || {};
         const out = [];
 
+        if (step.galaxy) {
+            out.push("<div class='wf-prev'><div class='wf-prev-title'><i class='bi bi-boxes'></i> " + esc(step.galaxy.name) + "</div><div class='wf-prev-sub'>Galaxy" + (step.galaxy.version ? " · " + esc(step.galaxy.version) : "")
+                + (step.galaxy.result_url ? " · result linked" : "") + "</div></div>");
+        }
         if (step.submission && !step.submission.hidden) {
             const s = step.submission;
 
@@ -278,7 +283,8 @@
                 + "<div class='wf-node-meta'><span>" + STATUS_LABEL[step.status] + "</span>"
                 + (step.assignee_name ? "<span><i class='bi bi-person'></i> " + esc(step.assignee_name) + "</span>" : "") + dueHtml(step)
                 + (step.files && step.files.length ? "<span title='Attached images'><i class='bi bi-images'></i> " + step.files.length + "</span>" : "")
-                + (step.kind === "jupyter" ? "<span title='Jupyter notebook step'><i class='bi bi-code-square'></i></span>" : "") + "</div>"
+                + (step.kind === "jupyter" ? "<span title='Jupyter notebook step'><i class='bi bi-code-square'></i></span>" : "")
+                + (step.kind === "galaxy" ? "<span title='Galaxy tool step'><i class='bi bi-boxes'></i></span>" : "") + "</div>"
                 + (canEdit ? "<button type='button' class='wf-port' aria-label='Connect from this step'></button>" : "");
             layer.appendChild(node);
         });
@@ -365,8 +371,21 @@
         root.querySelectorAll(".wf-work-only").forEach((el) => { el.hidden = note; });
         $("wf-jupyter").hidden = kind !== "jupyter";
         $("wf-submission").hidden = kind !== "submission";
+        $("wf-galaxy").hidden = kind !== "galaxy";
         $("wf-f-notes-label").textContent = note ? "Annotation" : "Notes";
         $("wf-f-notes").rows = note ? 8 : 3;
+    }
+
+    function renderGalaxy(step) {
+        const g = step.galaxy;
+
+        if (!g) return;
+
+        $("wf-galaxy-info").innerHTML = "<b>" + esc(g.name) + "</b>" + (g.version ? " <span class='badge text-bg-light'>" + esc(g.version) + "</span>" : "")
+            + (g.section ? "<div class='text-muted'>" + esc(g.section) + "</div>" : "") + (g.description ? "<div>" + esc(g.description) + "</div>" : "")
+            + (g.result_url ? "<div class='mt-1'><a href='" + esc(g.result_url) + "' target='_blank' rel='noopener'>Result in Galaxy</a></div>" : "");
+        $("wf-galaxy-open").href = g.tool_url;
+        $("wf-f-galaxy-url").value = g.result_url || "";
     }
 
     function renderSubmission(step) {
@@ -396,9 +415,10 @@
 
         $("wf-f-title").value = step.title;
         $("wf-f-status").value = step.status;
-        Array.from($("wf-f-kind").options).forEach((o) => { if (o.value === "submission") o.disabled = step.kind !== "submission"; });
+        Array.from($("wf-f-kind").options).forEach((o) => { if (o.value === "submission" || o.value === "galaxy") o.disabled = step.kind !== o.value; });
         $("wf-f-kind").value = step.kind;
-        $("wf-f-kind").disabled = step.kind === "submission" || !canEdit;
+        $("wf-f-kind").disabled = step.kind === "submission" || step.kind === "galaxy" || !canEdit;
+        renderGalaxy(step);
         $("wf-f-assignee").value = step.assignee || "";
         $("wf-f-due").value = step.due_date || "";
         $("wf-f-notes").value = step.notes;
@@ -409,6 +429,7 @@
         renderFiles(step);
         $("wf-f-params").value = step.parameters || "";
         $("wf-f-result").value = step.result_note || "";
+        $("wf-g-result").value = step.result_note || "";
         const saved = step.run_resources || {};
 
         $("wf-run-partition").value = saved.partition || "basic";
@@ -706,10 +727,37 @@
         $("wf-arrange").addEventListener("click", arrange);
         const catalog = JSON.parse($("wf-templates-data").textContent);
         const picker = {tab: "workflows", category: "", query: ""};
+        catalog.galaxy = [];
         const HELP = {
             workflows: "Adds a connected set of steps. Each step says what it needs; edit anything afterwards.",
             blocks: "Adds one step to the canvas. Analysis steps come with their own ready notebook.",
+            galaxy: "Tools installed in the DaVinci Galaxy. A step opens the tool in Galaxy with your DaVinci login; run it there and link the result back.",
         };
+        const galaxyState = {loaded: false, loading: false, message: ""};
+
+        async function loadGalaxy() {
+            if (galaxyState.loaded || galaxyState.loading) return;
+            galaxyState.loading = true;
+            renderPicker();
+
+            try {
+                const response = await fetch(root.dataset.galaxyUrl, {credentials: "same-origin"});
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    catalog.galaxy = data.tools.map((t) => ({key: t.id, name: t.name, category: t.section, description: t.description, engine: t.version ? "v" + t.version : "galaxy", custom: t.custom}));
+                    galaxyState.loaded = true;
+                    galaxyState.message = "";
+                } else {
+                    galaxyState.message = data.message || "Galaxy is not reachable right now.";
+                }
+            } catch (error) {
+                galaxyState.message = "Galaxy is not reachable right now.";
+            }
+
+            galaxyState.loading = false;
+            renderPicker();
+        }
 
         function pickerEntries() {
             const words = picker.query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -730,10 +778,22 @@
 
             $("wf-tpl-n-workflows").textContent = catalog.workflows.length;
             $("wf-tpl-n-blocks").textContent = catalog.blocks.length;
+            $("wf-tpl-n-galaxy").textContent = galaxyState.loaded ? catalog.galaxy.length : "";
             $("wf-tpl-tabs").querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === picker.tab));
             $("wf-tpl-help").textContent = HELP[picker.tab];
             $("wf-tpl-cats").innerHTML = ["", ...cats].map((c) => "<button type='button' class='btn btn-sm " + (picker.category === c ? "btn-primary" : "btn-outline-secondary") + " py-0' data-cat='" + esc(c) + "'>" + (c ? esc(c) : "All") + "</button>").join("");
             $("wf-tpl-cats").querySelectorAll("[data-cat]").forEach((b) => b.addEventListener("click", () => { picker.category = b.dataset.cat; renderPicker(); }));
+
+            if (picker.tab === "galaxy" && !galaxyState.loaded) {
+                $("wf-templates-list").innerHTML = galaxyState.loading
+                    ? "<div class='text-muted text-center py-4'>Reading the Galaxy tool list...</div>"
+                    : "<div class='alert alert-warning'>" + esc(galaxyState.message || "Galaxy is not reachable right now.") + " <button type='button' class='btn btn-sm btn-outline-secondary ms-2' id='wf-galaxy-retry'>Try again</button></div>";
+                const retry = $("wf-galaxy-retry");
+
+                if (retry) retry.addEventListener("click", loadGalaxy);
+
+                return;
+            }
 
             if (!shown.length) {
                 $("wf-templates-list").innerHTML = "<div class='text-muted text-center py-4'>Nothing matches &ldquo;" + esc(picker.query) + "&rdquo;. Try another word, or clear the category.</div>";
@@ -752,7 +812,9 @@
                 + (t.inputs ? "<div class='small'><b>You will need:</b> " + esc(t.inputs.join(" · ")) + "</div>" : "") + "</div>").join("")).join("");
             $("wf-templates-list").querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", async () => {
                 const at = {x: 40, y: wf.steps.length ? bottomY() + 40 : 40};
-                const data = await act(picker.tab === "workflows" ? Object.assign({action: "apply_template", template: b.dataset.pick}, at) : Object.assign({action: "add_block", block: b.dataset.pick}, at));
+                const payload = picker.tab === "workflows" ? {action: "apply_template", template: b.dataset.pick}
+                    : picker.tab === "galaxy" ? {action: "add_galaxy_step", tool_id: b.dataset.pick} : {action: "add_block", block: b.dataset.pick};
+                const data = await act(Object.assign(payload, at));
 
                 if (data) {
                     if (data.step_id) { selected = data.step_id; render(); }
@@ -762,7 +824,7 @@
         }
 
         $("wf-tpl-q").addEventListener("input", () => { picker.query = $("wf-tpl-q").value; renderPicker(); });
-        $("wf-tpl-tabs").querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { picker.tab = b.dataset.tab; picker.category = ""; renderPicker(); }));
+        $("wf-tpl-tabs").querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { picker.tab = b.dataset.tab; picker.category = ""; renderPicker(); if (picker.tab === "galaxy") loadGalaxy(); }));
         $("wf-templates-modal").addEventListener("shown.bs.modal", () => $("wf-tpl-q").focus());
         $("wf-templates").addEventListener("click", () => {
             picker.query = "";

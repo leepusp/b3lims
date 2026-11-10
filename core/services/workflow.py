@@ -151,13 +151,15 @@ def apply_step_fields(step, user, data):
         step.title = _text(data["title"], "title", required=True)
     if "notes" in data:
         step.notes = _text(data["notes"], "notes")
-    if "kind" in data and step.kind == "submission" and step.pk:
-        pass  # a submission step stays one: it is tied to its package
+    if "kind" in data and step.kind in ("submission", "galaxy") and step.pk:
+        pass  # these stay what they are: tied to their package or tool
     elif "kind" in data:
         step.kind = _choice(data["kind"], WorkflowStep.Kind.choices, "kind")
 
         if step.kind == "submission" and not (step.config or {}).get("package_id"):
             raise ValidationError("Submission steps are added from the Templates catalog (Single steps).")
+        if step.kind == "galaxy" and not (step.config or {}).get("tool_id"):
+            raise ValidationError("Galaxy steps are added from the Templates catalog (Galaxy tools).")
     if "status" in data:
         status = _choice(data["status"], WorkflowStep.Status.choices, "status")
 
@@ -178,6 +180,12 @@ def apply_step_fields(step, user, data):
         step.molecule = _link(data["molecule"], _molecule_for, user)
     if "sample" in data:
         step.sample = _link(data["sample"], _sample_for, user)
+    if "galaxy_url" in data and step.kind == "galaxy":
+        from core.services import galaxy
+
+        config = dict(step.config or {})
+        config["galaxy_url"] = galaxy.clean_result_link(data["galaxy_url"])
+        step.config = config
     if any(k in data for k in ("jupyter_notebook", "parameters", "result_note")):
         config = dict(step.config or {})
 
@@ -458,9 +466,38 @@ def _submission_info(step, user):
     }}
 
 
+def _galaxy_info(step):
+    if step.kind != "galaxy":
+        return {"galaxy": None}
+
+    from core.services import galaxy
+
+    config = step.config or {}
+    tool_id = config.get("tool_id", "")
+
+    return {"galaxy": {
+        "tool_id": tool_id, "name": config.get("tool_name") or tool_id, "version": config.get("tool_version", ""),
+        "section": config.get("tool_section", ""), "description": config.get("tool_description", ""),
+        "tool_url": galaxy.tool_url(tool_id) if tool_id else "", "result_url": config.get("galaxy_url", ""),
+    }}
+
+
+def add_galaxy_step(workflow, user, tool, x=40, y=40):
+    """A step that stands for one Galaxy tool (``tool`` is a catalog entry)."""
+    if workflow.steps.count() >= MAX_STEPS:
+        raise ValidationError(f"At most {MAX_STEPS} steps per workflow.")
+
+    return WorkflowStep.objects.create(
+        workflow=workflow, title=tool["name"][:200], kind="galaxy", x=int(x), y=int(y),
+        config={"tool_id": tool["id"], "tool_name": tool["name"], "tool_version": tool.get("version", ""),
+                "tool_section": tool.get("section", ""), "tool_description": tool.get("description", "")},
+    )
+
+
 def serialize_step(step, user=None):
     return {
         **_jupyter_info(step),
+        **_galaxy_info(step),
         **_submission_info(step, user),
         **_latest_run(step),
         "id": step.pk,
