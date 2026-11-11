@@ -195,6 +195,24 @@
         render();
     });
 
+    // The "fill from taxonomy" box above the type's fields sets the main organism too.
+    document.addEventListener("biobank:set-main-organism", (event) => {
+        const t = event.detail;
+        const row = {role: "primary", strain: "", notes: "", name: t.name, taxid: String(t.taxid), rank: t.rank, source: "ncbi", path: t.path, genus: t.genus};
+        const at = rows.findIndex((r) => r.role === "primary");
+
+        if (at >= 0) {
+            row.strain = rows[at].strain || "";
+            rows[at] = row;
+        } else {
+            rows.unshift(row);
+        }
+
+        // keep a single entry for the same taxon
+        rows = rows.filter((r, i) => i === (at >= 0 ? at : 0) || !(r.taxid && r.taxid === row.taxid && r.strain === row.strain));
+        render();
+    });
+
     if (typeInput) typeInput.addEventListener("change", scope);
 
     scope();

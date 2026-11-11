@@ -704,6 +704,8 @@
                                 {{ form.instance.sample_type|default:"this Sample" }}.
                             </p>
 
+                            {% include "internal/samples/_taxonomy_fill.html" with fill_type=form.instance.sample_type %}
+
                             <div class="row g-3">
                                 {% for field in biological_fields %}
                                     <div class="col-md-6">

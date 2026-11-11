@@ -54,7 +54,10 @@ class ServiceTests(OrganismBase):
         self.assertEqual([r["name"] for r in sample_organisms.search("staphylococcus a", "Bacterium (Host)")["results"]], ["Staphylococcus aureus"])
         self.assertEqual(sample_organisms.search("staphylococcus a", "Phage (Virus)")["results"], [])
         self.assertEqual(sample_organisms.search("escherichia", "Phage (Virus)")["results"][0]["taxid"], 12333)
-        self.assertEqual(sample_organisms.search("staphylococcus a", "Other")["results"][0]["genus"], "Staphylococcus")
+        found = sample_organisms.search("staphylococcus a", "Other")["results"][0]
+
+        self.assertEqual(found["genus"], "Staphylococcus")
+        self.assertEqual(found["ranks"]["species"], "Staphylococcus aureus")
 
     def test_clean_takes_names_from_the_index_and_enforces_scope(self):
         taxonomy_local.build_index()
@@ -119,6 +122,13 @@ class ViewTests(OrganismBase):
 
         self.assertContains(page, "typed by hand")
         self.assertContains(page, "taxid 1280")
+
+    def test_taxonomy_fill_box_is_on_new_and_edit_pages(self):
+        self.assertContains(self.client.get(reverse("sample_add")), 'id="taxFill"')
+
+        sample = Sample.objects.create(sample_id="ORG-FILL", organism_name="x", sample_type="Other", owner=self.user)
+
+        self.assertContains(self.client.get(reverse("sample_edit", args=[sample.pk])), "organismsSection")
 
     def test_invalid_organisms_create_nothing(self):
         taxonomy_local.build_index()

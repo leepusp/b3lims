@@ -62,7 +62,8 @@ def search(query, sample_type="", limit=12):
             continue
 
         genus = next((c["name"] for c in chain if c.get("rank") == "genus"), "")
-        results.append({**hit, "path": _brief(chain), "genus": genus})
+        ranks = {c["rank"]: c["name"] for c in chain if c.get("rank") and c["rank"] != "no rank"}
+        results.append({**hit, "path": _brief(chain), "genus": genus, "ranks": ranks})
 
         if len(results) >= limit:
             break
