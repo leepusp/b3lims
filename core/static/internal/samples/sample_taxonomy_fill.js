@@ -34,6 +34,12 @@
         if (field && value && !field.value) setField(name, value);
     }
 
+    function ictvGenomeType(text) {
+        const first = String(text || "").split(",")[0].trim();
+
+        return /RT/.test(first) ? "" : (["dsDNA", "ssDNA", "dsRNA", "ssRNA"].find((g) => first.startsWith(g)) || "");
+    }
+
     function apply(t) {
         const ranks = t.ranks || {};
         const genus = ranks.genus || t.genus || "";
@@ -51,6 +57,8 @@
             setField("genus", genus);
             setField("taxonomy", ranks.family || ranks.order || ranks.class || "");
 
+            if (t.source === "ictv") setIfEmpty("genome_type", ictvGenomeType(t.genome));
+
             if (below) setField("strain", t.name);
         }
 
@@ -59,7 +67,7 @@
     }
 
     const num = (v) => (v == null ? "-" : Number(v).toLocaleString());
-    const SOURCES = {ncbi: "NCBI Taxonomy", gtdb: "GTDB", inferred: "Inferred from the lineage"};
+    const SOURCES = {ncbi: "NCBI Taxonomy", gtdb: "GTDB", ictv: "ICTV", inferred: "Inferred from the lineage"};
     let chosen = new Set();
 
     function writeSelection() {
@@ -84,14 +92,14 @@
 
         html += "<div class='fw-semibold mb-1'>Reference data for <i>" + esc(d.name) + "</i> - tick what to keep with this sample</div>";
 
-        ["ncbi", "gtdb", "inferred"].forEach((source) => {
+        ["ncbi", "gtdb", "ictv", "inferred"].forEach((source) => {
             const mine = items.filter((i) => i.source === source);
 
             if (!mine.length) return;
 
             html += "<div class='mt-2 pt-2 border-top'><div class='d-flex justify-content-between align-items-center'>"
                 + "<div class='fw-semibold'>" + esc(SOURCES[source]) + " <span class='text-muted fw-normal'>" + esc(mine[0].version) + "</span>"
-                + (source === "gtdb" && d.source !== "gtdb" ? " <span class='badge text-bg-light border'>matched through the NCBI species</span>" : "") + "</div>"
+                + (source === d.source || source === "inferred" || source === "ncbi" ? "" : " <span class='badge text-bg-light border'>matched through the NCBI species</span>") + "</div>"
                 + "<span><button type='button' class='btn btn-link btn-sm p-0 me-2' data-all='" + source + "'>select all</button>"
                 + "<button type='button' class='btn btn-link btn-sm p-0' data-none='" + source + "'>none</button></span></div>";
 
@@ -145,7 +153,7 @@
         writeSelection();
 
         try {
-            const query = t.source === "gtdb" ? "?source=gtdb&name=" + encodeURIComponent(t.gtdb) : "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType());
+            const query = t.source === "gtdb" ? "?source=gtdb&name=" + encodeURIComponent(t.gtdb) : t.source === "ictv" ? "?source=ictv&name=" + encodeURIComponent(t.ictv) : "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType());
             const response = await fetch(root.dataset.detailsUrl + query, {credentials: "same-origin"});
             const d = await response.json();
 
@@ -153,7 +161,8 @@
 
             const inferred = d.inferred || {};
 
-            setIfEmpty("genome_type", inferred.genome_type && inferred.genome_type.value);
+            setIfEmpty("genome_type", d.genome_type || (inferred.genome_type && inferred.genome_type.value));
+            setIfEmpty("ncbi_accession", d.ncbi_accession);
             setIfEmpty("morphotype", inferred.morphotype && inferred.morphotype.value);
             box.innerHTML = card(d);
             box.hidden = false;
@@ -172,7 +181,7 @@
         } else {
             hits = data.results;
             box.innerHTML = hits.map((t, i) => "<button type='button' class='list-group-item list-group-item-action' data-hit='" + i + "'>"
-                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge " + (t.source === "gtdb" ? "text-bg-success" : "text-bg-primary") + "'>" + (t.source === "gtdb" ? "GTDB" : "NCBI") + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>" + (t.source === "gtdb" ? num(t.genomes) + " genomes" : "taxid " + esc(t.taxid)) + "</span>"
+                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge " + ({gtdb: "text-bg-success", ictv: "text-bg-warning"}[t.source] || "text-bg-primary") + "'>" + (t.source || "ncbi").toUpperCase() + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>" + (t.source === "gtdb" ? num(t.genomes) + " genomes" : t.source === "ictv" ? esc(t.genome) + (t.hosts ? " · host: " + esc(t.hosts) : "") : "taxid " + esc(t.taxid)) + "</span>"
                 + (t.matched ? " <span class='small text-muted'>(" + esc(t.matched) + ")</span>" : "")
                 + (t.path ? "<div class='small text-muted'>" + esc(t.path) + "</div>" : "") + "</button>").join("");
         }
@@ -203,11 +212,12 @@
     function toggle() {
         root.hidden = !supported();
 
-        const bacteria = sampleType() === "Bacterium (Host)";
+        const type = sampleType();
+        const own = {"Bacterium (Host)": "gtdb", "Phage (Virus)": "ictv"}[type];
 
-        $("taxFillSource").querySelectorAll("option").forEach((o) => { o.hidden = !bacteria && o.value !== "ncbi"; });
-        $("taxFillSource").closest(".d-flex").hidden = !bacteria;
-        $("taxFillSource").value = bacteria ? "all" : "ncbi";
+        $("taxFillSource").querySelectorAll("option").forEach((o) => { o.hidden = o.value !== "all" && o.value !== "ncbi" && o.value !== own; });
+        $("taxFillSource").closest(".d-flex").hidden = !own;
+        $("taxFillSource").value = own ? "all" : "ncbi";
 
         $("taxFillQuery").placeholder = {
             "Bacterium (Host)": "Scientific or common name, for example Escherichia coli or E. coli",

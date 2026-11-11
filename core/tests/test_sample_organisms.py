@@ -431,3 +431,113 @@ class ReferenceDataTests(OrganismBase):
         data = self.client.get(reverse("sample_organism_details"), {"taxid": "1280", "type": "Bacterium (Host)"}).json()
 
         self.assertTrue(any(i["key"] == "lineage" for i in data["catalog"]))
+
+
+class IctvTests(OrganismBase):
+    def setUp(self):
+        super().setUp()
+
+        import openpyxl
+
+        from core.services import ictv_local
+
+        taxonomy_local.build_index()
+
+        head = ["Sort", "Realm", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species", "Exemplar or additional isolate", "Virus name(s)",
+                "Virus name abbreviation(s)", "Virus isolate designation", "Virus GenBank accession", "Genome coverage", "Genome", "Host source", "ICTV_ID"]
+        rows = [
+            [1, "Duplodnaviria", "Heunggongvirae", "Uroviricota", "Caudoviricetes", "", "Straboviridae", "Tequatrovirus", "Tequatrovirus T4", "E",
+             "Enterobacteria phage T4", "T4", "", '=HYPERLINK("https://x/AF158101","AF158101")', "Complete genome", "dsDNA", "bacteria", "ICTV20000001"],
+            [2, "Riboviria", "Orthornavirae", "Pisuviricota", "Pisoniviricetes", "Picornavirales", "Picornaviridae", "Enterovirus", "Enterovirus alphacoryzae", "E",
+             "Poliovirus 1", "PV1", "", "V01149", "Complete genome", "ssRNA(+)", "vertebrates", "ICTV20000002"],
+        ]
+        self.vmr = self.tmp / "ictv" / "MSL41"
+
+        self.vmr.mkdir(parents=True)
+
+        book = openpyxl.Workbook()
+        sheet = book.active
+        sheet.title = "VMR MSL41"
+        sheet.append(head)
+
+        for row in rows:
+            sheet.append(row)
+
+        book.save(self.vmr / "VMR_MSL41.xlsx")
+
+        override = override_settings(BIOBANK_ICTV_DIR=str(self.tmp / "ictv"))
+
+        override.enable()
+        self.addCleanup(override.disable)
+        self.ictv = ictv_local
+
+    def build(self):
+        return self.ictv.build_index()
+
+    def test_build_and_search_only_phages(self):
+        self.assertFalse(self.ictv.available())
+        self.assertEqual(self.build()["species"], 2)
+        self.assertEqual(self.build()["phages"], 1)
+
+        found = self.ictv.search("T4")
+
+        self.assertEqual([r["name"] for r in found], ["Tequatrovirus T4"])
+        self.assertEqual(found[0]["matched"], "" if found[0]["name"].lower() == "t4" else "T4")
+        self.assertEqual([r["name"] for r in self.ictv.search("Tequatro")], ["Tequatrovirus T4"])
+        self.assertEqual(self.ictv.search("Polio"), [])
+        self.assertEqual([r["name"] for r in self.ictv.search("Polio", phages_only=False)], ["Enterovirus alphacoryzae"])
+
+    def test_get_strips_hyperlinks_and_maps_genome(self):
+        self.build()
+
+        data = self.ictv.get("tequatrovirus t4")
+
+        self.assertEqual(data["exemplars"][0]["accession"], "AF158101")
+        self.assertEqual(data["release"], "VMR_MSL41")
+        self.assertEqual(self.ictv.genome_type_of("ssRNA(+)"), "ssRNA")
+        self.assertEqual(self.ictv.genome_type_of("ssRNA-RT"), "")
+
+    def test_search_in_the_organism_service_and_pick(self):
+        self.build()
+
+        found = sample_organisms.search("T4", "Phage (Virus)", source="ictv")["results"]
+
+        self.assertEqual((found[0]["source"], found[0]["ictv"]), ("ictv", "Tequatrovirus T4"))
+        self.assertTrue(any(r["source"] == "ictv" for r in sample_organisms.search("Tequatro", "Phage (Virus)", source="all")["results"]))
+        self.assertEqual(sample_organisms.search("Tequatro", "Bacterium (Host)", source="all")["results"], [])
+
+        rows = sample_organisms.clean([{"source": "ictv", "ictv": "Tequatrovirus T4", "role": "primary"}], "Phage (Virus)")
+
+        self.assertEqual((rows[0]["source"], rows[0]["taxon_id"]), ("ictv", "Tequatrovirus T4"))
+
+        with self.assertRaises(ValidationError):
+            sample_organisms.clean([{"source": "ictv", "ictv": "Tequatrovirus T4", "role": "primary"}], "Bacterium (Host)")
+
+        picked = sample_organisms.details_ictv("Tequatrovirus T4")
+
+        self.assertEqual((picked["genome_type"], picked["ncbi_accession"], picked["ranks"]["family"]), ("dsDNA", "AF158101", "Straboviridae"))
+
+    def test_api_catalog_and_roundtrip_on_a_sample(self):
+        from core.services import reference_data
+
+        self.build()
+
+        api = self.client.get(reverse("sample_organism_details"), {"source": "ictv", "name": "Tequatrovirus T4"}).json()
+
+        self.assertEqual(api["status"], "success")
+        self.assertTrue(any(i["source"] == "ictv" and i["key"] == "exemplar_accession" and i["value"] == "AF158101" for i in api["catalog"]))
+        self.assertEqual(self.client.get(reverse("sample_organism_details"), {"source": "ictv", "name": "Nope"}).status_code, 404)
+
+        response = self.client.post(reverse("sample_add"), self.payload(
+            [{"source": "ictv", "ictv": "Tequatrovirus T4", "role": "primary"}], sample_type="Phage (Virus)",
+            reference_json=json.dumps([{"source": "ictv", "key": "genome_composition"}]),
+        ))
+
+        self.assertIn(response.status_code, (200, 302))
+
+        sample = Sample.objects.get(sample_id="ORG-1")
+        rows = sample_organisms.serialize(sample)
+
+        self.assertEqual(rows[0]["ictv"], "Tequatrovirus T4")
+        self.assertEqual(reference_data.main_details(sample)[0]["name"], "Tequatrovirus T4")
+        self.assertEqual(sample.reference_data.get(source="ictv", key="genome_composition").value, "dsDNA")

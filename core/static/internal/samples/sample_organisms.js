@@ -26,20 +26,20 @@
 
     function sync() {
         $("organismsJson").value = JSON.stringify(rows.map((r) => ({
-            role: r.role, name: r.name, strain: r.strain || "", taxid: r.taxid || "", notes: r.notes || "", source: r.source || "", gtdb: r.gtdb || "",
+            role: r.role, name: r.name, strain: r.strain || "", taxid: r.taxid || "", notes: r.notes || "", source: r.source || "", gtdb: r.gtdb || "", ictv: r.ictv || "",
         })));
     }
 
     function badge(r) {
-        return r.taxid || r.source === "gtdb"
-            ? "<span class='badge text-bg-light border'>" + esc((r.source || "ncbi").toUpperCase()) + (r.source === "gtdb" ? "" : " · taxid " + esc(r.taxid)) + (r.rank ? " · " + esc(r.rank) : "") + "</span>"
+        return r.taxid || r.source === "gtdb" || r.source === "ictv"
+            ? "<span class='badge text-bg-light border'>" + esc((r.source || "ncbi").toUpperCase()) + (r.source === "gtdb" || r.source === "ictv" ? "" : " · taxid " + esc(r.taxid)) + (r.rank ? " · " + esc(r.rank) : "") + "</span>"
             : "<span class='badge text-bg-warning' title='Not linked to a taxonomy database'>typed by hand</span>";
     }
 
     function render() {
         $("orgRows").innerHTML = rows.map((r, i) => {
             const roles = ROLES.map(([v, l]) => "<option value='" + v + "'" + (r.role === v ? " selected" : "") + ">" + l + "</option>").join("");
-            const name = r.taxid || r.source === "gtdb"
+            const name = r.taxid || r.source === "gtdb" || r.source === "ictv"
                 ? "<div class='fw-semibold fst-italic'>" + esc(r.name) + "</div>" + (r.path ? "<div class='small text-muted'>" + esc(r.path) + "</div>" : "")
                 : "<input class='form-control form-control-sm' data-org='name' data-i='" + i + "' maxlength='255' value='" + esc(r.name) + "' placeholder='Organism name'>";
 
@@ -198,7 +198,7 @@
     // The "fill from taxonomy" box above the type's fields sets the main organism too.
     document.addEventListener("biobank:set-main-organism", (event) => {
         const t = event.detail;
-        const row = {role: "primary", strain: "", notes: "", name: t.name, taxid: t.taxid ? String(t.taxid) : "", rank: t.rank, source: t.source || "ncbi", gtdb: t.gtdb || "", path: t.path, genus: t.genus};
+        const row = {role: "primary", strain: "", notes: "", name: t.name, taxid: t.taxid ? String(t.taxid) : "", rank: t.rank, source: t.source || "ncbi", gtdb: t.gtdb || "", ictv: t.ictv || "", path: t.path, genus: t.genus};
         const at = rows.findIndex((r) => r.role === "primary");
 
         if (at >= 0) {
@@ -209,7 +209,7 @@
         }
 
         // keep a single entry for the same taxon
-        rows = rows.filter((r, i) => i === (at >= 0 ? at : 0) || !(((r.taxid && r.taxid === row.taxid) || (r.gtdb && r.gtdb === row.gtdb)) && r.strain === row.strain));
+        rows = rows.filter((r, i) => i === (at >= 0 ? at : 0) || !(((r.taxid && r.taxid === row.taxid) || (r.gtdb && r.gtdb === row.gtdb) || (r.ictv && r.ictv === row.ictv)) && r.strain === row.strain));
         render();
     });
 

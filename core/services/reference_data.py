@@ -15,8 +15,8 @@ from core.models.samples.reference_data import SampleReferenceData
 from core.services import gtdb_local, sample_organisms, taxonomy_local
 
 MAX_ITEMS = 120
-NCBI, GTDB, INFERRED = "ncbi", "gtdb", "inferred"
-SOURCE_LABELS = {NCBI: "NCBI Taxonomy", GTDB: "GTDB", INFERRED: "Inferred from the lineage"}
+NCBI, GTDB, ICTV, INFERRED = "ncbi", "gtdb", "ictv", "inferred"
+SOURCE_LABELS = {NCBI: "NCBI Taxonomy", GTDB: "GTDB", ICTV: "ICTV", INFERRED: "Inferred from the lineage"}
 
 
 def _number(value, digits=0):
@@ -55,6 +55,22 @@ def catalog(details):
 
     for key, found in (details.get("inferred") or {}).items():
         add(INFERRED, "NCBI lineage", "Virus traits", key, key.replace("_", " ").capitalize(), f"{found['value']} (from {found['basis']})")
+
+    ictv = details.get("ictv")
+
+    if ictv:
+        v = ictv.get("release", "")
+        e = (ictv.get("exemplars") or [{}])[0]
+
+        add(ICTV, v, "Taxonomy", "ictv_lineage", "ICTV lineage", " > ".join(c["name"] for c in ictv["lineage"]))
+        add(ICTV, v, "Taxonomy", "ictv_id", "ICTV species id", ictv.get("ictv_id"))
+        add(ICTV, v, "Exemplar virus", "exemplar_name", "Exemplar virus", e.get("name"))
+        add(ICTV, v, "Exemplar virus", "exemplar_abbreviation", "Abbreviation", e.get("abbreviation"))
+        add(ICTV, v, "Exemplar virus", "exemplar_isolate", "Isolate designation", e.get("isolate"))
+        add(ICTV, v, "Exemplar virus", "exemplar_accession", "GenBank accession", "; ".join(x["accession"] for x in ictv["exemplars"] if x.get("accession")))
+        add(ICTV, v, "Exemplar virus", "genome_coverage", "Genome coverage", e.get("coverage"))
+        add(ICTV, v, "Biology", "genome_composition", "Genome composition", "; ".join(ictv.get("composition", [])))
+        add(ICTV, v, "Biology", "host_source", "Host source", "; ".join(ictv.get("hosts", [])))
 
     g = details.get("gtdb")
 
@@ -102,6 +118,9 @@ def main_details(sample):
 
     if main.source == SampleOrganism.SOURCE_GTDB:
         return sample_organisms.details_gtdb(main.taxon_id), main
+
+    if main.source == SampleOrganism.SOURCE_ICTV:
+        return sample_organisms.details_ictv(main.taxon_id), main
 
     if main.source == SampleOrganism.SOURCE_NCBI and main.taxon_id:
         return sample_organisms.details(main.taxon_id, sample.sample_type), main

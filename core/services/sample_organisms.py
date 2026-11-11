@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core.models.samples.organisms import SampleOrganism
-from core.services import gtdb_local, taxonomy_local
+from core.services import gtdb_local, ictv_local, taxonomy_local
 
 MAX_ORGANISMS = 25
 BACTERIA, ARCHAEA, VIRUSES = 2, 2157, 10239
@@ -53,16 +53,38 @@ def search(query, sample_type="", limit=12, source="ncbi"):
     ``source`` is ``ncbi``, ``gtdb`` or ``all`` (NCBI first, then GTDB for bacteria)."""
     if source == "all":
         first = search(query, sample_type, limit, "ncbi")
+        scope = scope_for(sample_type) or ()
+        extra = []
 
-        if scope_for(sample_type) is None or BACTERIA not in (scope_for(sample_type) or ()):
+        if BACTERIA in scope:
+            extra += search(query, sample_type, 4, SourceGTDB)["results"]
+
+        if VIRUSES in scope:
+            extra += search(query, sample_type, 4, SourceICTV)["results"]
+
+        if not extra and not scope:
             return first
 
-        second = search(query, sample_type, 4, SourceGTDB)
-
         return {
-            "available": first["available"] or second["available"], "results": first["results"][:8] + second["results"],
-            "scope": "NCBI Taxonomy and GTDB", "source": "all",
+            "available": first["available"] or bool(extra), "results": first["results"][:8] + extra,
+            "scope": "NCBI Taxonomy and " + ("GTDB" if BACTERIA in scope else "ICTV"), "source": "all",
         }
+
+    if source == SourceICTV:
+        if not ictv_local.available():
+            return {"available": False, "results": [], "scope": "Viruses (ICTV)", "source": source}
+
+        results = []
+
+        for hit in ictv_local.search(query, limit, phages_only=sample_type == "Phage (Virus)"):
+            chain = hit["lineage"]
+            ranks = {c["rank"]: c["name"] for c in chain}
+            results.append({
+                "taxid": "", "ictv": hit["name"], "rank": "species", "name": hit["name"], "matched": hit["matched"], "path": _brief(chain),
+                "genus": ranks.get("genus", ""), "ranks": ranks, "hosts": ", ".join(hit["hosts"]), "genome": ", ".join(hit["genomes"]), "source": "ictv",
+            })
+
+        return {"available": True, "results": results, "scope": "Viruses (ICTV)", "source": source}
 
     if source == SourceGTDB:
         if not gtdb_local.available():
@@ -105,6 +127,7 @@ def search(query, sample_type="", limit=12, source="ncbi"):
 
 
 SourceGTDB = "gtdb"
+SourceICTV = "ictv"
 
 
 def _gtdb_base(name):
@@ -140,7 +163,7 @@ def parse(raw):
 
 def clean(rows, sample_type=""):
     """Validated rows ready to store. The taxonomy index, not the browser, supplies names and lineages."""
-    rows = [r for r in rows if any(str(r.get(key) or "").strip() for key in ("name", "taxid", "gtdb"))]
+    rows = [r for r in rows if any(str(r.get(key) or "").strip() for key in ("name", "taxid", "gtdb", "ictv"))]
 
     if len(rows) > MAX_ORGANISMS:
         raise ValidationError(f"A sample can list at most {MAX_ORGANISMS} organisms.")
@@ -173,6 +196,19 @@ def clean(rows, sample_type=""):
             item = {
                 "name": _gtdb_base(data["name"]), "taxon_id": data["name"], "rank": "species", "lineage": chain,
                 "source": SampleOrganism.SOURCE_GTDB, "taxonomy_version": data.get("release", ""),
+            }
+        elif str(row.get("source") or "") == SourceICTV and not taxid:
+            data = ictv_local.get(str(row.get("ictv") or row.get("name") or ""))
+
+            if data is None:
+                raise ValidationError(f"{label}: this species is not in the local ICTV copy.")
+
+            if role in (SampleOrganism.ROLE_PRIMARY, SampleOrganism.ROLE_MEMBER) and not in_scope([{"taxid": VIRUSES, "name": "Viruses"}], scope):
+                raise ValidationError(f"{label} ({data['name']}) is a virus, which this sample type does not take.")
+
+            item = {
+                "name": data["name"], "taxon_id": data["name"], "rank": "species", "lineage": data["lineage"],
+                "source": SampleOrganism.SOURCE_ICTV, "taxonomy_version": data.get("release", ""),
             }
         elif taxid:
             if not taxid.isdigit():
@@ -259,8 +295,9 @@ def serialize(sample):
     return [
         {
             "name": o.name, "strain": o.strain, "role": o.role, "rank": o.rank,
-            "taxid": "" if o.source == SampleOrganism.SOURCE_GTDB else o.taxon_id,
+            "taxid": "" if o.source in (SampleOrganism.SOURCE_GTDB, SampleOrganism.SOURCE_ICTV) else o.taxon_id,
             "gtdb": o.taxon_id if o.source == SampleOrganism.SOURCE_GTDB else "",
+            "ictv": o.taxon_id if o.source == SampleOrganism.SOURCE_ICTV else "",
             "source": o.source, "notes": o.notes, "path": _brief(o.lineage) if o.lineage else "",
         }
         for o in sample.organisms.all()
@@ -272,8 +309,9 @@ def form_rows(rows):
     return [
         {
             "name": r["name"], "strain": r["strain"], "role": r["role"], "rank": r["rank"],
-            "taxid": "" if r["source"] == SampleOrganism.SOURCE_GTDB else r["taxon_id"],
+            "taxid": "" if r["source"] in (SampleOrganism.SOURCE_GTDB, SampleOrganism.SOURCE_ICTV) else r["taxon_id"],
             "gtdb": r["taxon_id"] if r["source"] == SampleOrganism.SOURCE_GTDB else "",
+            "ictv": r["taxon_id"] if r["source"] == SampleOrganism.SOURCE_ICTV else "",
             "source": r["source"], "notes": r["notes"], "path": _brief(r["lineage"]) if r["lineage"] else "",
         }
         for r in rows
@@ -376,3 +414,33 @@ def details_gtdb(name):
     }
 
     return {**out, "ranks": {c["rank"]: c["name"] for c in chain}, "gtdb": data, "source": "gtdb", "name": base}
+
+
+def details_ictv(name):
+    """The card of an ICTV species picked in the form, with the NCBI entry of the same name when there is one."""
+    data = ictv_local.get(name)
+
+    if data is None:
+        return None
+
+    chain = data["lineage"]
+    found = None
+
+    for hit in taxonomy_local.search(data["name"], limit=10):
+        if hit["name"].lower() == data["name"].lower() and hit["rank"] == "species" and "matched" not in hit:
+            found = details(hit["taxid"], "Phage (Virus)")
+
+            break
+
+    out = found or {
+        "taxid": "", "rank": "species", "name": data["name"], "synonyms": [], "common_names": [], "authority": [], "division": "",
+        "genetic_code": "", "lineage": chain, "ranks": {}, "gtdb": None, "inferred": {}, "warnings": [],
+    }
+    ranks = {c["rank"]: c["name"] for c in chain}
+    exemplar = (data["exemplars"] or [{}])[0]
+    genome_type = ictv_local.genome_type_of(exemplar.get("genome", ""))
+
+    return {
+        **out, "ranks": ranks, "ictv": data, "source": "ictv", "name": data["name"], "ncbi_accession": exemplar.get("accession", ""),
+        "genome_type": genome_type, "gtdb": None,
+    }
