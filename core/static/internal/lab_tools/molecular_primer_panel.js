@@ -1,7 +1,8 @@
 /*
  * Primers window: check primers and simulate a PCR on the open record.
  *
- * - Each primer gets length, Tm (nearest neighbour), GC, 3' clamp, runs, the
+ * - Each primer gets length, Tm (nearest neighbour, with the reaction conditions set in the
+ *   Tm calculator: salt, Mg2+, dNTP, primer concentration, DMSO), GC, 3' clamp, runs, the
  *   longest hairpin stem and self-dimer, and its binding sites on the record.
  * - Pick a forward and a reverse primer to see the products: size, range,
  *   sequence (with the primer tails), a small gel, and the cross-dimer check.
@@ -381,7 +382,127 @@
         button("CSV", "Download the primer table", exportCsv),
         button("Order list", "Copy name and sequence of every primer", copyOrder),
     );
-    pane.append(head, pasteBox, listBox, sitesBox, pcrBox, note);
+    /* ---------- Tm calculator and reaction conditions ---------- */
+
+    const tmBox = el("details", "mwpr-card mwpr-tm");
+    const tmFields = [
+        ["monovalentMM", "Na⁺/K⁺ (mM)", "1", "0"], ["magnesiumMM", "Mg²⁺ (mM)", "0.1", "0"], ["dntpMM", "dNTPs, total (mM)", "0.1", "0"],
+        ["primerUM", "Primer (µM)", "0.05", "0.001"], ["dmsoPercent", "DMSO (%)", "1", "0"], ["formamidePercent", "Formamide (%)", "1", "0"],
+    ];
+    const tmInputs = {};
+    const tmPreset = el("select", "mwp-select");
+    const tmExcess = el("input");
+    const tmQuick = el("input", "mwp-cell mwpr-seq");
+    const tmResult = el("p", "mwpr-line");
+
+    function tmCurrent() {
+        const out = {primerExcess: tmExcess.checked};
+
+        tmFields.forEach(([key]) => {
+            out[key] = Number(tmInputs[key].value) || 0;
+        });
+
+        return out;
+    }
+
+    function tmFill(values) {
+        tmFields.forEach(([key]) => {
+            tmInputs[key].value = String(values[key] !== undefined ? values[key] : (key === "primerUM" ? 0.25 : key === "monovalentMM" ? 50 : 0));
+        });
+        tmExcess.checked = Boolean(values.primerExcess);
+    }
+
+    function tmQuickResult() {
+        const seq = clean(tmQuick.value);
+
+        if (!seq) {
+            tmResult.textContent = "Paste or type a sequence to get its Tm with these conditions.";
+
+            return;
+        }
+
+        const tm = calc.meltingTemperature(seq);
+        const base = calc.meltingTemperature(seq, calc.TM_PRESETS.default);
+
+        tmResult.textContent = tm === null
+            ? seq.length + " nt: Tm needs 8-120 nt of A, C, G, T only."
+            : seq.length + " nt · GC " + gcPercent(seq) + " % · Tm " + tm.toFixed(1) + " °C · suggested annealing " + (tm - 5).toFixed(0) + " °C" + (base === tm ? "" : " (default conditions: " + base.toFixed(1) + " °C)");
+    }
+
+    function tmPresetName() {
+        const now = tmCurrent();
+
+        return Object.keys(calc.TM_PRESETS).find(key => {
+            const preset = calc.TM_PRESETS[key];
+
+            return Object.keys(now).every(name => Number(preset[name] || 0) === Number(now[name] || 0));
+        }) || "custom";
+    }
+
+    function tmApply() {
+        calc.setTmConditions(tmCurrent());
+        tmPreset.value = tmPresetName();
+        tmQuickResult();
+        render();
+    }
+
+    tmBox.append(el("summary", "", "Tm calculator · reaction conditions"));
+    Object.keys(calc.TM_PRESETS).forEach(key => {
+        const option = el("option", "", calc.TM_PRESETS[key].label);
+
+        option.value = key;
+        tmPreset.append(option);
+    });
+    tmPreset.append(Object.assign(el("option", "", "Custom"), {value: "custom"}));
+    tmPreset.setAttribute("aria-label", "Reaction conditions used for every Tm");
+    tmPreset.addEventListener("change", () => {
+        if (calc.TM_PRESETS[tmPreset.value]) {
+            tmFill(calc.TM_PRESETS[tmPreset.value]);
+            tmApply();
+        }
+    });
+
+    const tmRow = el("div", "mwpr-tmgrid");
+
+    tmPreset.style.gridColumn = "1 / -1";
+    tmRow.append(tmPreset);
+    tmFields.forEach(([key, label, step, min]) => {
+        const field = el("label", "mwg-muted", label + " ");
+        const input = el("input", "mwp-cell");
+
+        input.type = "number";
+        input.step = step;
+        input.min = min;
+        input.style.width = "5.5rem";
+        input.addEventListener("change", tmApply);
+        input.addEventListener("keydown", event => event.stopPropagation());
+        tmInputs[key] = input;
+        field.append(input);
+        tmRow.append(field);
+    });
+    tmExcess.type = "checkbox";
+    tmExcess.addEventListener("change", tmApply);
+
+    const tmExcessLabel = el("label", "mwg-muted", " primer in excess over the template (PCR)");
+
+    tmExcessLabel.style.gridColumn = "1 / -1";
+    tmExcessLabel.style.flexDirection = "row";
+    tmExcessLabel.prepend(tmExcess);
+    tmRow.append(tmExcessLabel);
+    tmQuick.placeholder = "Sequence to check, 5′→3′";
+    tmQuick.addEventListener("input", tmQuickResult);
+    tmQuick.addEventListener("keydown", event => event.stopPropagation());
+    tmBox.append(
+        tmRow,
+        el("p", "mwp-note", "Tm follows the conditions above in this table, the inspector and the cloning primers. Mg²⁺ and dNTPs use Owczarzy (2008) (dNTPs bind Mg²⁺); DMSO lowers Tm by about 0.6 °C per 1 %. It is an estimate: polymerase vendors use their own buffers, so check theirs when the annealing temperature matters."),
+        tmQuick,
+        tmResult,
+    );
+    tmFill(Object.assign({}, calc.TM_PRESETS.default, calc.getTmConditions()));
+    tmPreset.value = tmPresetName();
+    tmQuickResult();
+
+    pane.append(head, tmBox, pasteBox, listBox, sitesBox, pcrBox, note);
 
     function fromAnnotations() {
         const workspace = api();
@@ -571,7 +692,7 @@
         renderSites(snapshot);
         renderPcr(snapshot);
 
-        note.textContent = "Tm is nearest-neighbour (SantaLucia), 50 mM Na⁺, 250 nM primer. Hairpin and dimer checks are the longest complementary stretch, a screen and not a free energy. A site needs the last " + ui.minMatch + " nt of the primer to pair; unpaired 5′ bases count as a tail (restriction site, overhang).";
+        note.textContent = "Tm is nearest-neighbour (SantaLucia) with the conditions of the Tm calculator above. Hairpin and dimer checks are the longest complementary stretch, a screen and not a free energy. A site needs the last " + ui.minMatch + " nt of the primer to pair; unpaired 5′ bases count as a tail (restriction site, overhang).";
     }
 
     function renderSites(snapshot) {
@@ -773,6 +894,7 @@
             return products({seq: clean(fwdSeq)}, {seq: clean(revSeq)}, snapshot).map(item => ({size: item.size, start: item.start, end: item.end}));
         },
         analyse: seq => analyse(clean(seq)),
+        tmConditions: () => calc.getTmConditions(),
     };
 
     load();

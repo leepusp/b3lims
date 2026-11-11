@@ -174,19 +174,103 @@
         TT: "AA", TG: "CA", AC: "GT", AG: "CT", TC: "GA", CC: "GG",
     };
 
+    const MG_DNTP_KA = 3.0e4;
+    const TM_STORE = "biobank.tm-conditions.v1";
+
+    /** Reaction conditions the Tm of every primer follows (set in the Primers window, kept in the browser). */
+    const TM_PRESETS = {
+        default: {label: "Default: 50 mM Na⁺, 250 nM, equal strands", monovalentMM: 50, magnesiumMM: 0, dntpMM: 0, primerUM: 0.25, primerExcess: false, dmsoPercent: 0, formamidePercent: 0},
+        taq: {label: "PCR, Taq-like: 50 mM K⁺, 1.5 mM Mg²⁺, 0.8 mM dNTP, 0.2 µM primer", monovalentMM: 50, magnesiumMM: 1.5, dntpMM: 0.8, primerUM: 0.2, primerExcess: true, dmsoPercent: 0, formamidePercent: 0},
+        salt: {label: "PCR, more salt: 100 mM K⁺, 2 mM Mg²⁺, 0.8 mM dNTP, 0.5 µM primer", monovalentMM: 100, magnesiumMM: 2, dntpMM: 0.8, primerUM: 0.5, primerExcess: true, dmsoPercent: 0, formamidePercent: 0},
+    };
+    let conditions = {};
+
+    try {
+        if (typeof window !== "undefined" && window.localStorage) {
+            conditions = JSON.parse(window.localStorage.getItem(TM_STORE) || "{}") || {};
+        }
+    } catch (error) {
+        conditions = {};
+    }
+
+    function setTmConditions(next) {
+        conditions = Object.assign({}, next || {});
+
+        try {
+            if (typeof window !== "undefined" && window.localStorage) {
+                window.localStorage.setItem(TM_STORE, JSON.stringify(conditions));
+            }
+        } catch (error) {
+            // storage can be blocked; the conditions still apply for this page
+        }
+    }
+
+    const getTmConditions = () => Object.assign({}, conditions);
+
+    /** Mg2+ left (molar) after dNTPs bind it 1:1. */
+    function freeMagnesium(mg, dntp) {
+        if (mg <= 0) return 0;
+        if (dntp <= 0) return mg;
+
+        const b = 1 + MG_DNTP_KA * (mg + dntp);
+        const bound = (b - Math.sqrt(b * b - 4 * MG_DNTP_KA * MG_DNTP_KA * mg * dntp)) / (2 * MG_DNTP_KA);
+
+        return Math.max(mg - bound, 0);
+    }
+
+    /** 1/Tm (kelvin) corrected from 1 M Na+ to the given monovalent and free Mg2+ (Owczarzy et al. 2008). */
+    function owczarzy(inv1M, gcFraction, length, mon, mg) {
+        const lnMon = mon > 0 ? Math.log(mon) : 0;
+        const monovalent = () => inv1M + (4.29 * gcFraction - 3.95) * 1e-5 * lnMon + 9.40e-6 * lnMon * lnMon;
+
+        if (mg <= 0) return monovalent();
+
+        const ratio = mon > 0 ? Math.sqrt(mg) / mon : Infinity;
+
+        if (ratio < 0.22) return monovalent();
+
+        let a = 3.92e-5;
+        let d = 1.42e-5;
+        let g = 8.31e-5;
+        const b = -9.11e-6;
+        const c = 6.26e-5;
+        const e = -4.82e-4;
+        const f = 5.25e-4;
+
+        if (ratio < 6.0) {
+            a = 3.92e-5 * (0.843 - 0.352 * Math.sqrt(mon) * lnMon);
+            d = 1.42e-5 * (1.279 - 4.03e-3 * lnMon - 8.03e-3 * lnMon * lnMon);
+            g = 8.31e-5 * (0.486 - 0.258 * lnMon + 5.25e-3 * Math.pow(lnMon, 3));
+        }
+
+        const lnMg = Math.log(mg);
+
+        return inv1M + a + b * lnMg + gcFraction * (c + d * lnMg) + (e + f * lnMg + g * lnMg * lnMg) / (2 * (length - 1));
+    }
+
     /**
-     * Melting temperature in degrees C, nearest-neighbour method.
+     * Melting temperature in degrees C, nearest-neighbour method (SantaLucia 1998).
      * Returns null for sequences with ambiguity codes or outside 8-120 nt.
+     *
+     * Options (all optional; the defaults are 50 mM Na+, 250 nM strands, as before):
+     *   monovalentMM, magnesiumMM, dntpMM, primerUM, primerExcess, dmsoPercent, formamidePercent,
+     *   method: "santalucia" | "owczarzy" | "auto" (owczarzy when Mg2+ is given).
+     * The older sodiumMolar / strandMolar options still work.
      */
     function meltingTemperature(sequence, options) {
         const seq = clean(sequence).replace(/U/g, "T");
-        const opts = options || {};
-        const sodium = (Number(opts.sodiumMolar) || 0.05);
-        const strand = (Number(opts.strandMolar) || 250e-9);
+        const opts = options || conditions;
+        const monMolar = opts.monovalentMM !== undefined ? Math.max(Number(opts.monovalentMM), 0) / 1000 : (Number(opts.sodiumMolar) || 0.05);
+        const mg = Math.max(Number(opts.magnesiumMM) || 0, 0) / 1000;
+        const dntp = Math.max(Number(opts.dntpMM) || 0, 0) / 1000;
+        const strand = opts.primerUM !== undefined ? Math.max(Number(opts.primerUM), 1e-6) * 1e-6 : (Number(opts.strandMolar) || 250e-9);
+        let method = opts.method || "auto";
 
         if (seq.length < 8 || seq.length > 120 || /[^ACGT]/.test(seq)) {
             return null;
         }
+
+        if (method === "auto") method = mg > 0 ? "owczarzy" : "santalucia";
 
         let dh = 0;
         let ds = 0;
@@ -214,11 +298,21 @@
             ds += -1.4;
         }
 
-        ds += 0.368 * (seq.length - 1) * Math.log(sodium);
-
         const R = 1.987;
-        const x = selfComplementary ? 1 : 4;
-        const tm = (dh * 1000) / (ds + R * Math.log(strand / x)) - 273.15;
+        const x = selfComplementary || opts.primerExcess ? 1 : 4;
+        let tm;
+
+        if (method === "santalucia") {
+            ds += 0.368 * (seq.length - 1) * Math.log(Math.max(monMolar, 1e-6));
+            tm = (dh * 1000) / (ds + R * Math.log(strand / x)) - 273.15;
+        } else {
+            const tm1M = (dh * 1000) / (ds + R * Math.log(strand / x));
+            const gc = (seq.split("G").length - 1 + seq.split("C").length - 1) / seq.length;
+
+            tm = 1 / owczarzy(1 / tm1M, gc, seq.length, Math.max(monMolar, 1e-9), freeMagnesium(mg, dntp)) - 273.15;
+        }
+
+        tm -= 0.6 * (Number(opts.dmsoPercent) || 0) + 0.65 * (Number(opts.formamidePercent) || 0);
 
         return Math.round(tm * 10) / 10;
     }
@@ -316,6 +410,9 @@
         findOrfs,
         longestOrf,
         meltingTemperature,
+        setTmConditions,
+        getTmConditions,
+        TM_PRESETS,
         primerChecks,
         proteinProperties,
     };

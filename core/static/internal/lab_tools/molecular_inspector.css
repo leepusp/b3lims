@@ -342,3 +342,9 @@ input.mwp-cell[type=number]{width:100%}
 .mwv-addwin[hidden]{display:none}
 
 .mwg-simrow{grid-template-columns:6.5rem minmax(0,1fr) auto}
+
+.mwpr-tm summary{cursor:pointer;font-weight:600;font-size:.82rem}
+.mwpr-tmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));gap:.4rem .6rem;margin:.4rem 0}
+.mwpr-tmgrid label{display:flex;flex-direction:column;gap:.1rem;font-size:.72rem}
+.mwpr-tmgrid select{width:100%}
+.mwpr-tmgrid input[type=number]{width:100%!important;border-color:#c5ced8;background:#fff}
