@@ -111,12 +111,6 @@
             <span class="nav-label">Jupyter Notebooks</span>
         </a>
 
-        <a href="{% url 'workflow_list' %}"
-           class="nav-link {% if '/lab-tools/workflows/' in request.path %}active{% endif %}">
-            <i class="bi bi-diagram-3"></i>
-            <span class="nav-label">Workflows</span>
-        </a>
-
         <a href="{% url 'submission_list' %}"
            class="nav-link {% if '/lab-tools/submissions/' in request.path %}active{% endif %}">
             <i class="bi bi-cloud-upload"></i>

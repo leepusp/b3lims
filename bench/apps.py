@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class BenchConfig(AppConfig):
-    """B3 Bench: ELN extensions, Lab Calendar, tools and workflows.
+    """B3 Bench: ELN extensions, Lab Calendar and tools.
 
     Dependency rule: ``bench`` may import ``core``; ``core`` never imports
     ``bench``. Panels shown on core screens are registered here through

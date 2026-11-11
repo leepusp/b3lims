@@ -127,7 +127,6 @@
             $("sp-description").value = pkg.description;
             $("sp-destination").value = pkg.destination;
             showSra();
-            $("sp-workflow").value = pkg.workflow || "";
             META_KEYS.forEach((k) => { $("sp-" + k).value = (pkg.metadata || {})[k] || ""; });
         }
 
@@ -187,7 +186,6 @@
         event.preventDefault();
         act({
             action: "update", title: $("sp-title").value, description: $("sp-description").value, destination: $("sp-destination").value,
-            workflow: $("sp-workflow").value || null,
             metadata: Object.fromEntries(META_KEYS.map((k) => [k, $("sp-" + k).value])),
         });
     });

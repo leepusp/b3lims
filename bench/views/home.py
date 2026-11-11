@@ -34,7 +34,7 @@ MODULES = (
         "icon": "bi-code-square",
         "description": "Notebooks on the cluster, linked to ELN entries.",
         "url_name": "jupyter_index",
-        "step": "Run notebooks inside workflows: step 6.3",
+        "step": "Starter notebooks, sharing and unattended runs: step 6.3",
     },
     {
         "title": "Molecular Registry",
@@ -42,13 +42,6 @@ MODULES = (
         "description": "Sequences, plasmid maps, alignments and structures.",
         "url_name": "molecular_registry_index",
         "step": "OpenCloning strategies: step 4.4",
-    },
-    {
-        "title": "Workflows",
-        "icon": "bi-diagram-3",
-        "description": "From a Biobank sample to analysis, review and public data, with Jupyter and Galaxy steps.",
-        "url_name": "workflow_list",
-        "step": "Steps 6.1 to 6.7",
     },
     {
         "title": "Data submissions",

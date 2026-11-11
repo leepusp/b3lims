@@ -89,17 +89,12 @@ Other useful functions
 - [ ] Bench calculators (dilution, buffer, molarity, master mix, gel marker, plate layout) as small pure-JS tools, inspired by Lablaps (closed product, ideas only; no code to reuse)
 - [ ] Decide OpenCloning route: library inside Django, adopt its JSON history, or embedded container
 
-## Block E: workflows and submissions
+## Block E: data submissions
 
-- [ ] Map the workflow steps already announced on the Laboratory hub (6.1 to 6.7) and what exists today
-- [x] Workflow model (phase 1): steps with status, owner, due date and connections, linked to ELN entries, molecular records and samples; steps due show in the Calendar
-- [x] 6.3 Run Jupyter notebooks inside workflows: steps link a notebook with parameters and a result note (p81) and can run it unattended through the Slurm broker (p82; needs install_notebook_batch_runtime.sh)
-- [ ] Galaxy steps in a workflow
-- [ ] Review NoLabs (Apache-2.0; FastAPI microservices for ESMFold, DiffDock, RFdiffusion, ProteinMPNN, BLAST; Celery + Redis scheduler) as a source of model steps: call its microservice REST endpoints from a workflow step, store result as a Registry record (PDB to Protein structure); do not adopt its UI or workflow engine
-- [x] Workflow builder screen (canvas, side panel, import of ELN steps, members)
+The workflow builder (p81 to p90) was removed in p91: the canvas, steps, runs, Galaxy catalog and their tables. Submission guides and templates are the focus now.
+
 - [x] 5.2 and 6.6 Data submissions (phase 1): packages with taxon, review (proposed, approved) and publication to the internal repository at /scratch/global/databases/biobank as manifest.json + RO-Crate
 - [x] Submissions (phase 2): GenBank/SRA, wwPDB and Zenodo export folders with checks, README steps, reference field and optional Zenodo draft upload (sandbox by default); ENA not covered
-- [ ] Hub cards for Workflows and Data submissions move from "Planned" to "Available" as each ships
 
 ## Block F: Storage interface review (to be scheduled)
 

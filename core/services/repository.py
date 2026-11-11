@@ -193,7 +193,6 @@ def build_manifest(package: SubmissionPackage, described: list[dict], files: dic
         },
         "taxon": _taxon_block(package),
         "metadata": package.metadata,
-        "workflow": {"id": package.workflow_id, "name": package.workflow.name} if package.workflow_id else None,
         "items": described,
         "files": [{"path": p, "bytes": len(b), "sha256": _sha256(b)} for p, b in sorted(files.items())],
     }

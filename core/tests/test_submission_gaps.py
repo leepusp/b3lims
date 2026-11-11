@@ -1,12 +1,10 @@
-"""GenBank feature table, SRA metadata and packages created from a workflow."""
+"""GenBank feature table, SRA metadata and the sample-related data of a package."""
 
 import json
 
 from django.urls import reverse
 
-from core.models.lab_tools.notebook import JupyterNotebook, MolecularFeature, MolecularSequence, NotebookEntry
-from core.models.lab_tools.submission import SubmissionPackage
-from core.models.lab_tools.workflow import Workflow
+from core.models.lab_tools.notebook import MolecularFeature, MolecularSequence, NotebookEntry
 from core.services import submission_adapters as adapters
 from core.tests.test_submissions import SubmissionBase
 
@@ -224,91 +222,6 @@ class PublishGenbankAndSraTests(SubmissionBase):
         self.assertIn(">Feature gfp_1", (base / "genbank/features.tbl").read_text())
 
 
-class PackageFromWorkflowTests(SubmissionBase):
-    def setUp(self):
-        super().setUp()
-        self.workflow = Workflow.objects.create(name="Cloning run", owner=self.ana)
-        self.notebook = JupyterNotebook.objects.create(title="Analysis", owner=self.ana, notebook_json={})
-        self.other_seq = MolecularSequence.objects.create(name="private", sequence_type="dna", sequence="ATGC", owner=self.bia)
-
-    def step(self, **fields):
-        return self.workflow.steps.create(title="s", **fields)
-
-    def wf_api(self, payload, user=None, workflow=None):
-        if user:
-            self.client.force_login(user)
-
-        return self.client.post(
-            reverse("workflow_api", args=[(workflow or self.workflow).pk]), json.dumps(payload), content_type="application/json"
-        )
-
-    def test_creates_a_draft_with_each_record_once_and_a_linked_step(self):
-        self.step(molecule=self.seq, entry=self.entry)
-        self.step(molecule=self.seq, config={"notebook_id": self.notebook.pk})
-
-        response = self.wf_api({"action": "create_submission", "destination": "genbank"})
-
-        self.assertEqual(response.status_code, 200, response.content)
-
-        package = SubmissionPackage.objects.get(workflow=self.workflow)
-        items = sorted((i.kind, i.label) for i in package.items.all())
-
-        self.assertEqual(package.status, "draft")
-        self.assertEqual(package.destination, "genbank")
-        self.assertEqual(package.owner, self.ana)
-        self.assertEqual(len(items), 3)
-        self.assertEqual([k for k, _ in items], ["entry", "notebook", "sequence"])
-
-        step = next(s for s in response.json()["workflow"]["steps"] if s["kind"] == "submission")
-
-        self.assertEqual(step["submission"]["id"], package.pk)
-        self.assertEqual(step["submission"]["status"], "draft")
-        self.assertEqual(step["submission"]["url"], reverse("submission_detail", args=[package.pk]))
-
-    def test_records_the_user_cannot_see_are_left_out(self):
-        self.workflow.members.add(self.bia)
-        self.step(molecule=self.seq)
-        self.step(molecule=self.other_seq)
-
-        self.wf_api({"action": "create_submission", "destination": "internal"}, user=self.bia)
-
-        package = SubmissionPackage.objects.get(workflow=self.workflow)
-
-        self.assertEqual(package.owner, self.bia)
-        self.assertEqual([i.molecule for i in package.items.all()], [self.other_seq])
-
-    def test_notes_and_empty_workflows(self):
-        self.step(kind="note", molecule=None)
-
-        self.wf_api({"action": "create_submission", "destination": "zenodo"})
-
-        self.assertEqual(SubmissionPackage.objects.get(workflow=self.workflow).items.count(), 0)
-
-    def test_access_and_validation(self):
-        self.assertEqual(self.wf_api({"action": "create_submission", "destination": "nowhere"}).status_code, 400)
-        self.assertEqual(self.wf_api({"action": "create_submission", "destination": "genbank"}, user=self.boss).status_code, 404)
-        self.assertEqual(SubmissionPackage.objects.filter(workflow=self.workflow).count(), 0)
-
-    def test_submission_kind_cannot_be_set_by_hand(self):
-        step = self.step()
-        response = self.wf_api({"action": "update_step", "step_id": step.pk, "step": {"kind": "submission"}})
-
-        self.assertEqual(response.status_code, 400)
-
-    def test_other_members_see_a_hidden_package_without_its_name(self):
-        self.step(molecule=self.seq)
-        self.wf_api({"action": "create_submission", "destination": "genbank"})
-        self.workflow.members.add(self.bia)
-
-        self.client.force_login(self.bia)
-
-        reply = self.wf_api({"action": "update", "name": "Cloning run"}, user=self.bia)
-        step = next(s for s in reply.json()["workflow"]["steps"] if s["kind"] == "submission")
-
-        self.assertEqual(step["submission"], {"id": SubmissionPackage.objects.get(workflow=self.workflow).pk, "hidden": True})
-        self.assertNotIn("Cloning run - GenBank", reply.content.decode())
-
-
 class SampleRelatedDataTests(SubmissionBase):
     def setUp(self):
         from core.models.lab_tools.notebook import NotebookSampleLink
@@ -375,24 +288,6 @@ class SampleRelatedDataTests(SubmissionBase):
         self.package.refresh_from_db()
 
         self.assertEqual(self.package.taxon_id, "1279")
-
-    def test_workflow_package_follows_the_sample_and_its_data(self):
-        workflow = Workflow.objects.create(name="Run", owner=self.ana)
-
-        workflow.steps.create(title="Isolate", sample=self.sample)
-
-        response = self.client.post(
-            reverse("workflow_api", args=[workflow.pk]),
-            json.dumps({"action": "create_submission", "destination": "genbank"}),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 200, response.content)
-
-        package = SubmissionPackage.objects.get(workflow=workflow)
-
-        self.assertEqual(self.kinds(package), [("entry", "Cloning <gfp>"), ("sample", "BB-1"), ("sequence", "from bia"), ("sequence", "gfp 1")])
-        self.assertEqual(package.taxon_id, "1280")
 
     def test_embargoed_samples_warn_for_external_destinations_only(self):
         self.sample.is_embargoed = True

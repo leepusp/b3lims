@@ -2,7 +2,7 @@
 
 Every template runs as it is, on small generated demo data, so it can be tried straight away; point its
 parameters at real files to use it. Parameters are read with ``param()``, which takes the value injected by a
-workflow run (always text) and falls back to the default, so the same notebook works by hand and unattended.
+unattended run (always text) and falls back to the default, so the same notebook works by hand and unattended.
 Only numpy, pandas and matplotlib are used.
 """
 
@@ -11,7 +11,7 @@ from copy import deepcopy
 from core.services.jupyter_server import starter_notebook
 
 PARAM_HELP = (
-    "# Parameters: a workflow run replaces these values; edit the defaults to try the notebook by hand.\n"
+    "# Parameters: an unattended run replaces these values; edit the defaults to try the notebook by hand.\n"
     "def param(name, default):\n"
     "    value = globals().get(name, default)\n"
     "    try:\n"

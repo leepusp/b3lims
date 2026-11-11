@@ -34,8 +34,6 @@
                     <div class="row g-2 mb-2">
                         <div class="col-md-6"><label class="form-label small mb-1" for="sp-destination">Destination</label>
                             <select class="form-select form-select-sm" id="sp-destination">{% for v, l in destinations %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
-                        <div class="col-md-6"><label class="form-label small mb-1" for="sp-workflow">Workflow</label>
-                            <select class="form-select form-select-sm" id="sp-workflow"><option value="">None</option>{% for w in workflows %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}</select></div>
                     </div>
                     <div class="row g-2 mb-2">
                         <div class="col-md-6"><label class="form-label small mb-1" for="sp-license">License (URL)</label><input class="form-control form-control-sm" id="sp-license" placeholder="https://creativecommons.org/licenses/by/4.0/"></div>

@@ -77,15 +77,6 @@ def update_fields(package, data) -> None:
         package.metadata = {
             k: str(raw[k]).strip()[: METADATA_LIMITS.get(k, 1000)] for k in METADATA_KEYS if k in raw and str(raw[k]).strip()
         }
-    if "workflow" in data:
-        from core.services.workflow import visible_workflows
-
-        wf = data["workflow"]
-
-        package.workflow = visible_workflows(package.owner).filter(pk=wf).first() if wf else None
-
-        if wf and not package.workflow:
-            raise ValidationError("That workflow is not available.")
     if "taxon_id" in data:
         repository.set_taxon(package, data["taxon_id"])
 
@@ -262,7 +253,6 @@ def serialize(package, user) -> dict:
         "destination": package.destination,
         "status": package.status,
         "owner": package.owner.get_username(),
-        "workflow": package.workflow_id,
         "taxon_id": package.taxon_id,
         "taxon_name": package.taxon_name,
         "taxonomy_version": package.taxonomy_version,
@@ -349,52 +339,3 @@ def suggest_taxon(package) -> None:
     if len(exact) == 1:
         repository.set_taxon(package, exact[0]["taxid"])
         package.save()
-
-
-def create_from_workflow(workflow, user, destination) -> SubmissionPackage:
-    """A draft package holding the records the workflow's steps point to (only those the user may see)."""
-    from core.services.workflow import can_edit as can_edit_workflow
-
-    if destination not in SubmissionPackage.Destination.values:
-        raise ValidationError("Invalid destination.")
-    if not can_edit_workflow(user, workflow):
-        raise ValidationError("You cannot edit this workflow.")
-
-    label = SubmissionPackage.Destination(destination).label.split(" (")[0]
-    package = SubmissionPackage.objects.create(
-        title=f"{workflow.name} - {label}"[:200], destination=destination, owner=user, workflow=workflow
-    )
-    wanted = []
-
-    if workflow.entry_id:
-        wanted.append(("entry", workflow.entry_id))
-
-    for step in workflow.steps.exclude(kind="note").order_by("y", "x", "id"):
-        if step.molecule_id:
-            wanted.append(("sequence", step.molecule_id))
-        if step.sample_id:
-            wanted.append(("sample", step.sample_id))
-        if step.entry_id:
-            wanted.append(("entry", step.entry_id))
-        if (step.config or {}).get("notebook_id"):
-            wanted.append(("notebook", step.config["notebook_id"]))
-
-    seen = set()
-
-    for kind, ref in wanted:
-        if (kind, ref) in seen:
-            continue
-
-        seen.add((kind, ref))
-
-        try:
-            item = add_item(package, user, kind, ref)
-        except ValidationError:
-            continue  # not visible to this user, or limit reached: leave it out
-
-        if kind == "sample":
-            add_sample_related(package, user, item.sample)
-
-    suggest_taxon(package)
-
-    return package

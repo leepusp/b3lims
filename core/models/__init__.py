@@ -59,7 +59,6 @@ from core.models.lab_tools.notebook_composer import (
     NotebookTag,
 )
 
-from core.models.lab_tools.workflow import Workflow, WorkflowEdge, WorkflowStep, WorkflowStepFile, WorkflowStepRun
 from core.models.lab_tools.submission import SubmissionItem, SubmissionPackage
 
 from core.models.biobanks.biobank import Biobank

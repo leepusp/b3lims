@@ -2,7 +2,7 @@
 
 Sharing never hands out the owner's workspace: a kernel, the files and the execution stay with the owner. People
 who can read a notebook may open it as text and "Use a copy", which creates an independent notebook of their own
-(and the copy is the one they can run, link in a workflow and edit).
+(and the copy is the one they can run, edit).
 """
 
 from copy import deepcopy

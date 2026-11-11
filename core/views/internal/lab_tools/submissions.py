@@ -15,7 +15,6 @@ from core.services import notebook_composer as composer
 from core.services import submission_adapters as adapters
 from core.services import submissions as service
 from core.services import taxonomy_local
-from core.services.workflow import visible_workflows
 
 S = SubmissionPackage.Status
 PAGE_SIZE = 25
@@ -101,7 +100,6 @@ def submission_detail(request, package_id):
         "manifest": service.manifest_json(package),
         "destinations": SubmissionPackage.Destination.choices,
         "taxonomy_ready": taxonomy_local.available(),
-        "workflows": visible_workflows(package.owner).exclude(status="archived").order_by("name"),
         "sra": {
             "strategy": adapters.SRA_STRATEGY, "source": adapters.SRA_SOURCE, "selection": adapters.SRA_SELECTION,
             "layout": adapters.SRA_LAYOUT, "platform": adapters.SRA_PLATFORM,

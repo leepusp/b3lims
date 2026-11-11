@@ -30,6 +30,5 @@ class BenchHomeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Laboratory")
         self.assertContains(response, "ELN Notebook")
-        self.assertContains(response, "Workflows")
         self.assertContains(response, reverse("notebook_index"))
         self.assertContains(response, reverse("lab_calendar"))

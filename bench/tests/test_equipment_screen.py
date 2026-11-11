@@ -113,4 +113,4 @@ class LayerStyleTests(TestCase):
     def test_calendar_lists_builtin_layers(self):
         self.client.force_login(self.ana)
         data = self.client.get(reverse("bench:calendar_resources")).json()
-        self.assertEqual([b["key"] for b in data["builtin"]], ["steps", "workflow", "samples"])
+        self.assertEqual([b["key"] for b in data["builtin"]], ["steps", "samples"])

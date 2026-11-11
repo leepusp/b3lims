@@ -147,7 +147,6 @@ from core.views.internal.lab_tools import notebook_templates as notebook_templat
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 from core.views.internal.lab_tools import jupyter_sharing as jupyter_sharing_views
-from core.views.internal.lab_tools import workflow as workflow_views
 from core.views.internal.lab_tools import submissions as submission_views
 
 # 9. QR CODE (PAGE)
@@ -502,15 +501,6 @@ urlpatterns = [
     path('internal/lab-tools/submissions/lookup/', submission_views.submission_lookup_api, name='submission_lookup_api'),
     path('internal/lab-tools/submissions/<int:package_id>/', submission_views.submission_detail, name='submission_detail'),
     path('internal/lab-tools/submissions/<int:package_id>/api/', submission_views.submission_api, name='submission_api'),
-    path('internal/lab-tools/workflows/', workflow_views.workflow_list, name='workflow_list'),
-    path('internal/lab-tools/workflows/create/', workflow_views.workflow_create, name='workflow_create'),
-    path('internal/lab-tools/workflows/galaxy-tools/', workflow_views.workflow_galaxy_tools_api, name='workflow_galaxy_tools_api'),
-    path('internal/lab-tools/workflows/lookup/', workflow_views.workflow_lookup_api, name='workflow_lookup_api'),
-    path('internal/lab-tools/workflows/<int:workflow_id>/', workflow_views.workflow_detail, name='workflow_detail'),
-    path('internal/lab-tools/workflows/<int:workflow_id>/api/', workflow_views.workflow_api, name='workflow_api'),
-    path('internal/lab-tools/workflows/<int:workflow_id>/steps/<int:step_id>/files/', workflow_views.workflow_step_file_upload, name='workflow_step_file_upload'),
-    path('internal/lab-tools/workflows/<int:workflow_id>/files/<int:file_id>/', workflow_views.workflow_step_file, name='workflow_step_file'),
-    path('internal/lab-tools/workflows/<int:workflow_id>/runs/<int:run_id>/figure/<int:index>.png', workflow_views.workflow_run_image, name='workflow_run_image'),
     path('internal/api/search-samples/', notebook_views.search_samples_api, name='search_samples_api'),
     path('internal/api/search-chemicals/', notebook_views.search_chemicals_api, name='search_chemicals_api'),
     path('internal/api/search-molecular-sequences/', notebook_views.search_molecular_sequences_api, name='search_molecular_sequences_api'),
@@ -681,7 +671,7 @@ urlpatterns = [
 
 ]
 
-# B3 Bench (ELN extensions, Lab Calendar, tools and workflows).
+# B3 Bench (ELN extensions, Lab Calendar and tools).
 urlpatterns += [
     path("internal/bench/", include("bench.urls")),
 ]

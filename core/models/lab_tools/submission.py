@@ -31,9 +31,6 @@ class SubmissionPackage(models.Model):
     )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT, db_default="draft")
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="submission_packages")
-    workflow = models.ForeignKey(
-        "core.Workflow", null=True, blank=True, on_delete=models.SET_NULL, related_name="submission_packages"
-    )
 
     # Taxon (NCBI taxonomy id) with the lineage frozen at the time it was set.
     taxon_id = models.CharField(max_length=20, blank=True, default="", db_default="")
