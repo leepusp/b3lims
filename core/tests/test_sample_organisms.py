@@ -258,3 +258,70 @@ class GtdbTests(OrganismBase):
         self.assertEqual(d["countries"][0], ["Brazil", 2])
         self.assertEqual(gtdb_local.for_species(name="staphylococcus aureus")["release"], "r232")
         self.assertIsNone(gtdb_local.for_species(name="Nothing here"))
+
+
+class SearchByAnyNameTests(OrganismBase):
+    def setUp(self):
+        super().setUp()
+
+        nodes = [(1, 1, "no rank"), (2, 1, "domain"), (561, 2, "genus"), (562, 561, "species"), (1280, 2, "species")]
+        (self.dump / "nodes.dmp").write_text("".join(f"{t}\t|\t{p}\t|\t{r}\t|\t\t|\n" for t, p, r in nodes))
+        (self.dump / "names.dmp").write_text(
+            "1\t|\troot\t|\t\t|\tscientific name\t|\n2\t|\tBacteria\t|\t\t|\tscientific name\t|\n561\t|\tEscherichia\t|\t\t|\tscientific name\t|\n"
+            "562\t|\tEscherichia coli\t|\t\t|\tscientific name\t|\n562\t|\tE. coli\t|\t\t|\tgenbank common name\t|\n"
+            "562\t|\tBacterium coli commune\t|\t\t|\tsynonym\t|\n1280\t|\tStaphylococcus aureus\t|\t\t|\tscientific name\t|\n"
+        )
+        taxonomy_local.build_index()
+
+    def test_common_names_synonyms_and_abbreviations_find_the_species(self):
+        for query in ("E. coli", "e coli", "ecoli", "Bacterium coli", "escherichia coli"):
+            self.assertIn(562, [r["taxid"] for r in taxonomy_local.search(query)], query)
+
+        hit = next(r for r in taxonomy_local.search("Bacterium coli") if r["taxid"] == 562)
+
+        self.assertEqual(hit["matched"], "Bacterium coli commune")
+        self.assertEqual(taxonomy_local.search("zzzzzz"), [])
+
+    def test_gtdb_search_and_pick(self):
+        import gzip
+
+        from core.services import gtdb_local
+
+        head = "accession\tgtdb_taxonomy\tgtdb_representative\tgenome_size\tgc_percentage\n"
+        tax = "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli_D"
+        folder = self.tmp / "gtdb" / "2026-r232"
+
+        folder.mkdir(parents=True)
+
+        with gzip.open(folder / "bac120_metadata_r232.tsv.gz", "wt") as out:
+            out.write(head + f"RS_9\t{tax}\tt\t4500000\t50.5\n")
+
+        gtdb_local.build_index(folder / "bac120_metadata_r232.tsv.gz")
+
+        found = sample_organisms.search("e. coli", "Bacterium (Host)", source="gtdb")["results"]
+
+        self.assertEqual((found[0]["name"], found[0]["gtdb"], found[0]["genus"]), ("Escherichia coli", "Escherichia coli_D", "Escherichia"))
+
+        rows = sample_organisms.clean([{"source": "gtdb", "gtdb": "Escherichia coli_D", "role": "primary"}], "Bacterium (Host)")
+
+        self.assertEqual((rows[0]["source"], rows[0]["taxon_id"], rows[0]["name"]), ("gtdb", "Escherichia coli_D", "Escherichia coli"))
+
+        with self.assertRaises(ValidationError):
+            sample_organisms.clean([{"source": "gtdb", "gtdb": "Escherichia coli_D"}], "Phage (Virus)")
+
+        with self.assertRaises(ValidationError):
+            sample_organisms.clean([{"source": "gtdb", "gtdb": "Nothing"}], "Other")
+
+        self.assertEqual(sample_organisms.details_gtdb("Escherichia coli_D")["gtdb"]["genomes"], 1)
+
+        sample = Sample.objects.create(sample_id="ORG-GT", organism_name="x", sample_type="Bacterium (Host)", owner=self.user)
+
+        sample_organisms.replace(sample, rows)
+
+        shown = sample_organisms.serialize(sample)[0]
+
+        self.assertEqual((shown["taxid"], shown["gtdb"]), ("", "Escherichia coli_D"))
+        self.assertEqual(sample_organisms.main_taxid(sample), "")
+
+        # what the edit form posts back is accepted again
+        sample_organisms.clean([{**shown, "role": "primary"}], "Bacterium (Host)")

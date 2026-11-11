@@ -100,7 +100,8 @@
         box.hidden = true;
 
         try {
-            const response = await fetch(root.dataset.detailsUrl + "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType()), {credentials: "same-origin"});
+            const query = t.source === "gtdb" ? "?source=gtdb&name=" + encodeURIComponent(t.gtdb) : "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType());
+            const response = await fetch(root.dataset.detailsUrl + query, {credentials: "same-origin"});
             const d = await response.json();
 
             if (d.status !== "success") return;
@@ -126,7 +127,8 @@
         } else {
             hits = data.results;
             box.innerHTML = hits.map((t, i) => "<button type='button' class='list-group-item list-group-item-action' data-hit='" + i + "'>"
-                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>taxid " + esc(t.taxid) + "</span>"
+                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>" + (t.source === "gtdb" ? num(t.genomes) + " genomes" : "taxid " + esc(t.taxid)) + "</span>"
+                + (t.matched ? " <span class='small text-muted'>(" + esc(t.matched) + ")</span>" : "")
                 + (t.path ? "<div class='small text-muted'>" + esc(t.path) + "</div>" : "") + "</button>").join("");
         }
 
@@ -144,7 +146,7 @@
         }
 
         try {
-            const response = await fetch(root.dataset.searchUrl + "?q=" + encodeURIComponent(query) + "&type=" + encodeURIComponent(sampleType()), {credentials: "same-origin"});
+            const response = await fetch(root.dataset.searchUrl + "?q=" + encodeURIComponent(query) + "&type=" + encodeURIComponent(sampleType()) + "&source=" + $("taxFillSource").value, {credentials: "same-origin"});
             const data = await response.json();
 
             if (mine === serial && data.status === "success") show(data, query);
@@ -153,8 +155,17 @@
         }
     }
 
-    function toggle() { root.hidden = !supported(); }
+    function toggle() {
+        root.hidden = !supported();
 
+        const gtdb = $("taxFillSource").querySelector("option[value='gtdb']");
+
+        gtdb.hidden = sampleType() !== "Bacterium (Host)";
+
+        if (gtdb.hidden) $("taxFillSource").value = "ncbi";
+    }
+
+    $("taxFillSource").addEventListener("change", search);
     $("taxFillQuery").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 250); });
     $("taxFillQuery").addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
     $("taxFillResults").addEventListener("click", (event) => {

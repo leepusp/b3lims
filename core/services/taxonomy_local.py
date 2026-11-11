@@ -9,6 +9,7 @@ empty and callers fall back to a typed taxon.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -294,24 +295,61 @@ def lineage(taxid) -> list[dict]:
     return list(reversed(chain))
 
 
+ABBREVIATED = re.compile(r"^([A-Za-z])\.?\s*([a-z][a-z\-]+)$")
+
+
+def _like(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def search(query: str, limit: int = 15) -> list[dict]:
-    """Scientific names starting with ``query`` (or the taxid when it is a number)."""
-    query = (query or "").strip()
+    """Taxa matching ``query``: scientific names that start with it, then synonyms and common names,
+    then abbreviated species (``E. coli``, ``ecoli``). A number is a taxid. ``matched`` names the synonym that hit."""
+    query = " ".join((query or "").split())
     db = _connect()
 
     if not db or not query:
         return []
 
+    found, seen = [], set()
+
+    def take(rows, matched=False):
+        for row in rows:
+            if row[0] not in seen and len(found) < limit:
+                seen.add(row[0])
+                found.append({"taxid": row[0], "rank": row[1], "name": row[2], **({"matched": row[3]} if matched else {})})
+
     try:
         if query.isdigit():
-            rows = db.execute("SELECT taxid, rank, name FROM nodes WHERE taxid=?", (int(query),)).fetchall()
+            take(db.execute("SELECT taxid, rank, name FROM nodes WHERE taxid=?", (int(query),)).fetchall())
         else:
-            escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            rows = db.execute(
-                "SELECT taxid, rank, name FROM nodes WHERE name LIKE ? ESCAPE '\\' COLLATE NOCASE ORDER BY length(name), name LIMIT ?",
-                (escaped + "%", int(limit)),
-            ).fetchall()
+            like = _like(query)
+
+            take(db.execute("SELECT taxid, rank, name FROM nodes WHERE name LIKE ? ESCAPE '\\' COLLATE NOCASE ORDER BY length(name), name LIMIT ?", (like + "%", int(limit))).fetchall())
+
+            try:
+                if len(found) < limit:
+                    take(db.execute(
+                        "SELECT n.taxid, n.rank, n.name, e.name FROM extra_names e JOIN nodes n ON n.taxid = e.taxid "
+                        "WHERE e.kind != 'authority' AND e.name LIKE ? ESCAPE '\\' COLLATE NOCASE ORDER BY length(e.name) LIMIT ?",
+                        (like + "%", int(limit)),
+                    ).fetchall(), matched=True)
+            except sqlite3.OperationalError:
+                pass  # an index built before synonyms were kept
+
+            abbreviated = ABBREVIATED.match(query)
+
+            if abbreviated and len(found) < limit:
+                letter, rest = abbreviated.groups()
+
+                take(db.execute(
+                    "SELECT taxid, rank, name FROM nodes WHERE rank = 'species' AND name LIKE ? COLLATE NOCASE ORDER BY length(name) LIMIT ?",
+                    (f"{letter}% {rest}%", int(limit)),
+                ).fetchall())
+
+            if len(found) < 3 and len(query) >= 4:
+                take(db.execute("SELECT taxid, rank, name FROM nodes WHERE name LIKE ? ESCAPE '\\' COLLATE NOCASE ORDER BY length(name) LIMIT ?", ("%" + like + "%", int(limit))).fetchall())
     finally:
         db.close()
 
-    return [{"taxid": r[0], "rank": r[1], "name": r[2]} for r in rows]
+    return found

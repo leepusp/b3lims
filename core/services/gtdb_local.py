@@ -224,3 +224,74 @@ def for_species(name="", taxid=None) -> dict | None:
     data["release"] = release()
 
     return data
+
+
+def _lineage(taxonomy: str):
+    """The GTDB lineage string as a list of {taxid, rank, name} like the NCBI one (no taxids in GTDB)."""
+    ranks = {"d": "domain", "p": "phylum", "c": "class", "o": "order", "f": "family", "g": "genus", "s": "species"}
+
+    return [{"taxid": "", "rank": ranks.get(part[:1], "no rank"), "name": part[3:]} for part in taxonomy.split(";") if len(part) > 3]
+
+
+def lineage_of(data: dict):
+    return _lineage(data.get("lineage", ""))
+
+
+def get(name: str) -> dict | None:
+    """One GTDB species by its exact name (with any ``_C`` suffix)."""
+    db = _connect()
+
+    if not db or not (name or "").strip():
+        return None
+
+    try:
+        row = db.execute("SELECT data FROM species WHERE name=? COLLATE NOCASE", (name.strip(),)).fetchone()
+    finally:
+        db.close()
+
+    if not row:
+        return None
+
+    data = json.loads(row[0])
+
+    data["release"] = release()
+
+    return data
+
+
+def search(query: str, limit: int = 12) -> list[dict]:
+    """GTDB species whose name starts with the query (``E. coli`` and ``ecoli`` work too), largest first."""
+    query = " ".join((query or "").split())
+    db = _connect()
+
+    if not db or not query:
+        return []
+
+    def esc(text):
+        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    patterns = [esc(query) + "%"]
+    short = re.match(r"^([A-Za-z])\.?\s*([a-z][a-z\-]+)$", query)
+
+    if short:
+        patterns.append(f"{short.group(1)}% {short.group(2)}%")
+
+    found, seen = [], set()
+
+    try:
+        for pattern in patterns:
+            for name, data in db.execute(
+                "SELECT name, data FROM species WHERE base LIKE ? ESCAPE '\\' COLLATE NOCASE", (pattern,)
+            ).fetchall():
+                if name in seen:
+                    continue
+
+                seen.add(name)
+                info = json.loads(data)
+                found.append({"name": name, "genomes": info["genomes"], "lineage": info["lineage"]})
+    finally:
+        db.close()
+
+    found.sort(key=lambda r: (-r["genomes"], len(r["name"])))
+
+    return found[:limit]

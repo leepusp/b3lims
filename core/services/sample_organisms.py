@@ -47,10 +47,26 @@ def _brief(lineage):
     return " > ".join(names[-2:])
 
 
-def search(query, sample_type="", limit=12):
-    """Taxa of the local index whose name starts with ``query``, limited to the sample type's branch."""
+def search(query, sample_type="", limit=12, source="ncbi"):
+    """Taxa of a local database whose name matches ``query``, limited to the sample type's branch."""
+    if source == SourceGTDB:
+        if not gtdb_local.available():
+            return {"available": False, "results": [], "scope": "Bacteria (GTDB)", "source": source}
+
+        results = []
+
+        for hit in gtdb_local.search(query, limit):
+            chain = gtdb_local.lineage_of(hit)
+            results.append({
+                "taxid": "", "gtdb": hit["name"], "rank": "species", "name": _gtdb_base(hit["name"]),
+                "path": _brief(chain), "genus": next((c["name"] for c in chain if c["rank"] == "genus"), ""),
+                "ranks": {c["rank"]: c["name"] for c in chain}, "genomes": hit["genomes"], "source": "gtdb",
+            })
+
+        return {"available": True, "results": results, "scope": "Bacteria (GTDB)", "source": source}
+
     if not taxonomy_local.available():
-        return {"available": False, "results": [], "scope": scope_label(sample_type)}
+        return {"available": False, "results": [], "scope": scope_label(sample_type), "source": "ncbi"}
 
     scope = scope_for(sample_type)
     results = []
@@ -63,14 +79,21 @@ def search(query, sample_type="", limit=12):
 
         genus = next((c["name"] for c in chain if c.get("rank") == "genus"), "")
         ranks = {c["rank"]: c["name"] for c in chain if c.get("rank") and c["rank"] != "no rank"}
-        results.append({**hit, "path": _brief(chain), "genus": genus, "ranks": ranks})
+        results.append({**hit, "path": _brief(chain), "genus": genus, "ranks": ranks, "source": "ncbi"})
 
         if len(results) >= limit:
             break
 
-    results.sort(key=lambda r: (r["rank"] not in ("species", "strain", "no rank", "subspecies"), len(r["name"])))
+    results.sort(key=lambda r: (r["rank"] not in ("species", "strain", "no rank", "subspecies"), "matched" in r, len(r["name"])))
 
-    return {"available": True, "results": results, "scope": scope_label(sample_type)}
+    return {"available": True, "results": results, "scope": scope_label(sample_type), "source": "ncbi"}
+
+
+SourceGTDB = "gtdb"
+
+
+def _gtdb_base(name):
+    return re.sub(r"_[A-Z]{1,2}$", "", name)
 
 
 def _text(value, limit, label):
@@ -102,7 +125,7 @@ def parse(raw):
 
 def clean(rows, sample_type=""):
     """Validated rows ready to store. The taxonomy index, not the browser, supplies names and lineages."""
-    rows = [r for r in rows if str(r.get("name") or "").strip() or str(r.get("taxid") or "").strip()]
+    rows = [r for r in rows if any(str(r.get(key) or "").strip() for key in ("name", "taxid", "gtdb"))]
 
     if len(rows) > MAX_ORGANISMS:
         raise ValidationError(f"A sample can list at most {MAX_ORGANISMS} organisms.")
@@ -121,7 +144,22 @@ def clean(rows, sample_type=""):
 
         taxid = str(row.get("taxid") or "").strip()
 
-        if taxid:
+        if str(row.get("source") or "") == SourceGTDB and not taxid:
+            data = gtdb_local.get(str(row.get("gtdb") or row.get("name") or ""))
+
+            if data is None:
+                raise ValidationError(f"{label}: this species is not in the local GTDB copy.")
+
+            chain = gtdb_local.lineage_of(data)
+
+            if role in (SampleOrganism.ROLE_PRIMARY, SampleOrganism.ROLE_MEMBER) and not in_scope([{"taxid": BACTERIA, "name": "Bacteria"}], scope):
+                raise ValidationError(f"{label} ({_gtdb_base(data['name'])}) is a bacterium, which this sample type does not take.")
+
+            item = {
+                "name": _gtdb_base(data["name"]), "taxon_id": data["name"], "rank": "species", "lineage": chain,
+                "source": SampleOrganism.SOURCE_GTDB, "taxonomy_version": data.get("release", ""),
+            }
+        elif taxid:
             if not taxid.isdigit():
                 raise ValidationError(f"{label} has an invalid taxonomy id.")
 
@@ -205,7 +243,9 @@ def replace(sample, rows):
 def serialize(sample):
     return [
         {
-            "name": o.name, "strain": o.strain, "role": o.role, "taxid": o.taxon_id, "rank": o.rank,
+            "name": o.name, "strain": o.strain, "role": o.role, "rank": o.rank,
+            "taxid": "" if o.source == SampleOrganism.SOURCE_GTDB else o.taxon_id,
+            "gtdb": o.taxon_id if o.source == SampleOrganism.SOURCE_GTDB else "",
             "source": o.source, "notes": o.notes, "path": _brief(o.lineage) if o.lineage else "",
         }
         for o in sample.organisms.all()
@@ -216,7 +256,9 @@ def form_rows(rows):
     """Cleaned rows in the shape the form script reads (see ``serialize``)."""
     return [
         {
-            "name": r["name"], "strain": r["strain"], "role": r["role"], "taxid": r["taxon_id"], "rank": r["rank"],
+            "name": r["name"], "strain": r["strain"], "role": r["role"], "rank": r["rank"],
+            "taxid": "" if r["source"] == SampleOrganism.SOURCE_GTDB else r["taxon_id"],
+            "gtdb": r["taxon_id"] if r["source"] == SampleOrganism.SOURCE_GTDB else "",
             "source": r["source"], "notes": r["notes"], "path": _brief(r["lineage"]) if r["lineage"] else "",
         }
         for r in rows
@@ -225,7 +267,7 @@ def form_rows(rows):
 
 def main_taxid(sample):
     """The taxonomy id of the main organism, or "" when it was typed by hand or the sample has none."""
-    main = sample.organisms.filter(role=SampleOrganism.ROLE_PRIMARY).first()
+    main = sample.organisms.filter(role=SampleOrganism.ROLE_PRIMARY, source=SampleOrganism.SOURCE_NCBI).first()
 
     return main.taxon_id if main else ""
 
@@ -287,3 +329,19 @@ def details(taxid, sample_type=""):
         warnings.append("This is an unspecified species (sp.): the species field is left empty.")
 
     return out
+
+
+def details_gtdb(name):
+    """The card of a GTDB species picked in the form."""
+    data = gtdb_local.get(name)
+
+    if data is None:
+        return None
+
+    chain = gtdb_local.lineage_of(data)
+
+    return {
+        "taxid": "", "rank": "species", "name": _gtdb_base(data["name"]), "synonyms": [], "common_names": [], "authority": [],
+        "division": "", "genetic_code": "", "lineage": chain, "ranks": {c["rank"]: c["name"] for c in chain}, "gtdb": data,
+        "inferred": {}, "warnings": [], "source": "gtdb",
+    }
