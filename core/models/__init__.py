@@ -12,6 +12,7 @@ from .samples.origin import SampleOrigin
 from .samples.sample_files import SampleFile
 from .samples.subtypes import Bacteria, Phage, Plasmid, HostRange
 from .samples.relationship import SampleRelationship
+from .samples.organisms import SampleOrganism
 from .samples.intake import SampleImportBatch, SampleIntakeRecord
 from .samples.enrichment import (
     SampleEnrichmentSnapshot,

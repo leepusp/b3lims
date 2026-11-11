@@ -316,13 +316,6 @@ BIOBANK_JUPYTER_PARTITION_MAX_HOURS = {
     "max50": 168,
 }
 
-BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL = os.environ.get(
-    "BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL",
-    (
-        "https://davinci.icb.usp.br/pun/sys/dashboard/"
-        "batch_connect/sys/jupyterlab/session_contexts/new"
-    ),
-)
 
 FILE_UPLOAD_PERMISSIONS = 0o660
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o2770

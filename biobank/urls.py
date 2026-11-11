@@ -143,6 +143,7 @@ from core.views.internal.lab_tools import notebook_collab as notebook_collab_vie
 from core.views.internal.lab_tools import notebook_trace as notebook_trace_views
 from core.views.internal.lab_tools import notebook_sharing as notebook_sharing_views
 from core.views.internal.lab_tools import notebook_taxonomy as notebook_taxonomy_views
+from core.views.internal.samples import organisms as sample_organism_views
 from core.views.internal.lab_tools import notebook_templates as notebook_templates_views
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
@@ -340,6 +341,7 @@ urlpatterns = [
         name="storage_path_register_v8146",
     ),
     path("samples/add/", sample_create_view, name="sample_add"),
+    path("samples/organisms/search/", sample_organism_views.organism_search_api, name="sample_organism_search"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
     path(
         "samples/share/",

@@ -33,10 +33,6 @@ from core.services.jupyter_server import (
     BIOBANK_JUPYTER_DEFAULT_CPUS=2,
     BIOBANK_JUPYTER_DEFAULT_MEMORY_MB=8192,
     BIOBANK_JUPYTER_DEFAULT_TIME_MINUTES=60,
-    BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL=(
-        "https://davinci.example/pun/sys/dashboard/"
-        "batch_connect/sys/jupyterlab/session_contexts/new"
-    ),
 )
 class IndependentJupyterViewTests(TestCase):
     @classmethod
@@ -469,7 +465,7 @@ class IndependentJupyterViewTests(TestCase):
         "active_session_for_notebook",
         return_value=None,
     )
-    def test_stopped_workspace_offers_standalone_jupyterlab(
+    def test_stopped_workspace_offers_only_the_managed_session(
         self,
         mocked_active_session,
     ):
@@ -491,15 +487,9 @@ class IndependentJupyterViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "Standalone JupyterLab",
-        )
-        self.assertContains(
-            response,
-            "batch_connect/sys/jupyterlab/"
-            "session_contexts/new",
-        )
+        self.assertContains(response, "Start managed session")
+        self.assertNotContains(response, "Standalone JupyterLab")
+        self.assertNotContains(response, "session_contexts/new")
         mocked_active_session.assert_called_once()
 
     @patch(

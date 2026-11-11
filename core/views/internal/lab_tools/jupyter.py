@@ -484,11 +484,6 @@ def jupyter_workspace(request, notebook_id):
             "jupyter_notebook": notebook,
             "active_session": active_session,
             "session_error": session_error,
-            "jupyterlab_ood_launch_url": getattr(
-                settings,
-                "BIOBANK_JUPYTERLAB_OOD_LAUNCH_URL",
-                "",
-            ),
             "can_edit_jupyter": can_edit_notebook(
                 request.user,
                 notebook,

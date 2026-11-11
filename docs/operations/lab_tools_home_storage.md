@@ -63,7 +63,7 @@ The application and runner share these limits:
 Slurm remains authoritative for current node state, available resources, and
 partition policy.
 
-## Managed and standalone JupyterLab
+## Managed JupyterLab
 
 A running Biobank notebook exposes **Open JupyterLab**. The Notebook and
 JupyterLab interfaces use the same authenticated Slurm allocation,
@@ -75,9 +75,8 @@ its file-browser root. It opens initially at
 `biobank/lab_tools/jupyter/notebooks/notebook_<id>/notebook.ipynb`.
 The `/workspace` path remains an alias for that notebook workspace.
 
-When the managed session is stopped, **Standalone JupyterLab** links to
-the Open OnDemand application. Open OnDemand creates a separate Slurm
-allocation and does not replace or resume the Biobank-managed session.
+When the managed session is stopped, the page offers only **Start managed
+session**. There is no link to a separate Open OnDemand JupyterLab.
 
 The managed JupyterLab URL must use the protected Biobank node proxy.
 It must never link directly to a compute-node port.

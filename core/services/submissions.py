@@ -325,6 +325,17 @@ def suggest_taxon(package) -> None:
     if package.taxon_id or not taxonomy_local.available():
         return
 
+    from core.services import sample_organisms
+
+    samples = [i.sample for i in package.items.filter(kind="sample").select_related("sample") if i.sample]
+    taxids = {sample_organisms.main_taxid(sample) for sample in samples}
+
+    if len(taxids) == 1 and "" not in taxids:
+        repository.set_taxon(package, taxids.pop())
+        package.save()
+
+        return
+
     names = {
         (i.sample.organism_name or "").strip().lower() for i in package.items.filter(kind="sample").select_related("sample")
         if i.sample

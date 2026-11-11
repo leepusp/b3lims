@@ -1195,6 +1195,24 @@
     </div>
 
 
+    {% if organisms %}
+    <div class="card shadow-sm mb-4" id="sampleOrganisms">
+        <div class="card-header fw-bold">
+            <i class="bi bi-diagram-3 me-2"></i>Organisms
+        </div>
+        <ul class="list-group list-group-flush">
+            {% for o in organisms %}
+            <li class="list-group-item">
+                <span class="badge text-bg-secondary me-1">{{ o.role }}</span>
+                <span class="fst-italic fw-semibold">{{ o.name }}</span>{% if o.strain %} <span class="text-muted">strain {{ o.strain }}</span>{% endif %}
+                {% if o.taxid %}<span class="badge text-bg-light border ms-1">{{ o.source|upper }} · taxid {{ o.taxid }}{% if o.rank %} · {{ o.rank }}{% endif %}</span>{% else %}<span class="badge text-bg-warning ms-1">typed by hand</span>{% endif %}
+                {% if o.path %}<div class="small text-muted">{{ o.path }}</div>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <div class="card shadow-sm">
         <div
             class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"

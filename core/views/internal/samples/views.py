@@ -1,5 +1,6 @@
 from core.models.samples.subtypes import format_bacterial_taxonomic_name
 from core.services.sample_origin import save_sample_origin
+from core.services import sample_organisms
 from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
 import csv
@@ -1568,6 +1569,17 @@ def sample_create_view(request):
                     ),
                 )
 
+                try:
+                    organism_rows = sample_organisms.clean(
+                        sample_organisms.parse(request.POST.get("organisms_json")),
+                        sample_type,
+                    )
+                except ValidationError as exc:
+                    raise ValueError(" ".join(exc.messages)) from exc
+
+                if len(organism_rows) > 1 or (organism_rows and not organism_name):
+                    organism_name = sample_organisms.summary(organism_rows) or organism_name
+
                 created_samples = []
 
                 with transaction.atomic():
@@ -1685,6 +1697,9 @@ def sample_create_view(request):
 
                             else:
                                 sample = Sample.objects.create(**base_data)
+
+                            if organism_rows:
+                                sample_organisms.replace(sample, organism_rows)
 
                             # Collections & Parents
                             if selected_collections:
@@ -2700,6 +2715,8 @@ def sample_edit_view(request, sample_id):
         .first()
     )
 
+    organism_rows = None
+
     if request.method == "POST":
         form = FormClass(
             request.POST,
@@ -2772,6 +2789,18 @@ def sample_edit_view(request, sample_id):
         form_valid = form.is_valid()
         origin_valid = origin_form.is_valid()
 
+        organisms_posted = request.POST.get("organisms_json")
+
+        if organisms_posted is not None:
+            try:
+                organism_rows = sample_organisms.clean(
+                    sample_organisms.parse(organisms_posted),
+                    base_sample.sample_type,
+                )
+            except ValidationError as exc:
+                form.add_error(None, " ".join(exc.messages))
+                form_valid = False
+
         from core.services.storage_locations import split_location_text
         from core.services.storage_assignment_reconcile import (
             reconcile_sample_storage_from_text,
@@ -2822,6 +2851,14 @@ def sample_edit_view(request, sample_id):
             base_sample.storage_location = persisted_storage_text
 
             real_sample = form.save()
+
+            if organism_rows is not None:
+                sample_organisms.replace(base_sample, organism_rows)
+
+                if len(organism_rows) > 1:
+                    Sample.objects.filter(pk=base_sample.pk).update(
+                        organism_name=sample_organisms.summary(organism_rows)
+                    )
 
             save_sample_origin(
                 base_sample,
@@ -3067,6 +3104,12 @@ def sample_edit_view(request, sample_id):
         'all_tags': all_tags,
         'selected_tag_ids': selected_tag_ids,
         'keyword_pairs_text': keyword_pairs_text,
+        'organisms_initial': json.dumps(
+            sample_organisms.form_rows(organism_rows)
+            if request.method == "POST" and organism_rows is not None
+            else sample_organisms.serialize(base_sample)
+        ),
+        'organisms_type': base_sample.sample_type,
         'all_samples': visible_samples_for_user(request.user).values('sample_id', 'organism_name', 'sample_type'),
     })
     return render(request, "internal/samples/edit.html", ctx)
@@ -3713,6 +3756,7 @@ def sample_detail_view(request, sample_id):
 
     ctx.update(
         {
+            "organisms": sample_organisms.serialize(base_sample),
             "external_identifiers": (
                 base_sample.external_identifiers
                 .all()

@@ -81,14 +81,6 @@
                         Open JupyterLab
                     </a>
                 {% endif %}
-            {% elif jupyterlab_ood_launch_url %}
-                <a class="btn btn-sm btn-outline-primary"
-                   href="{{ jupyterlab_ood_launch_url }}"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="bi bi-box-arrow-up-right me-1"></i>
-                    Standalone JupyterLab
-                </a>
             {% endif %}
 
             {% if not active_session %}
@@ -164,8 +156,6 @@
              role="status">
             This notebook has no active managed server.
             Start a Slurm session to open Notebook 7.
-            Standalone JupyterLab uses a separate Open OnDemand
-            allocation and workspace.
         </div>
     {% endif %}
 
@@ -229,25 +219,7 @@
                             <i class="bi bi-play-fill me-1"></i>
                             Start managed session
                         </a>
-
-                        {% if jupyterlab_ood_launch_url %}
-                            <a class="btn btn-outline-primary"
-                               href="{{ jupyterlab_ood_launch_url }}"
-                               target="_blank"
-                               rel="noopener">
-                                <i class="bi bi-box-arrow-up-right me-1"></i>
-                                Launch standalone JupyterLab
-                            </a>
-                        {% endif %}
                     </div>
-
-                    {% if jupyterlab_ood_launch_url %}
-                        <p class="small text-muted mt-3 mb-0">
-                            Standalone JupyterLab is independent from
-                            this notebook and starts a separate
-                            Open OnDemand Slurm session.
-                        </p>
-                    {% endif %}
                 </div>
             </div>
         {% endif %}
