@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core.models.samples.organisms import SampleOrganism
-from core.services import taxonomy_local
+from core.services import gtdb_local, taxonomy_local
 
 MAX_ORGANISMS = 25
 BACTERIA, ARCHAEA, VIRUSES = 2, 2157, 10239
@@ -228,3 +228,62 @@ def main_taxid(sample):
     main = sample.organisms.filter(role=SampleOrganism.ROLE_PRIMARY).first()
 
     return main.taxon_id if main else ""
+
+
+# What the NCBI lineage of a virus lets us infer. Always shown as "inferred", never as measured.
+GENOME_TYPES = (
+    ("Leviviricetes", "ssRNA"), ("Cystoviridae", "dsRNA"), ("Monodnaviria", "ssDNA"), ("Microviridae", "ssDNA"),
+    ("Inoviridae", "ssDNA"), ("Duplodnaviria", "dsDNA"), ("Varidnaviria", "dsDNA"), ("Adnaviria", "dsDNA"),
+    ("Caudoviricetes", "dsDNA"), ("Caudovirales", "dsDNA"),
+)
+MORPHOTYPES = (("Myoviridae", "myovirus"), ("Siphoviridae", "siphovirus"), ("Podoviridae", "podovirus"))
+
+
+def infer_virus(chain):
+    names = {c["name"] for c in chain}
+    out = {}
+
+    for name, value in GENOME_TYPES:
+        if name in names:
+            out["genome_type"] = {"value": value, "basis": name}
+
+            break
+
+    for name, value in MORPHOTYPES:
+        if name in names:
+            out["morphotype"] = {"value": value, "basis": name}
+
+            break
+
+    return out
+
+
+def species_of(chain):
+    return next((c for c in reversed(chain) if c.get("rank") == "species"), None)
+
+
+def details(taxid, sample_type=""):
+    """Everything the form can show about one picked taxon: NCBI names, GTDB reference data, inferred virus traits."""
+    info = taxonomy_local.details(taxid)
+
+    if info is None:
+        return None
+
+    chain = taxonomy_local.lineage(info["taxid"])
+    species = species_of(chain)
+    ranks = {c["rank"]: c["name"] for c in chain if c.get("rank") and c["rank"] != "no rank"}
+    warnings = []
+    out = {**info, "lineage": chain, "ranks": ranks, "gtdb": None, "inferred": {}, "warnings": warnings}
+
+    if in_scope(chain, (VIRUSES,)):
+        out["inferred"] = infer_virus(chain)
+
+        if not ranks.get("genus") and not ranks.get("family"):
+            warnings.append("NCBI has no genus or family for this virus (unclassified), so only the name can be used.")
+    elif in_scope(chain, (BACTERIA, ARCHAEA)):
+        if gtdb_local.available() and species:
+            out["gtdb"] = gtdb_local.for_species(species["name"], species["taxid"])
+    if info["rank"] == "species" and re.search(r"\bsp\.", info["name"]):
+        warnings.append("This is an unspecified species (sp.): the species field is left empty.")
+
+    return out

@@ -28,18 +28,25 @@
         return genus ? name.replace(new RegExp("^" + genus.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s+", "i"), "") : name;
     }
 
+    function setIfEmpty(name, value) {
+        const field = document.querySelector("[name='" + name + "']");
+
+        if (field && value && !field.value) setField(name, value);
+    }
+
     function apply(t) {
         const ranks = t.ranks || {};
         const genus = ranks.genus || t.genus || "";
         const type = sampleType();
         const below = ["strain", "subspecies", "serotype", "serogroup", "biotype", "isolate", "forma specialis", "varietas", "no rank"].includes(t.rank);
-        const species = ranks.species || (t.rank === "species" ? t.name : "");
+        const unspecified = /\bsp\./.test(t.name);
+        const species = unspecified ? "" : (ranks.species || (t.rank === "species" ? t.name : ""));
 
         if (type === "Bacterium (Host)") {
             setField("genus", genus);
             setField("species", epithet(species, genus));
 
-            if (below) setField("strain", epithet(t.name, species || genus));
+            if (below && !unspecified) setField("strain", epithet(t.name, species || genus));
         } else if (type === "Phage (Virus)") {
             setField("genus", genus);
             setField("taxonomy", ranks.family || ranks.order || ranks.class || "");
@@ -48,6 +55,65 @@
         }
 
         document.dispatchEvent(new CustomEvent("biobank:set-main-organism", {detail: t}));
+        details(t);
+    }
+
+    const list = (items, limit) => (items || []).slice(0, limit || 6).map(esc).join("; ");
+    const pairs = (items) => (items || []).map((p) => esc(p[0]) + " (" + p[1] + ")").join("; ");
+    const num = (v, d) => (v == null ? "-" : Number(v).toLocaleString(undefined, {maximumFractionDigits: d == null ? 0 : d}));
+
+    function card(d) {
+        const rows = [];
+        const add = (label, value) => { if (value) rows.push("<div><span class='text-muted'>" + label + ":</span> " + value + "</div>"); };
+        const g = d.gtdb;
+
+        add("NCBI", "taxid " + esc(d.taxid) + " · " + esc(d.rank) + (d.division ? " · " + esc(d.division) : "") + (d.genetic_code ? " · genetic code: " + esc(d.genetic_code) : ""));
+        add("Lineage", (d.lineage || []).filter((c) => c.rank !== "no rank" && c.rank !== "clade").map((c) => esc(c.name)).join(" > "));
+        add("Also known as", list(d.synonyms));
+        add("Common names", list(d.common_names, 4));
+        add("Authority", list(d.authority, 3));
+
+        let html = "<div class='border rounded bg-light p-2 small'>" + rows.join("");
+
+        (d.warnings || []).forEach((w) => { html += "<div class='text-warning-emphasis mt-1'><i class='bi bi-exclamation-triangle me-1'></i>" + esc(w) + "</div>"; });
+
+        const inferred = d.inferred || {};
+        const inf = Object.keys(inferred).map((k) => esc(k.replace("_", " ")) + " = <b>" + esc(inferred[k].value) + "</b> (from " + esc(inferred[k].basis) + ")");
+
+        if (inf.length) html += "<div class='mt-1'><span class='badge text-bg-info me-1'>inferred</span>" + inf.join("; ") + ". Filled only when the field was empty.</div>";
+
+        if (g) {
+            html += "<div class='mt-2 pt-2 border-top'><div class='fw-semibold'>GTDB " + esc(g.release) + " reference for " + esc(g.name) + "</div>"
+                + "<div>" + num(g.genomes) + " genomes · size " + num(g.genome_size_median) + " bp (" + num(g.genome_size_min) + " – " + num(g.genome_size_max) + ") · GC " + num(g.gc_mean, 1) + "%</div>"
+                + "<div>CheckM2 completeness " + num(g.completeness_mean, 1) + "% · contamination " + num(g.contamination_mean, 1) + "% · type-material genomes " + num(g.type_material_genomes) + "</div>"
+                + (g.isolation_sources && g.isolation_sources.length ? "<div><span class='text-muted'>Common isolation sources:</span> " + pairs(g.isolation_sources) + "</div>" : "")
+                + (g.countries && g.countries.length ? "<div><span class='text-muted'>Countries:</span> " + pairs(g.countries) + "</div>" : "")
+                + "<div class='text-muted'>" + esc((g.lineage || "").replace(/[a-z]__/g, "").split(";").join(" > ")) + "</div></div>";
+        }
+
+        return html + "</div>";
+    }
+
+    async function details(t) {
+        const box = $("taxFillCard");
+
+        box.hidden = true;
+
+        try {
+            const response = await fetch(root.dataset.detailsUrl + "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType()), {credentials: "same-origin"});
+            const d = await response.json();
+
+            if (d.status !== "success") return;
+
+            const inferred = d.inferred || {};
+
+            setIfEmpty("genome_type", inferred.genome_type && inferred.genome_type.value);
+            setIfEmpty("morphotype", inferred.morphotype && inferred.morphotype.value);
+            box.innerHTML = card(d);
+            box.hidden = false;
+        } catch (e) {
+            box.hidden = true;
+        }
     }
 
     function show(data, query) {

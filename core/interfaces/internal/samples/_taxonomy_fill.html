@@ -2,6 +2,7 @@
 <div class="border rounded bg-white p-3 mb-3" id="taxFill"
      data-search-url="{% url 'sample_organism_search' %}"
      data-type="{{ fill_type|default:'' }}"
+     data-details-url="{% url 'sample_organism_details' %}"
      data-type-input="{{ fill_type_input|default:'' }}">
     <label class="form-label fw-semibold small mb-1" for="taxFillQuery">
         <i class="bi bi-search me-1 text-primary"></i>Fill from the local taxonomy
@@ -12,6 +13,7 @@
         <div id="taxFillResults" class="list-group position-absolute w-100 shadow-sm" hidden
              style="z-index: 30; max-height: 16rem; overflow: auto;"></div>
     </div>
+    <div id="taxFillCard" class="mt-2" hidden></div>
     <div class="form-text" id="taxFillNote">Picking a result fills the fields below and sets the main organism. Every field stays editable, so you can also type them by hand.</div>
 </div>
-<script src="{% static 'internal/samples/sample_taxonomy_fill.js' %}?v=20261111-fill1"></script>
+<script src="{% static 'internal/samples/sample_taxonomy_fill.js' %}?v=20261111-fill2"></script>

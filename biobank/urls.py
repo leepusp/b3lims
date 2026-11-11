@@ -342,6 +342,7 @@ urlpatterns = [
     ),
     path("samples/add/", sample_create_view, name="sample_add"),
     path("samples/organisms/search/", sample_organism_views.organism_search_api, name="sample_organism_search"),
+    path("samples/organisms/details/", sample_organism_views.organism_details_api, name="sample_organism_details"),
     path("samples/network/", samples_network_view, name="samples_network"), # <-- ROTA DO GRAFO AQUI
     path(
         "samples/share/",

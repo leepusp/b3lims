@@ -176,3 +176,85 @@ class SubmissionSuggestionTests(OrganismBase):
         package.refresh_from_db()
 
         self.assertEqual(package.taxon_id, "1280")
+
+
+class RichTaxonomyTests(OrganismBase):
+    def setUp(self):
+        super().setUp()
+
+        # a richer dump: division, genetic code, synonyms, authority and a merged taxon
+        nodes = [(1, 1, "no rank", 8, 11), (2, 1, "domain", 0, 11), (1280, 2, "species", 0, 11), (10239, 1, "domain", 9, 1), (77920, 10239, "species", 9, 1)]
+        (self.dump / "nodes.dmp").write_text("".join(f"{t}\t|\t{p}\t|\t{r}\t|\t\t|\t{d}\t|\t1\t|\t{g}\t|\n" for t, p, r, d, g in nodes))
+        (self.dump / "names.dmp").write_text(
+            "1\t|\troot\t|\t\t|\tscientific name\t|\n2\t|\tBacteria\t|\t\t|\tscientific name\t|\n"
+            "1280\t|\tStaphylococcus aureus\t|\t\t|\tscientific name\t|\n1280\t|\tStaph aureus\t|\t\t|\tsynonym\t|\n"
+            "1280\t|\tStaphylococcus aureus Rosenbach 1884\t|\t\t|\tauthority\t|\n1280\t|\tgolden staph\t|\t\t|\tcommon name\t|\n"
+            "10239\t|\tViruses\t|\t\t|\tscientific name\t|\n77920\t|\tPhage #D\t|\t\t|\tscientific name\t|\n"
+        )
+        (self.dump / "division.dmp").write_text("0\t|\tBCT\t|\tBacteria\t|\t\t|\n9\t|\tPHG\t|\tPhages\t|\t\t|\n")
+        (self.dump / "gencode.dmp").write_text("1\t|\tSGC0\t|\tStandard\t|\t\t|\t\t|\n11\t|\tSGC3\t|\tBacterial, Archaeal and Plant Plastid\t|\t\t|\t\t|\n")
+        (self.dump / "merged.dmp").write_text("123\t|\t1280\t|\n")
+        taxonomy_local.build_index()
+
+    def test_details_carry_names_division_and_code(self):
+        d = taxonomy_local.details(1280)
+
+        self.assertEqual(d["synonyms"], ["Staph aureus"])
+        self.assertEqual(d["common_names"], ["golden staph"])
+        self.assertEqual(d["authority"], ["Staphylococcus aureus Rosenbach 1884"])
+        self.assertEqual((d["division"], d["genetic_code"]), ("Bacteria", "Bacterial, Archaeal and Plant Plastid"))
+
+    def test_merged_taxon_resolves_to_the_current_one(self):
+        self.assertEqual(taxonomy_local.get(123)["taxid"], 1280)
+        self.assertEqual(sample_organisms.clean([{"taxid": "123"}], "Other")[0]["taxon_id"], "1280")
+
+    def test_unclassified_virus_gets_a_warning_and_nothing_inferred(self):
+        d = sample_organisms.details(77920, "Phage (Virus)")
+
+        self.assertTrue(d["warnings"])
+        self.assertEqual(d["inferred"], {})
+
+    def test_virus_traits_are_inferred_from_the_lineage(self):
+        chain = [{"name": "Viruses"}, {"name": "Duplodnaviria"}, {"name": "Caudoviricetes"}, {"name": "Myoviridae"}]
+
+        self.assertEqual(sample_organisms.infer_virus(chain)["genome_type"]["value"], "dsDNA")
+        self.assertEqual(sample_organisms.infer_virus(chain)["morphotype"]["value"], "myovirus")
+
+    def test_details_api(self):
+        url = reverse("sample_organism_details")
+
+        self.assertEqual(self.client.get(url, {"taxid": "x"}).status_code, 400)
+        self.assertEqual(self.client.get(url, {"taxid": "999"}).status_code, 404)
+        self.assertEqual(self.client.get(url, {"taxid": "1280", "type": "Bacterium (Host)"}).json()["name"], "Staphylococcus aureus")
+
+
+class GtdbTests(OrganismBase):
+    def test_species_summary_from_metadata(self):
+        import gzip
+
+        from core.services import gtdb_local
+
+        head = "accession\tgtdb_taxonomy\tgtdb_representative\tgenome_size\tgc_percentage\tcheckm2_completeness\tcheckm2_contamination\tncbi_isolation_source\tncbi_country\tncbi_species_taxid\tgtdb_type_designation_ncbi_taxa\tncbi_assembly_level\n"
+        tax = "d__Bacteria;p__Bacillota;c__Bacilli;o__Staph;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus aureus"
+        rows = [
+            f"RS_1\t{tax}\tt\t2800000\t32.8\t99\t0.5\tblood\tBrazil: SP\t1280\tnot type material\tComplete\n",
+            f"RS_2\t{tax}\tf\t2900000\t32.9\t98\t1.0\tblood\tBrazil\t1280\ttype strain of species\tContig\n",
+            f"RS_3\t{tax}\tf\t2700000\t32.7\t97\t0.2\tna\tChina\t1280\tnot type material\tContig\n",
+        ]
+        path = self.tmp / "gtdb" / "2026-r232"
+
+        path.mkdir(parents=True)
+
+        with gzip.open(path / "bac120_metadata_r232.tsv.gz", "wt") as out:
+            out.write(head + "".join(rows))
+
+        self.assertFalse(gtdb_local.available())
+        self.assertEqual(gtdb_local.build_index(path / "bac120_metadata_r232.tsv.gz")["species"], 1)
+
+        d = gtdb_local.for_species(taxid=1280)
+
+        self.assertEqual((d["genomes"], d["genome_size_median"], d["type_material_genomes"], d["representative"]), (3, 2800000, 1, "RS_1"))
+        self.assertEqual(d["isolation_sources"], [["blood", 2]])
+        self.assertEqual(d["countries"][0], ["Brazil", 2])
+        self.assertEqual(gtdb_local.for_species(name="staphylococcus aureus")["release"], "r232")
+        self.assertIsNone(gtdb_local.for_species(name="Nothing here"))
