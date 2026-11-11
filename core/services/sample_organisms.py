@@ -48,7 +48,22 @@ def _brief(lineage):
 
 
 def search(query, sample_type="", limit=12, source="ncbi"):
-    """Taxa of a local database whose name matches ``query``, limited to the sample type's branch."""
+    """Taxa of the local databases whose name matches ``query``, limited to the sample type's branch.
+
+    ``source`` is ``ncbi``, ``gtdb`` or ``all`` (NCBI first, then GTDB for bacteria)."""
+    if source == "all":
+        first = search(query, sample_type, limit, "ncbi")
+
+        if scope_for(sample_type) is None or BACTERIA not in (scope_for(sample_type) or ()):
+            return first
+
+        second = search(query, sample_type, 4, SourceGTDB)
+
+        return {
+            "available": first["available"] or second["available"], "results": first["results"][:8] + second["results"],
+            "scope": "NCBI Taxonomy and GTDB", "source": "all",
+        }
+
     if source == SourceGTDB:
         if not gtdb_local.available():
             return {"available": False, "results": [], "scope": "Bacteria (GTDB)", "source": source}
@@ -331,17 +346,33 @@ def details(taxid, sample_type=""):
     return out
 
 
+def with_catalog(found):
+    """``found`` plus the list of items the user can attach to the sample."""
+    from core.services import reference_data
+
+    return None if found is None else {**found, "catalog": reference_data.catalog(found)}
+
+
 def details_gtdb(name):
-    """The card of a GTDB species picked in the form."""
+    """The card of a GTDB species picked in the form, with the NCBI entry of the same name when there is one."""
     data = gtdb_local.get(name)
 
     if data is None:
         return None
 
+    base = _gtdb_base(data["name"])
     chain = gtdb_local.lineage_of(data)
+    found = None
 
-    return {
-        "taxid": "", "rank": "species", "name": _gtdb_base(data["name"]), "synonyms": [], "common_names": [], "authority": [],
-        "division": "", "genetic_code": "", "lineage": chain, "ranks": {c["rank"]: c["name"] for c in chain}, "gtdb": data,
-        "inferred": {}, "warnings": [], "source": "gtdb",
+    for hit in taxonomy_local.search(base, limit=10):
+        if hit["name"].lower() == base.lower() and hit["rank"] == "species" and "matched" not in hit:
+            found = details(hit["taxid"], "Bacterium (Host)")
+
+            break
+
+    out = found or {
+        "taxid": "", "rank": "species", "name": base, "synonyms": [], "common_names": [], "authority": [], "division": "",
+        "genetic_code": "", "lineage": chain, "ranks": {}, "inferred": {}, "warnings": [],
     }
+
+    return {**out, "ranks": {c["rank"]: c["name"] for c in chain}, "gtdb": data, "source": "gtdb", "name": base}

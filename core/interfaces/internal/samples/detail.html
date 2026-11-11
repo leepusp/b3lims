@@ -1195,6 +1195,26 @@
     </div>
 
 
+    {% if reference_groups %}
+    <div class="card shadow-sm mb-4" id="sampleReferenceData">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-journal-bookmark me-2"></i>Reference metadata</span>
+            <span class="small text-muted fw-normal">chosen when the sample was registered or edited; frozen with source and version</span>
+        </div>
+        <div class="card-body">
+            {% for group, items in reference_groups %}
+            <div class="fw-semibold small text-muted mt-2">{{ group }}</div>
+            <dl class="row mb-1">
+                {% for item in items %}
+                <dt class="col-sm-4 fw-normal text-muted">{{ item.label }}</dt>
+                <dd class="col-sm-8">{{ item.value }} <span class="badge text-bg-light border">{{ item.source|upper }} {{ item.source_version }}</span></dd>
+                {% endfor %}
+            </dl>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if organisms %}
     <div class="card shadow-sm mb-4" id="sampleOrganisms">
         <div class="card-header fw-bold">

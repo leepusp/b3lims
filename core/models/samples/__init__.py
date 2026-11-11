@@ -5,6 +5,7 @@ from .sample_files import SampleFile
 from .subtypes import Bacteria, Phage, Plasmid, HostRange
 from .relationship import SampleRelationship
 from .organisms import SampleOrganism
+from .reference_data import SampleReferenceData
 from .intake import SampleImportBatch, SampleIntakeRecord
 from .enrichment import (
     SampleEnrichmentSnapshot,
@@ -25,6 +26,7 @@ __all__ = [
     "Plasmid",
     "SampleRelationship",
     "SampleOrganism",
+    "SampleReferenceData",
     "SampleImportBatch",
     "SampleIntakeRecord",
     "SampleTaxonomyAssignment",

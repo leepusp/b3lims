@@ -58,46 +58,91 @@
         details(t);
     }
 
-    const list = (items, limit) => (items || []).slice(0, limit || 6).map(esc).join("; ");
-    const pairs = (items) => (items || []).map((p) => esc(p[0]) + " (" + p[1] + ")").join("; ");
-    const num = (v, d) => (v == null ? "-" : Number(v).toLocaleString(undefined, {maximumFractionDigits: d == null ? 0 : d}));
+    const num = (v) => (v == null ? "-" : Number(v).toLocaleString());
+    const SOURCES = {ncbi: "NCBI Taxonomy", gtdb: "GTDB", inferred: "Inferred from the lineage"};
+    let chosen = new Set();
+
+    function writeSelection() {
+        $("referenceJson").value = JSON.stringify(Array.from(chosen).map((k) => {
+            const [source, key] = k.split("|");
+
+            return {source, key};
+        }));
+        const count = chosen.size;
+
+        $("taxFillCount").textContent = count ? count + " item(s) will be attached to the sample" : "Nothing selected: only the fields above are filled";
+    }
 
     function card(d) {
-        const rows = [];
-        const add = (label, value) => { if (value) rows.push("<div><span class='text-muted'>" + label + ":</span> " + value + "</div>"); };
-        const g = d.gtdb;
+        let html = "<div class='border rounded bg-light p-2 small'>";
 
-        add("NCBI", "taxid " + esc(d.taxid) + " · " + esc(d.rank) + (d.division ? " · " + esc(d.division) : "") + (d.genetic_code ? " · genetic code: " + esc(d.genetic_code) : ""));
-        add("Lineage", (d.lineage || []).filter((c) => c.rank !== "no rank" && c.rank !== "clade").map((c) => esc(c.name)).join(" > "));
-        add("Also known as", list(d.synonyms));
-        add("Common names", list(d.common_names, 4));
-        add("Authority", list(d.authority, 3));
+        (d.warnings || []).forEach((w) => { html += "<div class='text-warning-emphasis mb-1'><i class='bi bi-exclamation-triangle me-1'></i>" + esc(w) + "</div>"; });
 
-        let html = "<div class='border rounded bg-light p-2 small'>" + rows.join("");
+        const items = d.catalog || [];
 
-        (d.warnings || []).forEach((w) => { html += "<div class='text-warning-emphasis mt-1'><i class='bi bi-exclamation-triangle me-1'></i>" + esc(w) + "</div>"; });
+        if (!items.length) return html + "<div class='text-muted'>No reference data is available for this taxon.</div></div>";
 
-        const inferred = d.inferred || {};
-        const inf = Object.keys(inferred).map((k) => esc(k.replace("_", " ")) + " = <b>" + esc(inferred[k].value) + "</b> (from " + esc(inferred[k].basis) + ")");
+        html += "<div class='fw-semibold mb-1'>Reference data for <i>" + esc(d.name) + "</i> - tick what to keep with this sample</div>";
 
-        if (inf.length) html += "<div class='mt-1'><span class='badge text-bg-info me-1'>inferred</span>" + inf.join("; ") + ". Filled only when the field was empty.</div>";
+        ["ncbi", "gtdb", "inferred"].forEach((source) => {
+            const mine = items.filter((i) => i.source === source);
 
-        if (g) {
-            html += "<div class='mt-2 pt-2 border-top'><div class='fw-semibold'>GTDB " + esc(g.release) + " reference for " + esc(g.name) + "</div>"
-                + "<div>" + num(g.genomes) + " genomes · size " + num(g.genome_size_median) + " bp (" + num(g.genome_size_min) + " – " + num(g.genome_size_max) + ") · GC " + num(g.gc_mean, 1) + "%</div>"
-                + "<div>CheckM2 completeness " + num(g.completeness_mean, 1) + "% · contamination " + num(g.contamination_mean, 1) + "% · type-material genomes " + num(g.type_material_genomes) + "</div>"
-                + (g.isolation_sources && g.isolation_sources.length ? "<div><span class='text-muted'>Common isolation sources:</span> " + pairs(g.isolation_sources) + "</div>" : "")
-                + (g.countries && g.countries.length ? "<div><span class='text-muted'>Countries:</span> " + pairs(g.countries) + "</div>" : "")
-                + "<div class='text-muted'>" + esc((g.lineage || "").replace(/[a-z]__/g, "").split(";").join(" > ")) + "</div></div>";
-        }
+            if (!mine.length) return;
+
+            html += "<div class='mt-2 pt-2 border-top'><div class='d-flex justify-content-between align-items-center'>"
+                + "<div class='fw-semibold'>" + esc(SOURCES[source]) + " <span class='text-muted fw-normal'>" + esc(mine[0].version) + "</span>"
+                + (source === "gtdb" && d.source !== "gtdb" ? " <span class='badge text-bg-light border'>matched through the NCBI species</span>" : "") + "</div>"
+                + "<span><button type='button' class='btn btn-link btn-sm p-0 me-2' data-all='" + source + "'>select all</button>"
+                + "<button type='button' class='btn btn-link btn-sm p-0' data-none='" + source + "'>none</button></span></div>";
+
+            let group = "";
+
+            mine.forEach((i) => {
+                if (i.group !== group) {
+                    group = i.group;
+                    html += "<div class='text-muted mt-1'>" + esc(group) + "</div>";
+                }
+
+                const id = i.source + "|" + i.key;
+
+                html += "<label class='d-flex gap-2 align-items-start ms-2'><input type='checkbox' class='form-check-input mt-1' data-ref='" + esc(id) + "'" + (chosen.has(id) ? " checked" : "") + ">"
+                    + "<span><span class='text-muted'>" + esc(i.label) + ":</span> " + esc(i.value) + "</span></label>";
+            });
+
+            html += "</div>";
+        });
 
         return html + "</div>";
     }
+
+    $("taxFillCard").addEventListener("change", (event) => {
+        const box = event.target.closest("[data-ref]");
+
+        if (!box) return;
+
+        box.checked ? chosen.add(box.dataset.ref) : chosen.delete(box.dataset.ref);
+        writeSelection();
+    });
+    $("taxFillCard").addEventListener("click", (event) => {
+        const all = event.target.closest("[data-all]");
+        const none = event.target.closest("[data-none]");
+        const source = (all || none || {dataset: {}}).dataset.all || (all || none || {dataset: {}}).dataset.none;
+
+        if (!source) return;
+
+        $("taxFillCard").querySelectorAll("[data-ref^='" + source + "|']").forEach((box) => {
+            box.checked = !!all;
+            all ? chosen.add(box.dataset.ref) : chosen.delete(box.dataset.ref);
+        });
+        writeSelection();
+    });
 
     async function details(t) {
         const box = $("taxFillCard");
 
         box.hidden = true;
+        chosen = new Set();
+        writeSelection();
 
         try {
             const query = t.source === "gtdb" ? "?source=gtdb&name=" + encodeURIComponent(t.gtdb) : "?taxid=" + encodeURIComponent(t.taxid) + "&type=" + encodeURIComponent(sampleType());
@@ -127,7 +172,7 @@
         } else {
             hits = data.results;
             box.innerHTML = hits.map((t, i) => "<button type='button' class='list-group-item list-group-item-action' data-hit='" + i + "'>"
-                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>" + (t.source === "gtdb" ? num(t.genomes) + " genomes" : "taxid " + esc(t.taxid)) + "</span>"
+                + "<span class='fst-italic fw-semibold'>" + esc(t.name) + "</span> <span class='badge " + (t.source === "gtdb" ? "text-bg-success" : "text-bg-primary") + "'>" + (t.source === "gtdb" ? "GTDB" : "NCBI") + "</span> <span class='badge text-bg-light border'>" + esc(t.rank) + "</span> <span class='small text-muted'>" + (t.source === "gtdb" ? num(t.genomes) + " genomes" : "taxid " + esc(t.taxid)) + "</span>"
                 + (t.matched ? " <span class='small text-muted'>(" + esc(t.matched) + ")</span>" : "")
                 + (t.path ? "<div class='small text-muted'>" + esc(t.path) + "</div>" : "") + "</button>").join("");
         }
@@ -158,11 +203,16 @@
     function toggle() {
         root.hidden = !supported();
 
-        const gtdb = $("taxFillSource").querySelector("option[value='gtdb']");
+        const bacteria = sampleType() === "Bacterium (Host)";
 
-        gtdb.hidden = sampleType() !== "Bacterium (Host)";
+        $("taxFillSource").querySelectorAll("option").forEach((o) => { o.hidden = !bacteria && o.value !== "ncbi"; });
+        $("taxFillSource").closest(".d-flex").hidden = !bacteria;
+        $("taxFillSource").value = bacteria ? "all" : "ncbi";
 
-        if (gtdb.hidden) $("taxFillSource").value = "ncbi";
+        $("taxFillQuery").placeholder = {
+            "Bacterium (Host)": "Scientific or common name, for example Escherichia coli or E. coli",
+            "Phage (Virus)": "Scientific name of the virus, genus or family, for example Tequatrovirus",
+        }[sampleType()] || "Scientific or common name";
     }
 
     $("taxFillSource").addEventListener("change", search);

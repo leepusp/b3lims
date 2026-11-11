@@ -16,7 +16,7 @@
 
     <div class="position-relative">
         <input type="search" id="orgQuery" class="form-control form-control-sm" autocomplete="off"
-               placeholder="Search the taxonomy database, for example Escherichia coli">
+               placeholder="Search the taxonomy database by scientific or common name">
         <div id="orgResults" class="list-group position-absolute w-100 shadow-sm" hidden
              style="z-index: 30; max-height: 16rem; overflow: auto;"></div>
     </div>
@@ -25,7 +25,20 @@
         <span class="small text-muted" id="orgNote"></span>
     </div>
 
+    {% if reference_attached %}
+    <div class="border rounded p-2 mt-2 small bg-white">
+        <div class="fw-semibold mb-1">Already attached to this sample</div>
+        {% for item in reference_attached %}
+        <label class="d-flex gap-2 align-items-start">
+            <input type="checkbox" class="form-check-input mt-1" name="reference_remove" value="{{ item.pk }}">
+            <span><span class="text-muted">{{ item.label }}:</span> {{ item.value }}
+                <span class="badge text-bg-light border">{{ item.source|upper }} {{ item.source_version }}</span></span>
+        </label>
+        {% endfor %}
+        <div class="form-text">Tick an item to remove it when you save.</div>
+    </div>
+    {% endif %}
     <input type="hidden" name="organisms_json" id="organismsJson" value="[]">
     {{ organisms_initial|default:"[]"|json_script:"organisms-initial" }}
 </div>
-<script src="{% static 'internal/samples/sample_organisms.js' %}?v=20261111-org2"></script>
+<script src="{% static 'internal/samples/sample_organisms.js' %}?v=20261111-org4"></script>

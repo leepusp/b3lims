@@ -1,6 +1,6 @@
 from core.models.samples.subtypes import format_bacterial_taxonomic_name
 from core.services.sample_origin import save_sample_origin
-from core.services import sample_organisms
+from core.services import sample_organisms, reference_data
 from core.services.metadata_vocabularies import active_tags_from_ids, get_or_create_active_keyword_value
 import json  # <-- Adicionado para o Grafo e Auto-preenchimento
 import csv
@@ -1577,6 +1577,13 @@ def sample_create_view(request):
                 except ValidationError as exc:
                     raise ValueError(" ".join(exc.messages)) from exc
 
+                try:
+                    reference_selection = reference_data.parse_selection(request.POST.get("reference_json"))
+                except ValidationError as exc:
+                    raise ValueError(" ".join(exc.messages)) from exc
+
+                reference_unavailable = 0
+
                 if len(organism_rows) > 1 or (organism_rows and not organism_name):
                     organism_name = sample_organisms.summary(organism_rows) or organism_name
 
@@ -1700,6 +1707,9 @@ def sample_create_view(request):
 
                             if organism_rows:
                                 sample_organisms.replace(sample, organism_rows)
+
+                                _, missing = reference_data.attach(sample, reference_selection, user)
+                                reference_unavailable = max(reference_unavailable, missing)
 
                             # Collections & Parents
                             if selected_collections:
@@ -1897,6 +1907,12 @@ def sample_create_view(request):
                     sample.aliquot_count
                     for sample in created_samples
                 )
+
+                if reference_unavailable:
+                    messages.warning(
+                        request,
+                        f"{reference_unavailable} reference item(s) could not be attached because the main organism does not match them.",
+                    )
 
                 messages.success(
                     request,
@@ -2860,6 +2876,23 @@ def sample_edit_view(request, sample_id):
                         organism_name=sample_organisms.summary(organism_rows)
                     )
 
+            reference_data.remove(base_sample, request.POST.getlist("reference_remove"))
+
+            try:
+                _, missing = reference_data.attach(
+                    base_sample,
+                    reference_data.parse_selection(request.POST.get("reference_json")),
+                    request.user,
+                )
+            except ValidationError:
+                missing = 0
+
+            if missing:
+                messages.warning(
+                    request,
+                    f"{missing} reference item(s) could not be attached because the main organism does not match them.",
+                )
+
             save_sample_origin(
                 base_sample,
                 origin_form.cleaned_data,
@@ -3110,6 +3143,7 @@ def sample_edit_view(request, sample_id):
             else sample_organisms.serialize(base_sample)
         ),
         'organisms_type': base_sample.sample_type,
+        'reference_attached': base_sample.reference_data.all(),
         'all_samples': visible_samples_for_user(request.user).values('sample_id', 'organism_name', 'sample_type'),
     })
     return render(request, "internal/samples/edit.html", ctx)
@@ -3757,6 +3791,7 @@ def sample_detail_view(request, sample_id):
     ctx.update(
         {
             "organisms": sample_organisms.serialize(base_sample),
+            "reference_groups": reference_data.grouped(base_sample),
             "external_identifiers": (
                 base_sample.external_identifiers
                 .all()

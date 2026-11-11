@@ -298,6 +298,11 @@ class SearchByAnyNameTests(OrganismBase):
 
         gtdb_local.build_index(folder / "bac120_metadata_r232.tsv.gz")
 
+        both = sample_organisms.search("e. coli", "Bacterium (Host)", source="all")["results"]
+
+        self.assertEqual({r["source"] for r in both}, {"ncbi", "gtdb"})
+        self.assertEqual({r["source"] for r in sample_organisms.search("e. coli", "Phage (Virus)", source="all")["results"]}, set())
+
         found = sample_organisms.search("e. coli", "Bacterium (Host)", source="gtdb")["results"]
 
         self.assertEqual((found[0]["name"], found[0]["gtdb"], found[0]["genus"]), ("Escherichia coli", "Escherichia coli_D", "Escherichia"))
@@ -312,7 +317,10 @@ class SearchByAnyNameTests(OrganismBase):
         with self.assertRaises(ValidationError):
             sample_organisms.clean([{"source": "gtdb", "gtdb": "Nothing"}], "Other")
 
-        self.assertEqual(sample_organisms.details_gtdb("Escherichia coli_D")["gtdb"]["genomes"], 1)
+        picked = sample_organisms.details_gtdb("Escherichia coli_D")
+
+        self.assertEqual(picked["gtdb"]["genomes"], 1)
+        self.assertEqual(picked["taxid"], 562)  # the NCBI entry of the same name rides along
 
         sample = Sample.objects.create(sample_id="ORG-GT", organism_name="x", sample_type="Bacterium (Host)", owner=self.user)
 
@@ -325,3 +333,101 @@ class SearchByAnyNameTests(OrganismBase):
 
         # what the edit form posts back is accepted again
         sample_organisms.clean([{**shown, "role": "primary"}], "Bacterium (Host)")
+
+
+class ReferenceDataTests(OrganismBase):
+    def setUp(self):
+        super().setUp()
+
+        import gzip
+
+        from core.services import gtdb_local
+
+        nodes = [(1, 1, "no rank"), (2, 1, "domain"), (1279, 2, "genus"), (1280, 1279, "species")]
+        (self.dump / "nodes.dmp").write_text("".join(f"{t}\t|\t{p}\t|\t{r}\t|\t\t|\t0\t|\t1\t|\t11\t|\n" for t, p, r in nodes))
+        (self.dump / "names.dmp").write_text(
+            "1\t|\troot\t|\t\t|\tscientific name\t|\n2\t|\tBacteria\t|\t\t|\tscientific name\t|\n1279\t|\tStaphylococcus\t|\t\t|\tscientific name\t|\n"
+            "1280\t|\tStaphylococcus aureus\t|\t\t|\tscientific name\t|\n1280\t|\tStaph aureus\t|\t\t|\tsynonym\t|\n"
+        )
+        (self.dump / "division.dmp").write_text("0\t|\tBCT\t|\tBacteria\t|\t\t|\n")
+        (self.dump / "gencode.dmp").write_text("11\t|\tSGC3\t|\tBacterial code\t|\t\t|\t\t|\n")
+        taxonomy_local.build_index()
+
+        head = ("accession\tgtdb_taxonomy\tgtdb_representative\tgenome_size\tgc_percentage\tncbi_species_taxid\tncbi_assembly_name\t"
+                "ncbi_bioproject\tncbi_biosample\tncbi_protein_count\tncbi_assembly_level\n")
+        tax = "d__Bacteria;p__Bacillota;c__Bacilli;o__Staph;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus aureus"
+        folder = self.tmp / "gtdb" / "2026-r232"
+
+        folder.mkdir(parents=True)
+
+        with gzip.open(folder / "bac120_metadata_r232.tsv.gz", "wt") as out:
+            out.write(head + f"RS_GCF_000013425.1\t{tax}\tt\t2800000\t32.8\t1280\tASM1342v1\tPRJNA57795\tSAMN02604235\t2600\tComplete Genome\n")
+
+        gtdb_local.build_index(folder / "bac120_metadata_r232.tsv.gz")
+
+    def test_catalog_lists_items_by_source(self):
+        from core.services import reference_data
+
+        items = {(i["source"], i["key"]): i for i in reference_data.catalog(sample_organisms.details(1280, "Bacterium (Host)"))}
+
+        self.assertEqual(items[("ncbi", "taxid")]["value"], "1280")
+        self.assertEqual(items[("ncbi", "synonyms")]["value"], "Staph aureus")
+        self.assertEqual(items[("gtdb", "rep_accession")]["value"], "GCF_000013425.1")
+        self.assertEqual(items[("gtdb", "rep_bioproject")]["value"], "PRJNA57795")
+        self.assertEqual(items[("gtdb", "rep_proteins")]["value"], "2,600")
+
+    def test_only_ticked_items_are_attached_and_frozen(self):
+        selection = [{"source": "ncbi", "key": "taxid"}, {"source": "gtdb", "key": "rep_biosample"}, {"source": "gtdb", "key": "nope"}]
+        response = self.client.post(
+            reverse("sample_add"),
+            self.payload([{"taxid": "1280"}], sample_id="REF-1", reference_json=json.dumps(selection)),
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        sample = Sample.objects.get(sample_id="REF-1")
+        kept = {(r.source, r.key): r for r in sample.reference_data.all()}
+
+        self.assertEqual(set(kept), {("ncbi", "taxid"), ("gtdb", "rep_biosample")})
+        self.assertEqual(kept[("gtdb", "rep_biosample")].value, "SAMN02604235")
+        self.assertEqual(kept[("gtdb", "rep_biosample")].source_version, "r232")
+        self.assertEqual(kept[("gtdb", "rep_biosample")].added_by, self.user)
+
+        page = self.client.get(reverse("sample_detail", args=[sample.pk]))
+
+        self.assertContains(page, "Reference metadata")
+        self.assertContains(page, "SAMN02604235")
+
+    def test_edit_can_remove_and_add_items(self):
+        from core.services import reference_data
+
+        self.client.post(reverse("sample_add"), self.payload([{"taxid": "1280"}], sample_id="REF-2", reference_json=json.dumps([{"source": "ncbi", "key": "taxid"}])))
+
+        sample = Sample.objects.get(sample_id="REF-2")
+        item = sample.reference_data.get()
+
+        reference_data.remove(sample, [str(item.pk)])
+
+        self.assertEqual(sample.reference_data.count(), 0)
+        self.assertEqual(reference_data.attach(sample, [("ncbi", "rank"), ("ncbi", "rank")], self.user), (1, 0))
+        self.assertEqual(reference_data.attach(sample, [("ncbi", "rank")], self.user), (1, 0))
+        self.assertEqual(sample.reference_data.count(), 1)
+
+        page = self.client.get(reverse("sample_edit", args=[sample.pk]))
+
+        self.assertContains(page, "Already attached to this sample")
+
+    def test_nothing_is_attached_without_a_main_organism(self):
+        from core.services import reference_data
+
+        sample = Sample.objects.create(sample_id="REF-3", organism_name="x", sample_type="Other", owner=self.user)
+
+        self.assertEqual(reference_data.attach(sample, [("ncbi", "taxid")], self.user), (0, 1))
+
+        with self.assertRaises(ValidationError):
+            reference_data.parse_selection("{oops")
+
+    def test_catalog_is_in_the_details_api(self):
+        data = self.client.get(reverse("sample_organism_details"), {"taxid": "1280", "type": "Bacterium (Host)"}).json()
+
+        self.assertTrue(any(i["key"] == "lineage" for i in data["catalog"]))

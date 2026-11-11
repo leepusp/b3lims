@@ -23,6 +23,15 @@ from django.conf import settings
 
 TOP = 5
 EMPTY = {"", "none", "na", "n/a", "not available", "missing", "unknown"}
+# What the index keeps about the representative genome of each species.
+REPRESENTATIVE_COLUMNS = {
+    "assembly_name": "ncbi_assembly_name", "assembly_level": "ncbi_assembly_level", "genbank_accession": "ncbi_genbank_assembly_accession",
+    "bioproject": "ncbi_bioproject", "biosample": "ncbi_biosample", "contigs": "contig_count", "n50": "n50_contigs",
+    "proteins": "ncbi_protein_count", "coding_density": "coding_density", "refseq_category": "ncbi_refseq_category",
+    "isolate": "ncbi_isolate", "strain": "ncbi_strain_identifiers", "isolation_source": "ncbi_isolation_source",
+    "country": "ncbi_country", "date": "ncbi_seq_rel_date", "mimag_high": "mimag_high_quality", "mimag_medium": "mimag_medium_quality",
+    "type_designation": "gtdb_type_designation_ncbi_taxa",
+}
 SUFFIX = re.compile(r"_[A-Z]{1,2}$")
 
 
@@ -92,7 +101,7 @@ def build_index(metadata: Path | None = None, output: Path | None = None) -> dic
 
             item = agg.setdefault(name, {
                 "n": 0, "size": [], "gc": [], "complete": [], "contam": [], "type": 0, "lineage": taxonomy, "rep": "",
-                "rep_size": None, "sources": Counter(), "countries": Counter(), "levels": Counter(),
+                "rep_size": None, "sources": Counter(), "countries": Counter(), "levels": Counter(), "genome": {},
             })
 
             item["n"] += 1
@@ -110,6 +119,10 @@ def build_index(metadata: Path | None = None, output: Path | None = None) -> dic
                 item["rep"] = row.get("accession", "")
                 item["rep_size"] = _number(row.get("genome_size"))
                 item["lineage"] = taxonomy
+                item["genome"] = {
+                    key: (row.get(column) or "").strip() for key, column in REPRESENTATIVE_COLUMNS.items()
+                    if (row.get(column) or "").strip().lower() not in EMPTY
+                }
 
             for field, counter in (("ncbi_isolation_source", "sources"), ("ncbi_country", "countries"), ("ncbi_assembly_level", "levels")):
                 text = (row.get(field) or "").strip()
@@ -147,7 +160,7 @@ def build_index(metadata: Path | None = None, output: Path | None = None) -> dic
                 "genome_size_median": median(i["size"]), "genome_size_min": min(i["size"]) if i["size"] else None,
                 "genome_size_max": max(i["size"]) if i["size"] else None, "gc_mean": mean(i["gc"]),
                 "completeness_mean": mean(i["complete"]), "contamination_mean": mean(i["contam"]),
-                "type_material_genomes": i["type"],
+                "type_material_genomes": i["type"], "representative_genome": i["genome"],
                 "isolation_sources": i["sources"].most_common(TOP), "countries": i["countries"].most_common(TOP),
                 "assembly_levels": i["levels"].most_common(TOP),
             }))

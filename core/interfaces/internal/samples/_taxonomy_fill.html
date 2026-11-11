@@ -10,17 +10,20 @@
     <div class="d-flex gap-2 align-items-center mb-2">
         <label class="small text-muted mb-0" for="taxFillSource">Search in</label>
         <select id="taxFillSource" class="form-select form-select-sm w-auto">
-            <option value="ncbi">NCBI Taxonomy (all organisms of this type)</option>
-            <option value="gtdb" hidden>GTDB (bacteria, with reference genome data)</option>
+            <option value="all">All databases</option>
+            <option value="ncbi">NCBI Taxonomy only</option>
+            <option value="gtdb" hidden>GTDB only (bacteria)</option>
         </select>
     </div>
     <div class="position-relative">
         <input type="search" id="taxFillQuery" class="form-control form-control-sm" autocomplete="off"
-               placeholder="Scientific or common name, for example Escherichia coli, E. coli or ecoli">
+               placeholder="Scientific or common name">
         <div id="taxFillResults" class="list-group position-absolute w-100 shadow-sm" hidden
              style="z-index: 30; max-height: 16rem; overflow: auto;"></div>
     </div>
     <div id="taxFillCard" class="mt-2" hidden></div>
+    <input type="hidden" name="reference_json" id="referenceJson" value="[]">
+    <div class="form-text" id="taxFillCount"></div>
     <div class="form-text" id="taxFillNote">Picking a result fills the fields below and sets the main organism. Every field stays editable, so you can also type them by hand.</div>
 </div>
-<script src="{% static 'internal/samples/sample_taxonomy_fill.js' %}?v=20261111-fill3"></script>
+<script src="{% static 'internal/samples/sample_taxonomy_fill.js' %}?v=20261111-fill5"></script>
