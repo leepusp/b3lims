@@ -568,7 +568,9 @@ test "$CURRENT_RELEASE_ID" != "$TARGET_COMMIT" ||
 # not: accept a target whose history contains a commit with exactly the live release tree.
 if ! repo_git merge-base --is-ancestor "$CURRENT_RELEASE_ID" "$TARGET_COMMIT"; then
     LIVE_TREE="$(repo_git rev-parse "${CURRENT_RELEASE_ID}^{tree}")"
-    repo_git rev-list --format=%T "$TARGET_COMMIT" | grep -qx "$LIVE_TREE" ||
+    # Not a pipeline: grep -q would close it early and pipefail would report SIGPIPE.
+    TARGET_TREES="$(repo_git rev-list --format=%T "$TARGET_COMMIT")"
+    grep -qx "$LIVE_TREE" <<<"$TARGET_TREES" ||
         fail "Target does not descend from the live release."
     echo "history_rewrite_check=PASS live_tree=$LIVE_TREE found in target history"
 fi
