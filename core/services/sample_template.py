@@ -32,6 +32,7 @@ def prefilled(columns, sample_type, presets) -> dict:
 
     if sample_type:
         values["sample_type"] = sample_type
+        values["sample_id"] = tables.ID_PREFIXES[sample_type]
 
     return {c.key: values.get(c.key, "") for c in columns}
 
@@ -72,7 +73,8 @@ def xlsx_response(columns, sample_type, presets, biobanks, collections, name):
         return f"lists!${letter}$2:${letter}${max(len(values), 1) + 1}"
 
     refs["biobank"] = add_list("biobank", biobanks or [""])
-    refs["collection"] = add_list("collection", collections or [""])
+    if any(c.key == "collection" for c in columns):
+        refs["collection"] = add_list("collection", collections or [""])
 
     for column in columns:
         if column.kind == tables.CHOICE and column.choices:
@@ -148,37 +150,7 @@ def xlsx_response(columns, sample_type, presets, biobanks, collections, name):
         example.cell(1, position).font = Font(bold=True)
         example.column_dimensions[get_column_letter(position)].width = max(column.width, len(column.key) + 4)
 
-    dictionary = book.create_sheet("field_dictionary", 2)
-    dictionary.append(["field", "group", "required", "data type", "allowed values", "example", "description"])
-
-    for column in columns:
-        sample = next((v for v in column.example.values() if v), "")
-        dictionary.append([column.key, column.group, "Yes" if column.required else "No", tables.type_label(column), ", ".join(column.choices), sample, column.help])
-
-    for position, width in enumerate([26, 22, 10, 28, 40, 28, 70], start=1):
-        dictionary.column_dimensions[get_column_letter(position)].width = width
-        dictionary.cell(1, position).font = Font(bold=True)
-
-    steps = [
-        ("1", "Fill the samples sheet: one Sample per row. The example sheet shows how each column looks when filled."),
-        ("2", "Keep the column headers unchanged. Hover a header to read its help, type and allowed values."),
-        ("3", "Dark red headers are required. Blue, green, purple and brown headers are optional groups."),
-        ("4", "Choice columns have a drop-down list. Numbers accept digits only, yes/no columns accept true or false, dates use YYYY-MM-DD."),
-        ("5", "Several resistance markers go in one cell separated by commas."),
-        ("6", "Leave columns that do not apply to your Sample blank."),
-        ("7", "The upload only stages the rows for review. Samples are created when you confirm each row."),
-        ("8", "Do not enter passwords or sensitive credentials."),
-    ]
-
-    if sample_type is None:
-        steps.insert(1, ("1b", "This template has the columns of every Sample type. Columns that do not apply to a row's sample_type are ignored."))
-
-    instructions = book.create_sheet("instructions", 3)
-    instructions.append(["step", "instruction"])
-    instructions.column_dimensions["B"].width = 120
-
-    for row in steps:
-        instructions.append(list(row))
+    lists.sheet_state = "hidden"
 
     output = BytesIO()
     book.save(output)

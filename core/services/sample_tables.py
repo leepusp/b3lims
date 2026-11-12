@@ -22,6 +22,7 @@ KIND_LABELS = {
 TRUE_WORDS = {"1", "true", "yes", "y", "sim", "public", "público", "publico"}
 FALSE_WORDS = {"0", "false", "no", "n", "não", "nao", "private", "privado"}
 
+ID_PREFIXES = {BACTERIUM: "BAC-", PHAGE: "PHA-", PLASMID: "PLA-", OTHER: "SMP-"}
 BIOSAFETY = ["NB-1", "NB-2", "NB-3", "NB-4"]
 TEMPERATURES = ["Ambient", "2-8 °C", "-20 °C", "-80 °C", "Dry ice", "Liquid nitrogen"]
 STATUSES = ["pending", "qc", "available", "rejected", "depleted"]
@@ -46,15 +47,13 @@ IDENT, ORG, BIO, LOGISTICS = "Identification", "Organization", "Biological data"
 
 COMMON = [
     Column("sample_id", IDENT, required=True, width=22, help="Your unique identifier for this Sample. Keep it as text so leading zeros are preserved.",
-           example={BACTERIUM: "EXAMPLE-B-001", PHAGE: "EXAMPLE-P-001", PLASMID: "EXAMPLE-PL-001", OTHER: "EXAMPLE-001"}),
+           example={BACTERIUM: "BAC-EXAMPLE-001", PHAGE: "PHA-EXAMPLE-001", PLASMID: "PLA-EXAMPLE-001", OTHER: "SMP-EXAMPLE-001"}),
     Column("sample_type", IDENT, CHOICE, required=True, choices=tuple(SAMPLE_TYPES), width=18, help="Type of Sample; decides which biological columns apply."),
     Column("organism_name", IDENT, width=30, help="Display name of the organism or material. When empty it is built from the biological columns.",
            example={BACTERIUM: "Escherichia coli BL21", PHAGE: "Escherichia phage T4", PLASMID: "pET28a-GFP", OTHER: "Soil extract"}),
     Column("biosafety_level", IDENT, CHOICE, choices=tuple(BIOSAFETY), width=14, help="Biosafety level needed to handle the Sample.", example={BACTERIUM: "NB-1", PHAGE: "NB-1", PLASMID: "NB-1"}),
-    Column("biobank", ORG, CHOICE, strict=False, width=24, help="Biobank that will hold the Sample. Pick from the list; the receiving team confirms it."),
-    Column("collection", ORG, CHOICE, strict=False, width=24, help="One Collection. Several Collections need individual review."),
+    Column("biobank", ORG, CHOICE, strict=False, width=24, help="Biobank that will hold the Sample. Pick from the list."),
     Column("research_group", ORG, width=22, help="Research group or laboratory."),
-    Column("storage_location", ORG, width=26, help="Physical location, if already known. It is validated against the storage structure.", example={BACTERIUM: "Freezer 1 > Rack A > Box 3 > A1"}),
     Column("is_public", ORG, BOOLEAN, width=12, help="Yes when basic metadata may be public. Empty means private.", example={BACTERIUM: "false", PHAGE: "false"}),
     Column("provider", LOGISTICS, width=24, help="Collaborator or person who isolated or sent the Sample.", example={BACTERIUM: "Maria Souza", PHAGE: "Maria Souza"}),
     Column("expected_arrival_date", LOGISTICS, DATE, width=18, help="Expected arrival of the physical Sample.", example={BACTERIUM: "2026-12-01", PHAGE: "2026-12-01"}),

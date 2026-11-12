@@ -72,7 +72,11 @@ class TemplateAndImportTests(TestCase):
         self.assertEqual(validations[f"{letter('temp_C')}2:{letter('temp_C')}201"], "decimal")
         self.assertEqual(validations[f"{letter('expected_arrival_date')}2:{letter('expected_arrival_date')}201"], "date")
         self.assertEqual(phage["example"]["B2"].value, "Phage (Virus)")
-        self.assertEqual({r[0].value for r in phage["field_dictionary"].iter_rows(min_row=2)} >= {"lifestyle", "genome_size_bp"}, True)
+        self.assertEqual(phage.sheetnames, ["samples", "example", "lists"])
+        self.assertEqual(phage["lists"].sheet_state, "hidden")
+        self.assertEqual(phage["samples"]["A2"].value, "PHA-")
+        self.assertNotIn("collection", headers)
+        self.assertNotIn("storage_location", headers)
 
         bacterium = [c.value for c in load_workbook(BytesIO(self.download(type="bacterium").content))["samples"][1]]
 
@@ -161,3 +165,29 @@ class TypedExportTests(TestCase):
         self.assertEqual(frame.loc[0, "lifestyle"], "lytic")
         self.assertEqual(frame.loc[0, "genome_size_bp"], "168903")
         self.assertEqual(frame.loc[0, "is_public"], "true")
+
+
+class IdPrefixTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("prefix-user", password="x")
+
+    def run_import(self, rows):
+        with TemporaryDirectory() as root:
+            path = Path(root) / "t.csv"
+            pd.DataFrame(rows).to_csv(path, index=False)
+            batch = SampleImportBatch.objects.create(uploaded_by=self.user, original_file=ContentFile(path.read_bytes(), name="t.csv"), original_filename="t.csv")
+            import_sample_table(batch)
+
+        return batch
+
+    def test_bare_prefix_rows_are_untouched_and_prefix_only_ids_are_missing(self):
+        batch = self.run_import([
+            {"sample_id": "BAC-", "sample_type": "Bacterium (Host)", "species": ""},
+            {"sample_id": "BAC-", "sample_type": "Bacterium (Host)", "species": "Escherichia coli"},
+            {"sample_id": "BAC-2026-001", "sample_type": "Bacterium (Host)", "species": "Escherichia coli"},
+        ])
+        records = list(batch.records.order_by("row_number"))
+
+        self.assertEqual(len(records), 2)
+        self.assertTrue(any("Missing sample_id" in e for e in records[0].validation_errors))
+        self.assertEqual(records[1].validation_errors, [])

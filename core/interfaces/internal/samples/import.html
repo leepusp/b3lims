@@ -58,22 +58,13 @@
                             </div>
                         </div>
 
-                        <div class="fw-semibold small mb-2">2. Prefill (optional)</div>
-                        <div class="mb-2">
+                        <div class="fw-semibold small mb-2">2. Prefill the Biobank (optional)</div>
+                        <div class="mb-3">
                             <label class="form-label small mb-1">Biobank</label>
                             <select name="biobank_id" class="form-select form-select-sm">
                                 <option value="">No predefined Biobank</option>
                                 {% for biobank in template_biobanks %}
                                     <option value="{{ biobank.pk }}">{{ biobank.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small mb-1">Collection</label>
-                            <select name="collection_id" class="form-select form-select-sm">
-                                <option value="">No predefined Collection</option>
-                                {% for collection in template_collections %}
-                                    <option value="{{ collection.pk }}">{{ collection.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -87,16 +78,14 @@
                             <button type="submit" name="format" value="csv" class="btn btn-outline-secondary btn-sm">CSV</button>
                         </div>
                         <div class="form-text mt-2">
-                            The Excel file has drop-down lists, number and date checks, an example sheet and a field dictionary.
-                            Only authorized Biobanks and Collections are offered. Unused prefilled rows are ignored on upload.
-                            Send it to external collaborators to collect Sample information.
+                            Each type has its own columns, drop-down lists, number and date checks, and an example sheet. IDs start with the type prefix. Unused prefilled rows are ignored on upload.
                         </div>
                     </form>
                     <script>
                         document.getElementById("templateForm").addEventListener("submit", function (e) {
                             const f = e.currentTarget;
-                            f.elements.preset.value = (f.elements.biobank_id.value || f.elements.collection_id.value) ? "1" : "";
-                            if (!f.elements.preset.value) { f.elements.preset.disabled = true; f.elements.biobank_id.disabled = true; f.elements.collection_id.disabled = true; }
+                            f.elements.preset.value = f.elements.biobank_id.value ? "1" : "";
+                            if (!f.elements.preset.value) { f.elements.preset.disabled = true; f.elements.biobank_id.disabled = true; }
                             setTimeout(function () { Array.from(f.elements).forEach(function (el) { el.disabled = false; }); }, 400);
                         });
                     </script>
@@ -170,7 +159,7 @@
                                 <th>Sample ID</th>
                                 <th>Type</th>
                                 <th>Organism</th>
-                                <th>Biobank / Collection</th>
+                                <th>Biobank</th>
                                 <th>Status</th>
                                 <th class="text-end">Action</th>
                             </tr>
@@ -188,10 +177,6 @@
                                         <div class="small">
                                             <i class="bi bi-building me-1 text-muted"></i>
                                             {{ record.matched_biobank.name|default:record.biobank_name|default:"No biobank" }}
-                                        </div>
-                                        <div class="small text-muted">
-                                            <i class="bi bi-collection me-1"></i>
-                                            {{ record.matched_collection.name|default:record.collection_name|default:"No collection" }}
                                         </div>
                                     </td>
                                     <td>

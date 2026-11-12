@@ -78,10 +78,8 @@ class PreconfiguredImportTemplateTests(TestCase):
             first["biobank"],
             self.biobank.name,
         )
-        self.assertEqual(
-            first["collection"],
-            self.collection.name,
-        )
+        self.assertNotIn("collection", first)
+        self.assertNotIn("storage_location", first)
         self.assertIsNone(first["sample_id"])
 
     def test_foreign_biobank_is_denied(self):
@@ -117,7 +115,7 @@ class PreconfiguredImportTemplateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Prefill (optional)",
+            "Prefill the Biobank (optional)",
         )
         self.assertContains(
             response,
@@ -423,10 +421,6 @@ class RealUploadRoundTripV8152Tests(TestCase):
             self.assertEqual(
                 record.matched_biobank_id,
                 self.biobank.pk,
-            )
-            self.assertEqual(
-                record.matched_collection_id,
-                self.collection.pk,
             )
             self.assertEqual(record.row_number, 2)
 

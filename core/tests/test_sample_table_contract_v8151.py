@@ -214,8 +214,6 @@ class OfficialTemplateV8151Tests(TestCase):
             [
                 "samples",
                 "example",
-                "field_dictionary",
-                "instructions",
                 "lists",
             ],
         )
@@ -229,7 +227,7 @@ class OfficialTemplateV8151Tests(TestCase):
             self.assertEqual(len(parsed), 0)
             self.assertIn("sample_id", parsed.columns)
             self.assertIn("sample_type", parsed.columns)
-            self.assertIn("collection", parsed.columns)
+            self.assertNotIn("collection", parsed.columns)
 
     def test_csv_template(self):
         response = self.client.get(

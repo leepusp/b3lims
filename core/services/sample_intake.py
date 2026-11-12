@@ -208,6 +208,13 @@ def import_sample_table(batch):
             if canonical in {"biobank", "collection", "sample_type"}
         }
 
+        # An ID that is only the type prefix (BAC-, PHA-, ...) is a template placeholder, not an identifier.
+        id_column = column_map.get("sample_id")
+        bare_id = bool(id_column) and raw_data.get(id_column, "").strip() in set(sample_tables.ID_PREFIXES.values())
+
+        if bare_id:
+            preset_columns.add(id_column)
+
         # Ignore untouched rows of a preconfigured template.
         # Any other populated field must still be validated.
         if preset_columns and not any(
@@ -223,7 +230,7 @@ def import_sample_table(batch):
         for canonical, original_col in column_map.items():
             normalized[canonical] = _clean_value(row[original_col])
 
-        sample_id = normalized.get("sample_id", "")
+        sample_id = "" if bare_id else normalized.get("sample_id", "")
         sample_type = _canonical_type(normalized.get("sample_type", ""))
         organism_name = normalized.get("organism_name", "")
         biobank_name = normalized.get("biobank", "")
