@@ -1,33 +1,23 @@
 # Local installation, repository cleanup and ELN ideas
 
-Review of Nov 11, 2026. Nothing here changes behaviour; it lists what was found and
+Review of Nov 11, 2026, updated Nov 12, 2026. Nothing here changes behaviour; it lists what was found and
 proposes an order of work. Status marks as in `roadmap_checklist.md`: `[ ]` open.
 
-## 1. Where the code really lives (fix first)
+## 1. Repository and release flow (done)
 
-- Production (DaVinci) is built from `feature/schema-release` plus the patches applied
-  with `git am` in `/home/ladmin/git/biobank`. GitHub `origin/main` stops at Nov 9 and is
-  **diverged**: 82 commits only on GitHub, 127 only on `feature/schema-release` since the
-  last common merge (Nov 2). The 82 are the same work (for example "RNA and Protein
-  workbenches" exists as `62b1d00` and as `73422a2`) under different hashes, because the
-  work travels as patches. `feature/schema-release` is not on GitHub at all.
-- Risk: a clone of GitHub today is missing p97 to p104 (Tm calculator, ICTV, sample
-  tables, storage rework). A local installation built from `main` would be an older product.
-- Proposal:
-  - [ ] Push `feature/schema-release` to GitHub and make it the new `main` (a merge commit
-        that takes our tree, so the old history stays; no force-push). Tag every deployed
-        release (`release-p104`, ...).
-  - [ ] Keep a single flow afterwards: dev repo to patch to DaVinci, and the same commits
-        pushed to GitHub on every deploy (a line in the deploy checklist).
-- Remote branches reviewed (none has unique commits except the last one):
+- [x] The public repository is `leepusp/b3lims`. Its `main` carries the full current code
+      (the former `feature/schema-release` line), with a clean history.
+- [x] Releases are tagged (`release-p102` ... `release-p108`; later releases are tagged as
+      they are deployed).
+- [x] Single flow: dev repo, then patch, then DaVinci (`git am` and the immutable-release
+      deploy), then `git push origin main` to `leepusp/b3lims` on every deploy.
+- [x] The old `leepusp/biobank` repository is obsolete. Its extra branches were either
+      already inside `main` or test work (`public-shipments-quarantine-v1`, the
+      Sep 7 shipments quarantine experiment), and none of them is needed. It is to be made
+      private or deleted by an organization owner; nothing in the project depends on it.
+- [x] The local branch `feature/bench-app` (Lab Calendar / equipment booking) was merged
+      through `release/b3-bench-home`.
 
-  | Branch | State |
-  |---|---|
-  | `develop/modular-platform`, `feature/offline-assets`, `feature/offline-integrations` | same commit (`df7682c`, Sep 7), already inside `main`; delete |
-  | `feature/offline-baseline` | `369dbd2`, adds `standalone_settings.py` and its test; already inside `main`; delete |
-  | `feature/local-inventory-validation` | `d0af1ee`, already inside `main`; delete |
-  | `public-shipments-quarantine-v1` | 13 commits not in `main` (public shipments quarantine, Sep 7); review before deleting |
-  | `feature/bench-app` (local) | Lab Calendar / equipment booking; merged through `release/b3-bench-home` |
 
 ## 2. What already exists for a local installation
 
@@ -48,8 +38,8 @@ proposes an order of work. Status marks as in `roadmap_checklist.md`: `[ ]` open
 | Jupyter started by Slurm (`BIOBANK_JUPYTER_*`, partitions `basic`/`max50`, nodes `n01`, `gn0x`) | `jupyter_server.py` (1001 lines), `jupyter_*.py` views | Jupyter becomes a client of the Biobank: token-based read API plus a `biobank_client` package; the server launcher is optional and only enabled on HPC |
 | Reference indexes in `/scratch/global/databases/...` (taxonomy, GTDB, ICTV) | `taxonomy_local.py`, `gtdb_local.py`, `ictv_local.py`, `BIOBANK_REPOSITORY_ROOT`, `BIOBANK_TAXONOMY_DIR` | `BIOBANK_DATA_DIR` default under the local root; a `build_*_index` command per source and a "Reference data" admin page that downloads and builds them |
 | Zenodo sandbox, NCBI, PubChem, RCSB, AlphaFold, OpenStreetMap tiles | services | Already optional; each needs a clear offline message and an on/off setting |
-| Apache, systemd, fail2ban, PAM, sudoers files | `deploy/` | Keep for DaVinci; add `deploy/local/` (Docker Compose or `pip install` plus `biobank-local` launcher) |
-| Hard-coded defaults pointing at `/home/public/apps/biobank/...` and `/scratch/global/...` | `biobank/settings.py` lines 267-308 | Default to the local root unless an environment variable is set |
+| Apache, systemd, fail2ban, PAM, sudoers files | `deploy/` | Keep for DaVinci. Local installation is done: `pip`/`pipx` with the `biobank-local` wizard, and Docker Compose |
+| Hard-coded defaults pointing at `/home/public/apps/biobank/...` and `/scratch/global/...` | `biobank/settings.py` | Standalone profile already defaults to the local root; institution values (hosts, storage admins, public URL) are now `BIOBANK_*` variables. Remaining: path defaults in `settings.py` |
 
 ### 3.4 Database
 
@@ -63,8 +53,9 @@ proposes an order of work. Status marks as in `roadmap_checklist.md`: `[ ]` open
 ## 4. Repository cleanup
 
 - [x] `db.sqlite3` in the repository root is git-ignored (not tracked); keep it out of release packages.
-- [ ] `requirements.txt`: `django-import-export` is listed twice; split into
-      `requirements/base.txt`, `hpc.txt` (Jupyter/Slurm extras) and `dev.txt`.
+- [x] `requirements.txt`: duplicate `django-import-export` entry removed.
+- [ ] Split requirements into `requirements/base.txt`, `hpc.txt` (Jupyter/Slurm extras)
+      and `dev.txt`.
 - [ ] Very large modules to split: `views/internal/samples/views.py` (4.9k lines),
       `views/internal/lab_tools/notebook.py` (4.8k), `models/lab_tools/notebook.py` (1.3k,
       mixes notebook, molecular and Jupyter models), `rcsb_pdb.py` (1.2k).
@@ -146,14 +137,14 @@ From LabCollector:
 
 ## 7. Suggested order
 
-1. Repository: reconcile GitHub, tag releases, delete merged branches (1 to 2 days).
-2. Settings: defaults to local paths, `requirements` split, remove `db.sqlite3`,
-   CI on SQLite and PostgreSQL (2 to 3 days).
+1. ~~Repository: reconcile GitHub, tag releases, clean branches~~ (done).
+2. Settings: remaining path defaults, `requirements` split, CI on PostgreSQL in addition
+   to SQLite (2 to 3 days). CI on SQLite, install and Docker already run.
 3. Storage backend interface and `LocalFolderBackend` (the biggest coupling; 1 week).
 4. Biobank read API with tokens and the `biobank_client` package; Jupyter becomes optional
    (1 to 2 weeks; also gives notebooks on a laptop).
 5. Reference data manager (download and build indexes from the interface).
 6. `SampleType` registry and the first new types (cell line, nucleic acid, dataset).
 7. ELN: per-user columns and tabs, analyses/datasets, witness workflow, wellplate.
-8. Local installer: Docker Compose and a pip/pipx package with a first-run wizard
-   (admin user, local root, optional data downloads).
+8. ~~Local installer: Docker Compose and a pip/pipx package with a first-run wizard~~
+   (done; optional data downloads from the wizard are still open).
