@@ -53,13 +53,57 @@ def _descendant_ids(location):
     return found
 
 
-def preview_storage_container_move(*, container, destination):
+def _preview_move_to_workspace_root(container, workspace):
+    """Preview of moving a container to the top level of a workspace."""
+    if workspace is None:
+        raise ValidationError("Select a destination.")
+
+    if not container.is_active:
+        raise ValidationError("The container is inactive.")
+
+    if container.location_type in {"room", "position"}:
+        raise ValidationError(
+            "Rooms and individual positions cannot be moved as containers."
+        )
+
+    if container.parent_id is None and container.workspace_id == workspace.pk:
+        raise ValidationError("The container is already at this destination.")
+
+    if StorageLocation.objects.filter(
+        parent=None, workspace=workspace, name__iexact=container.name,
+    ).exclude(pk=container.pk).exists():
+        raise ValidationError(
+            "The destination already contains a location with the same name."
+        )
+
+    affected_ids = _descendant_ids(container)
+    assignments = SampleStorageAssignment.objects.filter(
+        location_id__in=affected_ids, status="active",
+    )
+
+    return {
+        "container_id": container.pk,
+        "expected_parent_id": container.parent_id,
+        "destination_id": f"ws:{workspace.pk}",
+        "old_path": container.full_path,
+        "new_path": container.name,
+        "affected_location_count": len(affected_ids),
+        "active_assignment_count": assignments.count(),
+        "active_sample_count": assignments.values("sample_id").distinct().count(),
+    }
+
+
+def preview_storage_container_move(*, container, destination, destination_workspace=None):
     """
     Validate movement without changing storage records.
 
     This function does not authorize or execute a transfer.
     """
     container = StorageLocation.objects.get(pk=container.pk)
+
+    if destination is None:
+        return _preview_move_to_workspace_root(container, destination_workspace)
+
     destination = StorageLocation.objects.get(pk=destination.pk)
 
     if not container.is_active:

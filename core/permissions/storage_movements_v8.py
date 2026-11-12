@@ -12,6 +12,7 @@ from core.permissions.storage_workspaces_v8 import (
     can_register_at_storage_location,
     can_register_in_storage_workspace,
     can_view_storage_location,
+    can_view_storage_workspace,
     is_storage_global_admin,
 )
 
@@ -124,6 +125,7 @@ def authorize_storage_container_move_v8(
     actor,
     container,
     destination,
+    destination_workspace=None,
 ):
     """
     Authorize a physical container move inside one workspace.
@@ -131,25 +133,34 @@ def authorize_storage_container_move_v8(
     A container may go to another workspace when the actor manages
     both; the whole subtree changes workspace with it.
     """
-    if container is None or destination is None:
+    if container is None or (destination is None and destination_workspace is None):
         raise PermissionDenied(
             "Container movement is not authorized."
         )
 
     if not (
         can_view_storage_location(actor, container)
-        and can_view_storage_location(actor, destination)
+        and (
+            can_view_storage_location(actor, destination)
+            if destination is not None
+            else can_view_storage_workspace(actor, destination_workspace)
+        )
     ):
         raise PermissionDenied(
             "Container movement is not authorized."
         )
 
     workspace_id = container.workspace_id
-    destination_workspace_id = destination.workspace_id
+    destination_workspace_id = (
+        destination.workspace_id if destination is not None else destination_workspace.pk
+    )
+    destination_scope = (
+        destination.workspace if destination is not None else destination_workspace
+    )
 
     for scoped_id, scoped in (
         (workspace_id, container.workspace),
-        (destination_workspace_id, destination.workspace),
+        (destination_workspace_id, destination_scope),
     ):
         if scoped_id is None:
             if not is_storage_global_admin(actor):
@@ -167,6 +178,9 @@ def authorize_storage_container_move_v8(
         (container, workspace_id),
         (destination, destination_workspace_id),
     ):
+        if starting_node is None:
+            continue
+
         seen = set()
         node = starting_node
 

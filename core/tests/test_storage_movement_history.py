@@ -307,7 +307,7 @@ class StorageMovementHistoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         # The audited list moved to the general History; the Storage page keeps only the transfer tools.
         self.assertNotContains(response, "Movement History")
-        self.assertContains(response, "Sample transfers")
+        self.assertNotContains(response, ">Transfers<")
         self.assertIn(
             "HISTORY-A-001",
             [i.sample_identifier for m in response.context["storage_movements"] for i in m.items.all()],

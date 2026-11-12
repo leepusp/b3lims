@@ -8,6 +8,7 @@ from core.models.samples.storage import (
     StorageLocation,
     StorageMovement,
     StorageMovementItem,
+    StorageWorkspace,
 )
 from core.permissions.storage_movements_v8 import (
     authorize_storage_container_move_v8,
@@ -35,6 +36,7 @@ def move_storage_container(
     reason,
     expected_origin_path=None,
     expected_destination_path=None,
+    destination_workspace=None,
 ):
     """
     Move a container without modifying SampleStorageAssignment.
@@ -51,21 +53,28 @@ def move_storage_container(
     from core.services.storage_writer_lock import acquire_storage_writer_lock
     acquire_storage_writer_lock()
     container = StorageLocation.objects.get(pk=container.pk)
-    destination = StorageLocation.objects.get(pk=destination.pk)
+    to_root = destination is None
+
+    if to_root:
+        destination_workspace = StorageWorkspace.objects.select_for_update().get(
+            pk=destination_workspace.pk
+        )
+    else:
+        destination = StorageLocation.objects.get(pk=destination.pk)
 
     if container.location_type in {"room", "position"}:
         raise ValidationError(
             "Only movable storage infrastructure is supported."
         )
 
-    if destination.location_type == "position":
+    if not to_root and destination.location_type == "position":
         raise ValidationError(
             "A position cannot receive a storage container."
         )
 
     descendants_before = _descendant_ids(container)
     source_ancestors = _ancestor_ids(container)
-    destination_ancestors = _ancestor_ids(destination)
+    destination_ancestors = set() if to_root else _ancestor_ids(destination)
 
     lock_ids = (
         descendants_before
@@ -83,13 +92,21 @@ def move_storage_container(
     )
 
     container.refresh_from_db()
-    destination.refresh_from_db()
+
+    if not to_root:
+        destination.refresh_from_db()
 
     authorize_storage_container_move_v8(
         actor=actor,
         container=container,
         destination=destination,
+        destination_workspace=destination_workspace,
     )
+
+    target_workspace_id = (
+        destination_workspace.pk if to_root else destination.workspace_id
+    )
+    new_parent_path = "" if to_root else f"{destination.full_path} > "
 
     if (
         expected_origin_path is not None
@@ -99,7 +116,7 @@ def move_storage_container(
 
     if (
         expected_destination_path is not None
-        and f"{destination.full_path} > {container.name}" != expected_destination_path
+        and f"{new_parent_path}{container.name}" != expected_destination_path
     ):
         raise ValidationError("The container destination path has changed since preview.")
 
@@ -115,7 +132,7 @@ def move_storage_container(
 
     ancestors = (
         _ancestor_ids(container)
-        | _ancestor_ids(destination)
+        | (set() if to_root else _ancestor_ids(destination))
     )
 
     if StorageLocation.objects.filter(
@@ -129,6 +146,7 @@ def move_storage_container(
     preview = preview_storage_container_move(
         container=container,
         destination=destination,
+        destination_workspace=destination_workspace,
     )
 
     affected_ids = _descendant_ids(container)
@@ -171,24 +189,28 @@ def move_storage_container(
     origin_path = container.full_path
 
     # Moving to another workspace carries the whole subtree with it.
-    workspace_changed = container.workspace_id != destination.workspace_id
+    workspace_changed = container.workspace_id != target_workspace_id
 
     if workspace_changed:
         from core.services.storage_biobank_transfer import apply_destination_biobank
 
+        target_workspace = (
+            destination_workspace if to_root else destination.workspace
+        )
+
         StorageLocation.objects.filter(pk__in=affected_ids).update(
-            workspace_id=destination.workspace_id
+            workspace_id=target_workspace_id
         )
         container.refresh_from_db()
 
-        if destination.workspace_id is not None:
+        if target_workspace is not None:
             apply_destination_biobank(
-                actor, destination.workspace,
+                actor, target_workspace,
                 list({a.sample_id: a.sample for a in assignments}.values()),
             )
 
     # Moving the node changes paths without changing assignments.
-    container.parent = destination
+    container.parent = None if to_root else destination
     container.save(update_fields=["parent"])
 
     container.refresh_from_db()
@@ -208,7 +230,7 @@ def move_storage_container(
         movement_type="container",
         moved_location=container,
         origin_location_id=origin_parent_id,
-        destination_location=destination,
+        destination_location=None if to_root else destination,
         origin_path=origin_path,
         destination_path=destination_path,
         affected_location_count=preview[

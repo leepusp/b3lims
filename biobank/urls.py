@@ -100,6 +100,7 @@ from core.views.internal.samples.views import (
     samples_network_view,  # <-- FUNÇÃO DO GRAFO IMPORTADA AQUI
     sample_import_view,
     sample_import_batch_detail_view,
+    sample_import_record_edit_view,
 )
 
 # 6. CHEMICALS (REAGENTES)
@@ -325,6 +326,7 @@ urlpatterns = [
     path("samples/map/", samples_origin_map_view, name="samples_origin_map"),
     path("samples/import/", sample_import_view, name="samples_import"),
     path("samples/import/<int:batch_id>/", sample_import_batch_detail_view, name="samples_import_batch"),
+    path("samples/import/record/<int:record_id>/edit/", sample_import_record_edit_view, name="samples_import_record_edit"),
     path(
         "storage/locations/create-child/v8146/",
         storage_location_child_create_v8146,

@@ -4,7 +4,7 @@
 {% block title %}Storage · B3 LIMS{% endblock %}
 {% block page_title %}Storage{% endblock %}
 {% block page_subtitle %}
-Physical locations, Sample custody and movement history.
+Physical locations and Sample custody.
 {% endblock %}
 
 {% block extra_css %}
@@ -154,12 +154,6 @@ Physical locations, Sample custody and movement history.
                 aria-selected="false">
           Path tree
         </button>
-        <button type="button"
-                role="tab"
-                data-b3s-tab="movements"
-                aria-selected="false">
-          Transfers
-        </button>
         {% if storage_manageable_workspaces_v8 %}
         <button type="button"
                 role="tab"
@@ -230,14 +224,7 @@ Physical locations, Sample custody and movement history.
         <div id="b3s-assignments"
              class="b3s-assignments"></div>
 
-        <details class="b3s-historical-block">
-          <summary>Historical registrations</summary>
-          <p class="b3s-note">
-            Unverified textual paths are not authorized
-            physical destinations.
-          </p>
-          <div id="b3s-legacy"></div>
-        </details>
+        <div id="b3s-legacy" hidden></div>
 
       </section>
 
@@ -271,7 +258,8 @@ Physical locations, Sample custody and movement history.
         {% if storage_manageable_workspaces_v8 %}
         <section id="storage-container-preview"
                  class="b3s-move-panel"
-                 aria-labelledby="b3s-move-title">
+                 aria-labelledby="b3s-move-title"
+                 {% if not storage_container_preview and not storage_container_preview_error %}hidden{% endif %}>
 
           <h3 id="b3s-move-title">Move Container</h3>
 
@@ -327,82 +315,23 @@ Physical locations, Sample custody and movement history.
             </div>
           </form>
           {% else %}
-          <p class="b3s-note">
-            Select a location in the tree and choose
-            <strong>Move this location</strong>, then click the
-            destination. You can also pick both below.
-          </p>
 
-          <form method="get"
-                action="{% url 'storage_workspace' %}"
-                class="b3s-move-select">
-            <input type="hidden" name="preview_container" value="1">
-
-            <label>
-              Container to move
-              <select name="container_id" required>
-                <option value="">Select a location</option>
-                {% for location in storage_parent_choices_v8 %}
-                {% if location.location_type != "room" and location.location_type != "position" %}
-                <option value="{{ location.pk }}"{% if location.pk == storage_preview_container_id %} selected{% endif %}>
-                  {{ location.full_path }}
-                </option>
-                {% endif %}
-                {% endfor %}
-              </select>
-            </label>
-
-            <label>
-              New parent
-              <select name="destination_id" required>
-                <option value="">Select a destination</option>
-                {% for location in storage_parent_choices_v8 %}
-                {% if location.location_type != "position" %}
-                <option value="{{ location.pk }}"{% if location.pk == storage_preview_destination_id %} selected{% endif %}>
-                  {{ location.full_path }}
-                </option>
-                {% endif %}
-                {% endfor %}
-              </select>
-            </label>
-
-            <button type="submit"
-                    class="btn btn-outline-primary">
-              Preview move
-            </button>
-          </form>
           {% endif %}
         </section>
         {% endif %}
       </section>
 
-      <section id="b3s-movements"
-               class="b3s-section"
-               role="tabpanel"
-               hidden>
-        <h3>Sample transfers</h3>
+      <section id="b3s-movements" class="b3s-section" role="tabpanel" hidden>
+        <h3>Sample move preview</h3>
         <p class="b3s-note">
-          Move Samples one by one or in bulk. Every move is
-          recorded in the general <a href="{% url 'activity_history' %}">History</a>.
+          Review the move below and confirm. Every move is recorded in the
+          general <a href="{% url 'activity_history' %}">History</a>.
         </p>
-        <div class="b3s-transfer-dock" aria-label="Sample transfer tools">
-        <details id="b3s-sample-transfer-details" open>
-
-          <summary id="b3s-sample-transfers-heading">
-            Sample transfers
-            <span class="b3s-transfer-subtitle">
-              Individual and bulk movements
-            </span>
-          </summary>
-
+        <div class="b3s-transfer-dock" aria-label="Sample move review">
           <div class="b3s-sample-transfer-body">
-
             {% include "internal/storage/_sample_preview.html" %}
-
             {% include "internal/storage/_sample_bulk_preview.html" %}
-
           </div>
-        </details>
         </div>
       </section>
 
@@ -1086,9 +1015,9 @@ Physical locations, Sample custody and movement history.
         src="{% static 'internal/storage/storage_new_workspace_v8147.js' %}?v=20261027-c4e">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_picker_v815.js' %}?v=20261105-v815">
+        src="{% static 'internal/storage/storage_picker_v815.js' %}?v=20261111-v816">
 </script>
 <script defer
-        src="{% static 'internal/storage/storage_v814.js' %}?v=20261105-v817">
+        src="{% static 'internal/storage/storage_v814.js' %}?v=20261111-v818">
 </script>
 {% endblock %}

@@ -947,6 +947,7 @@
         window.B3StoragePicker.open({
           title: `Move ${displayName(node)}`,
           mode: "node",
+          workspaceRoots: true,
           exclude: node.id,
           confirmLabel: "Preview move",
           onPick: result => {

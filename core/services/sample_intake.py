@@ -159,6 +159,128 @@ def read_sample_table(file_path):
 
 
 
+def evaluate_row(normalized, seen_sample_ids):
+    """Validate one table row: IDs, type, typed columns, Biobank and Collection names, organism and visibility."""
+    sample_id = normalized.get("sample_id", "")
+    sample_type = _canonical_type(normalized.get("sample_type", ""))
+    organism_name = normalized.get("organism_name", "")
+    biobank_name = normalized.get("biobank", "")
+    collection_name = normalized.get("collection", "")
+
+    errors = []
+    warnings = []
+
+    if not sample_id:
+        errors.append("Missing sample_id.")
+    elif Sample.objects.filter(
+        sample_id__iexact=sample_id
+    ).exists():
+        errors.append(
+            f"Sample ID already exists: {sample_id}"
+        )
+
+    if sample_id:
+        key = sample_id.casefold()
+
+        if key in seen_sample_ids:
+            errors.append(
+                f"Duplicate sample_id in this table: {sample_id}"
+            )
+
+        seen_sample_ids.add(key)
+
+    if not sample_type:
+        errors.append("Missing sample_type.")
+    elif sample_type not in ["Bacterium (Host)", "Phage (Virus)", "Plasmid", "Other"]:
+        errors.append(
+            f"Unsupported sample_type: {sample_type}"
+        )
+
+    matched_biobank = None
+    if biobank_name:
+        matched_biobank = Biobank.objects.filter(name__iexact=biobank_name).first()
+        if not matched_biobank:
+            warnings.append(f"Biobank not found: {biobank_name}")
+
+    matched_collection = None
+    if collection_name:
+        matched_collection = Collection.objects.filter(name__iexact=collection_name).first()
+        if not matched_collection:
+            warnings.append(f"Collection not found: {collection_name}")
+
+    if not organism_name:
+        if sample_type == "Bacterium (Host)":
+            organism_name = " ".join(
+                x for x in [
+                    normalized.get("genus", ""),
+                    normalized.get("species", ""),
+                    normalized.get("strain", ""),
+                ]
+                if x
+            )
+        elif sample_type == "Phage (Virus)":
+            organism_name = normalized.get("strain", "") or normalized.get("phage_name", "") or normalized.get("taxonomy", "")
+        elif sample_type == "Plasmid":
+            organism_name = normalized.get("construction_name", "") or normalized.get("backbone_name", "")
+
+    if not organism_name.strip():
+        errors.append(
+            "Missing organism_name or subtype identification."
+        )
+
+    # Type-aware check of every typed column: numbers, yes/no, dates, lists and fixed vocabularies.
+    specs = sample_tables.by_key()
+    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set(specs)
+
+    for key in list(normalized):
+        spec = specs.get(key)
+
+        if spec is None or key in {"sample_type", "biobank", "collection", "is_public"} or not normalized[key]:
+            continue
+
+        if key not in own:
+            warnings.append(f"{key} does not apply to {sample_type} and will be ignored.")
+            normalized[key] = ""
+
+            continue
+
+        value, problem = sample_tables.normalize_value(spec, normalized[key])
+        normalized[key] = value
+
+        if problem:
+            errors.append(problem)
+
+    visibility = normalized.get(
+        "is_public", ""
+    ).strip().casefold()
+
+    allowed_visibility = {
+        "", "0", "1",
+        "true", "false",
+        "yes", "no",
+        "sim", "não", "nao",
+        "public", "público", "publico",
+        "private", "privado",
+    }
+
+    if visibility not in allowed_visibility:
+        errors.append(
+            "Invalid is_public. Use true or false."
+        )
+
+    if ";" in collection_name:
+        errors.append(
+            "Multiple Collections require individual review."
+        )
+
+    return {
+        "sample_id": sample_id, "sample_type": sample_type, "organism_name": organism_name,
+        "biobank_name": biobank_name, "collection_name": collection_name,
+        "matched_biobank": matched_biobank, "matched_collection": matched_collection,
+        "errors": errors, "warnings": warnings, "normalized": normalized,
+    }
+
+
 @transaction.atomic
 def import_sample_table(batch):
     df = read_sample_table(batch.original_file.path)
@@ -230,117 +352,17 @@ def import_sample_table(batch):
         for canonical, original_col in column_map.items():
             normalized[canonical] = _clean_value(row[original_col])
 
-        sample_id = "" if bare_id else normalized.get("sample_id", "")
-        sample_type = _canonical_type(normalized.get("sample_type", ""))
-        organism_name = normalized.get("organism_name", "")
-        biobank_name = normalized.get("biobank", "")
-        collection_name = normalized.get("collection", "")
-
-        errors = []
-        warnings = []
-
-        if not sample_id:
-            errors.append("Missing sample_id.")
-        elif Sample.objects.filter(
-            sample_id__iexact=sample_id
-        ).exists():
-            errors.append(
-                f"Sample ID already exists: {sample_id}"
-            )
-
-        if sample_id:
-            key = sample_id.casefold()
-
-            if key in seen_sample_ids:
-                errors.append(
-                    f"Duplicate sample_id in this table: {sample_id}"
-                )
-
-            seen_sample_ids.add(key)
-
-        if not sample_type:
-            errors.append("Missing sample_type.")
-        elif sample_type not in ["Bacterium (Host)", "Phage (Virus)", "Plasmid", "Other"]:
-            errors.append(
-                f"Unsupported sample_type: {sample_type}"
-            )
-
-        matched_biobank = None
-        if biobank_name:
-            matched_biobank = Biobank.objects.filter(name__iexact=biobank_name).first()
-            if not matched_biobank:
-                warnings.append(f"Biobank not found: {biobank_name}")
-
-        matched_collection = None
-        if collection_name:
-            matched_collection = Collection.objects.filter(name__iexact=collection_name).first()
-            if not matched_collection:
-                warnings.append(f"Collection not found: {collection_name}")
-
-        if not organism_name:
-            if sample_type == "Bacterium (Host)":
-                organism_name = " ".join(
-                    x for x in [
-                        normalized.get("genus", ""),
-                        normalized.get("species", ""),
-                        normalized.get("strain", ""),
-                    ]
-                    if x
-                )
-            elif sample_type == "Phage (Virus)":
-                organism_name = normalized.get("strain", "") or normalized.get("phage_name", "") or normalized.get("taxonomy", "")
-            elif sample_type == "Plasmid":
-                organism_name = normalized.get("construction_name", "") or normalized.get("backbone_name", "")
-
-        if not organism_name.strip():
-            errors.append(
-                "Missing organism_name or subtype identification."
-            )
-
-        # Type-aware check of every typed column: numbers, yes/no, dates, lists and fixed vocabularies.
-        specs = sample_tables.by_key()
-        own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set(specs)
-
-        for key in list(normalized):
-            spec = specs.get(key)
-
-            if spec is None or key in {"sample_type", "biobank", "collection", "is_public"} or not normalized[key]:
-                continue
-
-            if key not in own:
-                warnings.append(f"{key} does not apply to {sample_type} and will be ignored.")
-                normalized[key] = ""
-
-                continue
-
-            value, problem = sample_tables.normalize_value(spec, normalized[key])
-            normalized[key] = value
-
-            if problem:
-                errors.append(problem)
-
-        visibility = normalized.get(
-            "is_public", ""
-        ).strip().casefold()
-
-        allowed_visibility = {
-            "", "0", "1",
-            "true", "false",
-            "yes", "no",
-            "sim", "não", "nao",
-            "public", "público", "publico",
-            "private", "privado",
-        }
-
-        if visibility not in allowed_visibility:
-            errors.append(
-                "Invalid is_public. Use true or false."
-            )
-
-        if ";" in collection_name:
-            errors.append(
-                "Multiple Collections require individual review."
-            )
+        result = evaluate_row(
+            normalized, seen_sample_ids,
+        ) if not bare_id else evaluate_row(
+            {**normalized, "sample_id": ""}, seen_sample_ids,
+        )
+        sample_id, sample_type = result["sample_id"], result["sample_type"]
+        organism_name = result["organism_name"]
+        biobank_name, collection_name = result["biobank_name"], result["collection_name"]
+        matched_biobank, matched_collection = result["matched_biobank"], result["matched_collection"]
+        errors, warnings = result["errors"], result["warnings"]
+        normalized = result["normalized"]
 
         status = (
             "ready_to_fill"
@@ -400,3 +422,61 @@ def import_sample_table(batch):
     batch.save(update_fields=["total_rows", "valid_rows", "invalid_rows", "status", "notes", "updated_at"])
 
     return batch
+
+
+EDIT_SKIP = {"sample_type", "biobank", "collection"}
+
+
+def update_intake_record(record, values):
+    """Apply edits made on screen to one staged row, validate it again and refresh the batch counters."""
+    batch = record.batch
+    submitted = {k: str(v).strip() for k, v in values.items()}
+    sample_type = _canonical_type(submitted.get("sample_type", record.sample_type or ""))
+    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set()
+    normalized = dict(record.normalized_data or {})
+
+    for key in sample_tables.by_key():
+        if key in submitted:
+            normalized[key] = submitted[key]
+
+    normalized["sample_type"] = sample_type
+
+    # Values that do not belong to the chosen type are dropped instead of being reported again.
+    for key in list(normalized):
+        if key in sample_tables.by_key() and own and key not in own:
+            normalized[key] = ""
+
+    others = {
+        (r.imported_sample_id or "").casefold()
+        for r in batch.records.exclude(pk=record.pk)
+        if r.imported_sample_id
+    }
+    result = evaluate_row(normalized, others)
+
+    record.imported_sample_id = result["sample_id"]
+    record.sample_type = result["sample_type"]
+    record.organism_name = result["organism_name"]
+    record.biobank_name = result["biobank_name"]
+    record.collection_name = result["collection_name"]
+    record.matched_biobank = result["matched_biobank"]
+    record.matched_collection = result["matched_collection"]
+    record.provider = result["normalized"].get("provider", "")
+    record.research_group_name = result["normalized"].get("research_group", "")
+    record.is_public = _as_bool(result["normalized"].get("is_public", ""))
+    record.scientific_notes = result["normalized"].get("scientific_notes", "")
+    record.expected_arrival_date = result["normalized"].get("expected_arrival_date", "")
+    record.temperature_condition = result["normalized"].get("temperature_condition", "")
+    record.movement_notes = result["normalized"].get("movement_notes", "")
+    record.normalized_data = result["normalized"]
+    record.validation_errors = result["errors"]
+    record.validation_warnings = result["warnings"]
+    record.status = "waiting_review" if result["errors"] else "ready_to_fill"
+    record.save()
+
+    records = list(batch.records.all())
+    batch.total_rows = len(records)
+    batch.invalid_rows = sum(1 for r in records if r.validation_errors)
+    batch.valid_rows = batch.total_rows - batch.invalid_rows
+    batch.save(update_fields=["total_rows", "valid_rows", "invalid_rows", "updated_at"])
+
+    return record

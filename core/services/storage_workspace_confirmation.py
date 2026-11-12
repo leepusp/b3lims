@@ -2,7 +2,7 @@
 
 from django.core.exceptions import ValidationError
 
-from core.models.samples.storage import StorageLocation, SampleStorageAssignment
+from core.models.samples.storage import SampleStorageAssignment, StorageLocation, StorageWorkspace
 from core.services.storage_container_movements import move_storage_container
 from core.services.storage_sample_movements import move_sample, move_samples_bulk
 
@@ -68,7 +68,7 @@ def confirm_storage_workspace_transfer(*, action, data, actor):
 
         if action == "confirm_container_move":
             container_id = _positive_id(data.get("container_id"), "container ID")
-            destination_id = _positive_id(data.get("destination_id"), "destination ID")
+            raw_destination = data.get("destination_id", "")
             original_parent = data.get("expected_parent_id", "")
             parent_id = (
                 _positive_id(original_parent, "original parent ID")
@@ -77,14 +77,25 @@ def confirm_storage_workspace_transfer(*, action, data, actor):
             old_path = _text(data.get("expected_origin_path"), "original container path", max_length=16384)
             new_path = _text(data.get("expected_destination_path"), "proposed container path", max_length=16384)
             container = StorageLocation.objects.get(pk=container_id)
-            destination = StorageLocation.objects.get(pk=destination_id)
+            destination, destination_workspace = None, None
+
+            if isinstance(raw_destination, str) and raw_destination.startswith("ws:"):
+                destination_workspace = StorageWorkspace.objects.get(
+                    pk=_positive_id(raw_destination[3:], "destination workspace ID")
+                )
+            else:
+                destination = StorageLocation.objects.get(
+                    pk=_positive_id(raw_destination, "destination ID")
+                )
+
             return move_storage_container(
-                container=container, destination=destination, actor=actor,
+                container=container, destination=destination,
+                destination_workspace=destination_workspace, actor=actor,
                 expected_parent_id=parent_id, reason=reason,
                 expected_origin_path=old_path,
                 expected_destination_path=new_path,
             )
-    except (StorageLocation.DoesNotExist, SampleStorageAssignment.DoesNotExist) as exc:
+    except (StorageLocation.DoesNotExist, StorageWorkspace.DoesNotExist, SampleStorageAssignment.DoesNotExist) as exc:
         raise ValidationError("The selected Storage record no longer exists.") from exc
 
     raise ValidationError("Unknown Storage transfer action.")

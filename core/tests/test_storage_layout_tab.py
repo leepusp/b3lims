@@ -32,4 +32,4 @@ class StorageBoardContractTests(SimpleTestCase):
 
     def test_manage_and_historical_blocks_are_restructured(self):
         self.assertIn("b3s-manage-grid", TEMPLATE)
-        self.assertIn('class="b3s-historical-block"', TEMPLATE)
+        self.assertNotIn("b3s-historical-block", TEMPLATE)

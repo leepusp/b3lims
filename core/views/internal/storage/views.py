@@ -19,6 +19,7 @@ from django.shortcuts import (
 
 from core.context import base_context
 from core.models.samples.storage import (
+    StorageWorkspace,
     SampleStorageAssignment,
     StorageLocation,
 )
@@ -674,24 +675,35 @@ def storage_workspace_view(
                 and int(value) > 0
             )
 
+        to_workspace = destination_text.startswith("ws:")
+        destination_token = destination_text[3:] if to_workspace else destination_text
+
         if not (
             valid_location_id(container_text)
-            and valid_location_id(destination_text)
+            and valid_location_id(destination_token)
         ):
             container_preview_error = (
                 "Select a valid container and destination."
             )
         else:
             preview_container_id = int(container_text)
-            preview_destination_id = int(destination_text)
+            preview_destination_id = int(destination_token)
 
             try:
                 preview_container = StorageLocation.objects.get(
                     pk=preview_container_id
                 )
-                preview_destination = StorageLocation.objects.get(
-                    pk=preview_destination_id
-                )
+                preview_workspace = None
+                preview_destination = None
+
+                if to_workspace:
+                    preview_workspace = StorageWorkspace.objects.get(
+                        pk=preview_destination_id
+                    )
+                else:
+                    preview_destination = StorageLocation.objects.get(
+                        pk=preview_destination_id
+                    )
 
                 from core.permissions.storage_movements_v8 import (
                     authorize_storage_container_move_v8,
@@ -701,13 +713,15 @@ def storage_workspace_view(
                     actor=request.user,
                     container=preview_container,
                     destination=preview_destination,
+                    destination_workspace=preview_workspace,
                 )
 
                 container_preview = preview_storage_container_move(
                     container=preview_container,
                     destination=preview_destination,
+                    destination_workspace=preview_workspace,
                 )
-            except StorageLocation.DoesNotExist:
+            except (StorageLocation.DoesNotExist, StorageWorkspace.DoesNotExist):
                 container_preview_error = (
                     "The selected location no longer exists."
                 )

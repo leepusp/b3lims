@@ -63,3 +63,14 @@ class AutoWorkspaceTests(TestCase):
 
         self.assertEqual(ranks, [1, 2])
         self.assertEqual({a["workspace_id"] for a in catalog}, {StorageWorkspace.objects.get().pk})
+
+
+class StoragePageCleanupTests(TestCase):
+    def test_removed_panels_are_not_on_the_page(self):
+        user = get_user_model().objects.create_user("cleanup-user", password="x")
+        self.client.force_login(user)
+        html = self.client.get(reverse("storage_workspace")).content.decode()
+
+        self.assertNotIn("Historical registrations", html)
+        self.assertNotIn("Move Container", html)
+        self.assertNotIn(">Transfers<", html)

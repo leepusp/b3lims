@@ -112,3 +112,47 @@ class CrossWorkspaceMoveTests(BiobankRoleBase):
         self.sample.refresh_from_db()
 
         self.assertEqual(self.sample.biobank, self.other)
+
+
+class MoveToWorkspaceRootTests(BiobankRoleBase):
+    def setUp(self):
+        super().setUp()
+
+        self.empty = StorageWorkspace.objects.create(name="Empty", scope="personal", owner=self.coordinator)
+        self.box = StorageLocation.objects.create(name="Box A", location_type="box", workspace=self.workspace)
+        self.inner = StorageLocation.objects.create(name="Tray", location_type="box", parent=self.box, workspace=self.workspace)
+
+    def test_container_goes_to_the_top_of_a_workspace_without_locations(self):
+        move_storage_container(
+            container=self.box, destination=None, destination_workspace=self.empty,
+            actor=self.coordinator, expected_parent_id=None, reason="to the empty storage",
+            expected_origin_path="Box A", expected_destination_path="Box A",
+        )
+        self.box.refresh_from_db()
+        self.inner.refresh_from_db()
+
+        self.assertEqual((self.box.workspace_id, self.box.parent_id, self.inner.workspace_id), (self.empty.pk, None, self.empty.pk))
+
+    def test_preview_and_confirmation_accept_the_workspace_destination(self):
+        self.client.force_login(self.coordinator)
+
+        page = self.client.get(reverse("storage_workspace"), {"preview_container": "1", "container_id": self.box.pk, "destination_id": f"ws:{self.empty.pk}"})
+        preview = page.context["storage_container_preview"]
+
+        self.assertEqual((preview["destination_id"], preview["new_path"]), (f"ws:{self.empty.pk}", "Box A"))
+
+        self.client.post(reverse("storage_workspace"), {
+            "action": "confirm_container_move", "container_id": self.box.pk, "destination_id": preview["destination_id"],
+            "expected_parent_id": "", "expected_origin_path": preview["old_path"], "expected_destination_path": preview["new_path"],
+            "reason": "test",
+        })
+        self.box.refresh_from_db()
+
+        self.assertEqual(self.box.workspace_id, self.empty.pk)
+
+    def test_workspace_the_user_does_not_manage_is_refused(self):
+        with self.assertRaises(PermissionDenied):
+            move_storage_container(
+                container=self.box, destination=None, destination_workspace=self.empty,
+                actor=self.editor, expected_parent_id=None, reason="no",
+            )

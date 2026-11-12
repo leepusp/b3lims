@@ -51,7 +51,8 @@ from core.permissions.samples import (
 )
 from core.permissions.collections import can_edit_collection
 from core.permissions.biobanks import editable_biobanks_for_user
-from core.services.sample_intake import import_sample_table
+from core.services import sample_tables
+from core.services.sample_intake import import_sample_table, update_intake_record
 from core.services.sample_origin_map import (
     build_sample_origin_distribution_context,
 )
@@ -4450,10 +4451,24 @@ def sample_import_batch_detail_view(request, batch_id):
         raise PermissionDenied("You do not have permission to view this import batch.")
 
     ctx = base_context(request)
+    records = list(batch.records.select_related("matched_biobank", "matched_collection", "sample").all())
     ctx.update({
         "recent_batches": SampleImportBatch.objects.filter(uploaded_by=request.user)[:10],
         "selected_batch": batch,
-        "records": batch.records.select_related("matched_biobank", "matched_collection", "sample").all(),
+        "records": records,
+        "edit_columns": [
+            {
+                "key": c.key, "kind": c.kind, "required": c.required, "choices": list(c.choices), "help": c.help,
+                "types": sample_tables.types_using(c.key) if c.key not in {x.key for x in sample_tables.COMMON} else sample_tables.SAMPLE_TYPES,
+                "strict": c.strict,
+            }
+            for c in sample_tables.columns_for(None) if c.key not in {"sample_type"}
+        ],
+        "edit_rows": {
+            str(r.pk): {**(r.normalized_data or {}), "sample_type": r.sample_type or ""} for r in records
+        },
+        "edit_types": sample_tables.SAMPLE_TYPES,
+        "edit_biobanks": list(editable_biobanks_for_user(request.user).order_by("name").values_list("name", flat=True)),
     })
     ctx["template_types"] = TEMPLATE_TYPES
     ctx["template_biobanks"] = (
@@ -4466,6 +4481,32 @@ def sample_import_batch_detail_view(request, batch_id):
     )
 
     return render(request, "internal/samples/import.html", ctx)
+
+
+@login_required
+@require_POST
+def sample_import_record_edit_view(request, record_id):
+    """Edit one staged row on screen and validate it again."""
+    record = get_object_or_404(
+        SampleIntakeRecord.objects.select_related("batch"), pk=record_id,
+    )
+
+    if record.batch.uploaded_by_id != request.user.pk and not request.user.is_superuser:
+        raise PermissionDenied("You do not have permission to edit this import row.")
+
+    if record.status == "used_for_sample":
+        messages.error(request, "This row was already used to register a Sample.")
+
+        return redirect("samples_import_batch", batch_id=record.batch_id)
+
+    update_intake_record(record, {k: v for k, v in request.POST.items() if k != "csrfmiddlewaretoken"})
+
+    if record.validation_errors:
+        messages.warning(request, f"Row {record.row_number} still needs review: " + "; ".join(record.validation_errors))
+    else:
+        messages.success(request, f"Row {record.row_number} is ready.")
+
+    return redirect("samples_import_batch", batch_id=record.batch_id)
 
 
 @login_required

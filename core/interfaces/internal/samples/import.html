@@ -201,9 +201,10 @@
                                             <a href="{% url 'sample_add' %}?intake_id={{ record.id }}" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-magic me-1"></i>Use to fill form
                                             </a>
-                                        {% else %}
-                                            <button class="btn btn-sm btn-outline-secondary" disabled>
-                                                Review needed
+                                        {% endif %}
+                                        {% if record.status != "used_for_sample" %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-import-edit="{{ record.id }}" data-row="{{ record.row_number }}">
+                                                <i class="bi bi-pencil me-1"></i>Edit
                                             </button>
                                         {% endif %}
                                     </td>
@@ -224,4 +225,113 @@
         </div>
     </div>
 </div>
+
+{% if selected_batch %}
+<div class="modal fade" id="importEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form method="post" id="importEditForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Edit row <span id="importEditRow"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="importEditErrors" class="alert alert-danger py-2 small d-none"></div>
+        <div class="row g-3" id="importEditFields"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save and validate again</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{ edit_columns|json_script:"importEditColumns" }}
+{{ edit_rows|json_script:"importEditRows" }}
+{{ edit_types|json_script:"importEditTypes" }}
+{{ edit_biobanks|json_script:"importEditBiobanks" }}
+<script>
+(function () {
+  var cols = JSON.parse(document.getElementById("importEditColumns").textContent);
+  var rows = JSON.parse(document.getElementById("importEditRows").textContent);
+  var types = JSON.parse(document.getElementById("importEditTypes").textContent);
+  var biobanks = JSON.parse(document.getElementById("importEditBiobanks").textContent);
+  var modalEl = document.getElementById("importEditModal");
+  var form = document.getElementById("importEditForm");
+  var box = document.getElementById("importEditFields");
+  var errs = document.getElementById("importEditErrors");
+  var errorsByRecord = {};
+  document.querySelectorAll("[data-import-edit]").forEach(function (btn) {
+    var tr = btn.closest("tr");
+    var bad = tr ? tr.querySelector(".small.text-danger") : null;
+    errorsByRecord[btn.dataset.importEdit] = bad ? bad.textContent.trim() : "";
+  });
+
+  function field(c, value, type) {
+    var id = "ie_" + c.key, el;
+    var wrap = document.createElement("div");
+    wrap.className = "col-md-6";
+    wrap.dataset.types = (c.types || []).join("|");
+    var label = document.createElement("label");
+    label.className = "form-label small mb-1";
+    label.htmlFor = id;
+    label.textContent = c.key.replace(/_/g, " ") + (c.required ? " *" : "");
+    var options = c.key === "sample_type" ? types : c.key === "biobank" ? biobanks : c.choices;
+    if (c.kind === "boolean") options = ["", "yes", "no"];
+    if (options && options.length && (c.strict || c.kind === "boolean" || c.key === "biobank")) {
+      el = document.createElement("select");
+      [""].concat(options).forEach(function (o) {
+        var opt = document.createElement("option");
+        opt.value = o; opt.textContent = o || "—";
+        el.appendChild(opt);
+      });
+    } else {
+      el = document.createElement("input");
+      el.type = c.kind === "date" ? "date" : "text";
+      if (options && options.length) {
+        var dl = document.createElement("datalist");
+        dl.id = id + "_list";
+        options.forEach(function (o) { var opt = document.createElement("option"); opt.value = o; dl.appendChild(opt); });
+        wrap.appendChild(dl);
+        el.setAttribute("list", dl.id);
+      }
+    }
+    el.className = "form-control form-control-sm";
+    el.id = id; el.name = c.key;
+    if (c.help) el.title = c.help;
+    var v = value == null ? "" : value;
+    if (Array.isArray(v)) v = v.join(", ");
+    if (typeof v === "boolean") v = v ? "yes" : "no";
+    el.value = v;
+    wrap.insertBefore(el, wrap.firstChild);
+    wrap.insertBefore(label, wrap.firstChild);
+    return wrap;
+  }
+
+  function applyType() {
+    var t = form.elements["sample_type"].value;
+    box.querySelectorAll("[data-types]").forEach(function (w) {
+      var list = w.dataset.types ? w.dataset.types.split("|") : [];
+      w.classList.toggle("d-none", !!t && list.length > 0 && list.indexOf(t) === -1);
+    });
+  }
+
+  document.querySelectorAll("[data-import-edit]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.dataset.importEdit, data = rows[id] || {};
+      form.action = "{% url 'samples_import_record_edit' 0 %}".replace(/0\/edit\/$/, id + "/edit/");
+      document.getElementById("importEditRow").textContent = btn.dataset.row;
+      box.innerHTML = "";
+      box.appendChild(field({key: "sample_type", required: true, kind: "choice", strict: true, choices: types, types: []}, data.sample_type, null));
+      cols.forEach(function (c) { box.appendChild(field(c, data[c.key], data.sample_type)); });
+      errs.textContent = errorsByRecord[id] || "";
+      errs.classList.toggle("d-none", !errs.textContent);
+      form.elements["sample_type"].addEventListener("change", applyType);
+      applyType();
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

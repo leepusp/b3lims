@@ -91,7 +91,7 @@
 
   // ---- data ---------------------------------------------------------
 
-  function readData() {
+  function readData(withWorkspaces) {
     const locationSource = document.getElementById("b3s-location-data");
     const sampleSource = document.getElementById("b3s-sample-data");
 
@@ -137,6 +137,35 @@
         children: [],
         samples: []
       });
+    }
+
+    // Each storage you manage is a destination of its own (its top level).
+    const storageSelect = document.getElementById("b3s-create-workspace");
+
+    if (withWorkspaces && storageSelect) {
+      for (const option of storageSelect.options) {
+        if (!option.value) continue;
+
+        nodes.set("ws:" + option.value, {
+          id: "ws:" + option.value,
+          parent: "",
+          workspace: option.value,
+          name: option.textContent.trim(),
+          type: "workspace",
+          path: option.textContent.trim(),
+          active: true,
+          rank: -1,
+          layout: {kind: "free"},
+          children: [],
+          samples: []
+        });
+      }
+
+      for (const node of nodes.values()) {
+        if (!node.id.startsWith("ws:") && !node.parent && nodes.has("ws:" + node.workspace)) {
+          node.parent = "ws:" + node.workspace;
+        }
+      }
     }
 
     for (const node of nodes.values()) {
@@ -197,7 +226,7 @@
   }
 
   function open(options) {
-    const nodes = readData();
+    const nodes = readData(Boolean(options.workspaceRoots));
 
     if (!nodes) return;
 
