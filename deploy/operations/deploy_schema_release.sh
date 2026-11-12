@@ -563,8 +563,15 @@ repo_git cat-file -e "${CURRENT_RELEASE_ID}^{commit}" ||
 test "$CURRENT_RELEASE_ID" != "$TARGET_COMMIT" ||
     fail "Target commit is already live."
 
-repo_git merge-base --is-ancestor "$CURRENT_RELEASE_ID" "$TARGET_COMMIT" ||
-    fail "Target does not descend from the live release."
+# The target normally descends from the live release. After a deliberate history rewrite
+# (for example removing a file from every commit) the hashes change but the content does
+# not: accept a target whose history contains a commit with exactly the live release tree.
+if ! repo_git merge-base --is-ancestor "$CURRENT_RELEASE_ID" "$TARGET_COMMIT"; then
+    LIVE_TREE="$(repo_git rev-parse "${CURRENT_RELEASE_ID}^{tree}")"
+    repo_git rev-list --format=%T "$TARGET_COMMIT" | grep -qx "$LIVE_TREE" ||
+        fail "Target does not descend from the live release."
+    echo "history_rewrite_check=PASS live_tree=$LIVE_TREE found in target history"
+fi
 
 test ! -e "$TARGET_RELEASE" ||
     fail "Target immutable release already exists."
