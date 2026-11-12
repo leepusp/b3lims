@@ -3,7 +3,7 @@
 {% block title %}Sample types · {{ org_name }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3" style="max-width: 70rem">
+<div class="container-fluid py-3" style="max-width: 90rem">
     <div class="small text-muted mb-1"><a href="{% url 'samples_list' %}">Samples</a> / Sample types</div>
     <h1 class="h3 mb-1">Sample types</h1>
     <p class="text-muted">
@@ -17,7 +17,7 @@
     {% endfor %}
 
     <div class="row g-3">
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white fw-semibold">Types of this installation</div>
                 <ul class="list-group list-group-flush">
@@ -39,7 +39,7 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
+        <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white fw-semibold">{% if editing %}Edit {{ editing.name }}{% else %}New type{% endif %}</div>
                 <div class="card-body">
@@ -81,7 +81,7 @@
                             <div class="table-responsive">
                                 <table class="table table-sm align-middle mb-1" id="fieldsTable">
                                     <thead class="table-light">
-                                        <tr><th>Field name</th><th style="width:9.5rem">Value type</th><th class="text-center" style="width:4.5rem">Required</th><th>Allowed options</th><th style="width:5.5rem"></th></tr>
+                                        <tr><th style="min-width:14rem">Field name</th><th style="min-width:9.5rem">Value type</th><th class="text-center text-nowrap" style="width:6rem">Required</th><th style="min-width:14rem">Allowed options</th><th style="width:5.5rem"></th></tr>
                                     </thead>
                                     <tbody>
                                         {% for f in field_rows %}
