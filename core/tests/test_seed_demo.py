@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core.models import Sample
 from core.models.lab_tools.notebook import MolecularSequence, NotebookEntry
@@ -8,6 +8,7 @@ from core.models.samples.storage import SampleStorageAssignment
 
 
 class SeedDemoTests(TestCase):
+    @override_settings(ALLOWED_HOSTS=["biobank.example.org"])
     def test_seed_demo_creates_lab_and_is_idempotent(self):
         call_command("seed_demo", verbosity=0)
         self.assertTrue(get_user_model().objects.filter(username="demo").exists())

@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.test import Client
+from django.test import Client, override_settings
 
 from core.models import Biobank, Collection, ResearchGroup, Sample
 from core.models.biobanks.biobank_user_role import BiobankUserRole
@@ -90,6 +90,12 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ storage
 
     def make_storage(self, user):
+        # The in-process client sends a fixed host name; accept it whatever ALLOWED_HOSTS says
+        # (production profiles list only the public names).
+        with override_settings(ALLOWED_HOSTS=["*"]):
+            self._make_storage(user)
+
+    def _make_storage(self, user):
         client = Client(HTTP_HOST="localhost")
         client.force_login(user)
 
