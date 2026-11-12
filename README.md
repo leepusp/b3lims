@@ -69,7 +69,7 @@ Pick the way that suits you. All three give you the same application, and none n
 You need Python 3.12 or newer.
 
 ```bash
-pipx install "git+https://github.com/leepusp/biobank.git"
+pipx install "git+https://github.com/leepusp/b3lims.git"
 biobank-local setup        # four questions: data folder, database, administrator, network
 biobank-local run          # then open http://127.0.0.1:8000/
 ```
@@ -79,7 +79,7 @@ Add `--demo` to `setup` to load a small fictional lab to explore (user `demo`).
 ### Option 2: Docker Compose
 
 ```bash
-git clone https://github.com/leepusp/biobank.git && cd biobank
+git clone https://github.com/leepusp/b3lims.git && cd b3lims
 BIOBANK_ADMIN_PASSWORD='choose-a-long-password' docker compose up -d
 ```
 
@@ -88,7 +88,7 @@ Open <http://localhost:8000/> and sign in as `admin`. Your data lives in the `bi
 ### Option 3: from source (development)
 
 ```bash
-git clone https://github.com/leepusp/biobank.git && cd biobank
+git clone https://github.com/leepusp/b3lims.git && cd b3lims
 python -m venv .venv && . .venv/bin/activate
 pip install -e .
 biobank-local setup && biobank-local run
@@ -162,7 +162,7 @@ biobank/
 
 ## Status
 
-Biobank is under active development and is used in production at CEPID B3. The local installation path is new: please [open an issue](https://github.com/leepusp/biobank/issues) if something does not work on your machine. Sample records are sensitive; keep real data, credentials and `config.env` out of Git, issues and screenshots.
+Biobank is under active development and is used in production at CEPID B3. The local installation path is new: please [open an issue](https://github.com/leepusp/b3lims/issues) if something does not work on your machine. Sample records are sensitive; keep real data, credentials and `config.env` out of Git, issues and screenshots.
 
 ## Contributing and license
 
