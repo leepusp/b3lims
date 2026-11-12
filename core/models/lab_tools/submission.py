@@ -12,7 +12,7 @@ from django.db import models
 
 class SubmissionPackage(models.Model):
     class Destination(models.TextChoices):
-        INTERNAL = "internal", "Internal repository (USP/CEPID B3)"
+        INTERNAL = "internal", "Internal repository"
         GENBANK = "genbank", "GenBank / SRA (NCBI)"
         PDB = "pdb", "PDB / wwPDB"
         ZENODO = "zenodo", "Zenodo"

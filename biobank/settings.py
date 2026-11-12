@@ -42,6 +42,10 @@ BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN = env.bool("BIOBANK_STORAGE_SUPERUSER_
 BIOBANK_ELN_API_HOST = env("BIOBANK_ELN_API_HOST", default="davinci.icb.usp.br")
 # Public address of this installation, shown to geocoding services as contact information.
 BIOBANK_PUBLIC_URL = env("BIOBANK_PUBLIC_URL", default="https://davinci.icb.usp.br/b3lims/")
+# Name shown in the page footer and on printed labels.
+BIOBANK_ORG_NAME = env("BIOBANK_ORG_NAME", default="CEPID B3")
+# Jupyter servers started through Slurm (HPC). Off in the standalone profile.
+BIOBANK_JUPYTER_ENABLED = env.bool("BIOBANK_JUPYTER_ENABLED", default=True)
 
 # 2. Avisa o Django que o Apache já cuidou do cadeado de segurança (HTTPS)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -195,6 +199,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.installation",
             ],
         },
     },

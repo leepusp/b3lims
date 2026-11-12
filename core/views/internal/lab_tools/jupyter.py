@@ -278,7 +278,16 @@ def _validated_launch(request, defaults):
 
 
 @login_required
+def jupyter_local_info(request):
+    """Installations without an HPC cluster: how to use Jupyter with the data (replaces the Slurm launcher)."""
+    return render(request, "internal/lab_tools/jupyter_connect.html", {"jupyter_enabled": settings.BIOBANK_JUPYTER_ENABLED})
+
+
+@login_required
 def jupyter_index(request):
+    if not getattr(settings, "BIOBANK_JUPYTER_ENABLED", True):
+        return redirect("jupyter_local_info")
+
     notebooks = (
         visible_notebooks_for_user(request.user)
         .select_related("owner")
@@ -301,6 +310,9 @@ def jupyter_index(request):
 
 @login_required
 def jupyter_launch(request):
+    if not getattr(settings, "BIOBANK_JUPYTER_ENABLED", True):
+        return redirect("jupyter_local_info")
+
     defaults = _launch_defaults()
     notebook_id = (
         request.POST.get("notebook_id")

@@ -1,0 +1,45 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Jupyter · {{ org_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 60rem">
+    <h1 class="h3 mb-1"><i class="bi bi-code-square me-2"></i>Use B3 LIMS data in Jupyter</h1>
+    <p class="text-muted">
+        This installation does not start Jupyter servers for you (that needs a Slurm cluster).
+        Run Jupyter wherever you like and bring the data to it.
+    </p>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <h2 class="h5">Today</h2>
+            <ol class="mb-0">
+                <li>Open <a href="{% url 'samples_list' %}">Samples</a>, select what you need and choose <strong>Export Selected</strong> (Excel or CSV).</li>
+                <li>Install Jupyter on your computer: <code>pip install jupyterlab</code>, then <code>jupyter lab</code>.</li>
+                <li>Read the file with pandas: <code>pandas.read_excel("samples.xlsx")</code>.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <h2 class="h5">Planned: connect by API</h2>
+            <p class="mb-0">
+                A read-only API with personal access tokens and a small Python package (<code>biobank_client</code>)
+                so a notebook can load samples, storage and metadata directly from this installation.
+                It is on the roadmap and is not available yet.
+            </p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h2 class="h5">Running a cluster?</h2>
+            <p class="mb-0">
+                Administrators of an HPC installation can turn on the Slurm launcher with
+                <code>BIOBANK_JUPYTER_ENABLED=true</code> (see <code>docs/hpc.md</code>).
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

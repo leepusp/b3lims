@@ -190,7 +190,8 @@ LOGOUT_REDIRECT_URL = LOGIN_URL
 # consumes them will be implemented separately.
 
 BIOBANK_HPC_ENABLED = False
-BIOBANK_JUPYTER_ENABLED = False
+BIOBANK_JUPYTER_ENABLED = os.environ.get("BIOBANK_JUPYTER_ENABLED", "").lower() in {"1", "true", "yes"}
+BIOBANK_ORG_NAME = os.environ.get("BIOBANK_ORG_NAME", "") or "B3 LIMS"
 BIOBANK_ONLINE_INTEGRATIONS_ENABLED = False
 
 # Never invoke the DaVinci PAM-login provisioning path in this profile.

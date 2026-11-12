@@ -596,6 +596,7 @@ urlpatterns = [
         jupyter_views.jupyter_index,
         name='jupyter_index',
     ),
+    path('internal/lab-tools/jupyter/connect/', jupyter_views.jupyter_local_info, name='jupyter_local_info'),
     path('internal/lab-tools/jupyter/from-template/', jupyter_sharing_views.jupyter_from_template, name='jupyter_from_template'),
     path('internal/lab-tools/jupyter/shared/<int:notebook_id>/', jupyter_sharing_views.jupyter_shared_view, name='jupyter_shared'),
     path('internal/lab-tools/jupyter/shared/<int:notebook_id>/copy/', jupyter_sharing_views.jupyter_copy, name='jupyter_copy'),

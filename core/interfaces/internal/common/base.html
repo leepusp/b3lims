@@ -102,7 +102,7 @@
         <a href="{% url 'jupyter_index' %}"
            class="nav-link {% if '/lab-tools/jupyter/' in request.path %}active{% endif %}">
             <i class="bi bi-code-square"></i>
-            <span class="nav-label">Jupyter Notebooks</span>
+            <span class="nav-label">{% if jupyter_enabled %}Jupyter Notebooks{% else %}Jupyter{% endif %}</span>
         </a>
 
         <a href="{% url 'submission_list' %}"
@@ -118,7 +118,7 @@
                 font-size:1.15rem;
                 font-weight:600;
                 letter-spacing:0.5px;">
-        © CEPID B3
+        © {{ org_name }}
     </div>
 
 </aside>
