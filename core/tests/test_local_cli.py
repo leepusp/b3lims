@@ -131,3 +131,23 @@ class LocalInstallTests(TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("up to date", done.stdout)
         self.assertEqual(cli(Path(self.tmp.name) / "none", "migrate").returncode, 2)
+
+
+class BrandingTests(TestCase):
+    def test_about_lists_existing_and_planned_features(self):
+        from biobank import branding
+
+        text = branding.about("1.2.3")
+        self.assertIn("B3 LIMS", text)
+        self.assertIn("v1.2.3", text)
+        self.assertIn("Zenodo", text)
+        self.assertIn("Planned:", text)
+        self.assertIn("API", text)
+
+    def test_help_and_about_commands(self):
+        from biobank.local_cli import build_parser
+
+        help_text = build_parser().format_help()
+        self.assertIn("B3 LIMS", help_text)
+        self.assertIn("biobank-local setup", help_text)
+        self.assertIn("about", help_text)

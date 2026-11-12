@@ -109,7 +109,10 @@ def collect_answers(args, input_fn=input):
     out = {"root": root}
 
     if interactive:
-        print("\nBiobank local setup\n" + "=" * 19)
+        from biobank import branding
+
+        print(branding.welcome(package_version()))
+        print("Setup\n" + "=" * 5)
         print("Step 1 of 4  Where should your data live?")
         out["root"] = resolve_root(ask("Data folder", str(root), input_fn=input_fn))
 
@@ -230,7 +233,7 @@ def cmd_setup(args, input_fn=input):
 
     port = args.port
     print(
-        "\nDone. Start Biobank with:\n\n"
+        "\nDone. Start B3 LIMS with:\n\n"
         f"    biobank-local run{'' if root == DEFAULT_ROOT.resolve() else f' --root {root}'}\n\n"
         f"then open http://127.0.0.1:{port}/ and sign in as '{answers['admin_user']}'.\n"
         "Optional features (HPC, Slurm, Jupyter, online services) are documented in docs/hpc.md."
@@ -252,7 +255,7 @@ def cmd_run(args):
     config = read_config(root)
     activate(root, config)
     host = args.host or config.get("BIOBANK_HOST", "127.0.0.1")
-    print(f"Biobank is running at http://{'127.0.0.1' if host == '0.0.0.0' else host}:{args.port}/  (Ctrl+C to stop)")
+    print(f"B3 LIMS is running at http://{'127.0.0.1' if host == '0.0.0.0' else host}:{args.port}/  (Ctrl+C to stop)")
 
     try:
         from waitress import serve
@@ -363,8 +366,32 @@ def cmd_doctor(args):
     return 1 if problems else 0
 
 
+def cmd_about(args):
+    from biobank import branding
+
+    print(branding.about(package_version()))
+
+    return 0
+
+
+def package_version():
+    try:
+        from importlib.metadata import version
+
+        return version("biobank-lims")
+    except Exception:  # not installed as a package (running from a checkout)
+        return ""
+
+
 def build_parser():
-    parser = argparse.ArgumentParser(prog="biobank-local", description="Install and run Biobank on one computer.")
+    from biobank import branding
+
+    parser = argparse.ArgumentParser(
+        prog="biobank-local",
+        description=f"{branding.NAME}: {branding.TAGLINE}\nInstall and run it on one computer.",
+        epilog=branding.HELP_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--root", help=f"data folder (default: {DEFAULT_ROOT})")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -403,6 +430,9 @@ def build_parser():
 
     doctor = sub.add_parser("doctor", help="check the installation")
     doctor.set_defaults(func=cmd_doctor)
+
+    about = sub.add_parser("about", help="what B3 LIMS is for and which integrations it supports")
+    about.set_defaults(func=cmd_about)
 
     return parser
 
