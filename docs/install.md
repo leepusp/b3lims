@@ -2,6 +2,20 @@
 
 B3 LIMS needs **Python 3.12 or newer** (or Docker). It does not need a cluster, Slurm, PAM accounts or a separate web server.
 
+## Before you start: your system
+
+| System | Recommended route | Prepare it with |
+|---|---|---|
+| Ubuntu / Debian | Option 1 (pipx) | `sudo apt install -y pipx python3-venv`, then `pipx ensurepath` |
+| Fedora / other Linux | Option 1 (pipx) | your package manager's `pipx`, or `python3 -m pip install --user pipx` |
+| macOS | Option 1 (pipx) | `brew install pipx python@3.12`, then `pipx ensurepath` |
+| Windows 10/11 | **Docker Desktop** (Option 2) or **WSL 2 with Ubuntu** (then follow the Ubuntu line) | Docker Desktop from docker.com; or `wsl --install -d Ubuntu` in PowerShell, then open Ubuntu |
+| Any system, no Python 3.12 | Docker (Option 2) | [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop |
+
+Check Python first: `python3 --version` must print 3.12 or newer. Ubuntu 24.04 has it; Ubuntu 22.04 and Debian 12 do not, so use Docker, or install Python 3.12 (for example with [uv](https://docs.astral.sh/uv/): `uv tool install --python 3.12 "git+https://github.com/leepusp/b3lims.git"`).
+
+The automated tests run on Linux. On Windows, use Docker Desktop or WSL 2; a plain Windows Python installation is not tested. In WSL, keep the data folder inside the Linux home (the default `~/.biobank-local`), not under `/mnt/c`, and open `http://127.0.0.1:8000` from the Windows browser.
+
 ## Option 1: pipx and the setup wizard
 
 ```bash
