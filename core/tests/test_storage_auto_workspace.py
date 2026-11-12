@@ -74,3 +74,13 @@ class StoragePageCleanupTests(TestCase):
         self.assertNotIn("Historical registrations", html)
         self.assertNotIn("Move Container", html)
         self.assertNotIn(">Transfers<", html)
+
+
+class StorageChildPreviewTests(TestCase):
+    def test_layout_preview_container_and_script_are_on_the_sample_form(self):
+        user = get_user_model().objects.create_user("preview-user", password="x")
+        self.client.force_login(user)
+        html = self.client.get(reverse("sample_add")).content.decode()
+
+        self.assertIn('id="storageChildPreviewV8146"', html)
+        self.assertIn("20261112-preview", html)

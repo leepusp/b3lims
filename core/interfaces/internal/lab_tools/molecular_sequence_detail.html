@@ -95,7 +95,7 @@
                     {{ molecule.get_sequence_type_display }}
                 </span>
 
-                <span id="mw-topology-badge" class="mw-badge mw-badge-muted">
+                <span id="mw-topology-badge" class="mw-badge mw-badge-muted" hidden>
                     {{ molecule.get_topology_display }}
                 </span>
 
@@ -276,7 +276,7 @@
 
             </label>
 
-            <label{% if molecule.sequence_type == "rna" or molecule.sequence_type == "protein" or molecule.sequence_type == "primer" %} hidden{% endif %}>
+            <label hidden>
                 <span>Topology</span>
                 <select id="mw-topology"
                         class="form-select form-select-sm"

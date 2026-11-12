@@ -13,4 +13,4 @@ class BenchSidebarTests(TestCase):
         response = self.client.get(request_path("bench:home"))
 
         self.assertContains(response, 'nav-section-label">Laboratory<')
-        self.assertContains(response, reverse("bench:home"))
+        self.assertNotContains(response, ">Overview<")

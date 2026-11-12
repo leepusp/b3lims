@@ -79,12 +79,6 @@
 
         <div class="nav-section-label">Laboratory</div>
 
-        <a href="{% url 'bench:home' %}"
-           class="nav-link {% if request.resolver_match.namespace == 'bench' and request.resolver_match.url_name == 'home' %}active{% endif %}">
-            <i class="bi bi-grid-1x2"></i>
-            <span class="nav-label">Overview</span>
-        </a>
-
         <a href="{% url 'lab_calendar' %}"
            class="nav-link {% if 'calendar' in request.path %}active{% endif %}">
             <i class="bi bi-calendar-week"></i>

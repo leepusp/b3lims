@@ -52,13 +52,88 @@
         let busy = true;
         let available = 0;
 
+        const preview = document.getElementById("storageChildPreviewV8146");
+
+        function clampInt(id, low, high, fallback) {
+            const value = parseInt(document.getElementById(id).value, 10);
+
+            return Math.min(high, Math.max(low, Number.isFinite(value) ? value : fallback));
+        }
+
+        function drawPreview() {
+            if (!preview) return;
+
+            preview.replaceChildren();
+            preview.hidden = layoutBox.hidden || orgSelect.value === "free";
+
+            if (preview.hidden) return;
+
+            const board = document.createElement("div");
+
+            board.className = "b3-child-board";
+
+            if (orgSelect.value === "grid") {
+                const rows = clampInt("storageChildRowsV8146", 1, 26, 9);
+                const cols = clampInt("storageChildColsV8146", 1, 24, 9);
+
+                board.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
+                board.style.setProperty("--b3-cell", Math.max(10, Math.min(26, Math.floor(300 / cols))) + "px");
+
+                for (let r = 0; r < rows; r += 1) {
+                    for (let c = 0; c < cols; c += 1) {
+                        const cell = document.createElement("span");
+
+                        cell.className = "b3-child-cell";
+                        cell.style.animationDelay = ((r + c) * 18) + "ms";
+                        cell.title = String.fromCharCode(65 + r) + (c + 1);
+                        board.append(cell);
+                    }
+                }
+
+                preview.dataset.caption = rows + " × " + cols + " = " + (rows * cols) + " positions";
+            } else {
+                const names = document.getElementById("storageChildSlotNamesV8146").value
+                    .split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+                const labels = names.length ? names : ["Compartment 1", "Compartment 2", "Compartment 3"];
+                const sideBySide = document.getElementById("storageChildDirV8146").value === "row";
+
+                board.classList.add("is-slots");
+                board.style.gridTemplateColumns = sideBySide ? "repeat(" + labels.length + ", 1fr)" : "1fr";
+
+                labels.forEach((label, index) => {
+                    const slot = document.createElement("span");
+
+                    slot.className = "b3-child-slot";
+                    slot.style.animationDelay = (index * 70) + "ms";
+                    slot.textContent = label;
+                    board.append(slot);
+                });
+
+                preview.dataset.caption = labels.length + " compartment" + (labels.length === 1 ? "" : "s")
+                    + (names.length ? "" : " (example, type the names above)");
+            }
+
+            preview.append(board);
+        }
+
         function syncLayout() {
             if (!layoutBox) return;
 
             layoutBox.hidden = !path.value.trim();
             gridBox.hidden = orgSelect.value !== "grid";
             slotsBox.hidden = orgSelect.value !== "slots";
+            drawPreview();
         }
+
+        ["storageChildRowsV8146", "storageChildColsV8146", "storageChildSlotNamesV8146", "storageChildDirV8146"]
+            .forEach(id => {
+                const node = document.getElementById(id);
+
+                if (node) {
+                    node.addEventListener("input", drawPreview);
+                    node.addEventListener("change", drawPreview);
+                }
+            });
 
         function layoutFields(body) {
             if (!orgSelect || layoutBox.hidden) return;

@@ -225,6 +225,11 @@
 
         cardBody.prepend(section);
 
+        // The front page drop zone is the only place to choose a file.
+        const intakeDrop = section.querySelector("#molecular-registry-drop-zone");
+
+        if (intakeDrop) intakeDrop.hidden = true;
+
         const modeButtons = [
             ...section.querySelectorAll(
                 "[data-mri-mode]"
@@ -384,6 +389,17 @@
             }
 
             mode = resolved;
+
+            // A loaded file already carries the name and sequence: nothing is mandatory by hand.
+            [fields.name, fields.sequence].forEach(field => {
+                if (!field) return;
+
+                if (field.dataset.wasRequired === undefined) {
+                    field.dataset.wasRequired = field.required ? "1" : "0";
+                }
+
+                field.required = resolved === "import" ? false : field.dataset.wasRequired === "1";
+            });
 
             modeButtons.forEach(button => {
                 const active = (
@@ -738,7 +754,8 @@
 
         function fillImportedFields(record) {
             fields.name.value = String(
-                record.name || ""
+                record.name
+                || (fileInput.files?.[0]?.name || "").replace(/\.[^.]+$/, "")
             );
 
             renderTypeAwareFields(record);
@@ -865,6 +882,10 @@
                 fileInput.value = "";
                 return;
             }
+
+            // A file chosen from the front page switches the form to import mode, so the
+            // file is kept and sent with the record instead of being cleared on submit.
+            if (mode !== "import") setMode("import");
 
             const requestId = ++previewRequest;
             const formData = new FormData();
@@ -1077,7 +1098,10 @@
 
         removeFile.addEventListener(
             "click",
-            resetTypeAwareImport,
+            () => {
+                resetTypeAwareImport();
+                setMode("blank");
+            },
         );
 
         section.querySelectorAll(
