@@ -1,0 +1,1048 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Samples, storage, notebook and shipments for research labs">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>ELN roadmap: features adapted from eLabFTW - B3 LIMS</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#eln-roadmap-features-adapted-from-elabftw" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="B3 LIMS" class="md-header__button md-logo" aria-label="B3 LIMS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            B3 LIMS
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ELN roadmap: features adapted from eLabFTW
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/leepusp/b3lims" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="B3 LIMS" class="md-nav__button md-logo" aria-label="B3 LIMS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    B3 LIMS
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/leepusp/b3lims" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install and upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../hpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clusters and Slurm (optional)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local_install_and_eln_roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ground-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ground rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-state-before-this-roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current state (before this roadmap)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-notebook-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — Notebook foundation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1 — Notebook foundation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-categories-and-statuses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Categories and statuses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-entry-identity-state-and-locking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Entry identity, state and locking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-templates-as-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Templates as records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-revisions-changelog-and-comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Revisions, changelog and comments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-read-and-write-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Read and write permissions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-entry-list-mockup-01-eln-entry-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 Entry list (mockup 01-eln-entry-list)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-entry-view-mockup-02-eln-entry-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 Entry view (mockup 02-eln-entry-view)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-lab-calendar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Lab Calendar
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2 — Lab Calendar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-bookable-equipment-and-bookings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Bookable equipment and bookings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-calendar-ui-mockup-04-lab-calendar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Calendar UI (mockup 04-lab-calendar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-extra-fields-builder-steps-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Extra fields, builder, steps, links
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3 — Extra fields, builder, steps, links">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-extra-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Extra fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-template-builder-and-settings-mockup-03-eln-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Template builder and settings (mockup 03-eln-templates)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-entry-links-and-pins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Entry links and pins
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4 — Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-compounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Compounds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-structure-editor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Structure editor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Inventory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-opencloning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 OpenCloning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-integrity-and-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Integrity and export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 5 — Integrity and export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-lock-sign-timestamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Lock, sign, timestamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-export-and-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Export and import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="eln-roadmap-features-adapted-from-elabftw">ELN roadmap: features adapted from eLabFTW</h1>
+<p>This is the working spec for extending the Biobank ELN, Lab Calendar and
+chemical tools with features found in eLabFTW. Each implementation step has an
+ID (for example <code>1.3</code>) that pull requests and prompts refer to.</p>
+<p>Mockups: <code>docs/design/eln/</code> (open the HTML files in a browser).</p>
+<h2 id="ground-rules">Ground rules</h2>
+<ol>
+<li><strong>No eLabFTW code.</strong> eLabFTW is AGPL-3.0. Use its repository only to read
+   which entities, fields and rules exist. Never copy or translate its PHP,
+   SQL, TypeScript or Twig into this repository. Write Django code from this
+   spec.</li>
+<li><strong>Third-party front-end libraries</strong> may be used directly when their licence
+   allows it: FullCalendar core and the daygrid, timegrid, list and interaction
+   plugins (MIT), Ketcher (Apache-2.0), jsoneditor (Apache-2.0), 3Dmol
+   (BSD-3-Clause), OpenCloning (MIT, separate container). Do <strong>not</strong> use
+   <code>@fullcalendar/timeline</code> or other FullCalendar premium plugins.</li>
+<li><strong>Existing data is preserved.</strong> Every model change ships with a migration;
+   value changes ship with a data migration that has a reverse function.</li>
+<li><strong>Tests run on SQLite</strong> (<code>biobank/test_settings.py</code>). PostgreSQL-only
+   features (exclusion constraints, <code>btree_gist</code>, RDKit) must be guarded by
+   <code>connection.vendor == "postgresql"</code> and must also be enforced in Python.</li>
+<li><strong>Permissions stay centralized</strong> in <code>core/permissions/</code>. Views never check
+   ownership inline.</li>
+<li><strong>Business logic lives in <code>core/services/</code></strong>; views stay thin.</li>
+<li><strong>English</strong> for code, templates, labels, messages and migration names.</li>
+<li>Before each pull request: <code>python manage.py check</code>,
+   <code>python manage.py makemigrations --check --dry-run</code>, <code>python manage.py test</code>.</li>
+</ol>
+<h2 id="current-state-before-this-roadmap">Current state (before this roadmap)</h2>
+<ul>
+<li><code>core/models/lab_tools/notebook.py</code>: <code>NotebookEntry</code> with hard-coded
+  <code>ENTRY_TYPE_CHOICES</code>, <code>STATUS_CHOICES</code>, <code>VISIBILITY_CHOICES</code>;
+  <code>NotebookBlock</code>, <code>NotebookAttachment</code>, <code>NotebookSampleLink</code>,
+  <code>NotebookChemicalLink</code>, <code>NotebookMolecularLink</code>, <code>NotebookJupyterLink</code>.</li>
+<li>Templates are a Python dict in
+  <code>core/views/internal/lab_tools/notebook.py::_notebook_entry_templates()</code>.</li>
+<li><code>notebook_delete_entry_api</code> deletes rows permanently.</li>
+<li><code>core/permissions/notebook.py</code>: private / lab visibility; <code>shared</code> has no effect.</li>
+<li><code>core/models/access_grants.py</code>: generic <code>ResourceAccessGrant</code>
+  (user or <code>ResearchGroup</code>, level view/edit/manage).</li>
+<li><code>core/views/internal/calendar/views.py</code>: lists the last 100 sample <code>Event</code>s.</li>
+<li><code>core/models/chemicals/chemical.py</code>: <code>Chemical</code> mixes identity (name, CAS,
+  formula) and stock (lot, quantity, location text).</li>
+<li><code>core/models/samples/storage.py</code>: <code>StorageLocation</code> tree and
+  <code>SampleStorageAssignment</code>.</li>
+</ul>
+<h2 id="phase-1-notebook-foundation">Phase 1 — Notebook foundation</h2>
+<h3 id="11-categories-and-statuses">1.1 Categories and statuses</h3>
+<p>New models in <code>core/models/lab_tools/notebook_settings.py</code>:</p>
+<ul>
+<li><code>NotebookCategory</code>: <code>research_group</code> (FK, nullable = global), <code>title</code>,
+  <code>color</code> (hex), <code>custom_id_prefix</code> (default <code>EXP</code>), <code>is_private</code>, <code>ordering</code>,
+  <code>is_active</code>, timestamps. Unique <code>(research_group, title)</code> case-insensitive.</li>
+<li><code>NotebookStatus</code>: <code>research_group</code>, <code>title</code>, <code>color</code>, <code>is_default</code>,
+  <code>ordering</code>, <code>is_active</code>, timestamps. One default per group.</li>
+</ul>
+<p><code>NotebookEntry.category</code> and <code>NotebookEntry.status</code> become FKs
+(<code>on_delete=PROTECT</code>, nullable during migration). A data migration creates
+global categories from the current <code>ENTRY_TYPE_CHOICES</code> and global statuses from
+<code>STATUS_CHOICES</code>, then maps every entry. The <code>archived</code> status becomes
+<code>state=archived</code> in step 1.2. Keep the old fields until the data migration
+runs, then remove them in a separate migration.</p>
+<p>eLabFTW reference: tables <code>experiments_categories</code>, <code>experiments_status</code>.</p>
+<h3 id="12-entry-identity-state-and-locking">1.2 Entry identity, state and locking</h3>
+<p>Add to <code>NotebookEntry</code>:</p>
+<ul>
+<li><code>custom_id</code> (positive int, nullable) and property <code>display_id</code>
+  (<code>{prefix}-{year}-{custom_id:03d}</code>). Assigned on create: next number per
+  category prefix and year, inside a transaction (<code>select_for_update</code>).</li>
+<li><code>rating</code> (0–5), <code>content_type</code> (<code>html</code> | <code>markdown</code>, default <code>html</code>).</li>
+<li><code>state</code> (<code>normal</code> | <code>archived</code> | <code>deleted</code>, indexed). Default managers return
+  <code>normal</code> only; add <code>all_objects</code>.</li>
+<li><code>locked</code>, <code>locked_by</code>, <code>locked_at</code>; <code>last_change_by</code>.</li>
+<li><code>created_from_template</code> (FK to <code>NotebookTemplate</code>, nullable, added in 1.3).</li>
+</ul>
+<p>Delete becomes <code>state=deleted</code>; add archive, unarchive and restore actions and a
+Trash filter. Locked entries reject edits except unlock by the locker, the owner
+or a group coordinator.</p>
+<h3 id="13-templates-as-records">1.3 Templates as records</h3>
+<p><code>NotebookTemplate</code>: <code>title</code>, <code>description</code>, <code>icon</code> (Bootstrap Icons name),
+<code>owner</code>, <code>research_group</code>, <code>default_category</code>, <code>default_status</code>, <code>content</code>,
+<code>protocol_content</code>, <code>blocks_json</code> (initial blocks), <code>metadata</code> (extra-field
+schema, used in 3.1), <code>default_read_base</code>, <code>default_write_base</code>, <code>ordering</code>,
+<code>is_active</code>, timestamps. Steps for templates come in 3.3.</p>
+<p>Data migration: create one global template per entry in
+<code>_notebook_entry_templates()</code> (same keys, labels, icons, content). The create
+menu reads templates from the database; <code>notebook_create?template=&lt;id&gt;</code> copies
+fields into the new entry and sets <code>created_from_template</code>. Keep the helper
+function only as the seed source, or delete it once tests use the table.</p>
+<h3 id="14-revisions-changelog-and-comments">1.4 Revisions, changelog and comments</h3>
+<ul>
+<li><code>NotebookRevision</code>: <code>entry</code>, <code>content</code>, <code>protocol_content</code>, <code>content_type</code>,
+  <code>created_by</code>, <code>created_at</code>. Saved by a service when content changes and at
+  most once per 5 minutes per user, plus always before lock and sign.
+  Keep the last 100 per entry.</li>
+<li><code>NotebookChangelog</code>: <code>entry</code>, <code>user</code>, <code>field</code>, <code>old_value</code>, <code>new_value</code>,
+  <code>created_at</code>. Written by the service for title, category, status, rating,
+  permissions, lock state, links and steps.</li>
+<li><code>NotebookComment</code>: <code>entry</code>, <code>author</code>, <code>body</code>, <code>is_immutable</code>, timestamps.</li>
+<li>Views: revision list and side-by-side compare; restore a revision (creates a
+  new revision); comment create/delete (author only, not when immutable).</li>
+</ul>
+<h3 id="15-read-and-write-permissions">1.5 Read and write permissions</h3>
+<p>Replace <code>visibility</code> with <code>read_base</code> and <code>write_base</code>
+(<code>owner</code> | <code>group</code> | <code>institution</code>) plus explicit <code>ResourceAccessGrant</code>s for
+users and research groups. Migration: <code>private</code> → <code>owner</code>, <code>lab</code> →
+<code>institution</code> (current behaviour: any authenticated user), <code>shared</code> → <code>owner</code>.
+Rewrite <code>visible_notebook_entries_for_user</code>, <code>can_view_notebook_entry</code> and
+<code>can_edit_notebook_entry</code>; add <code>can_manage_notebook_entry</code>. Superusers keep full
+access. Permissions modal in the entry view.</p>
+<h3 id="16-entry-list-mockup-01-eln-entry-list">1.6 Entry list (mockup <code>01-eln-entry-list</code>)</h3>
+<p>Scope tabs (mine / my groups / all readable), filters (category, status, owner,
+state, tags), search with simple <code>key:value</code> terms (<code>category:</code>, <code>status:</code>,
+<code>tag:</code>, <code>owner:</code>), pinned entries (<code>NotebookPin</code>: user + entry), steps progress,
+rating, integrity column, batch actions (status, tag, lock, archive, export).
+Paginate server side.</p>
+<h3 id="17-entry-view-mockup-02-eln-entry-view">1.7 Entry view (mockup <code>02-eln-entry-view</code>)</h3>
+<p>Header with display ID, category, inline status select, rating, lock badge,
+tags; toolbar (edit, lock/unlock, duplicate, request signature, timestamp,
+permissions, export, pin); metadata row; right column with linked items,
+integrity card and Comments / Revisions / Changelog tabs. Existing blocks and
+attachments stay as they are.</p>
+<h2 id="phase-2-lab-calendar">Phase 2 — Lab Calendar</h2>
+<h3 id="21-bookable-equipment-and-bookings">2.1 Bookable equipment and bookings</h3>
+<p><code>core/models/scheduling/</code>:</p>
+<ul>
+<li><code>BookableResource</code>: <code>name</code>, <code>description</code>, <code>research_group</code>, <code>location</code>
+  (FK <code>StorageLocation</code>, nullable), <code>color</code>, <code>is_bookable</code>, <code>max_minutes</code>
+  (0 = no limit), <code>max_slots</code> (open future bookings per user, 0 = no limit),
+  <code>can_overlap</code>, <code>users_can_book_in_past</code>, <code>is_cancellable</code>,
+  <code>cancel_minutes</code>, <code>booking_window_days</code> (0 = no limit), <code>hourly_rate</code>,
+  <code>currency</code>, <code>requires_note</code>, <code>is_active</code>. Who can book uses
+  <code>ResourceAccessGrant</code> (edit level = can book, manage = can manage).</li>
+<li><code>Booking</code>: <code>resource</code>, <code>user</code>, <code>research_group</code>, <code>title</code>, <code>start</code>, <code>end</code>,
+  <code>notebook_entry</code> (nullable), <code>recurrence_id</code> (UUID, nullable),
+  <code>recurrence_index</code>, <code>recurrence_rule</code> (JSON: frequency daily|weekly,
+  interval, weekdays, count or until), <code>cancelled_at</code>, timestamps.</li>
+<li><code>core/services/booking_rules.py</code>: <code>validate_booking(resource, user, start,
+  end, exclude_ids=())</code> checks, in order: permission, end after start, past
+  start, <code>max_minutes</code>, <code>booking_window_days</code>, <code>max_slots</code>, overlap. Returns
+  every failed rule (the UI lists them). Recurring bookings expand to one row
+  per occurrence and are validated as a whole.</li>
+<li>PostgreSQL only: <code>btree_gist</code> + an exclusion constraint on
+  <code>(resource, tstzrange(start, end))</code> for non-overlapping resources, added with
+  a vendor-guarded <code>RunSQL</code>.</li>
+</ul>
+<h3 id="22-calendar-ui-mockup-04-lab-calendar">2.2 Calendar UI (mockup <code>04-lab-calendar</code>)</h3>
+<p>Replace <code>calendar_view</code>. FullCalendar 6 (daygrid, timegrid, list, interaction)
+from a CDN already allowed by the project. JSON endpoints: list events in a
+range, create, move/resize, cancel, plus a <code>validate</code> endpoint used live by the
+booking form. Sample <code>Event</code>s stay visible as a separate toggleable source.
+CSV export of bookings for a range.</p>
+<h2 id="phase-3-extra-fields-builder-steps-links">Phase 3 — Extra fields, builder, steps, links</h2>
+<h3 id="31-extra-fields">3.1 Extra fields</h3>
+<p>Add <code>metadata = JSONField(default=dict)</code> to <code>NotebookEntry</code> (template already has
+it). Format, kept compatible with the <code>.eln</code> export of eLabFTW:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"elabftw"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"extra_fields_groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Culture conditions"</span><span class="p">}]},</span>
+<span class="w">  </span><span class="nt">"extra_fields"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"Temperature (°C)"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"number"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"28"</span><span class="p">,</span><span class="w"> </span><span class="nt">"group_id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"position"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                          </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w"> </span><span class="nt">"blank_value_on_duplicate"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Types: <code>text</code>, <code>number</code>, <code>date</code>, <code>datetime-local</code>, <code>time</code>, <code>select</code> (with
+<code>options</code>, optional <code>allow_multi_values</code>), <code>radio</code>, <code>checkbox</code>, <code>email</code>, <code>url</code>,
+<code>users</code>, <code>items</code> (Biobank <code>Sample</code> IDs), <code>experiments</code> (ELN entry IDs),
+<code>compounds</code> (<code>Compound</code> IDs, phase 4), <code>uploads</code> (attachment IDs).
+<code>core/services/notebook_metadata.py</code> validates schema and values, resolves
+linked IDs against the user's permissions, and copies the schema from the
+template on create (values kept unless <code>blank_value_on_duplicate</code>).
+Rendered as grouped form fields in the entry (mockup 02).</p>
+<h3 id="32-template-builder-and-settings-mockup-03-eln-templates">3.2 Template builder and settings (mockup <code>03-eln-templates</code>)</h3>
+<p>Template list and editor: defaults, permissions, extra-field table with
+add/reorder/edit/delete and group management, optional raw JSON editor
+(jsoneditor). Category and status management per research group with drag to
+reorder. Only group coordinators and superusers manage group settings.</p>
+<h3 id="33-steps">3.3 Steps</h3>
+<p><code>NotebookStepGroup</code> (<code>entry</code> or <code>template</code>, <code>title</code>, <code>ordering</code>) and
+<code>NotebookStep</code> (<code>entry</code> or <code>template</code>, <code>group</code>, <code>body</code>, <code>ordering</code>, <code>is_done</code>,
+<code>done_at</code>, <code>done_by</code>, <code>deadline</code>, <code>notify_deadline</code>). Exactly one of entry or
+template is set (check constraint). Templates copy steps into new entries.
+Management command <code>notify_step_deadlines</code> (cron) emails owners of steps due
+in the next 24 h, once per step. Progress shown in list and view.</p>
+<h3 id="34-entry-links-and-pins">3.4 Entry links and pins</h3>
+<p><code>NotebookEntryLink</code> (<code>entry</code>, <code>linked_entry</code>, <code>created_by</code>, <code>created_at</code>,
+unique pair, no self link) shown in both directions. Pins from 1.6 if not done.</p>
+<h2 id="phase-4-tools">Phase 4 — Tools</h2>
+<h3 id="41-compounds">4.1 Compounds</h3>
+<p><code>Compound</code>: <code>name</code>, <code>iupac_name</code>, <code>molecular_formula</code>, <code>molecular_weight</code>,
+<code>smiles</code>, <code>inchi</code>, <code>inchi_key</code> (unique, nullable), <code>cas_number</code> (unique,
+nullable), <code>pubchem_cid</code> (unique, nullable), optional external IDs (ChEBI,
+ChEMBL, DrugBank, KEGG, Wikidata), and boolean hazard flags (corrosive,
+explosive, flammable, gas under pressure, hazardous to environment, hazardous
+to health, serious health hazard, oxidising, toxic, radioactive, antibiotic,
+antibiotic precursor, drug, drug precursor, explosive precursor, CMR, nano,
+controlled), timestamps, <code>created_by</code>. <code>Chemical.compound</code> FK (nullable) with a
+data migration that matches existing chemicals by CAS. <code>NotebookCompoundLink</code>.
+<code>core/services/pubchem.py</code> imports by CID, CAS or name through the PubChem
+PUG REST API with timeouts and caching, following the style of
+<code>core/services/sample_enrichment/ncbi_taxonomy.py</code>.</p>
+<h3 id="42-structure-editor">4.2 Structure editor</h3>
+<p>Page with Ketcher standalone (served as static files); save as new <code>Compound</code>
+or search existing by exact InChIKey. Optional notebook block type
+<code>chemical_structure</code> storing SMILES and MOL.</p>
+<h3 id="43-inventory">4.3 Inventory</h3>
+<p><code>StorageLocation.capacity</code> (nullable) and <code>StorageLocationMove</code> history
+(location, old parent, new parent, user, date). <code>ChemicalStorageAssignment</code>
+(chemical container → location, quantity, unit) replacing free-text location.
+Capacity check before assigning. Storage tree with occupancy bars and an Excel
+export (openpyxl).</p>
+<h3 id="44-opencloning">4.4 OpenCloning</h3>
+<p>Deployment files: container <code>manulera/opencloning</code> (read-only, no capabilities),
+Apache reverse proxy at <code>/opencloning</code> behind the existing auth guard, feature
+flag <code>BIOBANK_OPENCLONING_ENABLED</code>. Page that embeds it and a save action that
+stores the resulting GenBank as a <code>MolecularSequence</code> linked to an entry.</p>
+<h2 id="phase-5-integrity-and-export">Phase 5 — Integrity and export</h2>
+<h3 id="51-lock-sign-timestamp">5.1 Lock, sign, timestamp</h3>
+<p><code>NotebookSignature</code> (entry, user, meaning approve|review|author, revision,
+content hash, signed_at); signing locks the entry and makes attachments
+immutable. <code>NotebookTimestamp</code> (entry, revision, sha256 of the exported PDF,
+TSA URL, token file, created_at) using an RFC 3161 TSA configured by settings.
+<code>NotebookAttachment.sha256</code> computed on upload.</p>
+<h3 id="52-export-and-import">5.2 Export and import</h3>
+<p>PDF export of an entry (blocks, extra fields, steps, links, signatures).
+<code>.eln</code> export and import (RO-Crate 1.2: <code>ro-crate-metadata.json</code> plus files),
+mapping <code>metadata.extra_fields</code> unchanged so files exchange with eLabFTW.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,718 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Samples, storage, notebook and shipments for research labs">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Per-user Lab Tools storage - B3 LIMS</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#per-user-lab-tools-storage" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="B3 LIMS" class="md-header__button md-logo" aria-label="B3 LIMS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            B3 LIMS
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Per-user Lab Tools storage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/leepusp/b3lims" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="B3 LIMS" class="md-nav__button md-logo" aria-label="B3 LIMS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    B3 LIMS
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/leepusp/b3lims" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install and upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../hpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clusters and Slurm (optional)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/local_install_and_eln_roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ownership-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slurm-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slurm identity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jupyter-node-and-resource-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Jupyter node and resource selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managed-jupyterlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managed JupyterLab
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-artifact-retention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime artifact retention
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="per-user-lab-tools-storage">Per-user Lab Tools storage</h1>
+<p>Biobank keeps institutional inventory metadata and files in PostgreSQL and
+the shared application storage. Personal Lab Tools artifacts are isolated in
+the authenticated Linux user's home, following the deployment pattern used
+for Galaxy real-user storage.</p>
+<h2 id="ownership-model">Ownership model</h2>
+<p>For a Linux user <code>alice</code>, the managed layout is:</p>
+<div class="highlight"><pre><span></span><code>/home/alice/biobank/lab_tools/
+├── eln/entries/&lt;entry-id&gt;/attachments/
+├── jupyter/notebooks/notebook_&lt;notebook-id&gt;/
+├── jupyter/jobs/notebook_&lt;notebook-id&gt;/&lt;run-id&gt;/
+├── molecular/records/                 # reserved for molecular file exports
+├── exports/
+└── tmp/
+</code></pre></div>
+<p>The user and their primary group own these directories and artifacts. Their
+mode is <code>0770</code> for directories and <code>0660</code> for files. A named ACL grants the
+trusted <code>ladmin</code> application account only the access required to serve and
+update the owner's data. No other user receives access.</p>
+<p>PostgreSQL remains the source of truth for object identifiers, ownership,
+visibility, permissions, relationships, audit metadata, and Jupyter session
+state. Inventory/sample uploads remain under <code>MEDIA_ROOT</code>. ELN attachments
+and Jupyter files are never served directly by Apache; authenticated Django
+views enforce object permissions before opening them.</p>
+<h2 id="slurm-identity">Slurm identity</h2>
+<p>The web process does not impersonate a user directly. It invokes two narrowly
+scoped, root-owned helpers through sudo. The Jupyter helper validates the
+Linux account and every path, then invokes both <code>sbatch</code> and <code>scancel</code> through
+<code>runuser</code> as the notebook owner. Consequently, <code>squeue</code> and <code>sacct</code> show the
+real user and use that user's normal Slurm account and limits—not the shared
+<code>biobank</code> account.</p>
+<p>Repository changes, Django checks, migrations, and application tests run as
+<code>ladmin</code>. Root is used only to install the reviewed helpers and sudo policy or
+to repair ownership and ACLs. During a normal launch, Django runs as <code>ladmin</code>,
+the root-owned helper validates the request, and <code>sbatch</code> runs as the notebook
+owner through <code>runuser</code>.</p>
+<h2 id="jupyter-node-and-resource-selection">Jupyter node and resource selection</h2>
+<p>The launch form defaults to <code>Automatic (Slurm decides)</code>. A user may instead
+request one allowlisted compute node: <code>n01</code>, <code>gn01</code>, <code>gn02</code>, or <code>gn03</code>. The
+selection is validated by the Django view, the Jupyter service, and the
+root-owned runner. The runner omits <code>--nodelist</code> for automatic placement and
+adds exactly one validated <code>--nodelist=NODE</code> argument for an explicit choice.</p>
+<p>The application and runner share these limits:</p>
+<ul>
+<li>1–128 CPU cores;</li>
+<li>1024–1048576 MB of memory;</li>
+<li><code>basic</code>: 1–72 hours;</li>
+<li><code>max50</code>: 1–168 hours.</li>
+</ul>
+<p>Slurm remains authoritative for current node state, available resources, and
+partition policy.</p>
+<h2 id="managed-jupyterlab">Managed JupyterLab</h2>
+<p>A running Biobank notebook exposes <strong>Open JupyterLab</strong>. The Notebook and
+JupyterLab interfaces use the same authenticated Slurm allocation,
+Jupyter server, protected node proxy, token and persistent workspace.
+Opening JupyterLab does not submit another job.</p>
+<p>The managed server exposes only the authenticated Linux user's home as
+its file-browser root. It opens initially at
+<code>biobank/lab_tools/jupyter/notebooks/notebook_&lt;id&gt;/notebook.ipynb</code>.
+The <code>/workspace</code> path remains an alias for that notebook workspace.</p>
+<p>When the managed session is stopped, the page offers only <strong>Start managed
+session</strong>. There is no link to a separate Open OnDemand JupyterLab.</p>
+<p>The managed JupyterLab URL must use the protected Biobank node proxy.
+It must never link directly to a compute-node port.</p>
+<h2 id="runtime-artifact-retention">Runtime artifact retention</h2>
+<p><code>jupyter/notebooks/notebook_&lt;id&gt;/</code> is persistent user data.</p>
+<p><code>jupyter/jobs/notebook_&lt;id&gt;/&lt;run_id&gt;/</code> is transient control data. It may
+contain the generated submission script, Slurm output, connection
+metadata and isolated Jupyter runtime directories.</p>
+<p>The protected runner removes a run directory after a terminal status,
+an owner-scoped stop, a failed submission, or an explicit protected
+<code>session-cleanup</code>. Persistent notebook workspaces are not removed by
+session cleanup.</p>
+<p>Although <code>$HOME</code> is the authenticated user's real <code>/home/&lt;username&gt;</code>,
+Jupyter runtime, configuration, data, cache, Matplotlib and IPython
+paths are redirected to <code>/runtime</code>. These artifacts remain transient
+and are removed with the session run directory.</p>
+<h2 id="deployment-order">Deployment order</h2>
+<ol>
+<li>Back up PostgreSQL, the Git candidate, the current Biobank application storage, the current
+   Jupyter runner, and the applicable sudoers files.</li>
+<li>Confirm there are no active legacy Biobank Jupyter jobs. Stop them through
+   the application before changing the runner.</li>
+<li>Have an administrator run <code>deploy/install_lab_tools_home_storage.sh</code> from
+   the reviewed release tree. This is the only step requiring unrestricted
+   root access. It installs the reviewed sandbox runtime under
+   <code>/home/public/apps/biobank/runtime/notebook_server.sh</code>, a root-controlled path
+   shared with every compute node. The application root uses mode <code>2771</code>, the
+   shared runtime directory uses <code>0751</code>, and <code>notebook_server.sh</code> uses <code>0755</code>.
+   This gives authenticated Slurm users execute-only pathname traversal to the
+   shared runtime without granting membership in the <code>biobank</code> Unix group or
+   access to protected application directories such as <code>storage</code>, <code>backups</code>,
+   and <code>logs</code>. A head-node-only path such as <code>/usr/local/libexec</code> must not be
+   written into Slurm job scripts. Installation
+   accepts only the reviewed isolated-runtime SHA-256
+   <code>2e9144ff1591509eb8c8912d0ce655fac9434f7584ab217afd84f6160b2784a1</code>
+   or the current authenticated-home runtime SHA-256
+   <code>9a576f69972add1e9a455e425964be9d4ab711fc734b66eec37fdf622f31ad0f</code>.</li>
+<li>Set <code>BIOBANK_LAB_TOOLS_PROVISION_ON_LOGIN=1</code> in the protected Biobank
+   service environment, deploy the Django source, then run:</li>
+</ol>
+<div class="highlight"><pre><span></span><code>/home/public/conda/envs/biobank/bin/python<span class="w"> </span>manage.py<span class="w"> </span>check
+/home/public/conda/envs/biobank/bin/python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>--check<span class="w"> </span>--dry-run
+/home/public/conda/envs/biobank/bin/python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</code></pre></div>
+<ol>
+<li>Preview and apply legacy ELN attachment copies:</li>
+</ol>
+<div class="highlight"><pre><span></span><code>/home/public/conda/envs/biobank/bin/python<span class="w"> </span>manage.py<span class="w"> </span>migrate_lab_tools_attachments
+/home/public/conda/envs/biobank/bin/python<span class="w"> </span>manage.py<span class="w"> </span>migrate_lab_tools_attachments<span class="w"> </span>--apply
+</code></pre></div>
+<p>Keep the shared sources until backup and user acceptance are complete.
+   Only then rerun with <code>--apply --delete-source</code> if removal is explicitly
+   approved.</p>
+<ol>
+<li>Restart <code>biobank.service</code>, log in as two different real users, and create
+   one ELN attachment and one Jupyter notebook for each user.</li>
+<li>Validate ownership and isolation:</li>
+</ol>
+<div class="highlight"><pre><span></span><code>namei<span class="w"> </span>-l<span class="w"> </span>/home/USER/biobank/lab_tools
+getfacl<span class="w"> </span>-p<span class="w"> </span>/home/USER/biobank/lab_tools
+find<span class="w"> </span>/home/USER/biobank/lab_tools<span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">5</span><span class="w"> </span>-printf<span class="w"> </span><span class="s1">'%M %u:%g %p\n'</span>
+squeue<span class="w"> </span>-o<span class="w"> </span><span class="s1">'%.18i %.12u %.20j %.10T'</span>
+</code></pre></div>
+<p>For Jupyter, test both automatic placement and one explicit node. Confirm
+   that the job owner is the authenticated Linux user and that the selected
+   node appears in <code>squeue</code> after allocation.</p>
+<p>The runner automatically copies an old notebook workspace from the exact
+legacy <code>user_&lt;django-id&gt;_&lt;username&gt;/notebook_&lt;id&gt;</code> directory the first time
+that notebook is started. It does not delete the old workspace.</p>
+<h2 id="rollback">Rollback</h2>
+<p>Stop new Jupyter starts, restore the backed-up helper and sudoers policy,
+restore the application release, and restart <code>biobank.service</code>. Migration
+0066 changes only the Django storage declaration and field length; legacy
+attachment names remain readable, so rolling back does not require moving
+files immediately. Do not delete per-user or legacy data during rollback.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
