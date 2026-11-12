@@ -1,0 +1,36 @@
+# Run Biobank on your own computer or lab server:
+#
+#     BIOBANK_ADMIN_PASSWORD='choose-a-long-password' docker compose up -d
+#
+# Open http://localhost:8000/ and sign in as "admin". Data lives in the `biobank-data` volume.
+# Use PostgreSQL instead of SQLite with:  docker compose --profile postgres up -d
+services:
+  biobank:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      BIOBANK_ADMIN_USER: admin
+      BIOBANK_ADMIN_PASSWORD: ${BIOBANK_ADMIN_PASSWORD:?set BIOBANK_ADMIN_PASSWORD}
+      BIOBANK_ALLOWED_HOSTS: ${BIOBANK_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      BIOBANK_TIME_ZONE: ${BIOBANK_TIME_ZONE:-UTC}
+      # For PostgreSQL uncomment the next line and start with --profile postgres:
+      # BIOBANK_DATABASE_URL: postgres://biobank:biobank@db:5432/biobank
+    volumes:
+      - biobank-data:/data
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: biobank
+      POSTGRES_PASSWORD: biobank
+      POSTGRES_DB: biobank
+    volumes:
+      - biobank-db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  biobank-data:
+  biobank-db:

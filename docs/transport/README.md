@@ -6,7 +6,7 @@ This directory stores the reference documents used to model the shipment, declar
 
 - `source_templates/declarations/`: sender declaration and content declaration.
 - `source_templates/labels/`: external package identification and printable labels.
-- `source_templates/ogm_cibio/`: OGM/CIBio notification forms.
+- `core/resources/transport/ogm_cibio/`: OGM/CIBio notification forms (moved into the package because the application reads them at run time).
 - `source_templates/mta_ttm/`: MTA/TTM and genetic heritage shipment documents.
 - `extracted_structure/`: structured implementation notes derived from the source documents.
 

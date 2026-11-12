@@ -51,7 +51,7 @@ class ShipmentCibioTemplateTests(SimpleTestCase):
         self.assertTrue(template_path.is_file())
         self.assertEqual(template_path.suffix.lower(), ".docx")
         self.assertIn(
-            "docs/transport/source_templates/ogm_cibio",
+            "core/resources/transport/ogm_cibio",
             template_path.as_posix(),
         )
 

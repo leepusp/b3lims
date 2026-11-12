@@ -9,7 +9,6 @@ matplotlib>=3.7
 openpyxl>=3.1
 django-environ>=0.10.0
 django-import-export>=3.0
-django-import-export>=3.0
 django-extensions>=3.2
 djangorestframework>=3.14
 markdown>=3.4
@@ -17,3 +16,5 @@ django-filter>=23.0
 psycopg[binary]==3.3.4
 gunicorn>=23,<24
 bleach>=6.0
+whitenoise>=6.5
+waitress>=3.0

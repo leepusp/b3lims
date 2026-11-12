@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biobank-lims"
+version = "0.1.0"
+description = "Biobank: sample inventory, physical storage, electronic lab notebook and shipments for research labs."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "Framework :: Django",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+dependencies = [
+    "Django>=4.2",
+    "biopython>=1.81",
+    "qrcode>=7.4",
+    "segno==1.6.6",
+    "Pillow>=9.5",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "openpyxl>=3.1",
+    "django-environ>=0.10.0",
+    "django-import-export>=3.0",
+    "django-extensions>=3.2",
+    "djangorestframework>=3.14",
+    "markdown>=3.4",
+    "django-filter>=23.0",
+    "bleach>=6.0",
+    # Used by `biobank-local`: serve the application without a separate web server.
+    "whitenoise>=6.5",
+    "waitress>=3.0",
+]
+
+[project.optional-dependencies]
+# A lab server with PostgreSQL.
+postgres = ["psycopg[binary]>=3.1"]
+# Production behind Apache/Nginx and cluster (HPC/Slurm) deployments.
+hpc = ["gunicorn>=23,<24", "psycopg[binary]>=3.1"]
+
+[project.scripts]
+biobank-local = "biobank.local_cli:main"
+
+[project.urls]
+Homepage = "https://github.com/leepusp/biobank"
+Documentation = "https://github.com/leepusp/biobank/tree/main/docs"
+Issues = "https://github.com/leepusp/biobank/issues"
+
+[tool.setuptools.packages.find]
+include = ["biobank*", "core*", "bench*"]
+
+[tool.setuptools.package-data]
+core = ["interfaces/**/*", "static/**/*", "resources/**/*"]
+bench = ["templates/**/*", "static/**/*"]

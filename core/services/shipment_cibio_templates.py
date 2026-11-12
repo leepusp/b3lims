@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from django.conf import settings
 
 
 @dataclass(frozen=True)
@@ -17,11 +16,11 @@ class CibioTemplate:
     content_type: str
 
 
+# Shipped inside the package so that a pip installation finds the forms.
 CIBIO_TEMPLATE_ROOT = (
-    Path(settings.BASE_DIR)
-    / "docs"
+    Path(__file__).resolve().parent.parent
+    / "resources"
     / "transport"
-    / "source_templates"
     / "ogm_cibio"
 )
 

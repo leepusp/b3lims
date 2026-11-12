@@ -1,0 +1,9 @@
+.git
+.github
+db.sqlite3
+**/__pycache__
+*.pyc
+docs
+deploy
+staticfiles
+media

@@ -1,0 +1,47 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python manage.py test --settings=biobank.test_settings
+
+  install:
+    name: pip install and biobank-local
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - run: |
+          cd "$RUNNER_TEMP"
+          biobank-local --root "$RUNNER_TEMP/lab" setup --non-interactive --admin-password 'ci-password-123'
+          biobank-local --root "$RUNNER_TEMP/lab" doctor
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t biobank .
+      - name: Start the container and open the login page
+        run: |
+          docker run -d --name biobank -p 8000:8000 -e BIOBANK_ADMIN_PASSWORD='ci-password-123' biobank
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/login/ >/dev/null && exit 0
+            sleep 2
+          done
+          docker logs biobank
+          exit 1
