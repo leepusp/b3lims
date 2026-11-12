@@ -149,6 +149,7 @@ from core.views.internal.lab_tools import notebook_templates as notebook_templat
 from core.views.internal.lab_tools import notebook_entry as notebook_entry_views
 from core.views.internal.lab_tools import jupyter as jupyter_views
 from core.views.internal.samples import types as sample_types_views
+from core.views.internal import interface_settings as interface_settings_views
 from core.views.internal.lab_tools import jupyter_sharing as jupyter_sharing_views
 from core.views.internal.lab_tools import submissions as submission_views
 
@@ -324,6 +325,7 @@ urlpatterns = [
     ),
     path("samples/", samples_list_view, name="samples_list"),
     path("samples/types/", sample_types_views.sample_types_view, name="sample_types"),
+    path("interface/", interface_settings_views.interface_settings_view, name="interface_settings"),
     path("samples/types/<int:type_id>/", sample_types_views.sample_types_view, name="sample_type_edit"),
     path("samples/dashboard/", samples_dashboard_view, name="samples_dashboard"),
     path("samples/map/", samples_origin_map_view, name="samples_origin_map"),

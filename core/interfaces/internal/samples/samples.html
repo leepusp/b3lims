@@ -136,11 +136,11 @@
                             <label class="section-label">Sample Type <span class="text-danger">*</span></label>
                             <select class="form-select text-dark fw-bold border-primary-subtle" name="sample_type" id="sampleTypeInput" required>
                                 <option value="" {% if not intake_prefill.sample_type %}selected{% endif %} disabled>Select type...</option>
-                                <option value="Bacterium (Host)" {% if intake_prefill.sample_type == "Bacterium (Host)" %}selected{% endif %}>Bacterium (Host)</option>
-                                <option value="Phage (Virus)" {% if intake_prefill.sample_type == "Phage (Virus)" %}selected{% endif %}>Phage (Virus)</option>
-                                <option value="Plasmid" {% if intake_prefill.sample_type == "Plasmid" %}selected{% endif %}>Plasmid</option>
+                                {% if "Bacterium (Host)" not in ui_hidden_types %}<option value="Bacterium (Host)" {% if intake_prefill.sample_type == "Bacterium (Host)" %}selected{% endif %}>Bacterium (Host)</option>{% endif %}
+                                {% if "Phage (Virus)" not in ui_hidden_types %}<option value="Phage (Virus)" {% if intake_prefill.sample_type == "Phage (Virus)" %}selected{% endif %}>Phage (Virus)</option>{% endif %}
+                                {% if "Plasmid" not in ui_hidden_types %}<option value="Plasmid" {% if intake_prefill.sample_type == "Plasmid" %}selected{% endif %}>Plasmid</option>{% endif %}
                                 {% for ct in custom_sample_types %}<option value="{{ ct.name }}" {% if intake_prefill.sample_type == ct.name %}selected{% endif %}>{{ ct.name }}</option>{% endfor %}
-                                <option value="Other" {% if intake_prefill.sample_type == "Other" %}selected{% endif %}>Other</option>
+                                {% if "Other" not in ui_hidden_types %}<option value="Other" {% if intake_prefill.sample_type == "Other" %}selected{% endif %}>Other</option>{% endif %}
                             </select>
 
                         </div>

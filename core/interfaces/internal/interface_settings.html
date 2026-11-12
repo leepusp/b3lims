@@ -1,0 +1,50 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Interface · {{ org_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 50rem">
+    <h1 class="h3 mb-1"><i class="bi bi-sliders me-2"></i>Interface</h1>
+    <p class="text-muted">
+        Choose what people see in this installation. Untick what your laboratory does not use, for example the
+        microorganism types when you only work with cells, or the modules that need a cluster.
+        Hiding an item only tidies the menu; it is not an access control, and nothing is deleted.
+    </p>
+
+    {% for message in messages %}<div class="alert alert-success">{{ message }}</div>{% endfor %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white fw-semibold">Menu</div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">Workspace and Samples are always shown.</p>
+                {% for key, label, shown in features %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="show_feature" value="{{ key }}" id="f_{{ key }}" {% if shown %}checked{% endif %}>
+                        <label class="form-check-label" for="f_{{ key }}">{{ label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white fw-semibold">Built-in Sample types in the New Sample form</div>
+            <div class="card-body">
+                {% for name, shown in builtin_types %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="show_type" value="{{ name }}" id="t_{{ forloop.counter }}" {% if shown %}checked{% endif %}>
+                        <label class="form-check-label" for="t_{{ forloop.counter }}">{{ name }}</label>
+                    </div>
+                {% endfor %}
+                <p class="small text-muted mt-2 mb-0">
+                    Types you created are managed in <a href="{% url 'sample_types' %}">Sample types</a>{% if custom_types %}
+                    ({{ custom_types|length }} active){% endif %}. Samples already registered keep their type.
+                </p>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save</button>
+    </form>
+</div>
+{% endblock %}

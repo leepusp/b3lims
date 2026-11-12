@@ -48,3 +48,10 @@ The **Lab Calendar** books equipment. **History** lists what was done to samples
 ## Who can see what
 
 Access follows roles at three levels: **biobank** (owner, manager, editor, viewer), **collection** and **research group**. Samples are private until you share them or mark them public. Every file download and export checks permission.
+
+## Making B3 LIMS fit your laboratory
+
+Administrators (users marked as staff) have two pages for this:
+
+- **Sample types** (button on the Samples page): add your own types such as *Cell line* or *Nucleic acid*, each with an ID prefix and its own fields, written one per line (`Passage number | integer | required`). The four built-in types stay available.
+- **Interface** (bottom of the menu): untick the menu items and built-in Sample types your laboratory does not use, for example the microorganism types when you only work with cells. Hiding only tidies the menu; it is not an access control, and nothing is deleted.
