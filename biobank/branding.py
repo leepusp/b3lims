@@ -69,9 +69,38 @@ def about(version=""):
     return "\n".join(lines)
 
 
+DOCS_URL = "https://leepusp.github.io/b3lims/"
+
+QUICKSTART = """\
+How B3 LIMS works
+-----------------
+1. Start it:      biobank-local start          (opens your browser; Ctrl+C in the terminal stops it)
+                  or double-click the "B3 LIMS" shortcut (create it with: biobank-local shortcut)
+2. Sign in:       http://127.0.0.1:8000/ with the administrator you created in the setup.
+3. Register:      Samples -> add samples; Storage -> draw freezers and place samples in boxes.
+4. Record work:   Notebook -> write entries and link them to samples, reagents and files.
+5. Ship:          Shipments -> build a shipment and generate the transport documents.
+6. Look after it: biobank-local backup         (copies the database and uploaded files)
+                  biobank-local doctor         (checks the installation)
+                  biobank-local createuser NAME   (adds an administrator or resets a password)
+
+Your data lives in the data folder chosen in the setup (default ~/.biobank-local); that
+folder is the only thing to back up. Nothing is sent anywhere unless you turn on an online
+integration (see: biobank-local about).
+
+Full manual: {docs}
+"""
+
+
+def quickstart():
+    return QUICKSTART.format(docs=DOCS_URL)
+
+
 HELP_EPILOG = """\
 first time:     biobank-local setup            (add --demo to load a fictional lab)
-every day:      biobank-local run
+every day:      biobank-local start            (opens the browser; or: biobank-local run)
+icon:           biobank-local shortcut         (desktop / menu launcher)
+manual:         biobank-local manual
 upgrading:      biobank-local migrate
 safety:         biobank-local backup
 more:           biobank-local about            (purpose, integrations, what is planned)

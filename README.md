@@ -99,6 +99,9 @@ python manage.py test --settings=biobank.test_settings    # about a minute
 
 | Command | What it does |
 |---|---|
+| `biobank-local start` | Start the application and open the browser (`run` starts it without opening) |
+| `biobank-local shortcut` | Create a desktop / menu icon that starts B3 LIMS |
+| `biobank-local manual` | Short guide to using B3 LIMS |
 | `biobank-local run` | Start the application (add `--host 0.0.0.0` to let other computers in your network open it) |
 | `biobank-local backup` | Archive the database folder, uploaded files and settings |
 | `biobank-local migrate` | Update the database after installing a newer version |

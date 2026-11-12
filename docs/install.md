@@ -21,10 +21,10 @@ The automated tests run on Linux. On Windows, use Docker Desktop or WSL 2; a pla
 ```bash
 pipx install "git+https://github.com/leepusp/b3lims.git"
 biobank-local setup
-biobank-local run
+biobank-local start
 ```
 
-`pipx` keeps B3 LIMS in its own environment (`pip install` into a virtual environment works too). `setup` asks four questions:
+`start` opens your browser. `pipx` keeps B3 LIMS in its own environment (`pip install` into a virtual environment works too). `setup` asks four questions:
 
 1. **Data folder** (default `~/.biobank-local`): the database, uploaded files, backups and `config.env` live here. It is the only folder you need to back up.
 2. **Database**: SQLite (one file, best for one person or a small lab) or PostgreSQL (a lab server with many users).
@@ -32,6 +32,19 @@ biobank-local run
 4. **Network**: whether other computers will open the installation, and the time zone.
 
 To script it, use `biobank-local setup --non-interactive --admin-user NAME --admin-password SECRET` (`--database-url`, `--allowed-hosts`, `--time-zone`, `--demo` are also available).
+
+Without administrator rights (no `sudo`, so no pipx)? Install into your own folder instead:
+
+```bash
+python3 -m venv ~/b3lims-env
+~/b3lims-env/bin/pip install "git+https://github.com/leepusp/b3lims.git"
+~/b3lims-env/bin/biobank-local setup
+~/b3lims-env/bin/biobank-local start
+```
+
+**An icon to click:** `setup` offers to create one; later, run `biobank-local shortcut`. It puts a "B3 LIMS" launcher on the Desktop (and in the application menu on Linux) that starts the program and opens the browser. **A short guide:** `biobank-local manual` prints how B3 LIMS works; `biobank-local manual --open` also opens this documentation.
+
+If you cannot sign in, `biobank-local createuser NAME` sets a new password for that administrator.
 
 ## Option 2: Docker Compose
 

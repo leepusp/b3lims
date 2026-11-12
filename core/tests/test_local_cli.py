@@ -46,7 +46,7 @@ class LocalInstallTests(TestCase):
         done = self.first
 
         self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertIn("biobank-local run", done.stdout)
+        self.assertIn("biobank-local start", done.stdout)
         config = (self.root / "config.env").read_text()
         self.assertIn("BIOBANK_SECRET_KEY=", config)
         self.assertIn("BIOBANK_TIME_ZONE=America/Sao_Paulo", config)
@@ -84,6 +84,7 @@ class LocalInstallTests(TestCase):
             "",               # e-mail
             "n",              # single computer
             "UTC",            # time zone
+            "n",              # no shortcut
         ]) + "\n"
         done = subprocess.run(
             [sys.executable, "-c",
@@ -131,6 +132,50 @@ class LocalInstallTests(TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("up to date", done.stdout)
         self.assertEqual(cli(Path(self.tmp.name) / "none", "migrate").returncode, 2)
+
+
+class ShortcutAndManualTests(TestCase):
+    def test_password_must_be_typed_twice_the_same(self):
+        from unittest import mock
+
+        from biobank import local_cli
+
+        passwords = iter(["first-pass-1", "other-pass-2", "right-pass-3", "right-pass-3"])
+
+        with mock.patch.object(local_cli.getpass, "getpass", lambda prompt="": next(passwords)):
+            args = local_cli.build_parser().parse_args(["--root", "/tmp/unused-b3", "setup"])
+            answers = iter(["", "1", "ana", "", "n", "UTC"])
+            result = local_cli.collect_answers(args, input_fn=lambda prompt="": next(answers))
+
+        self.assertEqual(result["admin_password"], "right-pass-3")
+
+    def test_shortcut_points_at_the_start_command(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from biobank import local_cli
+
+        with tempfile.TemporaryDirectory() as home, mock.patch.object(Path, "home", return_value=Path(home)):
+            (Path(home) / "Desktop").mkdir()
+            made = local_cli.create_shortcuts(Path(home) / "data")
+
+            self.assertTrue(made)
+            self.assertIn(" start", made[0].read_text())
+
+    def test_manual_prints_the_steps(self):
+        import io
+        from contextlib import redirect_stdout
+
+        from biobank import local_cli
+
+        out = io.StringIO()
+
+        with redirect_stdout(out):
+            self.assertEqual(local_cli.main(["manual"]), 0)
+
+        self.assertIn("biobank-local start", out.getvalue())
+        self.assertIn("backup", out.getvalue())
 
 
 class BrandingTests(TestCase):
