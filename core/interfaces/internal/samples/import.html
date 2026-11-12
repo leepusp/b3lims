@@ -34,102 +34,72 @@
                     <strong>Upload table</strong>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <a
-                            href="{% url 'export_samples_csv' %}?schema=template&amp;format=xlsx"
-                            class="btn btn-outline-primary w-100"
-                        >
-                            <i class="bi bi-file-earmark-spreadsheet me-1"></i>
-                            Download official import template (.xlsx)
-                        </a>
-                        <div class="form-text">
-                            Use this template when requesting Sample
-                            information from external collaborators.
-                        </div>
-                    </div>
+                    <form id="templateForm" method="get" action="{% url 'export_samples_csv' %}" class="border rounded p-3 mb-3">
+                        <input type="hidden" name="schema" value="template">
+                        <input type="hidden" name="preset" id="templatePreset" value="">
 
-                    <div class="border rounded p-3 mb-3">
-                        <div class="fw-semibold small mb-2">
-                            Preconfigured institutional template
-                        </div>
-
-                        <form
-                            method="get"
-                            action="{% url 'export_samples_csv' %}"
-                        >
-                            <input
-                                type="hidden"
-                                name="schema"
-                                value="template"
-                            >
-                            <input
-                                type="hidden"
-                                name="format"
-                                value="xlsx"
-                            >
-                            <input
-                                type="hidden"
-                                name="preset"
-                                value="1"
-                            >
-
-                            <div class="mb-2">
-                                <label class="form-label small">
-                                    Biobank
+                        <div class="fw-semibold small mb-2">1. Choose the Sample type</div>
+                        <div class="row g-2 mb-3" id="templateTypes">
+                            {% for slug, label, hint in template_types %}
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="type" id="tt-{{ slug }}" value="{{ slug }}" {% if forloop.first %}checked{% endif %}>
+                                    <label class="btn btn-outline-primary btn-sm w-100 text-start h-100" for="tt-{{ slug }}">
+                                        <span class="fw-semibold d-block">{{ label }}</span>
+                                        <span class="small d-block opacity-75">{{ hint }}</span>
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            <div class="col-12">
+                                <input type="radio" class="btn-check" name="type" id="tt-all" value="">
+                                <label class="btn btn-outline-secondary btn-sm w-100 text-start" for="tt-all">
+                                    <span class="fw-semibold d-block">All types in one table</span>
+                                    <span class="small d-block opacity-75">Every column; the sample_type of each row decides which apply.</span>
                                 </label>
-
-                                <select
-                                    name="biobank_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">
-                                        No predefined Biobank
-                                    </option>
-
-                                    {% for biobank in template_biobanks %}
-                                        <option value="{{ biobank.pk }}">
-                                            {{ biobank.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
                             </div>
+                        </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small">
-                                    Collection
-                                </label>
+                        <div class="fw-semibold small mb-2">2. Prefill (optional)</div>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Biobank</label>
+                            <select name="biobank_id" class="form-select form-select-sm">
+                                <option value="">No predefined Biobank</option>
+                                {% for biobank in template_biobanks %}
+                                    <option value="{{ biobank.pk }}">{{ biobank.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small mb-1">Collection</label>
+                            <select name="collection_id" class="form-select form-select-sm">
+                                <option value="">No predefined Collection</option>
+                                {% for collection in template_collections %}
+                                    <option value="{{ collection.pk }}">{{ collection.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-                                <select
-                                    name="collection_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">
-                                        No predefined Collection
-                                    </option>
-
-                                    {% for collection in template_collections %}
-                                        <option value="{{ collection.pk }}">
-                                            {{ collection.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="btn btn-outline-secondary btn-sm w-100"
-                            >
+                        <div class="fw-semibold small mb-2">3. Download</div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="format" value="xlsx" class="btn btn-primary btn-sm flex-grow-1">
                                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>
-                                Download preconfigured template
+                                Download official import template (.xlsx)
                             </button>
-                        </form>
-
-                        <div class="form-text mt-2">
-                            Only authorized Biobanks and Collections
-                            are offered. Unused prefilled rows are
-                            ignored when the table is uploaded.
+                            <button type="submit" name="format" value="csv" class="btn btn-outline-secondary btn-sm">CSV</button>
                         </div>
-                    </div>
+                        <div class="form-text mt-2">
+                            The Excel file has drop-down lists, number and date checks, an example sheet and a field dictionary.
+                            Only authorized Biobanks and Collections are offered. Unused prefilled rows are ignored on upload.
+                            Send it to external collaborators to collect Sample information.
+                        </div>
+                    </form>
+                    <script>
+                        document.getElementById("templateForm").addEventListener("submit", function (e) {
+                            const f = e.currentTarget;
+                            f.elements.preset.value = (f.elements.biobank_id.value || f.elements.collection_id.value) ? "1" : "";
+                            if (!f.elements.preset.value) { f.elements.preset.disabled = true; f.elements.biobank_id.disabled = true; f.elements.collection_id.disabled = true; }
+                            setTimeout(function () { Array.from(f.elements).forEach(function (el) { el.disabled = false; }); }, 400);
+                        });
+                    </script>
 
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
@@ -138,7 +108,7 @@
                             <label class="form-label small fw-bold">CSV or Excel file</label>
                             <input type="file" name="sample_table" class="form-control" accept=".csv,.tsv,.txt,.xlsx,.xls" required>
                             <div class="form-text">
-                                Accepted columns include sample_id, sample_type, organism_name, biobank, collection and storage_location.
+                                Use a template above: its column names are recognised exactly, numbers and lists are checked per Sample type, and unknown columns are reported and ignored.
                             </div>
                         </div>
 

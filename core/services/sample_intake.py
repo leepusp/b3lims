@@ -4,6 +4,7 @@ from django.db import transaction
 
 from core.models import Biobank, Collection, Sample
 from core.models.samples.intake import SampleIntakeRecord
+from core.services import sample_tables
 
 
 COLUMN_ALIASES = {
@@ -17,6 +18,7 @@ COLUMN_ALIASES = {
     "research_group": ["research_group", "grupo", "laboratorio", "laboratório"],
     "is_public": ["is_public", "public", "visibilidade"],
     "scientific_notes": ["scientific_notes", "notes", "observations", "observacoes", "observações"],
+    "biosafety_level": ["biosafety_level", "biosafety", "nivel_biosseguranca", "nível_biossegurança"],
 
     # Future movement/receipt metadata.
     "intake_type": ["intake_type", "movement_type", "tipo_recebimento"],
@@ -32,6 +34,7 @@ COLUMN_ALIASES = {
     "strain": ["strain", "linhagem"],
     "genotype": ["genotype", "genotipo", "genótipo"],
     "resistance_markers": ["resistance_markers", "resistance", "marcadores_resistencia"],
+    "isolation_source": ["isolation_source", "source", "origem_isolamento"],
 
     # Phage.
     "phage_name": ["phage_name", "fago", "phage"],
@@ -40,6 +43,9 @@ COLUMN_ALIASES = {
     "lifestyle": ["lifestyle", "ciclo"],
     "genome_type": ["genome_type", "tipo_genoma"],
     "genome_size_bp": ["genome_size_bp", "genome_size", "tamanho_genoma"],
+    "isolation_method": ["isolation_method", "metodo_isolamento"],
+    "temp_C": ["temp_C", "temp_c", "growth_temperature"],
+    "ncbi_accession": ["ncbi_accession", "genbank", "accession"],
 
     # Plasmid.
     "backbone_name": ["backbone_name", "backbone", "vector", "vetor"],
@@ -47,6 +53,10 @@ COLUMN_ALIASES = {
     "origin_of_replication": ["origin_of_replication", "origin", "ori"],
     "backbone_size_bp": ["backbone_size_bp", "backbone_size"],
     "is_empty_vector": ["is_empty_vector", "empty_vector"],
+    "induction_system": ["induction_system", "inducao", "indução"],
+    "backbone_resistance_markers": ["backbone_resistance_markers", "backbone_resistance"],
+    "insert_resistance_markers": ["insert_resistance_markers", "insert_resistance"],
+    "purpose": ["purpose", "finalidade"],
     "insert_name": ["insert_name", "insert", "inserto"],
     "insert_size_bp": ["insert_size_bp", "insert_size"],
     "construction_name": ["construction_name", "construct", "construcao", "construção"],
@@ -195,7 +205,7 @@ def import_sample_table(batch):
         preset_columns = {
             original_col
             for canonical, original_col in column_map.items()
-            if canonical in {"biobank", "collection"}
+            if canonical in {"biobank", "collection", "sample_type"}
         }
 
         # Ignore untouched rows of a preconfigured template.
@@ -280,6 +290,28 @@ def import_sample_table(batch):
                 "Missing organism_name or subtype identification."
             )
 
+        # Type-aware check of every typed column: numbers, yes/no, dates, lists and fixed vocabularies.
+        specs = sample_tables.by_key()
+        own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set(specs)
+
+        for key in list(normalized):
+            spec = specs.get(key)
+
+            if spec is None or key in {"sample_type", "biobank", "collection", "is_public"} or not normalized[key]:
+                continue
+
+            if key not in own:
+                warnings.append(f"{key} does not apply to {sample_type} and will be ignored.")
+                normalized[key] = ""
+
+                continue
+
+            value, problem = sample_tables.normalize_value(spec, normalized[key])
+            normalized[key] = value
+
+            if problem:
+                errors.append(problem)
+
         visibility = normalized.get(
             "is_public", ""
         ).strip().casefold()
@@ -348,10 +380,16 @@ def import_sample_table(batch):
             "before uploading the template."
         )
 
+    known = set(column_map.values())
+    ignored = [str(c) for c in df.columns if c not in known and str(c).strip()]
+
+    if ignored:
+        batch.notes = ("Columns not recognised and ignored: " + ", ".join(ignored))[:500]
+
     batch.total_rows = total
     batch.valid_rows = valid
     batch.invalid_rows = invalid
     batch.status = "validated"
-    batch.save(update_fields=["total_rows", "valid_rows", "invalid_rows", "status", "updated_at"])
+    batch.save(update_fields=["total_rows", "valid_rows", "invalid_rows", "status", "notes", "updated_at"])
 
     return batch

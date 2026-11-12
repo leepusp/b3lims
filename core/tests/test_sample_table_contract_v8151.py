@@ -213,9 +213,10 @@ class OfficialTemplateV8151Tests(TestCase):
             workbook.sheetnames,
             [
                 "samples",
+                "example",
                 "field_dictionary",
-                "allowed_values",
                 "instructions",
+                "lists",
             ],
         )
 

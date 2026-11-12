@@ -4317,6 +4317,14 @@ def samples_network_view(request):
 
 
 # === SAMPLE INTAKE IMPORT VIEWS ===
+TEMPLATE_TYPES = [
+    ("bacterium", "Bacterium (Host)", "Genus, species, strain, resistance"),
+    ("phage", "Phage (Virus)", "Morphotype, lifestyle, genome, host"),
+    ("plasmid", "Plasmid", "Backbone, insert, markers, sizes"),
+    ("other", "Other", "Identification and logistics only"),
+]
+
+
 @login_required
 def sample_import_view(request):
     """
@@ -4416,6 +4424,7 @@ def sample_import_view(request):
         "records": [],
     })
 
+    ctx["template_types"] = TEMPLATE_TYPES
     ctx["template_biobanks"] = (
         editable_biobanks_for_user(request.user)
         .order_by("name")
@@ -4446,6 +4455,7 @@ def sample_import_batch_detail_view(request, batch_id):
         "selected_batch": batch,
         "records": batch.records.select_related("matched_biobank", "matched_collection", "sample").all(),
     })
+    ctx["template_types"] = TEMPLATE_TYPES
     ctx["template_biobanks"] = (
         editable_biobanks_for_user(request.user)
         .order_by("name")

@@ -78,6 +78,10 @@ def _stringify(value):
         return ""
     if hasattr(value, "isoformat"):
         return value.isoformat()
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, tuple)):
+        return ", ".join(str(item) for item in value)
     return str(value)
 
 
@@ -154,6 +158,9 @@ def _sample_to_row(sample, schema="standard"):
         "status": _field(sample, "status"),
         "biobank": _field(getattr(sample, "biobank", None), "name"),
         "collections": _many_to_text(sample, "collections"),
+        "collection": _many_to_text(sample, "collections"),
+        "research_group": _field(getattr(sample, "research_group", None), "name"),
+        "biosafety_level": _field(sample, "biosafety_level"),
         "storage_location": _field(sample, "storage_location"),
         "provider": _field(getattr(sample, "owner", None), "username"),
         "is_public": _field(sample, "is_public"),
@@ -572,15 +579,47 @@ def export_samples_table(request):
                     content_type="text/plain",
                 )
 
-        return _export_import_template(
+        from core.permissions.biobanks import editable_biobanks_for_user
+        from core.permissions.samples import editable_sample_collections_for_user
+        from core.services import sample_tables, sample_template
+
+        sample_type = sample_tables.TYPE_SLUGS.get(params.get("type", "").strip().lower())
+
+        if params.get("type", "").strip() and sample_type is None:
+            return HttpResponse(
+                "Unknown Sample type for this template.",
+                status=400,
+                content_type="text/plain",
+            )
+
+        def names(queryset):
+            return list(
+                queryset.filter(is_active=True).order_by("name").values_list("name", flat=True)
+            )
+
+        return sample_template.template_response(
             file_format,
+            sample_type=sample_type,
             presets=presets,
+            biobanks=names(editable_biobanks_for_user(request.user)),
+            collections=names(editable_sample_collections_for_user(request.user)),
         )
 
     if schema not in ["standard", "full"]:
         schema = "standard"
 
+    from core.services import sample_tables
+
+    typed = sample_tables.TYPE_SLUGS.get(
+        params.get("sample_type", "").strip().lower(),
+        params.get("sample_type", "").strip(),
+    )
+    typed = typed if typed in sample_tables.SAMPLE_TYPES else None
+
     columns = list(STANDARD_COLUMNS)
+    if typed and schema == "standard":
+        # One Sample type: exactly the columns of its import template, so the file can be edited and imported again.
+        columns = [c.key for c in sample_tables.columns_for(typed)]
     if schema == "full":
         columns = FULL_EXTRA_COLUMNS + columns
 
@@ -641,9 +680,12 @@ def export_samples_table(request):
 
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="samples")
+            specs = sample_tables.by_key()
             pd.DataFrame({
                 "field": columns,
-                "description": [_field_description(col) for col in columns],
+                "data type": [sample_tables.type_label(specs[c]) if c in specs else "" for c in columns],
+                "allowed values": [", ".join(specs[c].choices) if c in specs else "" for c in columns],
+                "description": [specs[c].help if c in specs and specs[c].help else _field_description(c) for c in columns],
             }).to_excel(writer, index=False, sheet_name="schema")
 
         response = HttpResponse(
