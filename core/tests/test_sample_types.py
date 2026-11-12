@@ -130,3 +130,74 @@ class FieldTableEditorTests(TestCase):
         edit = self.client.get(reverse("sample_type_edit", args=[kind.pk]))
         self.assertContains(edit, 'value="Grade"')
         self.assertContains(edit, 'value="I, II, III"')
+
+
+class SampleTypeImportExportTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.admin = get_user_model().objects.create_user("boss4", password="pw-12345678", is_staff=True)
+        self.kind = SampleType.objects.create(
+            name="Cell line", slug="cell-line", id_prefix="CEL-", has_organism=True,
+            fields=sample_types.parse_fields(FIELDS),
+        )
+        self.client.force_login(self.admin)
+
+    def test_reserved_field_names_are_refused(self):
+        self.client.post(reverse("sample_types"), {"name": "Tissue", "fields": "Genus | text\nSpecies | text"})
+
+        self.assertFalse(SampleType.objects.filter(name="Tissue").exists())
+
+    def test_the_template_for_the_type_has_its_columns(self):
+        from core.services import sample_tables
+
+        keys = [c.key for c in sample_tables.columns_for("Cell line")]
+
+        self.assertIn("passage_number", keys)
+        self.assertIn("mycoplasma_status", keys)
+        self.assertNotIn("genus", keys)
+        self.assertEqual(sample_tables.type_for_slug("cell-line"), "Cell line")
+        self.assertEqual(sample_tables.prefix_of("Cell line"), "CEL-")
+
+        response = self.client.get(reverse("export_samples_csv"), {"schema": "template", "type": "cell-line", "format": "csv"})
+        header = response.content.decode().splitlines()[0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("passage_number", header)
+
+    def test_an_uploaded_table_is_validated_with_the_type_columns(self):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        good = (
+            "sample_id,sample_type,organism_name,passage_number,mycoplasma_status\n"
+            "CEL-1,Cell line,HEK293,5,negative\n"
+            "CEL-2,Cell line,HeLa,abc,negative\n"
+        )
+        done = self.client.post(
+            reverse("samples_import"),
+            {"sample_table": SimpleUploadedFile("cells.csv", good.encode(), content_type="text/csv")},
+        )
+
+        self.assertIn(done.status_code, (200, 302))
+
+        from core.models.samples.intake import SampleIntakeRecord
+
+        rows = {r.imported_sample_id: r for r in SampleIntakeRecord.objects.all()}
+
+        self.assertEqual(rows["CEL-1"].validation_errors, [])
+        self.assertEqual(rows["CEL-1"].normalized_data["passage_number"], "5")
+        self.assertTrue(any("passage_number" in e for e in rows["CEL-2"].validation_errors))
+
+    def test_export_includes_the_extra_fields(self):
+        Sample.objects.create(
+            sample_id="CEL-7", sample_type="Cell line", organism_name="HEK293", owner=self.admin,
+            type_data={"passage_number": 7, "mycoplasma_status": "negative"}, is_active=True, status="available",
+        )
+        response = self.client.get(reverse("export_samples_csv"), {"schema": "standard", "sample_type": "Cell line", "format": "csv"})
+        text = response.content.decode()
+
+        self.assertIn("passage_number", text.splitlines()[0])
+        self.assertIn("negative", text)

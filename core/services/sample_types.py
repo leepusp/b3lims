@@ -47,6 +47,16 @@ def id_prefixes():
     return {t.name: t.id_prefix for t in custom_types()}
 
 
+def reserved_keys():
+    """Names a custom field may not use because a built-in column already means something else."""
+    from core.services import sample_tables
+    from core.services.sample_intake import COLUMN_ALIASES
+
+    builtin = sample_tables.COMMON + sample_tables.BACTERIUM_COLUMNS + sample_tables.PHAGE_COLUMNS + sample_tables.PLASMID_COLUMNS
+
+    return {c.key for c in builtin} | set(COLUMN_ALIASES) | {"collection", "collections", "status", "tags", "keywords", "notes"}
+
+
 def parse_fields(text):
     """Turn the lines typed by an administrator into the stored field list; raise SampleTypeError on a mistake."""
     fields, seen = [], set()

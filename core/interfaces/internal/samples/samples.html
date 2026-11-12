@@ -1,5 +1,6 @@
 {% extends "internal/common/base.html" %}
 {% load static %}
+{% load biobank_extras %}
 
 {% block title %}New Sample · B3 LIMS
 {% endblock %}
@@ -354,7 +355,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="small fw-bold text-dark">{% if ct.has_organism %}Organism / material name{% else %}Name{% endif %} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="custom_type_name" disabled>
+                            <input type="text" class="form-control" name="custom_type_name" value="{{ intake_prefill.organism_name }}" disabled>
                         </div>
                         {% for f in ct.fields %}
                         <div class="col-md-6">
@@ -362,14 +363,14 @@
                             {% if f.kind == "choice" %}
                                 <select class="form-select" name="tf_{{ f.key }}" disabled>
                                     <option value="">Select...</option>
-                                    {% for c in f.choices %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                                    {% for c in f.choices %}<option value="{{ c }}" {% if intake_prefill|get_item:f.key == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
                                 </select>
                             {% elif f.kind == "boolean" %}
                                 <select class="form-select" name="tf_{{ f.key }}" disabled>
                                     <option value="">Not set</option><option value="true">Yes</option><option value="false">No</option>
                                 </select>
                             {% else %}
-                                <input class="form-control" name="tf_{{ f.key }}" disabled
+                                <input class="form-control" name="tf_{{ f.key }}" value="{{ intake_prefill|get_item:f.key }}" disabled
                                        type="{% if f.kind == 'date' %}date{% else %}text{% endif %}"
                                        {% if f.kind == 'integer' %}inputmode="numeric"{% elif f.kind == 'decimal' %}inputmode="decimal"{% endif %}>
                             {% endif %}

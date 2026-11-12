@@ -32,6 +32,13 @@ def sample_types_view(request, type_id=None):
                 raise sample_types.SampleTypeError(f"A type called '{name}' already exists.")
 
             fields = sample_types.parse_fields(request.POST.get("fields", ""))
+            clash = sorted({f["key"] for f in fields} & sample_types.reserved_keys())
+
+            if clash:
+                raise sample_types.SampleTypeError(
+                    "These field names are already used by built-in columns: " + ", ".join(clash) + ". Use another name."
+                )
+
             prefix = (request.POST.get("id_prefix") or "SMP-").strip().upper()[:12]
             obj = editing or SampleType(name=name)
             obj.name = name

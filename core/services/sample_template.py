@@ -22,7 +22,7 @@ NUMBER_FORMATS = {tables.TEXT: "@", tables.INTEGER: "0", tables.DECIMAL: "0.0##"
 
 
 def filename_for(sample_type, preconfigured: bool) -> str:
-    slug = tables.SLUG_OF.get(sample_type, "all_types")
+    slug = tables.slug_of(sample_type)
 
     return f"b3lims_import_{slug}" + ("_preconfigured" if preconfigured else "")
 
@@ -32,7 +32,7 @@ def prefilled(columns, sample_type, presets) -> dict:
 
     if sample_type:
         values["sample_type"] = sample_type
-        values["sample_id"] = tables.ID_PREFIXES[sample_type]
+        values["sample_id"] = tables.prefix_of(sample_type)
 
     return {c.key: values.get(c.key, "") for c in columns}
 

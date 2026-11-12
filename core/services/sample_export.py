@@ -171,6 +171,7 @@ def _sample_to_row(sample, schema="standard"):
     }
 
     row.update(subtype_data)
+    row.update({k: _stringify(v) for k, v in (getattr(sample, "type_data", None) or {}).items()})
 
     if schema == "full":
         row.update({
@@ -583,7 +584,7 @@ def export_samples_table(request):
         from core.permissions.samples import editable_sample_collections_for_user
         from core.services import sample_tables, sample_template
 
-        sample_type = sample_tables.TYPE_SLUGS.get(params.get("type", "").strip().lower())
+        sample_type = sample_tables.type_for_slug(params.get("type", ""))
 
         if params.get("type", "").strip() and sample_type is None:
             return HttpResponse(
@@ -610,11 +611,8 @@ def export_samples_table(request):
 
     from core.services import sample_tables
 
-    typed = sample_tables.TYPE_SLUGS.get(
-        params.get("sample_type", "").strip().lower(),
-        params.get("sample_type", "").strip(),
-    )
-    typed = typed if typed in sample_tables.SAMPLE_TYPES else None
+    typed = sample_tables.type_for_slug(params.get("sample_type", "")) or params.get("sample_type", "").strip()
+    typed = typed if typed in sample_tables.all_type_names() else None
 
     columns = list(STANDARD_COLUMNS)
     if typed and schema == "standard":

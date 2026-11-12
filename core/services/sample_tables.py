@@ -104,14 +104,83 @@ PLASMID_COLUMNS = [
 SPECIFIC = {BACTERIUM: BACTERIUM_COLUMNS, PHAGE: PHAGE_COLUMNS, PLASMID: PLASMID_COLUMNS, OTHER: []}
 
 
+_CUSTOM_KINDS = {"text": TEXT, "integer": INTEGER, "decimal": DECIMAL, "boolean": BOOLEAN, "choice": CHOICE, "date": DATE}
+
+
+def custom_types() -> list:
+    """Active Sample types the installation added (see ``core.services.sample_types``)."""
+    from core.services import sample_types
+
+    return list(sample_types.custom_types())
+
+
+def all_type_names() -> list[str]:
+    return SAMPLE_TYPES[:3] + [t.name for t in custom_types()] + [OTHER]
+
+
+def slug_of(name: str | None) -> str:
+    if name in SLUG_OF:
+        return SLUG_OF[name]
+
+    kind = next((t for t in custom_types() if t.name == name), None)
+
+    return kind.slug if kind else "all_types"
+
+
+def type_for_slug(slug: str):
+    slug = (slug or "").strip().lower()
+
+    if slug in TYPE_SLUGS:
+        return TYPE_SLUGS[slug]
+
+    kind = next((t for t in custom_types() if t.slug == slug), None)
+
+    return kind.name if kind else None
+
+
+def prefix_of(name: str | None) -> str:
+    if name in ID_PREFIXES:
+        return ID_PREFIXES[name]
+
+    kind = next((t for t in custom_types() if t.name == name), None)
+
+    return kind.id_prefix if kind else "SMP-"
+
+
+def all_prefixes() -> set[str]:
+    return set(ID_PREFIXES.values()) | {t.id_prefix for t in custom_types()}
+
+
+def custom_columns(kind) -> list[Column]:
+    return [
+        Column(
+            f["key"], BIO, _CUSTOM_KINDS.get(f.get("kind", "text"), TEXT), required=bool(f.get("required")),
+            choices=tuple(f.get("choices") or ()), help=f["label"], width=22,
+        )
+        for f in (kind.fields or [])
+    ]
+
+
+def _with_dynamic_types(columns: list[Column]) -> list[Column]:
+    from dataclasses import replace
+
+    return [replace(c, choices=tuple(all_type_names())) if c.key == "sample_type" else c for c in columns]
+
+
 def columns_for(sample_type: str | None) -> list[Column]:
     """Columns of the template of one Sample type; every type at once for ``None``."""
     if sample_type in SPECIFIC:
-        return COMMON + SPECIFIC[sample_type]
+        return _with_dynamic_types(COMMON + SPECIFIC[sample_type])
 
+    kind = next((t for t in custom_types() if t.name == sample_type), None) if sample_type else None
+
+    if kind is not None:
+        return _with_dynamic_types(COMMON + custom_columns(kind))
+
+    extra = [c for t in custom_types() for c in custom_columns(t)]
     seen, merged = set(), []
 
-    for column in COMMON + BACTERIUM_COLUMNS + PHAGE_COLUMNS + PLASMID_COLUMNS:
+    for column in _with_dynamic_types(COMMON) + BACTERIUM_COLUMNS + PHAGE_COLUMNS + PLASMID_COLUMNS + extra:
         if column.key not in seen:
             seen.add(column.key)
             merged.append(column)

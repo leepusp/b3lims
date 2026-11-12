@@ -119,6 +119,11 @@ def _build_column_map(columns):
                 result[canonical] = normalized_columns[normalized_alias]
                 break
 
+    # Columns of the Sample types this installation defined.
+    for column in sample_tables.columns_for(None):
+        if column.key not in result and column.key not in COLUMN_ALIASES and column.key in normalized_columns:
+            result[column.key] = normalized_columns[column.key]
+
     return result
 
 
@@ -191,7 +196,7 @@ def evaluate_row(normalized, seen_sample_ids):
 
     if not sample_type:
         errors.append("Missing sample_type.")
-    elif sample_type not in ["Bacterium (Host)", "Phage (Virus)", "Plasmid", "Other"]:
+    elif sample_type not in sample_tables.all_type_names():
         errors.append(
             f"Unsupported sample_type: {sample_type}"
         )
@@ -230,7 +235,7 @@ def evaluate_row(normalized, seen_sample_ids):
 
     # Type-aware check of every typed column: numbers, yes/no, dates, lists and fixed vocabularies.
     specs = sample_tables.by_key()
-    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set(specs)
+    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.all_type_names() else set(specs)
 
     for key in list(normalized):
         spec = specs.get(key)
@@ -332,7 +337,7 @@ def import_sample_table(batch):
 
         # An ID that is only the type prefix (BAC-, PHA-, ...) is a template placeholder, not an identifier.
         id_column = column_map.get("sample_id")
-        bare_id = bool(id_column) and raw_data.get(id_column, "").strip() in set(sample_tables.ID_PREFIXES.values())
+        bare_id = bool(id_column) and raw_data.get(id_column, "").strip() in sample_tables.all_prefixes()
 
         if bare_id:
             preset_columns.add(id_column)
@@ -432,7 +437,7 @@ def update_intake_record(record, values):
     batch = record.batch
     submitted = {k: str(v).strip() for k, v in values.items()}
     sample_type = _canonical_type(submitted.get("sample_type", record.sample_type or ""))
-    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.SAMPLE_TYPES else set()
+    own = {c.key for c in sample_tables.columns_for(sample_type)} if sample_type in sample_tables.all_type_names() else set()
     normalized = dict(record.normalized_data or {})
 
     for key in sample_tables.by_key():

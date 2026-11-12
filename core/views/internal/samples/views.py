@@ -4343,6 +4343,14 @@ TEMPLATE_TYPES = [
 ]
 
 
+def _template_types():
+    """Choices of the import-template screen: the built-in types plus the ones this installation defined."""
+    custom = [(k.slug, k.name, ", ".join(f["label"] for f in (k.fields or [])[:4]) or "Identification and logistics")
+              for k in custom_sample_types.custom_types()]
+
+    return TEMPLATE_TYPES[:3] + custom + TEMPLATE_TYPES[3:]
+
+
 @login_required
 def sample_import_view(request):
     """
@@ -4442,7 +4450,7 @@ def sample_import_view(request):
         "records": [],
     })
 
-    ctx["template_types"] = TEMPLATE_TYPES
+    ctx["template_types"] = _template_types()
     ctx["template_biobanks"] = (
         editable_biobanks_for_user(request.user)
         .order_by("name")
@@ -4484,10 +4492,10 @@ def sample_import_batch_detail_view(request, batch_id):
         "edit_rows": {
             str(r.pk): {**(r.normalized_data or {}), "sample_type": r.sample_type or ""} for r in records
         },
-        "edit_types": sample_tables.SAMPLE_TYPES,
+        "edit_types": sample_tables.all_type_names(),
         "edit_biobanks": list(editable_biobanks_for_user(request.user).order_by("name").values_list("name", flat=True)),
     })
-    ctx["template_types"] = TEMPLATE_TYPES
+    ctx["template_types"] = _template_types()
     ctx["template_biobanks"] = (
         editable_biobanks_for_user(request.user)
         .order_by("name")
