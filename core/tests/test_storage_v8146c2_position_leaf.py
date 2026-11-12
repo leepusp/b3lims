@@ -166,8 +166,8 @@ class StoragePositionLeafC2Tests(TestCase):
             "core/interfaces/internal/samples/samples.html"
         ).read_text()
 
-        self.assertIn('class="col-lg-7"', template)
-        self.assertIn('class="col-lg-5"', template)
+        self.assertIn('class="b3s-one-path"', template)
+        self.assertIn('class="b3s-one-ws"', template)
         self.assertIn(
             'id="storage_position_leaf_v8146c2"',
             template,

@@ -19,6 +19,23 @@
         margin-bottom: 16px;
     }
 
+    #b3s-unified-storage-card .b3s-one-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px;
+        border: 1px solid #dce5f0;
+        border-radius: 10px;
+        background: #f8fbff;
+    }
+
+    #b3s-unified-storage-card .b3s-one-ws .b3-child-top {
+        border: 0;
+        padding: 0;
+    }
+
+    #b3s-unified-storage-card .b3s-one-path { border-top: 1px solid #e3ebf5; padding-top: 14px; }
+
     #b3s-unified-storage-card > .row {
         display: grid;
         grid-template-columns:
@@ -166,11 +183,11 @@
                                 </p>
                             </header>
 
-                            <div class="row g-3 align-items-start">
-                                <div class="col-lg-5">
-                                    {% include "internal/samples/_storage_child_v8146.html" %}
+                            <div class="b3s-one-panel">
+                                <div class="b3s-one-ws">
+                                    {% include "internal/samples/_storage_child_v8146.html" with part="top" %}
                                 </div>
-                                <div class="col-lg-7">
+                                <div class="b3s-one-path">
                                     <label class="form-label fw-semibold"
                                            for="storageInputVisual">
                                         2. Physical path and Sample position
@@ -226,6 +243,8 @@
                               Loading registered storage locations…
                             </div>
 
+
+                            {% include "internal/samples/_storage_child_v8146.html" with part="bottom" %}
 
                             <div id="storagePositionPanelV8"
                                  class="border rounded bg-light p-3 mt-3"
@@ -576,7 +595,7 @@
 <script src="{% static 'vendor/quill/1.3.6/quill.js' %}"></script>
 <script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
 <script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261112-ws-scope"></script>
-<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261112-preview"></script>
+<script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261112-preview2"></script>
 
 <script id="intakeDynamicPrefillScript">
 (function() {

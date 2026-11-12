@@ -83,4 +83,16 @@ class StorageChildPreviewTests(TestCase):
         html = self.client.get(reverse("sample_add")).content.decode()
 
         self.assertIn('id="storageChildPreviewV8146"', html)
-        self.assertIn("20261112-preview", html)
+        self.assertIn("20261112-preview2", html)
+
+    def test_sample_form_is_a_single_panel_in_order(self):
+        user = get_user_model().objects.create_user("panel-user", password="x")
+        self.client.force_login(user)
+        html = self.client.get(reverse("sample_add")).content.decode()
+
+        order = [html.index(x) for x in (
+            'id="storageChildWorkspaceV8146"', 'id="storageInputVisual"',
+            'id="storageChildLayoutV8146"', 'id="storageChildCreateV8146"', 'id="storagePositionPanelV8"',
+        )]
+        self.assertEqual(order, sorted(order))
+        self.assertEqual(html.count('data-b3-storage-child-v8146'), 1)

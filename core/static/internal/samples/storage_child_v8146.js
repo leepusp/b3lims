@@ -60,60 +60,131 @@
             return Math.min(high, Math.max(low, Number.isFinite(value) ? value : fallback));
         }
 
+        let lastSignature = "";
+
+        function pathParts() {
+            return path.value.split(">").map(x => x.trim()).filter(Boolean);
+        }
+
+        function pickPosition(name) {
+            if (typeof window.setStorageLocationFromText !== "function") return;
+
+            const parts = pathParts();
+
+            // In Sample intake the last level is the Sample position: the click replaces it.
+            if (parts.length >= 2) parts.pop();
+
+            parts.push(name);
+            window.setStorageLocationFromText(parts.join(" > "));
+            update();
+        }
+
         function drawPreview() {
             if (!preview) return;
 
-            preview.replaceChildren();
             preview.hidden = layoutBox.hidden || orgSelect.value === "free";
 
-            if (preview.hidden) return;
+            if (preview.hidden) {
+                preview.replaceChildren();
+                lastSignature = "";
 
+                return;
+            }
+
+            const interactive = Boolean(document.getElementById("storagePositionPanelV8"));
+            const parts = pathParts();
+            const chosen = interactive && parts.length >= 2 ? parts[parts.length - 1].toLowerCase() : "";
+            const host = interactive && parts.length >= 2 ? parts[parts.length - 2] : (parts[parts.length - 1] || "");
             const board = document.createElement("div");
 
             board.className = "b3-child-board";
 
+            let labels = [];
+            let signature = orgSelect.value;
+            let caption = "";
+
             if (orgSelect.value === "grid") {
                 const rows = clampInt("storageChildRowsV8146", 1, 26, 9);
                 const cols = clampInt("storageChildColsV8146", 1, 24, 9);
+                const size = Math.max(14, Math.min(28, Math.floor(340 / cols)));
 
-                board.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
-                board.style.setProperty("--b3-cell", Math.max(10, Math.min(26, Math.floor(300 / cols))) + "px");
+                signature += rows + "x" + cols;
+                board.style.gridTemplateColumns = "18px repeat(" + cols + ", " + size + "px)";
+                board.append(document.createElement("span"));
+
+                for (let c = 1; c <= cols; c += 1) {
+                    const head = document.createElement("span");
+
+                    head.className = "b3-child-axis";
+                    head.textContent = size >= 18 ? c : "";
+                    board.append(head);
+                }
 
                 for (let r = 0; r < rows; r += 1) {
-                    for (let c = 0; c < cols; c += 1) {
-                        const cell = document.createElement("span");
+                    const head = document.createElement("span");
 
-                        cell.className = "b3-child-cell";
+                    head.className = "b3-child-axis";
+                    head.textContent = String.fromCharCode(65 + r);
+                    board.append(head);
+
+                    for (let c = 0; c < cols; c += 1) {
+                        const name = String.fromCharCode(65 + r) + (c + 1);
+                        const cell = document.createElement("button");
+
+                        cell.type = "button";
+                        cell.className = "b3-child-cell" + (chosen === name.toLowerCase() ? " is-chosen" : "");
+                        cell.style.width = cell.style.height = size + "px";
                         cell.style.animationDelay = ((r + c) * 18) + "ms";
-                        cell.title = String.fromCharCode(65 + r) + (c + 1);
+                        cell.title = name;
+                        cell.disabled = !interactive;
+                        cell.addEventListener("click", () => pickPosition(name));
                         board.append(cell);
                     }
                 }
 
-                preview.dataset.caption = rows + " × " + cols + " = " + (rows * cols) + " positions";
+                caption = rows + " × " + cols + " = " + (rows * cols) + " positions";
             } else {
                 const names = document.getElementById("storageChildSlotNamesV8146").value
                     .split(/[,\n]/).map(x => x.trim()).filter(Boolean);
-                const labels = names.length ? names : ["Compartment 1", "Compartment 2", "Compartment 3"];
+
+                labels = names.length ? names : ["Compartment 1", "Compartment 2", "Compartment 3"];
+                signature += labels.join("|") + document.getElementById("storageChildDirV8146").value;
+
                 const sideBySide = document.getElementById("storageChildDirV8146").value === "row";
 
                 board.classList.add("is-slots");
                 board.style.gridTemplateColumns = sideBySide ? "repeat(" + labels.length + ", 1fr)" : "1fr";
 
                 labels.forEach((label, index) => {
-                    const slot = document.createElement("span");
+                    const slot = document.createElement("button");
 
-                    slot.className = "b3-child-slot";
+                    slot.type = "button";
+                    slot.className = "b3-child-slot" + (chosen === label.toLowerCase() ? " is-chosen" : "");
                     slot.style.animationDelay = (index * 70) + "ms";
                     slot.textContent = label;
+                    slot.disabled = !interactive;
+                    slot.addEventListener("click", () => pickPosition(label));
                     board.append(slot);
                 });
 
-                preview.dataset.caption = labels.length + " compartment" + (labels.length === 1 ? "" : "s")
+                caption = labels.length + " compartment" + (labels.length === 1 ? "" : "s")
                     + (names.length ? "" : " (example, type the names above)");
             }
 
-            preview.append(board);
+            // Only a new drawing animates; picking a position just moves the highlight.
+            if (signature === lastSignature) board.classList.add("is-static");
+
+            lastSignature = signature;
+
+            const title = document.createElement("div");
+
+            title.className = "b3-child-title";
+            title.textContent = interactive
+                ? (host ? "Drawing of " + host : "Drawing") + " · click a position to choose where the Sample goes"
+                : "Drawing preview";
+
+            preview.replaceChildren(title, board);
+            preview.dataset.caption = caption;
         }
 
         function syncLayout() {

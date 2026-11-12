@@ -36,16 +36,16 @@ class SampleUnifiedStorageLayoutTests(SimpleTestCase):
 
     def test_original_columns_preserved(self):
         for marker in (
-            'class="row g-3 align-items-start"',
-            'class="col-lg-5"',
-            'class="col-lg-7"',
+            'class="b3s-one-panel"',
+            'class="b3s-one-ws"',
+            'class="b3s-one-path"',
         ):
             self.assertIn(marker, self.html)
 
     def test_workspace_precedes_path(self):
         workspace = (
             '{% include '
-            '"internal/samples/_storage_child_v8146.html" %}'
+            '"internal/samples/_storage_child_v8146.html" with part="top" %}'
         )
 
         self.assertLess(

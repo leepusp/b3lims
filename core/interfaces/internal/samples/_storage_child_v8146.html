@@ -1,18 +1,27 @@
 <style>
 .b3-child-preview{margin-top:.75rem}
 .b3-child-preview::after{content:attr(data-caption);display:block;margin-top:.35rem;font-size:.75rem;color:#6c757d}
-.b3-child-board{display:grid;gap:3px;max-width:340px;padding:8px;border:1px solid #cfd8e3;border-radius:8px;background:#f6f9fc}
-.b3-child-cell{display:block;width:100%;aspect-ratio:1;min-width:8px;border-radius:50%;background:#dbe7f5;border:1px solid #9db8d9;opacity:0;transform:scale(.4);animation:b3-child-pop .35s ease-out forwards}
-.b3-child-board.is-slots{gap:6px}
-.b3-child-slot{display:block;padding:.45rem .6rem;text-align:center;font-size:.8rem;border:1px dashed #6f9ad0;border-radius:6px;background:#eaf2fc;opacity:0;transform:translateY(6px);animation:b3-child-pop .35s ease-out forwards}
+.b3-child-title{font-size:.8rem;font-weight:600;margin-bottom:.4rem}
+.b3-child-board{display:grid;gap:3px;width:max-content;max-width:100%;padding:8px;border:1px solid #cfd8e3;border-radius:8px;background:#f6f9fc;overflow-x:auto}
+.b3-child-axis{font-size:.65rem;color:#6c757d;text-align:center;align-self:center}
+.b3-child-cell{display:block;padding:0;border-radius:50%;background:#fff;border:1px solid #9db8d9;cursor:pointer;opacity:0;transform:scale(.4);animation:b3-child-pop .35s ease-out forwards;transition:background .15s,transform .15s}
+.b3-child-cell:hover:not(:disabled){background:#cfe2ff;transform:scale(1.12)}
+.b3-child-cell:disabled,.b3-child-slot:disabled{cursor:default}
+.b3-child-cell.is-chosen,.b3-child-slot.is-chosen{background:#0d6efd;border-color:#0a58ca;color:#fff}
+.b3-child-board.is-slots{gap:6px;width:100%;max-width:420px}
+.b3-child-slot{display:block;padding:.45rem .6rem;text-align:center;font-size:.8rem;border:1px dashed #6f9ad0;border-radius:6px;background:#eaf2fc;cursor:pointer;opacity:0;transform:translateY(6px);animation:b3-child-pop .35s ease-out forwards}
+.b3-child-slot:hover:not(:disabled){background:#cfe2ff}
+.b3-child-board.is-static .b3-child-cell,.b3-child-board.is-static .b3-child-slot{animation:none;opacity:1;transform:none}
 @keyframes b3-child-pop{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.b3-child-cell,.b3-child-slot{animation:none;opacity:1;transform:none}}
 </style>
-<section class="border rounded p-3 h-100"
+{% if part != "bottom" %}
+<section class="{% if part == 'top' %}b3-child-top{% else %}border rounded p-3 h-100{% endif %}"
          data-b3-storage-child-v8146
          data-catalog-url="{% url 'storage_path_register_v8146' %}"
          data-create-url="{% url 'storage_path_register_v8146' %}"
          aria-label="Register physical storage path">
+
 
     <label class="form-label fw-semibold mb-2"
            for="storageChildWorkspaceV8146">
@@ -39,6 +48,10 @@
         </strong>
     </p>
 
+{% if part == "top" %}</section>{% endif %}
+{% endif %}
+{% if part != "top" %}
+{% if part == "bottom" %}<div class="b3-child-bottom" data-b3-storage-child-bottom>{% endif %}
     <fieldset id="storageChildLayoutV8146" class="border rounded p-2 mb-3" hidden>
         <legend class="float-none w-auto fs-6 fw-semibold px-1 mb-1">
             How does the last location hold Samples?
@@ -90,4 +103,6 @@
             Open Storage management
         </a>.
     </p>
-</section>
+{% if part == "bottom" %}</div>{% endif %}
+{% endif %}
+{% if part != "top" and part != "bottom" %}</section>{% endif %}
