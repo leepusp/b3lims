@@ -76,9 +76,51 @@
                             <label class="form-check-label" for="hasOrg">This type has an organism or species (ask for its name)</label>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label small fw-bold">Fields</label>
-                            <textarea class="form-control font-monospace" rows="7" name="fields" placeholder="Passage number | integer | required&#10;Mycoplasma status | choice | required | negative, positive, untested">{{ fields_text }}</textarea>
-                            <div class="form-text" style="white-space: pre-line">{{ field_help }}</div>
+                            <label class="form-label small fw-bold">Fields of this type</label>
+                            <div class="form-text mb-1">What must be recorded for each Sample of this type. Choose how each value is typed; for a list, write the allowed options separated by commas.</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-1" id="fieldsTable">
+                                    <thead class="table-light">
+                                        <tr><th>Field name</th><th style="width:9.5rem">Value type</th><th class="text-center" style="width:4.5rem">Required</th><th>Allowed options</th><th style="width:5.5rem"></th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for f in field_rows %}
+                                        <tr>
+                                            <td><input class="form-control form-control-sm f-label" value="{{ f.label }}" placeholder="Passage number"></td>
+                                            <td>
+                                                <select class="form-select form-select-sm f-kind">
+                                                    {% for k in kinds %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ k|title }}</option>{% endfor %}
+                                                </select>
+                                            </td>
+                                            <td class="text-center"><input class="form-check-input f-required" type="checkbox" {% if f.required %}checked{% endif %}></td>
+                                            <td><input class="form-control form-control-sm f-choices" value="{{ f.choices_text }}" placeholder="negative, positive"></td>
+                                            <td class="text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary f-up" title="Move up">&uarr;</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger f-del" title="Remove">&times;</button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addFieldRow"><i class="bi bi-plus-lg me-1"></i>Add field</button>
+                            <input type="hidden" name="fields" id="fieldsPayload">
+                            <template id="fieldRowTemplate">
+                                <tr>
+                                    <td><input class="form-control form-control-sm f-label" placeholder="Passage number"></td>
+                                    <td>
+                                        <select class="form-select form-select-sm f-kind">
+                                            {% for k in kinds %}<option value="{{ k }}">{{ k|title }}</option>{% endfor %}
+                                        </select>
+                                    </td>
+                                    <td class="text-center"><input class="form-check-input f-required" type="checkbox"></td>
+                                    <td><input class="form-control form-control-sm f-choices" placeholder="negative, positive"></td>
+                                    <td class="text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary f-up" title="Move up">&uarr;</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger f-del" title="Remove">&times;</button>
+                                    </td>
+                                </tr>
+                            </template>
                         </div>
                         {% if editing %}
                         <div class="form-check mb-3">
@@ -97,4 +139,43 @@
         </div>
     </div>
 </div>
+<script>
+(function () {
+    const body = document.querySelector("#fieldsTable tbody");
+    if (!body) return;
+    const clean = (s) => (s || "").replace(/[|\n\r]/g, " ").trim();
+    function syncRow(row) {
+        const isChoice = row.querySelector(".f-kind").value === "choice";
+        const choices = row.querySelector(".f-choices");
+        choices.disabled = !isChoice;
+        if (!isChoice) choices.value = "";
+    }
+    function addRow() {
+        const row = document.getElementById("fieldRowTemplate").content.firstElementChild.cloneNode(true);
+        body.appendChild(row);
+        syncRow(row);
+        row.querySelector(".f-label").focus();
+    }
+    body.addEventListener("change", (e) => { if (e.target.classList.contains("f-kind")) syncRow(e.target.closest("tr")); });
+    body.addEventListener("click", (e) => {
+        const row = e.target.closest("tr");
+        if (e.target.closest(".f-del")) row.remove();
+        if (e.target.closest(".f-up") && row.previousElementSibling) body.insertBefore(row, row.previousElementSibling);
+    });
+    document.getElementById("addFieldRow").addEventListener("click", addRow);
+    body.querySelectorAll("tr").forEach(syncRow);
+    if (!body.children.length) addRow();
+    document.getElementById("fieldsPayload").form.addEventListener("submit", () => {
+        const lines = [];
+        body.querySelectorAll("tr").forEach((row) => {
+            const label = clean(row.querySelector(".f-label").value);
+            if (!label) return;
+            lines.push([label, row.querySelector(".f-kind").value,
+                row.querySelector(".f-required").checked ? "required" : "",
+                clean(row.querySelector(".f-choices").value)].join(" | "));
+        });
+        document.getElementById("fieldsPayload").value = lines.join("\n");
+    });
+})();
+</script>
 {% endblock %}

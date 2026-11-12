@@ -109,3 +109,24 @@ class SampleTypeDisplayTests(TestCase):
         self.assertContains(page, "Passage number")
         self.assertContains(page, "7")
         self.assertContains(self.client.get(reverse("samples_list")), "Sample types")
+
+
+class FieldTableEditorTests(TestCase):
+    def test_the_page_offers_a_table_and_posts_the_lines_it_builds(self):
+        admin = get_user_model().objects.create_user("boss3", password="pw-12345678", is_staff=True)
+        self.client.force_login(admin)
+
+        page = self.client.get(reverse("sample_types"))
+        self.assertContains(page, 'id="fieldsTable"')
+        self.assertContains(page, "Value type")
+
+        self.client.post(reverse("sample_types"), {
+            "name": "Tissue", "id_prefix": "TIS-",
+            "fields": "Site | text | required |\nGrade | choice | | I, II, III",
+        })
+        kind = SampleType.objects.get(name="Tissue")
+        self.assertEqual([f["key"] for f in kind.fields], ["site", "grade"])
+
+        edit = self.client.get(reverse("sample_type_edit", args=[kind.pk]))
+        self.assertContains(edit, 'value="Grade"')
+        self.assertContains(edit, 'value="I, II, III"')

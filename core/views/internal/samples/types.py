@@ -57,6 +57,7 @@ def sample_types_view(request, type_id=None):
         "types": SampleType.objects.all(),
         "editing": editing,
         "fields_text": sample_types.fields_to_text(editing.fields) if editing else "",
+        "field_rows": [{**f, "choices_text": ", ".join(f.get("choices") or [])} for f in (editing.fields if editing else [])],
         "field_help": sample_types.FIELD_HELP,
         "can_edit": can_edit,
         "builtin_types": sample_types.BUILTIN_TYPES,
