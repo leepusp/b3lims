@@ -1,4 +1,5 @@
 {% extends "internal/common/base.html" %}
+{% load biobank_extras %}
 
 {% block title %}Sample Details - {{ sample.sample_id }}{% endblock %}
 
@@ -57,6 +58,11 @@
                 <li class="list-group-item"><strong>Insert:</strong> {{ sample.insert_name|default:"Empty Vector" }}</li>
                 <li class="list-group-item"><strong>Total Size:</strong> {{ sample.total_size_bp }} bp</li>
             
+            {% elif sample|type_fields %}
+                {% for label, value in sample|type_fields %}
+                    <li class="list-group-item"><strong>{{ label }}:</strong> {{ value }}</li>
+                {% endfor %}
+
             {% else %}
                 <li class="list-group-item text-muted fst-italic">No specific metadata registered.</li>
             {% endif %}

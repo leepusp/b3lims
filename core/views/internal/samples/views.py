@@ -52,6 +52,7 @@ from core.permissions.samples import (
 from core.permissions.collections import can_edit_collection
 from core.permissions.biobanks import editable_biobanks_for_user
 from core.services import sample_tables
+from core.services import sample_types as custom_sample_types
 from core.services.sample_intake import import_sample_table, update_intake_record
 from core.services.sample_origin_map import (
     build_sample_origin_distribution_context,
@@ -1306,6 +1307,17 @@ def sample_create_view(request):
 
                 elif sample_type == "Other":
                     organism_name = request.POST.get("custom_organism_name", "Unknown Sample").strip()
+                elif custom_sample_types.get_custom(sample_type):
+                    custom_type = custom_sample_types.get_custom(sample_type)
+                    organism_name = request.POST.get("custom_type_name", "").strip()
+
+                    if not organism_name:
+                        raise ValueError(f"Give the {custom_type.name} a name.")
+
+                    try:
+                        custom_type_data = custom_sample_types.read_values(custom_type, request.POST)
+                    except custom_sample_types.SampleTypeError as exc:
+                        raise ValueError(str(exc)) from exc
                 else:
                     organism_name = "Undefined"
 
@@ -1634,6 +1646,9 @@ def sample_create_view(request):
                                 "status": "pending",
                                 "storage_location": storage_plan_v8.initial_text,
                             }
+
+                            if custom_sample_types.get_custom(sample_type):
+                                base_data["type_data"] = custom_type_data
 
                             # BACTERIA
                             if sample_type == "Bacterium (Host)":
@@ -1987,6 +2002,8 @@ def sample_create_view(request):
         "default_owner_id": user.pk,
         "biobanks": user_biobanks,
         "all_samples": visible_samples_for_user(user).values('sample_id', 'organism_name', 'sample_type'),
+        "custom_sample_types": list(custom_sample_types.custom_types()),
+        "custom_type_prefixes_json": json.dumps(custom_sample_types.id_prefixes()),
         "empty_plasmids_json": json.dumps(empty_plasmids),
         "intake_prefill": intake_prefill,
         "origin_form": origin_form,

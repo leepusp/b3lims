@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biobank-lims"
-version = "0.1.1"
+version = "0.1.2"
 description = "B3 LIMS: sample inventory, physical storage, electronic lab notebook and shipments for research labs."
 readme = "README.md"
 requires-python = ">=3.12"

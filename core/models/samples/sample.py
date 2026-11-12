@@ -76,6 +76,8 @@ class Sample(models.Model):
         help_text="Biosafety level required for handling this sample.",
     )
     organism_name = models.CharField(max_length=255, blank=True, null=True)
+    # Values of the extra fields of an installation-defined Sample type (see SampleType.fields).
+    type_data = models.JSONField(default=dict, blank=True)
 
     # ==========================================
     # ORGANIZATION

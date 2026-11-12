@@ -581,6 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "Plasmid": "PLA-",
             "Other": "SMP-"
         };
+        Object.assign(prefixMap, window.B3_TYPE_PREFIXES || {});
 
         if (typeInput && identifierInput && btnGenerate) {
             btnGenerate.addEventListener('click', function() {

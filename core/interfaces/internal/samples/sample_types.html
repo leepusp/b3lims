@@ -1,0 +1,100 @@
+{% extends "internal/common/base.html" %}
+
+{% block title %}Sample types · {{ org_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 70rem">
+    <div class="small text-muted mb-1"><a href="{% url 'samples_list' %}">Samples</a> / Sample types</div>
+    <h1 class="h3 mb-1">Sample types</h1>
+    <p class="text-muted">
+        Define the kinds of material your laboratory registers. Every type can have its own ID prefix and its own fields
+        (cell line, nucleic acid, tissue, dataset ...). The four built-in types stay available:
+        {{ builtin_types|join:", " }}.
+    </p>
+
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %}">{{ message }}</div>
+    {% endfor %}
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">Types of this installation</div>
+                <ul class="list-group list-group-flush">
+                    {% for t in types %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-semibold">{{ t.name }}{% if not t.is_active %} <span class="badge bg-secondary">inactive</span>{% endif %}</div>
+                                <div class="small text-muted">
+                                    ID prefix {{ t.id_prefix }} · {{ t.fields|length }} field{{ t.fields|length|pluralize }}{% if t.has_organism %} · has organism{% endif %}
+                                </div>
+                                {% if t.description %}<div class="small">{{ t.description }}</div>{% endif %}
+                            </div>
+                            {% if can_edit %}<a class="btn btn-sm btn-outline-primary" href="{% url 'sample_type_edit' t.pk %}">Edit</a>{% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No types added yet. Use the form to create the first one.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">{% if editing %}Edit {{ editing.name }}{% else %}New type{% endif %}</div>
+                <div class="card-body">
+                    {% if can_edit %}
+                    <form method="post" action="{% url 'sample_types' %}">
+                        {% csrf_token %}
+                        {% if editing %}<input type="hidden" name="type_id" value="{{ editing.pk }}">{% endif %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Name</label>
+                            <input class="form-control" name="name" value="{{ editing.name }}" placeholder="Cell line" required>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">ID prefix</label>
+                                <input class="form-control" name="id_prefix" value="{{ editing.id_prefix|default:'SMP-' }}" placeholder="CEL-">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Default biosafety</label>
+                                <select class="form-select" name="default_biosafety">
+                                    <option value="">None</option>
+                                    <option value="NB-1" {% if editing.default_biosafety == "NB-1" %}selected{% endif %}>NB-1</option>
+                                    <option value="NB-2" {% if editing.default_biosafety == "NB-2" %}selected{% endif %}>NB-2</option>
+                                    <option value="NB-3" {% if editing.default_biosafety == "NB-3" %}selected{% endif %}>NB-3</option>
+                                    <option value="NB-4" {% if editing.default_biosafety == "NB-4" %}selected{% endif %}>NB-4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Description (optional)</label>
+                            <input class="form-control" name="description" value="{{ editing.description }}">
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="has_organism" id="hasOrg" {% if editing.has_organism %}checked{% endif %}>
+                            <label class="form-check-label" for="hasOrg">This type has an organism or species (ask for its name)</label>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Fields</label>
+                            <textarea class="form-control font-monospace" rows="7" name="fields" placeholder="Passage number | integer | required&#10;Mycoplasma status | choice | required | negative, positive, untested">{{ fields_text }}</textarea>
+                            <div class="form-text" style="white-space: pre-line">{{ field_help }}</div>
+                        </div>
+                        {% if editing %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="isActive" {% if editing.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="isActive">Active (offered when registering Samples)</label>
+                        </div>
+                        {% endif %}
+                        <button class="btn btn-primary" type="submit">Save type</button>
+                        {% if editing %}<a class="btn btn-outline-secondary" href="{% url 'sample_types' %}">Cancel</a>{% endif %}
+                    </form>
+                    {% else %}
+                        <p class="text-muted mb-0">Only administrators can add or change Sample types.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

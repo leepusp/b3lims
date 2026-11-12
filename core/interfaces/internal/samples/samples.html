@@ -139,6 +139,7 @@
                                 <option value="Bacterium (Host)" {% if intake_prefill.sample_type == "Bacterium (Host)" %}selected{% endif %}>Bacterium (Host)</option>
                                 <option value="Phage (Virus)" {% if intake_prefill.sample_type == "Phage (Virus)" %}selected{% endif %}>Phage (Virus)</option>
                                 <option value="Plasmid" {% if intake_prefill.sample_type == "Plasmid" %}selected{% endif %}>Plasmid</option>
+                                {% for ct in custom_sample_types %}<option value="{{ ct.name }}" {% if intake_prefill.sample_type == ct.name %}selected{% endif %}>{{ ct.name }}</option>{% endfor %}
                                 <option value="Other" {% if intake_prefill.sample_type == "Other" %}selected{% endif %}>Other</option>
                             </select>
 
@@ -346,6 +347,37 @@
                     {% include "internal/samples/_taxonomy_fill.html" with fill_type_input="sampleTypeInput" %}
                     <div id="templateFields" class="row g-3"></div>
                 </div>
+
+                {% for ct in custom_sample_types %}
+                <div class="custom-type-block p-4 mb-5 bg-primary-subtle rounded border border-primary d-none" data-type-name="{{ ct.name }}">
+                    <h6 class="text-primary fw-bold mb-3"><i class="bi bi-magic me-1"></i>{{ ct.name }}</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-dark">{% if ct.has_organism %}Organism / material name{% else %}Name{% endif %} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="custom_type_name" disabled>
+                        </div>
+                        {% for f in ct.fields %}
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-dark">{{ f.label }}{% if f.required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {% if f.kind == "choice" %}
+                                <select class="form-select" name="tf_{{ f.key }}" disabled>
+                                    <option value="">Select...</option>
+                                    {% for c in f.choices %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                                </select>
+                            {% elif f.kind == "boolean" %}
+                                <select class="form-select" name="tf_{{ f.key }}" disabled>
+                                    <option value="">Not set</option><option value="true">Yes</option><option value="false">No</option>
+                                </select>
+                            {% else %}
+                                <input class="form-control" name="tf_{{ f.key }}" disabled
+                                       type="{% if f.kind == 'date' %}date{% else %}text{% endif %}"
+                                       {% if f.kind == 'integer' %}inputmode="numeric"{% elif f.kind == 'decimal' %}inputmode="decimal"{% endif %}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
 
                 {% include "internal/samples/_organisms_fields.html" with organisms_type_input="sampleTypeInput" organisms_initial="[]" %}
 
@@ -593,7 +625,8 @@
 {% include "common/map_assets_js.html" %}
 <script src="{% static 'internal/samples/sample_origin_map.js' %}?v=20260923-map-resilience2"></script>
 <script src="{% static 'vendor/quill/1.3.6/quill.js' %}"></script>
-<script src="{% static 'internal/samples/samples.js' %}?v=20260715-quill-guard"></script>
+<script>window.B3_TYPE_PREFIXES = {{ custom_type_prefixes_json|default:"{}"|safe }};</script>
+<script src="{% static 'internal/samples/samples.js' %}?v=20261112-custom-types"></script>
 <script defer src="{% static 'internal/samples/storage_path_builder_v8.js' %}?v=20261112-ws-scope"></script>
 <script defer src="{% static 'internal/samples/storage_child_v8146.js' %}?v=20261112-preview2"></script>
 
@@ -784,5 +817,22 @@
             });
         }
     });
+</script>
+<script>
+(function () {
+    const select = document.getElementById("sampleTypeInput");
+    if (!select) return;
+    function showCustom() {
+        document.querySelectorAll(".custom-type-block").forEach(function (block) {
+            const on = block.dataset.typeName === select.value;
+            block.classList.toggle("d-none", !on);
+            block.querySelectorAll("input, select").forEach(function (el) { el.disabled = !on; });
+            const name = block.querySelector('[name="custom_type_name"]');
+            if (name) name.required = on;
+        });
+    }
+    select.addEventListener("change", showCustom);
+    showCustom();
+})();
 </script>
 {% endblock %}
