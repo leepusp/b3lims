@@ -24,6 +24,11 @@ Optional feature flags in this profile are off: `BIOBANK_HPC_ENABLED`, `BIOBANK_
 | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL` | Standard Django settings |
 | `BIOBANK_MEDIA_ROOT`, `BIOBANK_STORAGE_ROOT` | Uploaded files and persistent storage roots |
 | `BIOBANK_GROUP_ROOT`, `BIOBANK_INVENTORY_ROOT`, `BIOBANK_SAMPLE_DOCS_ROOT`, `BIOBANK_MANIFESTS_ROOT`, `BIOBANK_SHARED_ROOT` | Sub-folders of the storage root |
+| `BIOBANK_CSRF_TRUSTED_ORIGINS` | Public `https://` origins (comma-separated) |
+| `BIOBANK_STORAGE_GLOBAL_ADMINS` | Usernames allowed to inspect every storage workspace (also need staff or superuser) |
+| `BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN` | `true` lets any superuser do so (always on in the local profile) |
+| `BIOBANK_ELN_API_HOST` | Host name sent to the local ELN API socket; must be in `ALLOWED_HOSTS` |
+| `BIOBANK_PUBLIC_URL` | Public address of the installation, sent to the geocoding service as contact information |
 | `BIOBANK_PAM_*` | PAM sign-in behind Apache (see [clusters](hpc.md)) |
 | `BIOBANK_JUPYTER_*` | Jupyter servers started through Slurm |
 | `BIOBANK_REPOSITORY_ROOT`, `BIOBANK_TAXONOMY_DIR` | Shared reference-data folders |

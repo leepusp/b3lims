@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "biobank-lims"
 version = "0.1.0"
-description = "Biobank: sample inventory, physical storage, electronic lab notebook and shipments for research labs."
+description = "B3 LIMS: sample inventory, physical storage, electronic lab notebook and shipments for research labs."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "AGPL-3.0-or-later" }

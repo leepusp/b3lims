@@ -1,5 +1,6 @@
 """User and Research Group authorization for physical storage."""
 
+from django.conf import settings
 from django.db.models import Q
 
 from core.models.research_groups.model import ResearchGroup
@@ -20,14 +21,31 @@ def _active_user(user):
 
 def is_storage_global_admin(user):
     """
-    Only the designated institutional administrator may
-    inspect all workspaces, including unscoped legacy nodes.
+    Only designated administrators may inspect all workspaces,
+    including unscoped legacy nodes.
 
+    They are named in BIOBANK_STORAGE_GLOBAL_ADMINS (and must also be
+    staff or superuser). Single-lab installations may let any active
+    superuser act as one (BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN).
     Django staff status alone never grants global storage access.
     """
+    if not _active_user(user):
+        return False
+
+    if (
+        getattr(settings, "BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN", False)
+        and getattr(user, "is_superuser", False)
+    ):
+        return True
+
+    designated = {
+        str(name).strip().casefold()
+        for name in getattr(settings, "BIOBANK_STORAGE_GLOBAL_ADMINS", ())
+        if str(name).strip()
+    }
+
     return bool(
-        _active_user(user)
-        and user.get_username().casefold() == "ccalomeno"
+        user.get_username().casefold() in designated
         and (
             getattr(user, "is_staff", False)
             or getattr(user, "is_superuser", False)

@@ -1,6 +1,6 @@
 # Install and upgrade
 
-Biobank needs **Python 3.12 or newer** (or Docker). It does not need a cluster, Slurm, PAM accounts or a separate web server.
+B3 LIMS needs **Python 3.12 or newer** (or Docker). It does not need a cluster, Slurm, PAM accounts or a separate web server.
 
 ## Option 1: pipx and the setup wizard
 
@@ -10,7 +10,7 @@ biobank-local setup
 biobank-local run
 ```
 
-`pipx` keeps Biobank in its own environment (`pip install` into a virtual environment works too). `setup` asks four questions:
+`pipx` keeps B3 LIMS in its own environment (`pip install` into a virtual environment works too). `setup` asks four questions:
 
 1. **Data folder** (default `~/.biobank-local`): the database, uploaded files, backups and `config.env` live here. It is the only folder you need to back up.
 2. **Database**: SQLite (one file, best for one person or a small lab) or PostgreSQL (a lab server with many users).
@@ -44,7 +44,7 @@ biobank-local setup
 
 ## Letting the rest of the lab use it
 
-By default Biobank listens on `127.0.0.1` (this computer only). To open it to your network:
+By default B3 LIMS listens on `127.0.0.1` (this computer only). To open it to your network:
 
 ```bash
 biobank-local run --host 0.0.0.0

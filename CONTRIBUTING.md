@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for helping. Biobank is a Django application; English is the language of the code, UI and documentation (`docs/development/language_policy.md`).
+Thank you for helping. B3 LIMS is a Django application; English is the language of the code, UI and documentation (`docs/development/language_policy.md`).
 
 ## Set up for development
 

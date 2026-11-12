@@ -10,6 +10,8 @@ import socket
 from pathlib import Path
 from urllib.parse import urlencode
 
+from django.conf import settings
+
 
 class ElnApiError(Exception):
     """Unexpected or invalid API response."""
@@ -32,7 +34,7 @@ class UnixHTTPConnection(http.client.HTTPConnection):
 
     def __init__(self, socket_path, timeout):
         super().__init__(
-            host="davinci.icb.usp.br",
+            host=getattr(settings, "BIOBANK_ELN_API_HOST", "localhost"),
             port=80,
             timeout=timeout,
         )

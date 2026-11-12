@@ -30,8 +30,18 @@ CSRF_COOKIE_SECURE = env.bool(
     default=False,
 )
 
-# 1. Autoriza o domínio da USP a enviar formulários POST (Resolve o Erro 403 CSRF)
-CSRF_TRUSTED_ORIGINS = ['https://davinci.icb.usp.br']
+# 1. Public https origins allowed to submit forms (avoids CSRF 403 behind a proxy).
+CSRF_TRUSTED_ORIGINS = env.list("BIOBANK_CSRF_TRUSTED_ORIGINS", default=["https://davinci.icb.usp.br"])
+
+# Institution-specific values (override them in the environment of another deployment).
+# Usernames that may inspect every storage workspace, comma-separated.
+BIOBANK_STORAGE_GLOBAL_ADMINS = env.list("BIOBANK_STORAGE_GLOBAL_ADMINS", default=["ccalomeno"])
+# When true, any active superuser is also a global storage administrator (single-lab installs).
+BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN = env.bool("BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN", default=False)
+# Host name sent to the local ELN API socket (must be listed in ALLOWED_HOSTS).
+BIOBANK_ELN_API_HOST = env("BIOBANK_ELN_API_HOST", default="davinci.icb.usp.br")
+# Public address of this installation, shown to geocoding services as contact information.
+BIOBANK_PUBLIC_URL = env("BIOBANK_PUBLIC_URL", default="https://davinci.icb.usp.br/b3lims/")
 
 # 2. Avisa o Django que o Apache já cuidou do cadeado de segurança (HTTPS)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

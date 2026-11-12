@@ -1,4 +1,4 @@
-site_name: Biobank
+site_name: B3 LIMS
 site_description: Samples, storage, notebook and shipments for research labs
 repo_url: https://github.com/leepusp/biobank
 theme:

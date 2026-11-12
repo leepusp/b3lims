@@ -223,6 +223,12 @@ DEBUG = os.environ.get("BIOBANK_DEBUG", "").lower() in {"1", "true", "yes"}
 ALLOWED_HOSTS = list(ALLOWED_HOSTS) + _csv("BIOBANK_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = _csv("BIOBANK_CSRF_TRUSTED_ORIGINS")
 
+# No institution-specific defaults: the first administrator created by setup manages storage.
+BIOBANK_STORAGE_GLOBAL_ADMINS = _csv("BIOBANK_STORAGE_GLOBAL_ADMINS")
+BIOBANK_STORAGE_SUPERUSER_IS_GLOBAL_ADMIN = True
+BIOBANK_ELN_API_HOST = os.environ.get("BIOBANK_ELN_API_HOST", "localhost")
+BIOBANK_PUBLIC_URL = os.environ.get("BIOBANK_PUBLIC_URL", "")
+
 TIME_ZONE = os.environ.get("BIOBANK_TIME_ZONE", TIME_ZONE)
 
 # SQLite is the default; a lab server can point to PostgreSQL.

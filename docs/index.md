@@ -1,8 +1,8 @@
-# Biobank documentation
+# B3 LIMS documentation
 
-Biobank is an open-source system for the samples, freezers, notebooks and shipments of a research lab. It runs on one computer, on a lab server or on a cluster.
+B3 LIMS is an open-source system for the samples, freezers, notebooks and shipments of a research lab. It runs on one computer, on a lab server or on a cluster.
 
-![Biobank workspace](screenshots/home.png)
+![B3 LIMS workspace](screenshots/home.png)
 
 | I want to... | Read |
 |---|---|

@@ -26,10 +26,16 @@ NOMINATIM_BASE_URL = (
     "https://nominatim.openstreetmap.org"
 )
 
-DEFAULT_USER_AGENT = (
-    "B3-LIMS/1.0 "
-    "(+https://davinci.icb.usp.br/b3lims/)"
-)
+def default_user_agent():
+    """Identify the installation to the geocoder (its usage policy asks for contact details)."""
+    from django.conf import settings
+
+    contact = str(getattr(settings, "BIOBANK_PUBLIC_URL", "") or "").strip()
+
+    return f"B3-LIMS/1.0 (+{contact})" if contact else "B3-LIMS/1.0"
+
+
+DEFAULT_USER_AGENT = "B3-LIMS/1.0"
 
 REQUEST_TIMEOUT_SECONDS = 8.0
 MIN_REQUEST_INTERVAL_SECONDS = 1.05
@@ -233,7 +239,7 @@ def _serialized_upstream_request(
                 "User-Agent": (
                     os.environ.get(
                         "B3LIMS_NOMINATIM_USER_AGENT",
-                        DEFAULT_USER_AGENT,
+                        default_user_agent(),
                     )
                 ),
                 "Accept": "application/json",
