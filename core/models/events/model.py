@@ -6,23 +6,23 @@ from core.models.samples.sample import Sample # Caminho absoluto
 
 class Event(models.Model):
     EVENT_TYPES = [
-        ("entry", "Entrada"),
-        ("freeze", "Congelamento"),
-        ("thaw", "Descongelamento"),
-        ("transfer", "Transferência (Movimentação)"),
-        ("qc_check", "Controle de Qualidade"),
+        ("entry", "Entry"),
+        ("freeze", "Freezing"),
+        ("thaw", "Thawing"),
+        ("transfer", "Transfer (movement)"),
+        ("qc_check", "Quality control"),
     ]
 
     sample = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="events")
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
     timestamp = models.DateTimeField(default=timezone.now)
     
-    # Rastreio de Localização: Onde a amostra estava neste momento?
+    # Where the sample was at this moment
     location_snapshot = models.CharField(
         max_length=255, 
         blank=True, 
         null=True, 
-        help_text="Snapshot da localização física (Freezer/Rack/Box)"
+        help_text="Snapshot of the physical location (freezer/rack/box)"
     )
     
     notes = models.TextField(blank=True, null=True)

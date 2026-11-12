@@ -106,7 +106,7 @@ def feed(user, start, end, layers=LAYERS, resource_ids=None):
             )
 
     if "samples" in layers:
-        # One chip per day and event type ("Entrada · 38 samples"): the history
+        # One chip per day and event type ("Entry · 38 samples"): the history
         # of a busy day would otherwise bury everything else.
         rows = (
             visible_workspace_events_for_user(user)

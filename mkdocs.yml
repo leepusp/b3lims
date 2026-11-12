@@ -1,0 +1,22 @@
+site_name: Biobank
+site_description: Samples, storage, notebook and shipments for research labs
+repo_url: https://github.com/leepusp/biobank
+theme:
+  name: material
+  features: [navigation.sections, content.code.copy]
+nav:
+  - Home: index.md
+  - Install and upgrade: install.md
+  - User guide: user-guide.md
+  - Configuration: configuration.md
+  - Clusters and Slurm (optional): hpc.md
+  - Production deployment: operations/production.md
+  - Roadmap: development/local_install_and_eln_roadmap.md
+exclude_docs: |
+  transport/
+  design/
+  architecture/
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.superfences

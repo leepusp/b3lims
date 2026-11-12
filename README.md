@@ -1,324 +1,173 @@
+<div align="center">
+
 # Biobank
 
-Biobank is a Django-based laboratory information management platform for
-biological sample collections. It was developed in the context of CEPID B3 —
-the Center for Research, Innovation and Dissemination in Bacterial and
-Bacteriophage Biology — to improve traceability, governance, biosafety, and
-collaboration around biological assets.
+**Your lab's samples, freezers, notebooks and shipments in one place — instead of twenty spreadsheets.**
 
-The project is under active development. The repository contains application
-source code, database migrations, templates, static assets, and generic
-operational documentation. Runtime databases, uploaded files, credentials,
-backups, and institution-specific configuration must remain outside Git.
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776ab)
+![Django](https://img.shields.io/badge/Django-6-092e20)
+![SQLite or PostgreSQL](https://img.shields.io/badge/database-SQLite%20%7C%20PostgreSQL-336791)
+![Docker](https://img.shields.io/badge/run%20with-pip%20%7C%20Docker-2496ed)
+![Tests](https://img.shields.io/badge/tests-2500%2B-brightgreen)
 
-## Main capabilities
+[Install in 5 minutes](#install-in-5-minutes) · [What you can do](#what-you-can-do) · [Screenshots](#screenshots) · [Documentation](docs/index.md) · [Roadmap](docs/development/local_install_and_eln_roadmap.md)
 
-- Multiple biobank repositories and research-group associations
-- Role-based access at biobank and collection level
-- Biological sample registration, classification, relationships, and lineage
-- Collections, tags, keywords, QR codes, and printable labels
-- Hierarchical storage locations and inventory assignments
-- Batch sample intake and spreadsheet import
-- Sample-associated scientific files and molecular sequences
-- Electronic laboratory notebook and protocol content
-- Chemical inventory, governance, and stock movements
-- Shipment planning, documentation, traceability, receipt, and package labels
-- Biosafety, GMO/CIBio, CQB, MTA/TTM, and transport-document workflows
-- Public collection and shipment submission interfaces
-- PostgreSQL and uploaded-file backup status integration
+<a href="docs/screenshots/home.png"><img src="docs/screenshots/home.png" alt="Biobank workspace: samples by type, samples by storage location, calendar and activity" width="900"></a>
 
-## Architecture
+<sub>Demo lab with fictional data (<code>biobank-local setup --demo</code>).</sub>
+
+</div>
+
+Biobank is an open-source laboratory information system for biological sample collections — bacteria, phages, plasmids and, increasingly, other kinds of material. It was born in the [CEPID B3](https://www.b3.cepid.usp.br/) research center (bacteria and bacteriophage biology) to make samples traceable, governed and easy to share, and it is built so that **any lab can run it on its own computer or server**. It does not need a cluster, Slurm or institutional accounts; those stay optional.
+
+## What you can do
+
+| | Module | In one line |
+|---|---|---|
+| 🧫 | **Samples** | Register bacteria, phages, plasmids and more with typed fields, lineage, QR labels and sample tables you can fill in Excel. |
+| ❄️ | **Storage** | Freezers, racks, boxes and compartments drawn on screen; click a position to place a sample; move boxes between workspaces. |
+| 📓 | **Electronic lab notebook** | Experiments and protocols with templates, signatures that lock an entry, revisions, tags and links to the samples they used. |
+| 🧬 | **Molecular registry** | DNA, RNA, plasmids, primers and proteins: maps, annotations, digests, primer Tm calculator, alignments, 3D structure. |
+| ⚗️ | **Chemicals** | Reagent inventory, governance and stock movements. |
+| 📦 | **Shipments & compliance** | Shipment planning, receipt, labels and the transport documents (MTA/TTM, biosafety, GMO/CIBio) your institution asks for. |
+| 📅 | **Calendar & history** | Equipment booking, and one place to see who did what to which sample. |
+| 🔬 | **Reference data** | Local taxonomy, GTDB and ICTV virus indexes to name organisms consistently, without calling a web service. |
+| 🌐 | **Public catalog** | Optionally publish chosen collections as a read-only public page. |
+
+Access is role-based (biobank, collection, research group), and every download and export goes through a permission check.
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><a href="docs/screenshots/storage.png"><img src="docs/screenshots/storage.png" alt="Storage drawing of a 9 by 9 box"></a><br><b>Storage.</b> A box drawn as a grid, with the occupied positions highlighted.</td>
+<td width="50%"><a href="docs/screenshots/sample-new.png"><img src="docs/screenshots/sample-new.png" alt="Register a sample and choose its position in a drawing"></a><br><b>Register a sample.</b> Type the path or click the position on the drawing; new boxes and workspaces are created as you go.</td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/sample-detail.png"><img src="docs/screenshots/sample-detail.png" alt="Sample page with ownership and its position in the box"></a><br><b>Sample page.</b> Identity, governance, files, relationships and exactly where the tube is.</td>
+<td width="50%"><a href="docs/screenshots/samples.png"><img src="docs/screenshots/samples.png" alt="Sample list"></a><br><b>Sample list.</b> Filter by type, biobank, collection or status.</td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/import.png"><img src="docs/screenshots/import.png" alt="Import sample tables"></a><br><b>Sample tables.</b> Download a template for each sample type, fill it in Excel, import and fix any row on screen.</td>
+<td width="50%"><a href="docs/screenshots/notebook.png"><img src="docs/screenshots/notebook.png" alt="Electronic lab notebook list"></a><br><b>Lab notebook.</b> Entries with status, tags and the samples they used.</td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/notebook-entry.png"><img src="docs/screenshots/notebook-entry.png" alt="Notebook entry"></a><br><b>An entry.</b> Rich text, steps, tables, attachments, signature and revisions.</td>
+<td width="50%"><a href="docs/screenshots/molecular-record.png"><img src="docs/screenshots/molecular-record.png" alt="Plasmid map and sequence"></a><br><b>Molecular registry.</b> Circular map, features, sequence, ORFs and digest in one record.</td>
+</tr>
+</table>
+
+## Install in 5 minutes
+
+Pick the way that suits you. All three give you the same application, and none needs a cluster.
+
+<img src="docs/screenshots/install-wizard.png" alt="The biobank-local setup wizard" width="640">
+
+### Option 1: pip / pipx and the setup wizard
+
+You need Python 3.12 or newer.
+
+```bash
+pipx install "git+https://github.com/leepusp/biobank.git"
+biobank-local setup        # four questions: data folder, database, administrator, network
+biobank-local run          # then open http://127.0.0.1:8000/
+```
+
+Add `--demo` to `setup` to load a small fictional lab to explore (user `demo`).
+
+### Option 2: Docker Compose
+
+```bash
+git clone https://github.com/leepusp/biobank.git && cd biobank
+BIOBANK_ADMIN_PASSWORD='choose-a-long-password' docker compose up -d
+```
+
+Open <http://localhost:8000/> and sign in as `admin`. Your data lives in the `biobank-data` volume. For PostgreSQL add `--profile postgres` (see the comments in `docker-compose.yml`).
+
+### Option 3: from source (development)
+
+```bash
+git clone https://github.com/leepusp/biobank.git && cd biobank
+python -m venv .venv && . .venv/bin/activate
+pip install -e .
+biobank-local setup && biobank-local run
+python manage.py test --settings=biobank.test_settings    # about a minute
+```
+
+### Everyday commands
+
+| Command | What it does |
+|---|---|
+| `biobank-local run` | Start the application (add `--host 0.0.0.0` to let other computers in your network open it) |
+| `biobank-local backup` | Archive the database folder, uploaded files and settings |
+| `biobank-local migrate` | Update the database after installing a newer version |
+| `biobank-local createuser NAME` | Add or reset an administrator |
+| `biobank-local doctor` | Check the installation |
+
+Details, PostgreSQL, sharing with the rest of the lab, HTTPS and upgrades: [docs/install.md](docs/install.md).
+
+## Optional: clusters and institutional deployments
+
+The version at CEPID B3 runs on the DaVinci cluster with PAM sign-in, Apache, PostgreSQL and Jupyter servers started through Slurm. That is one *deployment profile* of the same code, not a requirement. If you do want it — Slurm-launched Jupyter, shared reference indexes, PAM accounts, Gunicorn behind a reverse proxy — see [docs/hpc.md](docs/hpc.md) and [docs/operations/production.md](docs/operations/production.md).
+
+## Documentation
+
+| | |
+|---|---|
+| [Install and upgrade](docs/install.md) | pip, Docker, PostgreSQL, sharing in your network, backups |
+| [User guide](docs/user-guide.md) | Samples, storage, sample tables, notebook, molecular registry |
+| [Configuration](docs/configuration.md) | Every setting and environment variable |
+| [Clusters and Slurm (optional)](docs/hpc.md) | What to switch on for an HPC deployment |
+| [Production deployment](docs/operations/production.md) | Gunicorn, reverse proxy, backups, restores |
+| [Roadmap](docs/development/local_install_and_eln_roadmap.md) | What is planned and in what order |
+| [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) | |
+
+The documentation is also published as a website (`mkdocs serve` builds it locally).
+
+## How it fits together
 
 ```mermaid
 flowchart TD
-    Client["Web browser"] --> Proxy["Reverse proxy / web server"]
-    Proxy --> App["Gunicorn / Django"]
-    Proxy --> Static["Collected static assets"]
-    App --> Database["PostgreSQL"]
-    App --> Storage["Protected persistent file storage"]
-    App --> Backup["Database and file backup workflows"]
+    Client["Web browser"] --> App["Django application (waitress or Gunicorn)"]
+    App --> Static["Static files (WhiteNoise or web server)"]
+    App --> Database["SQLite or PostgreSQL"]
+    App --> Files["Plain folders: uploads, sample files, notebook attachments"]
+    App -. optional .-> Cluster["PAM, Slurm and Jupyter (HPC deployments)"]
+    App -. optional .-> Online["NCBI, PubChem, RCSB, Zenodo (online services)"]
 ```
 
-The application can run with Django's development server for local work.
-Production deployments should use a WSGI server such as Gunicorn behind a
-reverse proxy. PostgreSQL is the authoritative production database. Uploaded
-files and other persistent artifacts are stored separately from the source
-checkout.
+Two settings profiles share one code base: `biobank.standalone_settings` (a single computer or lab server, the default of `biobank-local`) and `biobank.settings` (the institutional deployment).
 
-## Technology stack
-
-- Python 3.12 or newer
-- Django
-- PostgreSQL for production
-- Gunicorn
-- Django REST Framework
-- django-import-export
-- django-filter
-- Biopython, pandas, NumPy, Matplotlib, and openpyxl
-- HTML, CSS, and JavaScript templates served by Django
-
-The current production environment is tested with Python 3.14, Django 6.0, and
-PostgreSQL 18. Local development may use SQLite when `DATABASE_URL` is not
-configured.
-
-## Repository structure
+## Repository map
 
 ```text
 biobank/
-├── biobank/                  # Django project settings, URLs, ASGI, and WSGI
+├── biobank/                  # settings (standalone and institutional), URLs, the biobank-local command
 ├── core/
-│   ├── interfaces/           # Internal and public templates/static sources
-│   ├── management/commands/  # Inventory and sample-file maintenance commands
-│   ├── migrations/           # Versioned database schema migrations
-│   ├── models/               # Domain models grouped by feature
-│   ├── permissions/          # Centralized authorization rules
-│   ├── services/             # Business and infrastructure services
-│   ├── templatetags/         # Custom Django template tags
-│   └── views/                # Internal and public request handlers
-├── bench/                    # B3 Bench: Lab Calendar, tools and workflows (imports core; core never imports bench)
-├── docs/                     # Development and generic operations guidance
-├── static/                   # Additional source static assets
-├── manage.py
-└── requirements.txt
+│   ├── interfaces/           # templates
+│   ├── static/               # CSS, JavaScript, vendored libraries
+│   ├── models/               # domain models by feature
+│   ├── permissions/          # all authorization rules
+│   ├── services/             # business logic
+│   ├── views/                # request handlers
+│   ├── resources/            # forms and templates that ship with the package
+│   └── management/commands/  # seed_demo, build_*_index, maintenance
+├── bench/                    # Lab Calendar, equipment booking, tools
+├── docs/                     # documentation and screenshots
+├── deploy/                   # institutional deployment (Apache, systemd, PAM) — optional
+├── Dockerfile, docker-compose.yml, pyproject.toml
+└── manage.py
 ```
 
-Generated `staticfiles/`, local databases, uploaded data, environment files,
-logs, backups, and Python caches are intentionally excluded from version
-control.
+## Status
 
-## Local development
+Biobank is under active development and is used in production at CEPID B3. The local installation path is new: please [open an issue](https://github.com/leepusp/biobank/issues) if something does not work on your machine. Sample records are sensitive; keep real data, credentials and `config.env` out of Git, issues and screenshots.
 
-### 1. Prerequisites
+## Contributing and license
 
-Install Git and Python 3.12 or newer. PostgreSQL client and server packages are
-also required when using PostgreSQL locally.
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). English is the language of the code, interface and documentation.
 
-### 2. Clone the repository
+Biobank is free software under the [GNU Affero General Public License v3.0](LICENSE): you may use, study, change and share it; if you run a modified version as a service for others, you must offer them its source.
 
-```bash
-git clone https://github.com/leepusp/biobank.git
-cd biobank
-```
-
-### 3. Create a virtual environment
-
-Linux or macOS:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-Windows PowerShell:
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-### 4. Install dependencies
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-### 5. Configure the environment
-
-```bash
-cp .env.example .env
-```
-
-Generate a local secret key with:
-
-```bash
-python -c "from secrets import token_urlsafe; print(token_urlsafe(64))"
-```
-
-Replace the placeholder in `.env`. Never commit environment files, database
-connection strings, credentials, private keys, access tokens, or
-institution-specific configuration.
-
-### 6. Initialize the database
-
-For the default local SQLite configuration:
-
-```bash
-python manage.py migrate
-```
-
-For PostgreSQL, create an empty database and set `DATABASE_URL` before running
-the same migration command. For example:
-
-```dotenv
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-```
-
-Do not run `makemigrations` as an installation step. New migrations should be
-created only when an intentional model change is being developed.
-
-### 7. Create an administrator
-
-```bash
-python manage.py createsuperuser
-```
-
-### 8. Start the development server
-
-```bash
-python manage.py runserver
-```
-
-Open <http://127.0.0.1:8000/> unless a deployment-specific URL prefix is
-configured.
-
-## Environment variables
-
-| Variable | Purpose |
-|---|---|
-| `SECRET_KEY` | Django cryptographic signing key |
-| `DEBUG` | Enables or disables Django debug mode |
-| `ALLOWED_HOSTS` | Comma-separated allowed host names |
-| `DATABASE_URL` | Django database connection URL |
-| `BIOBANK_MEDIA_ROOT` | Uploaded-file root |
-| `BIOBANK_STORAGE_ROOT` | Root for persistent institutional storage |
-| `BIOBANK_NOTEBOOK_STORAGE_MODE` | Notebook storage strategy |
-| `BIOBANK_NOTEBOOK_ROOT` | Notebook artifact root |
-| `BIOBANK_GROUP_ROOT` | Research-group storage root |
-| `BIOBANK_INVENTORY_ROOT` | Inventory artifact root |
-| `BIOBANK_SAMPLE_DOCS_ROOT` | Sample-document root |
-| `BIOBANK_MANIFESTS_ROOT` | Generated manifest root |
-| `BIOBANK_SHARED_ROOT` | Shared artifact root |
-
-Use absolute, access-controlled paths in production. Values in `.env.example`
-are development examples only.
-
-## Static and persistent files
-
-Source templates and static assets live under `core/interfaces/` and
-`static/`. Build collected assets with:
-
-```bash
-python manage.py collectstatic --noinput
-```
-
-The generated `staticfiles/` directory must not be committed.
-
-Uploaded sample files, notebook attachments, shipment documents, signed
-documents, and import files are persistent data. They must:
-
-- live outside the Git repository in production;
-- use restrictive ownership and permissions;
-- be backed up independently from PostgreSQL;
-- be served only through an authorization-aware mechanism;
-- never be exposed by an unrestricted static-file alias.
-
-Database backups do not include uploaded files.
-
-## Permissions and data governance
-
-Authorization logic is centralized under `core/permissions/`. Supported
-workflows include biobank-level and collection-level roles, ownership,
-research-group membership, superuser administration, and visibility filtering.
-
-New views, downloads, exports, and file-serving endpoints must apply the
-appropriate permission helper. Hiding a link in a template is not an
-authorization control.
-
-Do not add real sample records, patient or participant information, scientific
-metadata, user lists, shipment documents, signed forms, credentials, or
-database dumps to fixtures, tests, screenshots, issues, or commits.
-
-## Production deployment
-
-A production installation should provide:
-
-1. a dedicated application account and group;
-2. an isolated Python environment;
-3. a PostgreSQL database and restricted database role;
-4. an environment file readable only by the application service;
-5. persistent file storage outside the source checkout;
-6. Gunicorn or another supported WSGI server;
-7. a TLS-enabled reverse proxy;
-8. collected static assets;
-9. authorization-aware delivery of protected uploads;
-10. separate, verified backups for PostgreSQL and persistent files.
-
-Typical deployment validation:
-
-```bash
-python manage.py check
-python manage.py check --deploy
-python manage.py makemigrations --check --dry-run
-python manage.py migrate --plan
-python manage.py collectstatic --noinput
-```
-
-Review migration plans and back up PostgreSQL and persistent files before
-applying production schema changes. Deployment-specific hostnames, IP
-addresses, users, paths, service definitions, authentication providers, and
-backup schedules belong in private operational documentation.
-
-## Backup and restore principles
-
-PostgreSQL should be backed up with `pg_dump` in custom format. Persistent files
-require a separate filesystem-level backup. Each backup should have an
-integrity checksum and a retention policy.
-
-A restore must first be tested against a temporary database and temporary file
-root. Database and file backups should be selected from compatible points in
-time. Stop write traffic and obtain explicit operational approval before a
-production restore.
-
-See `docs/operations/` for generic implementation guidance.
-
-## Development workflow
-
-Create focused branches from the current `main` branch:
-
-```bash
-git fetch origin --prune
-git switch main
-git pull --ff-only
-git switch -c feature/short-description
-```
-
-Before opening a pull request:
-
-```bash
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python manage.py test
-git status --short
-```
-
-Keep commits focused. Do not combine generated runtime data, local backups, or
-unrelated production changes with application code.
-
-## Language policy
-
-English is the official language for source-code comments, docstrings,
-templates, interface labels, Django messages, migration names, commit messages,
-and developer documentation. Existing non-English content should be translated
-incrementally when touched.
-
-See `docs/development/language_policy.md`.
-
-## Contributing
-
-Contributions should:
-
-- preserve database and migration history;
-- include migrations for intentional model changes;
-- reuse centralized permission helpers;
-- protect all file and export endpoints;
-- avoid real or identifying data in tests and examples;
-- document new environment variables and operational requirements;
-- include focused validation steps in the pull request description.
-
-## License
-
-This project is developed for academic and scientific work within CEPID B3 —
-FAPESP. A standalone software license has not yet been added to the repository.
-Contact the project maintainers before redistribution or use outside the
-project's research and development context.
+Developed within CEPID B3 — FAPESP.
