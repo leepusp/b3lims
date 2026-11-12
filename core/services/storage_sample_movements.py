@@ -367,6 +367,20 @@ def _execute_movement(
             updated_at=now,
         )
 
+    # Storage of another Biobank: the Sample follows it.
+    from core.services.storage_biobank_transfer import apply_destination_biobank
+
+    by_workspace = {}
+
+    for entry in snapshots:
+        destination_location = StorageLocation.objects.select_related("workspace__biobank").get(pk=entry["destination_id"])
+
+        if destination_location.workspace_id:
+            by_workspace.setdefault(destination_location.workspace, []).append(entry["sample"])
+
+    for destination_workspace, moved in by_workspace.items():
+        apply_destination_biobank(actor, destination_workspace, moved)
+
     # Synchronize Sample's primary legacy representation.
     sync_primary_storage_legacy_for_samples(
         sample_ids=sample_ids

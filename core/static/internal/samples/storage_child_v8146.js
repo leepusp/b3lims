@@ -44,8 +44,39 @@
             !status || !path || !input || !chips ||
             !prefix || !separator) return;
 
+        const layoutBox = document.getElementById("storageChildLayoutV8146");
+        const orgSelect = document.getElementById("storageChildOrgV8146");
+        const gridBox = document.getElementById("storageChildGridV8146");
+        const slotsBox = document.getElementById("storageChildSlotsV8146");
+
         let busy = true;
         let available = 0;
+
+        function syncLayout() {
+            if (!layoutBox) return;
+
+            layoutBox.hidden = !path.value.trim();
+            gridBox.hidden = orgSelect.value !== "grid";
+            slotsBox.hidden = orgSelect.value !== "slots";
+        }
+
+        function layoutFields(body) {
+            if (!orgSelect || layoutBox.hidden) return;
+
+            body.set("organization", orgSelect.value);
+
+            if (orgSelect.value === "grid") {
+                body.set("rows", document.getElementById("storageChildRowsV8146").value);
+                body.set("columns", document.getElementById("storageChildColsV8146").value);
+            }
+
+            if (orgSelect.value === "slots") {
+                document.getElementById("storageChildSlotNamesV8146").value
+                    .split(/[,\n]/).map(x => x.trim()).filter(Boolean)
+                    .forEach(label => body.append("slot_label", label));
+                body.set("slot_direction", document.getElementById("storageChildDirV8146").value);
+            }
+        }
 
         function update() {
             const value = path.value.trim();
@@ -69,10 +100,10 @@
                 [name, value].filter(Boolean).join(" > ") ||
                 "No path entered";
 
+            syncLayout();
+
             button.disabled = (
                 busy ||
-                available === 0 ||
-                !workspace.value ||
                 !value ||
                 Boolean(input.value.trim())
             );
@@ -103,7 +134,7 @@
 
                 const empty = document.createElement("option");
                 empty.value = "";
-                empty.textContent = "Select workspace";
+                empty.textContent = "New workspace from the first level of the path";
                 workspace.add(empty);
 
                 for (const item of rows) {
@@ -117,10 +148,11 @@
                     workspace.value = String(rows[0].id);
                 }
 
-                status.textContent = rows.length
-                    ? "Finish entering your path, then register it."
-                    : "No manageable workspace is available. " +
-                      "Open Storage management.";
+                status.textContent = "Finish entering your path, then register it.";
+
+                if (rows.length === 1) {
+                    workspace.dispatchEvent(new Event("change"));
+                }
 
             } catch (error) {
                 status.textContent = error.message;
@@ -171,10 +203,20 @@
                 hierarchyPath = parts.join(" > ");
             }
 
+            if (!submittedWorkspace && hierarchyPath.split(">").length < 2) {
+                status.textContent =
+                    "Without a workspace the first level becomes the workspace: " +
+                    "type workspace, location and then the Sample position " +
+                    "(for example Lab A > Freezer 1 > A4).";
+                return;
+            }
+
             const body = new URLSearchParams({
                 workspace_id: submittedWorkspace,
                 path: hierarchyPath
             });
+
+            layoutFields(body);
 
             busy = true;
             update();
@@ -213,6 +255,17 @@
                         "Path registered, but the editor changed. " +
                         "Select the registered destination again.";
                     return;
+                }
+
+                if (!submittedWorkspace && result.workspace) {
+                    const id = String(result.workspace.id);
+
+                    if (![...workspace.options].some(o => o.value === id)) {
+                        workspace.add(new Option(result.workspace.name, id));
+                    }
+
+                    workspace.value = id;
+                    available += 1;
                 }
 
                 document.dispatchEvent(
@@ -273,6 +326,7 @@
         );
 
         button.addEventListener("click", registerPath);
+        orgSelect?.addEventListener("change", syncLayout);
 
         loadWorkspaces();
     }

@@ -3,6 +3,7 @@
 from django.db.models import Q
 
 from core.models.research_groups.model import ResearchGroup
+from core.permissions.biobanks import can_edit_biobank
 from core.models.samples.storage import (
     StorageLocation,
     StorageWorkspace,
@@ -103,15 +104,40 @@ def can_manage_storage_workspace(user, workspace):
         return workspace.owner_id == user.pk
 
     if workspace.scope == "group":
-        return bool(
+        if (
             workspace.research_group_id
             and ResearchGroup.objects.filter(
                 pk=workspace.research_group_id,
                 coordinator_id=user.pk,
             ).exists()
+        ):
+            return True
+
+        # A group member who is owner, manager or editor of the
+        # Biobank linked to this storage may build its locations.
+        return bool(
+            workspace.biobank_id
+            and can_edit_biobank(user, workspace.biobank)
         )
 
     return False
+
+
+def can_link_storage_workspace_biobank(user, workspace):
+    """Only the workspace owner, the group coordinator or the administrator choose the Biobank."""
+    if not can_view_storage_workspace(user, workspace):
+        return False
+
+    if is_storage_global_admin(user) or workspace.owner_id == user.pk:
+        return True
+
+    return bool(
+        workspace.scope == "group"
+        and workspace.research_group_id
+        and ResearchGroup.objects.filter(
+            pk=workspace.research_group_id, coordinator_id=user.pk
+        ).exists()
+    )
 
 
 def can_view_storage_location(user, location):

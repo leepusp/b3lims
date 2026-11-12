@@ -338,15 +338,31 @@
             return String(anchor.full_path).split(" > ").length;
         }
 
+        const workspaceSelect = document.getElementById(
+            "storageChildWorkspaceV8146"
+        );
+
+        // Registered levels of the chosen workspace only; nothing is
+        // offered until a workspace is selected.
+        function scoped() {
+            const chosen = workspaceSelect ? workspaceSelect.value : "";
+
+            return chosen
+                ? anchors.filter(item => String(item.workspace_id) === chosen)
+                : [];
+        }
+
         function renderBrowse() {
             if (!browse) return;
             browse.replaceChildren();
 
-            if (!anchors.length) return;
+            const pool = scoped();
+
+            if (!pool.length) return;
 
             const here = selectedAnchor;
             const prefix = here ? here.full_path + " > " : "";
-            const below = anchors.filter(item =>
+            const below = pool.filter(item =>
                 !here || String(item.full_path).startsWith(prefix)
             );
 
@@ -376,7 +392,7 @@
                 const up = document.createElement("button");
                 const parentPath = String(here.full_path)
                     .split(" > ").slice(0, -1).join(" > ");
-                const parent = anchors.find(
+                const parent = pool.find(
                     item => item.full_path === parentPath
                 );
 
@@ -487,11 +503,11 @@
 
             const query = input.value.trim().toLowerCase();
 
-            if (!query || !anchors.length) return;
+            if (!query || !scoped().length) return;
 
             const prefix = path.value.trim();
 
-            const matches = anchors
+            const matches = scoped()
                 .filter(anchor => {
                     const childOfCurrent =
                         prefix &&
@@ -544,6 +560,13 @@
         }
 
         input.addEventListener("input", showSuggestions);
+
+        if (workspaceSelect) {
+            workspaceSelect.addEventListener("change", () => {
+                suggestions.replaceChildren();
+                renderBrowse();
+            });
+        }
 
         // Keep the original Enter, Backspace and chip removal.
         // Synchronize after the original listener updates the path.
@@ -677,6 +700,7 @@
 
                 anchors = fetchedAnchors.concat(newlyCreated);
                 renderBrowse();
+                setTimeout(renderBrowse, 700);
 
                 if (!path.value.trim()) {
                     status.textContent = anchors.length

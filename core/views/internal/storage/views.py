@@ -22,6 +22,7 @@ from core.models.samples.storage import (
     SampleStorageAssignment,
     StorageLocation,
 )
+from core.permissions.biobanks import editable_biobanks_for_user
 from core.permissions.samples import (
     can_edit_sample,
     visible_samples_for_user,
@@ -138,6 +139,7 @@ def storage_workspace_view(
 
     from core.models.research_groups.model import ResearchGroup
     from core.permissions.storage_workspaces_v8 import (
+        can_link_storage_workspace_biobank,
         can_manage_storage_workspace,
         is_storage_global_admin,
         visible_storage_locations_for_user,
@@ -347,6 +349,7 @@ def storage_workspace_view(
                     research_group_id=request.POST.get(
                         "research_group_id", ""
                     ),
+                    biobank_id=request.POST.get("biobank_id", ""),
                 )
 
                 messages.success(
@@ -363,6 +366,22 @@ def storage_workspace_view(
                     response = redirect("storage_workspace")
                     response["Location"] += f"?storage={workspace.pk}"
                     return response
+
+            elif action == "set_storage_biobank_v8":
+                from core.services.storage_workspaces_v8 import (
+                    set_storage_workspace_biobank_v8,
+                )
+
+                workspace = set_storage_workspace_biobank_v8(
+                    actor=request.user,
+                    workspace_id=request.POST.get("workspace_id"),
+                    biobank_id=request.POST.get("biobank_id", ""),
+                )
+
+                messages.success(
+                    request,
+                    f"Biobank of {workspace.name} updated.",
+                )
 
             elif action == "delete_empty_personal_storage_v8150":
                 from core.services.storage_workspace_delete_v8150 import (
@@ -444,7 +463,7 @@ def storage_workspace_view(
                     location_type=request.POST.get(
                         "location_type", "other"
                     ),
-                    rank=request.POST.get("rank", "1"),
+                    rank=request.POST.get("rank") or None,
                     notes=request.POST.get("notes", ""),
                 )
 
@@ -1079,6 +1098,11 @@ def storage_workspace_view(
             "storage_manageable_workspaces_v8": storage_manageable_workspaces_v8,
             "storage_parent_choices_v8": storage_parent_choices_v8,
             "storage_group_choices_v8": storage_group_choices_v8,
+            "storage_linkable_ids_v8": {
+                ws.pk for ws in visible_storage_workspaces_for_user(request.user)
+                if can_link_storage_workspace_biobank(request.user, ws)
+            },
+            "storage_biobank_choices_v8": editable_biobanks_for_user(request.user).order_by("name"),
             "can_manage_location_storage_v8": bool(storage_manageable_workspaces_v8),
             "storage_is_global_admin_v8": is_storage_global_admin(
                 request.user

@@ -33,6 +33,18 @@ class StorageWorkspace(models.Model):
         related_name="storage_workspaces",
     )
 
+    biobank = models.ForeignKey(
+        "core.Biobank",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storage_workspaces",
+        help_text=(
+            "Biobank this storage serves. Editors and managers of the "
+            "Biobank who can see the workspace may build its locations."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

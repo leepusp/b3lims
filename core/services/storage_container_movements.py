@@ -170,6 +170,23 @@ def move_storage_container(
     origin_parent_id = container.parent_id
     origin_path = container.full_path
 
+    # Moving to another workspace carries the whole subtree with it.
+    workspace_changed = container.workspace_id != destination.workspace_id
+
+    if workspace_changed:
+        from core.services.storage_biobank_transfer import apply_destination_biobank
+
+        StorageLocation.objects.filter(pk__in=affected_ids).update(
+            workspace_id=destination.workspace_id
+        )
+        container.refresh_from_db()
+
+        if destination.workspace_id is not None:
+            apply_destination_biobank(
+                actor, destination.workspace,
+                list({a.sample_id: a.sample for a in assignments}.values()),
+            )
+
     # Moving the node changes paths without changing assignments.
     container.parent = destination
     container.save(update_fields=["parent"])

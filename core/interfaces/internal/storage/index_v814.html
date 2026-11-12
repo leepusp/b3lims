@@ -158,7 +158,7 @@ Physical locations, Sample custody and movement history.
                 role="tab"
                 data-b3s-tab="movements"
                 aria-selected="false">
-          Movements
+          Transfers
         </button>
         {% if storage_manageable_workspaces_v8 %}
         <button type="button"
@@ -380,96 +380,11 @@ Physical locations, Sample custody and movement history.
                class="b3s-section"
                role="tabpanel"
                hidden>
-        <h3>Movement History</h3>
+        <h3>Sample transfers</h3>
         <p class="b3s-note">
-          Recent audited movements you are allowed to see.
-          Moving a location records one event and lists every
-          Sample address that changed with it. To move Samples
-          one by one or in bulk, use <strong>Sample transfers</strong>
-          below; those moves are recorded in this same history.
+          Move Samples one by one or in bulk. Every move is
+          recorded in the general <a href="{% url 'activity_history' %}">History</a>.
         </p>
-        <div class="b3s-table-wrap">
-          <table class="b3s-history-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Origin → Destination</th>
-                <th>Affected</th>
-                <th>Performed by / Reason</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for movement in storage_movements %}
-              <tr>
-                <td class="b3s-nowrap">
-                  {{ movement.created_at|date:"d/m/Y H:i" }}
-                </td>
-                <td>
-                  <span class="b3s-chip b3s-chip-{{ movement.movement_type }}">
-                    {{ movement.get_movement_type_display }}
-                  </span>
-                </td>
-                <td class="b3s-route">
-                  <span class="b3s-route-from">{{ movement.origin_path|default:"—" }}</span>
-                  <span class="b3s-route-arrow" aria-hidden="true">↓</span>
-                  <span class="b3s-route-to">{{ movement.destination_path|default:"—" }}</span>
-                </td>
-                <td class="b3s-nowrap">
-                  {{ movement.affected_sample_count }}
-                  Sample{{ movement.affected_sample_count|pluralize }}
-                  <div class="b3s-note">
-                    {{ movement.affected_assignment_count }}
-                    assignment{{ movement.affected_assignment_count|pluralize }}
-                  </div>
-                </td>
-                <td>
-                  <strong>{{ movement.actor_label|default:"—" }}</strong>
-                  <div class="b3s-note">
-                    {{ movement.reason|default:"—"|truncatechars:180 }}
-                  </div>
-                </td>
-                <td>
-                  {% if movement.affected_assignment_count %}
-                  <details class="b3s-changes">
-                    <summary>View changes</summary>
-                    {% for item in movement.items.all|slice:":5" %}
-                    <div class="b3s-change">
-                      <strong>{{ item.sample_identifier }}</strong>
-                      <div>
-                        {{ item.position_before|default:"—" }}
-                        →
-                        {{ item.position_after|default:"—" }}
-                      </div>
-                      <div class="b3s-note">
-                        {{ item.path_before|default:"—" }}
-                        →
-                        {{ item.path_after|default:"—" }}
-                      </div>
-                    </div>
-                    {% endfor %}
-                    {% if movement.affected_assignment_count > 5 %}
-                    <p class="b3s-note">
-                      Showing the first five assignments.
-                    </p>
-                    {% endif %}
-                  </details>
-                  {% else %}
-                  <span class="b3s-note">Infrastructure only</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="6" class="b3s-empty-row">
-                  No visible movement history.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
         <div class="b3s-transfer-dock" aria-label="Sample transfer tools">
         <details id="b3s-sample-transfer-details" open>
 
@@ -632,13 +547,9 @@ Physical locations, Sample custody and movement history.
               </select>
             </label>
 
-            <label>
-              Order
-              <input type="number"
-                     name="rank"
-                     min="1"
-                     required>
-            </label>
+            <input type="hidden"
+                   name="rank"
+                   value="1">
 
             <label>
               Notes
@@ -774,10 +685,23 @@ Physical locations, Sample custody and movement history.
           </select>
         </label>
 
+        {% if storage_biobank_choices_v8 %}
+        <label for="b3s-new-storage-biobank">
+          Biobank (optional)
+          <select id="b3s-new-storage-biobank" name="biobank_id">
+            <option value="">No Biobank</option>
+            {% for biobank in storage_biobank_choices_v8 %}
+            <option value="{{ biobank.pk }}">{{ biobank.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% endif %}
+
         <p class="b3s-note">
           Personal Storage belongs to your account.
-          Group Storage is managed by the coordinator
-          or an authorized administrator.
+          Group Storage is managed by the coordinator and by
+          group members who are owner, manager or editor of the
+          linked Biobank.
         </p>
 
         <p class="b3s-note">
@@ -924,8 +848,8 @@ Physical locations, Sample custody and movement history.
     <div class="b3s-dialog-body">
 <h3>Create physical location</h3>
         <p class="b3s-note">
-          Create a root location or a child of an
-          existing location in an authorized workspace.
+          It is created inside the location selected in the
+          explorer, or at the top of the chosen storage.
         </p>
 
         <form method="post"
@@ -952,7 +876,7 @@ Physical locations, Sample custody and movement history.
             </select>
           </label>
 
-          <label>
+          <label hidden>
             Parent location
             <select name="parent_id"
                     id="b3s-create-parent">
@@ -986,14 +910,6 @@ Physical locations, Sample custody and movement history.
             </select>
           </label>
 
-          <label>
-            Order
-            <input type="number"
-                   name="rank"
-                   value="1"
-                   min="1"
-                   required>
-          </label>
 
           <fieldset class="b3s-c3-layout">
             <legend>Storage organization</legend>

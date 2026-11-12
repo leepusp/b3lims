@@ -329,10 +329,19 @@ class StorageMovementsAccessV8Tests(TestCase):
                 destination=self.group_box,
             )
 
-    def test_global_admin_cannot_silently_change_ownership(self):
-        with self.assertRaises(PermissionDenied):
+    def test_cross_workspace_container_move_needs_management_of_both_sides(self):
+        # The move is audited in the movement history, so it is allowed for whoever manages both workspaces.
+        self.assertTrue(
             authorize_storage_container_move_v8(
                 actor=self.admin,
+                container=self.personal_box_a,
+                destination=self.group_freezer,
+            )
+        )
+
+        with self.assertRaises(PermissionDenied):
+            authorize_storage_container_move_v8(
+                actor=self.outsider,
                 container=self.personal_box_a,
                 destination=self.group_freezer,
             )

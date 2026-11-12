@@ -305,11 +305,13 @@ class StorageMovementHistoryTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Movement History")
-        self.assertContains(response, "HISTORY-A-001")
-        self.assertContains(response, "View changes")
-        self.assertContains(response, "P01")
-        self.assertContains(response, "P02")
+        # The audited list moved to the general History; the Storage page keeps only the transfer tools.
+        self.assertNotContains(response, "Movement History")
+        self.assertContains(response, "Sample transfers")
+        self.assertIn(
+            "HISTORY-A-001",
+            [i.sample_identifier for m in response.context["storage_movements"] for i in m.items.all()],
+        )
 
     def test_workspace_hides_private_and_mixed_movements(self):
         from django.urls import reverse
@@ -344,8 +346,10 @@ class StorageMovementHistoryTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "HISTORY-A-001")
-        self.assertNotContains(response, "HISTORY-B-001")
+        shown = [i.sample_identifier for m in response.context["storage_movements"] for i in m.items.all()]
+
+        self.assertIn("HISTORY-A-001", shown)
+        self.assertNotIn("HISTORY-B-001", shown)
         self.assertNotContains(response, "PRIVATE-D1-REASON")
         self.assertNotContains(response, "MIXED-D1-REASON")
 
@@ -395,9 +399,9 @@ class StorageMovementHistoryTests(TestCase):
             reverse("storage_workspace")
         )
 
-        self.assertNotContains(
-            owner_response,
+        self.assertNotIn(
             "EMPTY-CONTAINER-D1",
+            [m.reason for m in owner_response.context["storage_movements"]],
         )
 
         self.client.force_login(self.manager)
@@ -406,11 +410,27 @@ class StorageMovementHistoryTests(TestCase):
             reverse("storage_workspace")
         )
 
-        self.assertContains(
-            manager_response,
+        self.assertIn(
             "EMPTY-CONTAINER-D1",
+            [m.reason for m in manager_response.context["storage_movements"]],
         )
-        self.assertContains(
-            manager_response,
-            "Infrastructure only",
+
+
+class StorageMovementInGeneralHistoryTests(TestCase):
+    def test_a_storage_movement_is_listed_in_the_general_history(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+
+        user = get_user_model().objects.create_user("history-mover", password="x")
+
+        StorageMovement.objects.create(
+            movement_type="sample", origin_path="Room > Box A", destination_path="Room > Box B",
+            affected_sample_count=2, performed_by=user, actor_label="history-mover",
         )
+        self.client.force_login(user)
+
+        page = self.client.get(reverse("activity_history")).content.decode()
+
+        self.assertIn("Storage movement", page)
+        self.assertIn("Room &gt; Box A", page)
+        self.assertIn("2 samples", page)

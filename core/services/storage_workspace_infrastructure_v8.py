@@ -182,7 +182,8 @@ def create_storage_location_in_workspace_v8(
     workspace = _managed_workspace(actor, workspace_id)
     name = _clean_name(name)
     location_type = _clean_type(location_type)
-    rank = _clean_rank(rank)
+    automatic_rank = rank in (None, "")
+    rank = 1 if automatic_rank else _clean_rank(rank)
 
     parent = None
 
@@ -225,6 +226,17 @@ def create_storage_location_in_workspace_v8(
             "A location with this name already exists "
             "under the selected parent."
         )
+
+    if automatic_rank:
+        # New levels go after their siblings; order is changed later by moving.
+        last = (
+            StorageLocation.objects
+            .filter(parent=parent, workspace=workspace)
+            .order_by("-rank")
+            .values_list("rank", flat=True)
+            .first()
+        )
+        rank = (last or 0) + 1
 
     # Reuse the existing hierarchy validation service.
     # The unscoped intermediate object is inside this transaction

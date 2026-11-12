@@ -12,9 +12,12 @@ from core.permissions.storage_workspaces_v8 import (
     can_manage_storage_workspace,
     visible_storage_workspaces_for_user,
 )
+from core.models.samples.storage import StorageLocationLayoutV8146C3
 from core.services.storage_workspace_infrastructure_v8 import (
     create_storage_location_in_workspace_v8,
 )
+from core.services.storage_workspaces_v8 import create_storage_workspace_v8
+from core.views.internal.storage.location_layout_v8146c3 import parse_layout
 
 
 def _positive_id(value):
@@ -156,8 +159,9 @@ def storage_path_register_v8146(request):
 
     try:
         token = str(request.POST.get("workspace_id", "")).strip()
+        automatic = not token
 
-        if not (
+        if not automatic and not (
             token.isascii()
             and token.isdecimal()
             and 1 <= len(token) <= 18
@@ -191,11 +195,41 @@ def storage_path_register_v8146(request):
                 "without >, commas or semicolons."
             )
 
+        layout_args = (
+            parse_layout(request.POST)
+            if request.POST.get("organization") else None
+        )
+
         with transaction.atomic():
-            workspace = (
-                StorageWorkspace.objects.select_for_update()
-                .filter(pk=int(token)).first()
-            )
+            workspace_created = False
+
+            if automatic:
+                # No workspace chosen: the first level of the path names one.
+                if len(parts) < 2:
+                    raise ValidationError(
+                        "Without a workspace, the first level becomes "
+                        "the workspace; add at least one more level."
+                    )
+
+                name = parts.pop(0)
+                workspace = next((
+                    ws for ws in visible_storage_workspaces_for_user(request.user)
+                    if ws.name.casefold() == name.casefold()
+                    and can_manage_storage_workspace(request.user, ws)
+                ), None)
+
+                if workspace is None:
+                    workspace = create_storage_workspace_v8(
+                        actor=request.user, name=name, scope="personal",
+                    )
+                    workspace_created = True
+
+                workspace = StorageWorkspace.objects.select_for_update().get(pk=workspace.pk)
+            else:
+                workspace = (
+                    StorageWorkspace.objects.select_for_update()
+                    .filter(pk=int(token)).first()
+                )
 
             if (
                 workspace is None
@@ -209,6 +243,7 @@ def storage_path_register_v8146(request):
 
             parent = None
             created_count = 0
+            last_created = None
 
             for name in parts:
                 matches = list(
@@ -246,11 +281,18 @@ def storage_path_register_v8146(request):
                         parent_id=parent.pk if parent else None,
                         name=name,
                         location_type="other",
-                        rank=1,
+                        rank=None,
                     )
                     created_count += 1
+                    last_created = node.pk
 
                 parent = node
+
+            if layout_args and created_count and parent.pk == last_created:
+                layout = StorageLocationLayoutV8146C3(location=parent, **layout_args)
+
+                layout.full_clean()
+                layout.save()
 
             anchor = {
                 "id": parent.pk,
@@ -282,6 +324,7 @@ def storage_path_register_v8146(request):
         "ok": True,
         "created_count": created_count,
         "reused_count": len(parts) - created_count,
+        "workspace": {"id": workspace.pk, "name": workspace.name, "created": workspace_created},
         "anchor": anchor,
     }, status=201 if created_count else 200)
     response["Cache-Control"] = "no-store"

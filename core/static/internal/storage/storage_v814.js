@@ -910,9 +910,6 @@
       if (target.historical) return "Historical records are read-only.";
       if (target.active !== "1") return "Inactive location.";
       if (!manageable(target)) return "You cannot manage this location.";
-      if (target.workspace !== container.workspace) {
-        return "Different workspace.";
-      }
       if (target.type === "position") {
         return "A position cannot hold a container.";
       }
@@ -950,7 +947,6 @@
         window.B3StoragePicker.open({
           title: `Move ${displayName(node)}`,
           mode: "node",
-          workspace: node.workspace,
           exclude: node.id,
           confirmLabel: "Preview move",
           onPick: result => {

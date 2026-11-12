@@ -22,6 +22,7 @@ def build_storage_anchor_catalog(*, user):
             "location_type",
             "is_active",
             "rank",
+            "workspace_id",
         )
     )
 
@@ -109,6 +110,7 @@ def build_storage_anchor_catalog(*, user):
             "direction": layout.slot_direction if layout else "column",
             "occupied": occupied.get(row["pk"], []),
             "id": row["pk"],
+            "workspace_id": row["workspace_id"],
             "parent_id": row["parent_id"],
             "name": row["name"],
             "location_type": row["location_type"],

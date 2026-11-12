@@ -16,10 +16,10 @@
     </select>
 
     <p class="form-text mt-2 mb-3">
-        Select a workspace first, then define the physical
-        path in the adjacent Path Builder.
-        The workspace name is added automatically as a
-        visual prefix.
+        Pick a workspace, or leave it empty and type the path
+        starting with a new workspace name: the first level
+        becomes your personal workspace
+        (for example <em>Lab A &gt; Freezer 1 &gt; Box 2 &gt; A4</em>).
     </p>
 
     <p class="form-text mb-2">
@@ -28,6 +28,36 @@
             No path entered
         </strong>
     </p>
+
+    <fieldset id="storageChildLayoutV8146" class="border rounded p-2 mb-3" hidden>
+        <legend class="float-none w-auto fs-6 fw-semibold px-1 mb-1">
+            How does the last location hold Samples?
+        </legend>
+        <select id="storageChildOrgV8146" class="form-select form-select-sm mb-2">
+            <option value="free">It is a single place (or it only holds other locations)</option>
+            <option value="grid">Grid of positions (box, rack, plate)</option>
+            <option value="slots">Named compartments (doors, drawers, shelves)</option>
+        </select>
+        <div id="storageChildGridV8146" class="row g-2" hidden>
+            <div class="col-6">
+                <label class="form-label small mb-1" for="storageChildRowsV8146">Rows</label>
+                <input id="storageChildRowsV8146" type="number" min="1" max="26" value="9" class="form-control form-control-sm">
+            </div>
+            <div class="col-6">
+                <label class="form-label small mb-1" for="storageChildColsV8146">Columns</label>
+                <input id="storageChildColsV8146" type="number" min="1" max="24" value="9" class="form-control form-control-sm">
+            </div>
+        </div>
+        <div id="storageChildSlotsV8146" hidden>
+            <label class="form-label small mb-1" for="storageChildSlotNamesV8146">Compartment names, separated by commas</label>
+            <input id="storageChildSlotNamesV8146" type="text" class="form-control form-control-sm mb-2" placeholder="Door 1, Door 2, Door 3">
+            <select id="storageChildDirV8146" class="form-select form-select-sm">
+                <option value="column">Stacked, top to bottom</option>
+                <option value="row">Side by side</option>
+            </select>
+        </div>
+        <div class="form-text">Applied only when the last level is created now.</div>
+    </fieldset>
 
     <button id="storageChildCreateV8146"
             type="button"

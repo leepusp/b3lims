@@ -53,6 +53,79 @@ def _optional_label(value, *, maximum, label):
     return text
 
 
+def parse_layout(post):
+    """Validated layout arguments from POST data: organization, dimensions, compartments and labels."""
+    organization = str(
+        post.get("organization", "")
+    ).strip()
+
+    if organization not in {"free", "grid", "slots"}:
+        raise ValidationError(
+            "Select a valid storage organization."
+        )
+
+    if organization == "grid":
+        rows = _positive_dimension(
+            post.get("rows"),
+            maximum=26,
+            label="Rows",
+        )
+        columns = _positive_dimension(
+            post.get("columns"),
+            maximum=24,
+            label="Columns",
+        )
+    else:
+        rows = 0
+        columns = 0
+
+    slot_labels = []
+    slot_direction = "column"
+
+    if organization == "slots":
+        slot_labels = clean_slot_labels(
+            post.getlist("slot_label")
+        )
+        slot_direction = (
+            post.get("slot_direction") or "column"
+        )
+        if slot_direction not in {"column", "row"}:
+            raise ValidationError(
+                "Select a valid compartment direction."
+            )
+
+    if organization != "grid":
+        if any(
+            str(post.get(field, "")).strip()
+            for field in ("rows", "columns")
+        ):
+            raise ValidationError(
+                "Only a position grid can specify grid dimensions."
+            )
+
+    type_label = _optional_label(
+        post.get("type_label"),
+        maximum=80,
+        label="Descriptive type",
+    )
+
+    temperature_label = _optional_label(
+        post.get("temperature_label"),
+        maximum=60,
+        label="Temperature",
+    )
+
+    return {
+        "organization": organization,
+        "rows": rows,
+        "columns": columns,
+        "slot_labels": slot_labels,
+        "slot_direction": slot_direction,
+        "type_label": type_label,
+        "temperature_label": temperature_label,
+    }
+
+
 @login_required
 @require_POST
 def storage_location_create_with_layout_v8146c3(request):
@@ -62,65 +135,10 @@ def storage_location_create_with_layout_v8146c3(request):
         if request.POST.get("action") != "create_location":
             raise ValidationError("Invalid storage creation action.")
 
-        organization = str(
-            request.POST.get("organization", "")
-        ).strip()
-
-        if organization not in {"free", "grid", "slots"}:
-            raise ValidationError(
-                "Select a valid storage organization."
-            )
-
-        if organization == "grid":
-            rows = _positive_dimension(
-                request.POST.get("rows"),
-                maximum=26,
-                label="Rows",
-            )
-            columns = _positive_dimension(
-                request.POST.get("columns"),
-                maximum=24,
-                label="Columns",
-            )
-        else:
-            rows = 0
-            columns = 0
-
-        slot_labels = []
-        slot_direction = "column"
-
-        if organization == "slots":
-            slot_labels = clean_slot_labels(
-                request.POST.getlist("slot_label")
-            )
-            slot_direction = (
-                request.POST.get("slot_direction") or "column"
-            )
-            if slot_direction not in {"column", "row"}:
-                raise ValidationError(
-                    "Select a valid compartment direction."
-                )
-
-        if organization != "grid":
-            if any(
-                str(request.POST.get(field, "")).strip()
-                for field in ("rows", "columns")
-            ):
-                raise ValidationError(
-                    "Only a position grid can specify grid dimensions."
-                )
-
-        type_label = _optional_label(
-            request.POST.get("type_label"),
-            maximum=80,
-            label="Descriptive type",
-        )
-
-        temperature_label = _optional_label(
-            request.POST.get("temperature_label"),
-            maximum=60,
-            label="Temperature",
-        )
+        layout_args = parse_layout(request.POST)
+        organization = layout_args["organization"]
+        rows, columns = layout_args["rows"], layout_args["columns"]
+        slot_labels = layout_args["slot_labels"]
 
         with transaction.atomic():
             location = create_storage_location_in_workspace_v8(
@@ -131,19 +149,13 @@ def storage_location_create_with_layout_v8146c3(request):
                 location_type=request.POST.get(
                     "location_type", "other"
                 ),
-                rank=request.POST.get("rank", 1),
+                rank=request.POST.get("rank") or None,
                 notes=request.POST.get("notes", ""),
             )
 
             layout = StorageLocationLayoutV8146C3(
                 location=location,
-                organization=organization,
-                rows=rows,
-                columns=columns,
-                slot_labels=slot_labels,
-                slot_direction=slot_direction,
-                type_label=type_label,
-                temperature_label=temperature_label,
+                **layout_args,
             )
 
             layout.full_clean()

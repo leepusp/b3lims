@@ -17,6 +17,7 @@ def create_storage_workspace_v8(
     name,
     scope,
     research_group_id=None,
+    biobank_id=None,
 ):
     if not getattr(actor, "is_authenticated", False):
         raise PermissionDenied("Authentication required.")
@@ -61,14 +62,52 @@ def create_storage_workspace_v8(
                 "administrator can create a group workspace."
             )
 
+    biobank = None
+
+    if biobank_id not in (None, ""):
+        from core.models.biobanks.biobank import Biobank
+        from core.permissions.biobanks import can_edit_biobank
+
+        biobank = Biobank.objects.filter(pk=biobank_id).first() if str(biobank_id).isdigit() else None
+
+        if biobank is None or not can_edit_biobank(actor, biobank):
+            raise PermissionDenied("You cannot link this Biobank to a storage.")
+
     workspace = StorageWorkspace(
         name=name,
         scope=scope,
         owner=actor,
         research_group=group,
+        biobank=biobank,
     )
 
     workspace.full_clean()
     workspace.save()
+
+    return workspace
+
+
+@transaction.atomic
+def set_storage_workspace_biobank_v8(*, actor, workspace_id, biobank_id):
+    """Link a workspace to a Biobank (or unlink it with an empty value)."""
+    from core.models.biobanks.biobank import Biobank
+    from core.permissions.biobanks import can_edit_biobank
+    from core.permissions.storage_workspaces_v8 import can_link_storage_workspace_biobank
+
+    workspace = StorageWorkspace.objects.select_for_update().filter(pk=workspace_id).first()
+
+    if workspace is None or not can_link_storage_workspace_biobank(actor, workspace):
+        raise PermissionDenied("You cannot change this storage.")
+
+    biobank = None
+
+    if str(biobank_id or "").strip():
+        biobank = Biobank.objects.filter(pk=biobank_id).first() if str(biobank_id).isdigit() else None
+
+        if biobank is None or not can_edit_biobank(actor, biobank):
+            raise PermissionDenied("You cannot link this Biobank to a storage.")
+
+    workspace.biobank = biobank
+    workspace.save(update_fields=["biobank", "updated_at"])
 
     return workspace

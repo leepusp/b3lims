@@ -6,8 +6,9 @@
   <p class="small text-muted mt-3">
     Personal storage belongs to its owner.
     Research Group storage is shared with authorized members.
-    Only owners, group coordinators and the global administrator
-    can manage physical infrastructure.
+    Owners, group coordinators, the global administrator and group
+    members who are owner, manager or editor of the Biobank linked
+    to a storage can manage its physical infrastructure.
   </p>
 
   {% for workspace in storage_visible_workspaces_v8 %}
@@ -23,7 +24,24 @@
         {% else %}
           · Shared access
         {% endif %}
+        {% if workspace.biobank %}
+          · Biobank: {{ workspace.biobank.name }}
+        {% endif %}
       </div>
+      {% if workspace.pk in storage_linkable_ids_v8 %}
+        <form method="post" action="{% url 'storage_workspace' %}" class="d-flex gap-2 mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="set_storage_biobank_v8">
+          <input type="hidden" name="workspace_id" value="{{ workspace.pk }}">
+          <select name="biobank_id" class="form-select form-select-sm" aria-label="Biobank of {{ workspace.name }}">
+            <option value="">No Biobank</option>
+            {% for biobank in storage_biobank_choices_v8 %}
+              <option value="{{ biobank.pk }}" {% if biobank.pk == workspace.biobank_id %}selected{% endif %}>{{ biobank.name }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Link Biobank</button>
+        </form>
+      {% endif %}
     </div>
   {% empty %}
     <p class="small text-muted">
@@ -112,7 +130,7 @@
             </div>
 
             <div class="row g-2">
-              <div class="col-md-5">
+              <div class="col-md-7">
                 <label class="form-label">Location name</label>
                 <input name="name"
                        class="form-control"
@@ -132,12 +150,7 @@
                 </select>
               </div>
 
-              <div class="col-md-3">
-                <label class="form-label">Order</label>
-                <input name="rank" type="number"
-                       class="form-control"
-                       min="1" value="1" required>
-              </div>
+                <input type="hidden" name="rank" value="">
             </div>
 
             <button type="submit"

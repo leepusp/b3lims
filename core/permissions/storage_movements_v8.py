@@ -107,6 +107,15 @@ def authorize_sample_storage_move_v8(
             "The destination storage location is not accessible."
         )
 
+    if destination.workspace_id is not None:
+        from core.services.storage_biobank_transfer import (
+            require_destination_biobank,
+        )
+
+        require_destination_biobank(
+            actor, destination.workspace, [assignment.sample]
+        )
+
     return True
 
 
@@ -119,8 +128,8 @@ def authorize_storage_container_move_v8(
     """
     Authorize a physical container move inside one workspace.
 
-    Changing workspace ownership, including any descendant
-    of the moved container, requires a separate audited workflow.
+    A container may go to another workspace when the actor manages
+    both; the whole subtree changes workspace with it.
     """
     if container is None or destination is None:
         raise PermissionDenied(
@@ -136,29 +145,28 @@ def authorize_storage_container_move_v8(
         )
 
     workspace_id = container.workspace_id
+    destination_workspace_id = destination.workspace_id
 
-    if workspace_id != destination.workspace_id:
-        raise PermissionDenied(
-            "Cross-workspace infrastructure movements "
-            "require an explicit ownership-transfer workflow."
-        )
-
-    if workspace_id is None:
-        if not is_storage_global_admin(actor):
-            raise PermissionDenied(
-                "Legacy unscoped infrastructure is administrator-only."
-            )
-    elif not can_manage_storage_workspace(
-        actor,
-        container.workspace,
+    for scoped_id, scoped in (
+        (workspace_id, container.workspace),
+        (destination_workspace_id, destination.workspace),
     ):
-        raise PermissionDenied(
-            "You cannot manage this storage workspace."
-        )
+        if scoped_id is None:
+            if not is_storage_global_admin(actor):
+                raise PermissionDenied(
+                    "Legacy unscoped infrastructure is administrator-only."
+                )
+        elif not can_manage_storage_workspace(actor, scoped):
+            raise PermissionDenied(
+                "You cannot manage this storage workspace."
+            )
 
     # Verify both ancestor chains. In particular, the global
     # administrator must not bypass structural consistency.
-    for starting_node in (container, destination):
+    for starting_node, expected in (
+        (container, workspace_id),
+        (destination, destination_workspace_id),
+    ):
         seen = set()
         node = starting_node
 
@@ -170,7 +178,7 @@ def authorize_storage_container_move_v8(
 
             seen.add(node.pk)
 
-            if node.workspace_id != workspace_id:
+            if node.workspace_id != expected:
                 raise PermissionDenied(
                     "Mixed-workspace hierarchy."
                 )

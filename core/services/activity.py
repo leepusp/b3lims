@@ -101,6 +101,16 @@ TRACKED = {
         "actor": lambda o: o.owner,
         "url": lambda o: _url("submission_detail", o.pk),
     },
+    "core.StorageMovement": {
+        "type": lambda o: "storage_movement",
+        "label": lambda o: (
+            f"{o.get_movement_type_display()}: {o.origin_path or '—'} → {o.destination_path or '—'}"
+            + (f" ({o.affected_sample_count} sample{'s' if o.affected_sample_count != 1 else ''})" if o.affected_sample_count else "")
+        ),
+        "actor": lambda o: o.performed_by,
+        "url": lambda o: _url("storage_workspace"),
+        "verbs": ("created",),
+    },
     "bench.Booking": {
         "type": lambda o: "booking",
         "label": lambda o: o.title or f"Booking of {o.resource}",
@@ -198,6 +208,7 @@ ENTITY_GROUPS = [
     ("jupyter_notebook", "Jupyter notebook"),
     ("submission", "Data submission"),
     ("booking", "Booking"),
+    ("storage_movement", "Storage movement"),
 ]
 ENTITY_LABELS = dict(ENTITY_GROUPS)
 
