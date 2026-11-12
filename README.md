@@ -19,7 +19,7 @@
 
 </div>
 
-B3 LIMS is an open-source laboratory information system for biological sample collections — bacteria, phages, plasmids and, increasingly, other kinds of material. It was born in the [CEPID B3](https://www.b3.cepid.usp.br/) research center (bacteria and bacteriophage biology) to make samples traceable, governed and easy to share, and it is built so that **any lab can run it on its own computer or server**. It does not need a cluster, Slurm or institutional accounts; those stay optional.
+B3 LIMS is an open-source laboratory information system for biological sample collections — bacteria, phages, plasmids and, increasingly, other kinds of material. It was born in the [CEPID B3](https://www.b3.cepid.usp.br/](https://cepidb3.iq.usp.br/)) research center (bacteria and bacteriophage biology) to make samples traceable, governed and easy to share, and it is built so that **any lab can run it on its own computer or server**. It does not need a cluster, Slurm or institutional accounts; those stay optional.
 
 ## What you can do
 
