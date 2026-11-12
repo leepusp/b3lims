@@ -12,12 +12,12 @@ B3 LIMS is an open-source system for the samples, freezers, notebooks and shipme
 | Run it for many people behind HTTPS | [Production deployment](operations/production.md) |
 | Use Slurm, PAM or Jupyter servers | [Clusters (optional)](hpc.md) |
 | See what is planned | [Roadmap](development/local_install_and_eln_roadmap.md) |
-| Contribute code | [Contributing](https://github.com/leepusp/biobank/blob/main/CONTRIBUTING.md) |
+| Contribute code | [Contributing](https://github.com/leepusp/b3lims/blob/main/CONTRIBUTING.md) |
 
 ## The shortest path
 
 ```bash
-pipx install "git+https://github.com/leepusp/biobank.git"
+pipx install "git+https://github.com/leepusp/b3lims.git"
 biobank-local setup --demo
 biobank-local run
 ```

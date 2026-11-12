@@ -5,7 +5,7 @@ Thank you for helping. B3 LIMS is a Django application; English is the language 
 ## Set up for development
 
 ```bash
-git clone https://github.com/leepusp/biobank.git && cd biobank
+git clone https://github.com/leepusp/b3lims.git && cd b3lims
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 python manage.py test --settings=biobank.test_settings

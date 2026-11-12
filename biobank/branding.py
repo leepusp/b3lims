@@ -64,7 +64,7 @@ def about(version=""):
         lines.append(f"      {how}")
 
     lines += ["", "Planned:"] + [f"  - {item}" for item in PLANNED]
-    lines += ["", "Documentation: docs/index.md   Source: https://github.com/leepusp/biobank", ""]
+    lines += ["", "Documentation: docs/index.md   Source: https://github.com/leepusp/b3lims", ""]
 
     return "\n".join(lines)
 

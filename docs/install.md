@@ -5,7 +5,7 @@ B3 LIMS needs **Python 3.12 or newer** (or Docker). It does not need a cluster, 
 ## Option 1: pipx and the setup wizard
 
 ```bash
-pipx install "git+https://github.com/leepusp/biobank.git"
+pipx install "git+https://github.com/leepusp/b3lims.git"
 biobank-local setup
 biobank-local run
 ```
@@ -22,7 +22,7 @@ To script it, use `biobank-local setup --non-interactive --admin-user NAME --adm
 ## Option 2: Docker Compose
 
 ```bash
-git clone https://github.com/leepusp/biobank.git && cd biobank
+git clone https://github.com/leepusp/b3lims.git && cd b3lims
 BIOBANK_ADMIN_PASSWORD='choose-a-long-password' docker compose up -d
 ```
 
@@ -36,7 +36,7 @@ BIOBANK_ADMIN_PASSWORD=... BIOBANK_DATABASE_URL=postgres://biobank:biobank@db:54
 ## Option 3: from source
 
 ```bash
-git clone https://github.com/leepusp/biobank.git && cd biobank
+git clone https://github.com/leepusp/b3lims.git && cd b3lims
 python -m venv .venv && . .venv/bin/activate
 pip install -e .
 biobank-local setup

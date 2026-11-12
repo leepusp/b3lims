@@ -48,9 +48,9 @@ hpc = ["gunicorn>=23,<24", "psycopg[binary]>=3.1"]
 biobank-local = "biobank.local_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/leepusp/biobank"
-Documentation = "https://github.com/leepusp/biobank/tree/main/docs"
-Issues = "https://github.com/leepusp/biobank/issues"
+Homepage = "https://github.com/leepusp/b3lims"
+Documentation = "https://github.com/leepusp/b3lims/tree/main/docs"
+Issues = "https://github.com/leepusp/b3lims/issues"
 
 [tool.setuptools.packages.find]
 include = ["biobank*", "core*", "bench*"]

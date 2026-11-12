@@ -4,11 +4,18 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-TEXT = """$ pipx install "git+https://github.com/leepusp/biobank.git"
+TEXT = """$ pipx install "git+https://github.com/leepusp/b3lims.git"
 $ biobank-local setup
 
-Biobank local setup
-===================
+  ____  _____   _     ___ __  __ ____
+ | __ )|___ /  | |   |_ _|  \\/  / ___|
+ |  _ \\  |_ \\  | |    | || |\\/| \\___ \\
+ | |_) |___) | | |___ | || |  | |___) |
+ |____/|____/  |_____|___|_|  |_|____/
+  B3 LIMS  v0.1.0  -  Samples, freezers, notebooks and shipments for research labs.
+
+Setup
+=====
 Step 1 of 4  Where should your data live?
 Data folder [/home/ana/.biobank-local]:
 
@@ -31,14 +38,14 @@ Creating the database ...
 Preparing the web files ...
 Created administrator 'ana'.
 
-Done. Start Biobank with:
+Done. Start B3 LIMS with:
 
     biobank-local run
 
 then open http://127.0.0.1:8000/ and sign in as 'ana'.
 
 $ biobank-local run
-Biobank is running at http://127.0.0.1:8000/  (Ctrl+C to stop)"""
+B3 LIMS is running at http://127.0.0.1:8000/  (Ctrl+C to stop)"""
 
 HTML = """<html><body style="margin:0;background:#0d1b2a;">
 <div style="padding:22px 26px;font:15px/1.5 'DejaVu Sans Mono',Menlo,monospace;color:#d6e2f0;width:880px">
