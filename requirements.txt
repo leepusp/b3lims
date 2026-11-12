@@ -17,4 +17,5 @@ psycopg[binary]==3.3.4
 gunicorn>=23,<24
 bleach>=6.0
 whitenoise>=6.5
+requests>=2.31
 waitress>=3.0
